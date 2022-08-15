@@ -40,18 +40,46 @@ class Ding_model(object):
         return T1
 
     def force_model(self, Tc, Ri): #Ri array_type/list_type
-        dotCN = (1/Tc)*np.sum(Ri*np.exp(-(t-ti)/Tc)-CN/Tc)
-        dotF = A*(Cn/(Km+CN))-(F/(T1+T2*(CN/(Km+CN))))
+        dotCN = (1/Tc)*np.sum(Ri*np.exp(-(t-ti)/Tc)-CN/Tc) #Eq(1)
+        dotF = A*(Cn/(Km+CN))-(F/(T1+T2*(CN/(Km+CN)))) #Eq(2)
         return dotCN, dotF
 
     def Gnf(self, Fpred, Fexp): #fonction à minimiser par Sequential Quadratic Programing (SQP)
-        Gnf = np.sum(Fpred-Fexp)**2
+        Gnf = np.sum(Fpred-Fexp)**2 #Eq(3)
         return Gnf, T2
 
     def Gfat(self, Fpred, Fexp): #fonction à minimiser par Sequential Quadratic Programing (SQP)
-        Gfat = np.sum(Fpred-Fexp)**2
+        Gfat = np.sum(Fpred-Fexp)**2 #Eq(4)
         return Gfat, A, Km
 
+    ##### Fatigue Model #####
 
+    def dotA(self, A, Arest, Tfat, AlphaA, F):
+        dotA = -((A-Arest)/Tfat)+AlphaA*F #Eq(5)
+        return dotA
+
+    def Km(self, Km1, Km2):
+        Km = Km1+Km2 #Eq(6)
+        return Km
+
+    def dotKm1(self, Km1, Km1rest, Tkm, AlphaKm, F):
+        dotKm1 = -((Km1-Km1rest)/Tkm)-AlphaKm*F#Eq(7)
+        return dotKm1
+
+    def dotKm2(self, Km2, Km2rest, Tkm, AlphaKm, F):
+        dotKm2 = -((Km2-Km2rest)/Tkm)-AlphaKm*F #Eq(8)
+        return dotKm2
+
+    def dotT1(self, T1, T1rest, Tfat, AlphaT1, F):
+        dotT1 = -((T1-T1rest)/Tfat)+AlphaT1*F #Eq(9)
+        return dotT1
+
+    def G(self, Ppred, Pcalc): #fonction à minimiser par Sequential Quadratic Programing (SQP)
+        G = np.sum(np.sum([1-(Ppred/Pcalc)]**2)) #Eq(10)
+        return G
+
+    def dotKm(self, Km, Kmrest, Tfat, AlphaKm, F):
+        dotKm = -((Km-Kmrest)/Tfat)+AlphaKm*F #Eq(11)
+        return dotKm
 
 
