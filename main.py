@@ -19,7 +19,9 @@ F = 40  # (N) instantaneous force
 # Stimulation parameters :
 ti = 0.0005  # (s) time of the ith stimulation
 tp = 0.001  # (s) time of the pth data point
-u = [0., 0.1 , 1.1] # Electrical stimulation activation time
+u = [0., 0.1 , 1, 1.5] # Electrical stimulation activation time
+ti_all = [0, 0.0005, 0.0005, 0.00002, 0.0003]
+ti_index = 0
 # ti_all = np.array([0., 0.0005]) not implemented (need to be implemented with a ti_list for each activation)
 
 # Simulation parameters :
@@ -39,14 +41,20 @@ def x_dot(x, u, t):
     F = x[1]
     var_sum = 0
     global u_instant
+    global ti_index
 
     # See if t equals an activation time u (round up to prevent flot issues)
     if round(t, 5) in u:
         u_instant = t
+        ti_index += 1
 
     # Variables calculation for equation 1 of the force model
-    Ri = 1 + (R0 - 1) * np.exp(-((ti-ti) / Tauc))
-    var_sum += Ri * np.exp(-(t - (ti + u_instant)) / Tauc)
+    if ti_index == 0 :
+        Ri = 1 + (R0 - 1) * np.exp(-1 / Tauc)
+    else :
+        Ri = 1 + (R0 - 1) * np.exp(-((ti_all[ti_index] - ti_all[ti_index - 1]) / Tauc))
+
+    var_sum += Ri * np.exp(-(t - (ti_all[ti_index] + u_instant)) / Tauc)
 
     # Remove activation at t = 0 if not requested
     if t < min(u):
@@ -87,12 +95,15 @@ def perform_integration(final_time, dt, x_initial, x_dot_fun, u, integration_fun
     return time_vector, all_x
 
 # Figure out when electrical stimulation is activated
-def stim_signal(ti , u):
+def stim_signal(ti_all , u):
     time_vector = [0.]
     stim_signal_y = [0]
+    ti_counter = 1
     while time_vector[-1] <= final_time: # As long as we did not get to the final time continue
         time_vector.append(time_vector[-1] + dt) # The next time is dt later
-        if any(round(time_vector[-1], 5) >= i and round(time_vector[-1], 5) <= i + ti for i in u) : # See if an activation belongs to t
+        if any(round(time_vector[-1], 5) == i for i in u):
+            ti_counter += 1
+        if any(round(time_vector[-1], 5) >= i and round(time_vector[-1], 5) <= i + ti_all[ti_counter] for i in u) : # See if an activation belongs to t
             stim_signal_y.append(1) # Yes
         else:
             stim_signal_y.append(0) # No
@@ -102,7 +113,7 @@ def stim_signal(ti , u):
 
 
 time_vector_euler, all_x_euler = perform_integration(final_time, dt, x_initial, x_dot, u, euler)
-stim_signal_y = stim_signal(ti , u)
+stim_signal_y = stim_signal(ti_all , u)
 
 # We can now compare plot the two functions on the same graph
 pyplot.figure()
@@ -113,4 +124,3 @@ pyplot.legend()
 pyplot.ylabel("Force (N)")
 pyplot.xlabel("Time (s)")
 pyplot.show()
-
