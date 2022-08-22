@@ -5,7 +5,7 @@ from matplotlib import pyplot # Import matplotlib for graphics
 
 # Real values / Known values :
 Tauc = 0.020  # (s) time constant controlling the rise and decay of CN for quadriceps
-R0 = 2  # (-) mathematical term characterizing the magnitude of enhancement inCNfrom the following stimuli. When fatigue included : R0 = Km + 1.04
+R0 = 2  # (-) mathematical term characterizing the magnitude of enhancement in CN from the following stimuli. When fatigue included : R0 = Km + 1.04
 n = 2  # (-) total number of stimulus in the train before time t (single, doublets, triplets)
 
 # Arbitrary values / Different for each person :
@@ -17,12 +17,11 @@ CN = 2  # (-) representation of Ca2+-troponin complex
 F = 40  # (N) instantaneous force
 
 # Stimulation parameters :
-ti = 0.0005  # (s) time of the ith stimulation
-tp = 0.001  # (s) time of the pth data point
+ti = 0.0005  # (s) Time of the ith stimulation
+tp = 0.001  # (s) Time of the pth data point
 u = [0., 0.1 , 1, 1.5] # Electrical stimulation activation time
-ti_all = [0, 0.0005, 0.0005, 0.00002, 0.0003]
-ti_index = 0
-# ti_all = np.array([0., 0.0005]) not implemented (need to be implemented with a ti_list for each activation)
+ti_all = [0, 0.0005, 0.0005, 0.00002, 0.0003] # (s) Different values of time of the ith stimulation
+ti_index = 0 # Used in x_dot function
 
 # Simulation parameters :
 final_time = 2  # Stop at x seconds

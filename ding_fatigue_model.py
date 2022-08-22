@@ -5,7 +5,7 @@ from matplotlib import pyplot # Import matplotlib for graphics
 
 # Real values / Known values :
 Tauc = 0.020  # (s) Time constant controlling the rise and decay of CN for quadriceps
-R0 = 2  # (-) Mathematical term characterizing the magnitude of enhancement inCNfrom the following stimuli. When fatigue included : R0 = Km + 1.04
+R0 = 2  # (-) Mathematical term characterizing the magnitude of enhancement in CN from the following stimuli. When fatigue included : R0 = Km + 1.04
 n = 2  # (-) Total number of stimulus in the train before time t (single, doublets, triplets)
 
 # Arbitrary values / Different for each person :
@@ -32,10 +32,8 @@ tp = 0.001  # (s) Time of the pth data point
 u = [0., 0.1 , 1, 1.5] # Electrical stimulation activation time
 ti_all = [0, 0.0005, 0.0005, 0.00002, 0.0003] # (s) Different values of time of the ith stimulation
 
-ti_index = 0
-
 # Simulation parameters :
-final_time = 200  # Stop at x seconds
+final_time = 2  # Stop at x seconds
 dt = 0.00001 # Integration step
 x_initial = np.array([0,0,0,0,0]) # Initial A, Km1, Km2, Tau1, Km
 u_instant = 0 # Used in x_dot function
@@ -57,8 +55,8 @@ def x_dot(x, u, t):
     Km1dot = -(Km1-Km1rest)/TauKm-AlphaKm*F # Eq(7)
     Km2dot = -(Km2 - Km2rest) / TauKm + AlphaKm * F  # Eq(8)
     Tau1dot = -(Tau1-Tau1rest)/Taufat + AlphaTau1*F # Eq(9)
-    Km = Km1 + Km2
-    Kmdot = -(Km-Kmrest)/Taufat+AlphaKm*F
+    Km = Km1 + Km2  # Eq(6)
+    Kmdot = -(Km-Kmrest)/Taufat+AlphaKm*F # Eq(11)
 
 
     Adot = np.array([Adot]) # Put in array type
