@@ -9,20 +9,20 @@ R0 = 2  # (-) Mathematical term characterizing the magnitude of enhancement in C
 n = 2  # (-) Total number of stimulus in the train before time t (single, doublets, triplets)
 
 # Arbitrary values / Different for each person :
-A = 5  # (N/s) Scaling factor for the force and the shortening velocity of the muscle
-Arest = 3.009 # (N/s) Scaling factor for the force and the shortening velocity of the muscle when rested. '''Value from Ding's experimentation'''
-AlphaA = -3.9*10**-10 # (s^-2) Coefficient for force-model parameterAin the fatigue model. '''Value from Ding's experimentation'''
-Tau1 = 0.015  # (s) Time constant of force decline at the absence of strongly bound cross-bridges
+A = 5000 # (N/s) Scaling factor for the force and the shortening velocity of the muscle
+Arest = 3009 # (N/s) Scaling factor for the force and the shortening velocity of the muscle when rested. '''Value from Ding's experimentation'''
+AlphaA = -4.0*10**-7 # (s^-2) Coefficient for force-model parameterAin the fatigue model. '''Value from Ding's experimentation'''
+Tau1 = 0.05  # (s) Time constant of force decline at the absence of strongly bound cross-bridges
 Tau1rest = 0.050957 # (s) Time constant of force decline at the absence of strongly bound cross-bridges when rested. '''Value from Ding's experimentation'''
-AlphaTau1 = 7.3*10**-6 # (N^-1) Coefficient for force-model parametertcin the fatigue model. '''Value from Ding's experimentation'''
+AlphaTau1 = 2.1*10**-5 # (N^-1) Coefficient for force-model parametertcin the fatigue model. '''Value from Ding's experimentation'''
 Tau2 = 0.015  # (s) Time constant of force decline due to the extra friction between actin and myosin resulting from the presence of cross-bridges
 Taufat = 127 # (s) Time constant controlling the recovery of the three force-model parameters (A,R0,tc) during fatigue. '''Value from Ding's experimentation'''
-Km = 1  # (-) Sensitivity of strongly bound cross-bridges to CN
+Km = 0.1  # (-) Sensitivity of strongly bound cross-bridges to CN
 Kmrest = 0.103 # (-) Sensitivity of strongly bound cross-bridges to CN when rested. '''Value from Ding's experimentation'''
 Km1rest = 0.07 # (-) Mathematical split of force-model parameter Km
 Km2rest = 0.03 # (-) Mathematical split of force-model parameter Km
 TauKm = 127 # (s) Time constant controlling the recovery of K1m during fatigue. '''Value from Ding's experimentation'''
-AlphaKm = 3.4*10**-11 # (s^-1*N^-1) Coefficient for K1m and K2m in the fatigue model
+AlphaKm = 1.9*10**-8 # (s^-1*N^-1) Coefficient for K1m and K2m in the fatigue model
 CN = 2  # (-) Representation of Ca2+-troponin complex
 F = 40  # (N) Instantaneous force
 
@@ -35,7 +35,7 @@ ti_all = [0, 0.0005, 0.0005, 0.00002, 0.0003] # (s) Different values of time of 
 # Simulation parameters :
 final_time = 2  # Stop at x seconds
 dt = 0.00001 # Integration step
-x_initial = np.array([0,0,0,0,0]) # Initial A, Km1, Km2, Tau1, Km
+x_initial = np.array([3009,0.07,0.03,0.05,0.1]) # Initial A, Km1, Km2, Tau1, Km
 u_instant = 0 # Used in x_dot function
 
 # Euler integration method
