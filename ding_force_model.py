@@ -1,37 +1,41 @@
-import numpy as np # Import numpy for mathematical purpose
-from matplotlib import pyplot # Import matplotlib for graphics
+import numpy as np  # Import numpy for mathematical purpose
+import matplotlib.pyplot as plt  # Import matplotlib for graphics
+from brokenaxes import brokenaxes  # Import brokenaxes for subplot graphics
 
-##### Force Model #####
+#######################
+# Ding's Force Model #
+#######################
 
 # Real values / Known values :
-Tauc = 0.020  # (s) time constant controlling the rise and decay of CN for quadriceps
-R0 = 2  # (-) mathematical term characterizing the magnitude of enhancement in CN from the following stimuli. When fatigue included : R0 = Km + 1.04
-n = 2  # (-) total number of stimulus in the train before time t (single, doublets, triplets)
+Tauc = 20  # (ms) Time constant controlling the rise and decay of CN for quadriceps. '''Value from Ding's experimentation''' [1]
 
-# Arbitrary values / Different for each person :
-A = 3.009  # (N/s) scaling factor for the force and the shortening velocity of the muscle
-Tau1 = 0.050957  # (s) time constant of force decline at the absence of strongly bound cross-bridges
-Tau2 = 0.015  # (s) time constant of force decline due to the extra friction between actin and myosin resulting from the presence of cross-bridges
-Km = 0.103  # (-) sensitivity of strongly bound cross-bridges to CN
-CN = 2  # (-) representation of Ca2+-troponin complex
-F = 40  # (N) instantaneous force
+# Arbitrary values / Different for each person / From Ding's article :
+A = 3.009  # (N/ms) Scaling factor for the force and the shortening velocity of the muscle. Set to it's rested value, will change during experience time.
+Tau1 = 50.957  # (ms) Time constant of force decline at the absence of strongly bound cross-bridges. Set to it's rested value, will change during experience time.
+Alpha_Tau1 = 2.1 * 10 ** -5  # (N^-1) Coefficient for force-model parameter tc in the fatigue model. '''Value from Ding's experimentation''' [1]
+Tau2 = 60  # (ms) Time constant of force decline due to the extra friction between actin and myosin resulting from the presence of cross-bridges. First : '''Value from Ding's experimentation''' [2]. Then : Arbitrary value because the [1] did not use [2]'s value
+Km = 0.103  # (-) Sensitivity of strongly bound cross-bridges to CN. Set to it's rested value, will change during experience time.
+R0 = Km + 1.04  # (-) Mathematical term characterizing the magnitude of enhancement in CN from the following stimuli. When fatigue included : R0 = Km + 1.04. '''Value from Ding's experimentation''' [1]
+CN = 0  # (-) Representation of Ca2+-troponin complex
+F = 0  # (N) Instantaneous force
 
 # Stimulation parameters :
-ti = 0.0005  # (s) Time of the ith stimulation
-tp = 0.001  # (s) Time of the pth data point
-u = [0., 0.1 , 1, 1.5] # Electrical stimulation activation time
-ti_all = [0, 0.0005, 0.0005, 0.00002, 0.0003] # (s) Different values of time of the ith stimulation
-ti_index = 0 # Used in x_dot function
+stim_index = -1  # Stimulation index used in the x_dot function
 
 # Simulation parameters :
-final_time = 2  # Stop at x seconds
-dt = 0.00001 # Integration step
-x_initial = np.array([0,0]) # Initial CN and F
-u_instant = 0 # Used in x_dot function
+starting_time = 0
+final_time = 300000  # Stop at x milliseconds
+frequency = 33
+rest_time = 1000
+active_time = 1000
+dt = 1  # Integration step in milliseconds
+x_initial = np.array([CN, F])  # Initial state of CN, F, A, Tau1, Km
+
 
 # Euler integration method
 def euler(dt, x, dot_fun, u, t):
     return x + dot_fun(x, u, t) * dt
+
 
 # x_dot function
 def x_dot(x, u, t):
@@ -39,43 +43,25 @@ def x_dot(x, u, t):
     CN = x[0]
     F = x[1]
     var_sum = 0
-    global u_instant
-    global ti_index
+    global stim_index
 
     # See if t equals an activation time u (round up to prevent flot issues)
     if round(t, 5) in u:
-        u_instant = t
-        ti_index += 1
+        stim_index += 1
 
     # Variables calculation for equation 1 of the force model
-    if ti_index == 0 :
-        Ri = 1 + (R0 - 1) * np.exp(-1 / Tauc)
-    else :
-        Ri = 1 + (R0 - 1) * np.exp(-((ti_all[ti_index] - ti_all[ti_index - 1]) / Tauc))
-
-    var_sum += Ri * np.exp(-(t - (ti_all[ti_index] + u_instant)) / Tauc)
-
-    # Remove activation at t = 0 if not requested
-    if t < min(u):
+    if stim_index < 0:
         var_sum = 0
+    elif stim_index == 0:
+        Ri = 1 + (R0 - 1) * np.exp(-((1/frequency)*1000) / Tauc)
+        var_sum += Ri * np.exp(-(t - (u[stim_index])) / Tauc)
+    else:
+        Ri = 1 + (R0 - 1) * np.exp(-((u[stim_index] - u[stim_index - 1]) / Tauc))
+        var_sum += Ri * np.exp(-(t - (u[stim_index])) / Tauc)
+    CNdot = np.array([(1 / Tauc) * var_sum - (CN / Tauc)])  # Eq(1)
+    Fdot = np.array([A * (CN / (Km + CN)) - (F / (Tau1 + Tau2 * (CN / (Km + CN))))])  # Eq(2)
 
-    ## Two idea to keep ##
-
-    # for ti in range(1, len(ti_all)):
-    #     Ri = 1 + (R0 - 1) * np.exp(-((ti_all[ti]-ti_all[ti-1]) / Tauc))
-    #     var_sum += Ri * np.exp(-(t - ti_all[ti]) / Tauc)
-    # for ti in range(0, n):
-    #     Ri = 1 + (R0 - 1) * np.exp(-((ti_all[ti]-ti_all[ti-1]) / Tauc))
-    #     var_sum += Ri * np.exp(-(t - ti_all[ti]) / Tauc)
-
-
-    CNdot = (1 / Tauc) * var_sum - CN / Tauc # Eq(1)
-    Fdot = A * (CN / (Km + CN)) - (F / (Tau1 + Tau2 * (CN / (Km + CN)))) # Eq(2)
-
-    CNdot = np.array([CNdot]) # Put in array type
-    Fdot = np.array([Fdot]) # Put in array type
-
-    return np.concatenate((CNdot, Fdot),axis=0)
+    return np.concatenate((CNdot, Fdot), axis=0)
 
 
 # Now assuming some initial values, we can perform the integration up to a required final time
@@ -83,45 +69,40 @@ def perform_integration(final_time, dt, x_initial, x_dot_fun, u, integration_fun
     time_vector = [0.]
     all_x = [x_initial]
     while time_vector[-1] <= final_time:  # As long as we did not get to the final time continue
-        time_vector.append(time_vector[-1] + dt)  # The next time is dt later
         all_x.append(integration_fun(dt, x_initial, x_dot_fun, u, time_vector[-1]))  # Integrate
         x_initial = all_x[-1]  # The next x is the arrival state of the previous integration
-
-    # Format the time vector and the x so they are easier to use
+        time_vector.append(time_vector[-1] + dt)  # The next time is dt later
+    # Format the time vector and the x, so they are easier to use
     time_vector = np.array(time_vector)
     all_x = np.array(all_x).transpose()
-
     return time_vector, all_x
 
-# Figure out when electrical stimulation is activated
-def stim_signal(ti_all , u):
-    time_vector = [0.]
-    stim_signal_y = [0]
-    ti_counter = 1
-    while time_vector[-1] <= final_time: # As long as we did not get to the final time continue
-        time_vector.append(time_vector[-1] + dt) # The next time is dt later
-        if any(round(time_vector[-1], 5) == i for i in u):
-            ti_counter += 1
-        if any(round(time_vector[-1], 5) >= i and round(time_vector[-1], 5) <= i + ti_all[ti_counter] for i in u) : # See if an activation belongs to t
-            stim_signal_y.append(1) # Yes
+
+def create_impulse(frequency, active_period, rest_period, starting_time, final_time):
+    u = []
+    t = starting_time
+    dt = (1/frequency)*1000
+    t_reset = 0
+
+    while t <= final_time:
+        if t_reset <= active_period:
+            u.append(round(t))
         else:
-            stim_signal_y.append(0) # No
+            t += rest_period - 2 * dt
+            t_reset = -dt
+        t_reset += dt
+        t += dt
+    return u
 
-    return stim_signal_y
-
-
-
+u = create_impulse(frequency, active_time, rest_time, starting_time, final_time)
 time_vector_euler, all_x_euler = perform_integration(final_time, dt, x_initial, x_dot, u, euler)
-stim_signal_y = stim_signal(ti_all , u)
-
-# We can now compare plot the two functions on the same graph
-pyplot.figure()
-pyplot.plot(time_vector_euler, all_x_euler[0, :], 'blue', label='CN (-)') # Function of the Ca2+-troponin complex
-pyplot.plot(time_vector_euler, all_x_euler[1, :], 'green', label='F (N)') # Function of the force
-pyplot.plot(time_vector_euler, stim_signal_y[:], 'r-', label='Stim') # Function of electrical stimulation activation
-pyplot.legend()
-pyplot.ylabel("Force (N)")
-pyplot.xlabel("Time (s)")
-pyplot.show()
 
 
+# We can now compare plot the functions on a broken axis graph
+fig = plt.figure(figsize=(12, 6))
+bax = brokenaxes(xlims=((0, 10), (284, 294)), hspace=.05)
+bax.plot(time_vector_euler/1000, all_x_euler[1, :], label='F (N)')
+bax.legend(loc=3)
+bax.set_xlabel('Time (s)')
+bax.set_ylabel('Force (N)')
+plt.show()
