@@ -3,9 +3,9 @@ import matplotlib.pyplot as plt  # Import matplotlib for graphics
 from matplotlib.gridspec import GridSpec  # Import matplotlib Grid Spec for subplot graphics
 from brokenaxes import brokenaxes  # Import brokenaxes for subplot graphics
 
-#######################
-# Ding's Muscle Model #
-#######################
+############################
+# Ding's Muscle Model 2003 #
+############################
 
 # Real values / Known values :
 Tauc = 20  # (ms) Time constant controlling the rise and decay of CN for quadriceps. '''Value from Ding's experimentation''' [1]
@@ -21,7 +21,6 @@ Tau2 = 60  # (ms) Time constant of force decline due to the extra friction betwe
 Tau_fat = 127000  # (ms) Time constant controlling the recovery of the three force-model parameters (A,R0,tc) during fatigue. '''Value from Ding's experimentation''' [1]
 Km = 0.103  # (-) Sensitivity of strongly bound cross-bridges to CN. Set to it's rested value, will change during experience time.
 Km_rest = 0.103  # (-) Sensitivity of strongly bound cross-bridges to CN when rested. '''Value from Ding's experimentation''' [1]
-TauKm = 127000  # (ms) Time constant controlling the recovery of K1m during fatigue. '''Value from Ding's experimentation''' [1]
 Alpha_Km = 1.9 * 10 ** -8  # (s^-1*N^-1) Coefficient for K1m and K2m in the fatigue model. '''Value from Ding's experimentation''' [1]
 R0 = Km + 1.04  # (-) Mathematical term characterizing the magnitude of enhancement in CN from the following stimuli. When fatigue included : R0 = Km + 1.04. '''Value from Ding's experimentation''' [1]
 CN = 0  # (-) Representation of Ca2+-troponin complex
@@ -29,13 +28,13 @@ F = 0  # (N) Instantaneous force
 
 # Stimulation parameters :
 stim_index = -1  # Stimulation index used in the x_dot function
+frequency = 33 # (Hz) Stimulation frequency
+rest_time = 1000 # (ms) Time without electrical stimulation on the muscle
+active_time = 1000 # (ms) Time with electrical stimulation on the muscle
+starting_time = 0 # (ms) Time when the first train of electrical stimulation start on the muscle
 
 # Simulation parameters :
-starting_time = 0
 final_time = 300000  # Stop at x milliseconds
-frequency = 33
-rest_time = 1000
-active_time = 1000
 dt = 1  # Integration step in milliseconds
 x_initial = np.array([CN, F, A, Tau1, Km])  # Initial state of CN, F, A, Tau1, Km
 
