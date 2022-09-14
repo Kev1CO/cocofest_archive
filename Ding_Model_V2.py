@@ -11,7 +11,7 @@ Tauc = 11  # (ms) Time constant controlling the rise and decay of CN for quadric
 
 # Arbitrary values / Different for each person / From Ding's article :
 A = 3.009  # (N/ms) Scaling factor for the force and the shortening velocity of the muscle. Set to it's rested value, will change during experience time.
-A_rest = 0.692  # (N/ms) Scaling factor for the force and the shortening velocity of the muscle when rested. '''Value from Ding's experimentation''' [1]
+A_rest = 3.009  # (N/ms) Scaling factor for the force and the shortening velocity of the muscle when rested. '''Value from Ding's experimentation''' [1]
 Alpha_A = -4.0 * 10 ** -7  # (s^-2) Coefficient for force-model parameter A in the fatigue model. '''Value from Ding's experimentation''' [1]
 Tau1_rest = 44.099  # (ms) Time constant of force decline at the absence of strongly bound cross-bridges when rested. '''Value from Ding's experimentation''' [1]
 Alpha_Tau1 = 2.1 * 10 ** -5  # (N^-1) Coefficient for force-model parameter tc in the fatigue model. '''Value from Ding's experimentation''' [1]
@@ -32,17 +32,17 @@ starting_time = 0  # (ms) Time when the first train of electrical stimulation st
 
 # Simulation parameters :
 final_time = 1200  # Stop at x milliseconds
-dt = 1  # Integration step in milliseconds
+dt = 0.001  # Integration step in milliseconds
 
 # Arbitrary values
 '''
 Tau1 = 44.049  # (ms) Time constant of force decline at the absence of strongly bound cross-bridges. Set to it's rested value, will change during experience time.
 Tau2 = 18.522  # (ms) Time constant of force decline due to the extra friction between actin and myosin resulting from the presence of cross-bridges. 
 Km = 0.18  # (-) Sensitivity of strongly bound cross-bridges to CN. Set to it's rested value, will change during experience time.
-a_scale = 0.653  # (-) A's scaling factor
-pd = 0.000250  # (s) pd is the stimulation pulse duration
-pd0 = 0.0000106078  # (s) pd0 is the offset for stimulation pulse duration characterizing how sensitive the muscle is to the stimulation intensity
-pdt = 0.0000035131  # (s) pdt is the time constant controlling the steepness of the A-pd relationship
+a_scale = 0.653  # (N/ms) A's scaling factor
+pd = 0.250  # (ms) pd is the stimulation pulse duration
+pd0 = 0.106078  # (ms) pd0 is the offset for stimulation pulse duration characterizing how sensitive the muscle is to the stimulation intensity
+pdt = 0.035131  # (ms) pdt is the time constant controlling the steepness of the A-pd relationship
 '''
 
 
@@ -66,8 +66,8 @@ def ding_subject_parameters(number):
         Tau2 = Tau2_avg
         Km = Km_avg
         a_scale = a_scale_avg
-        pd0 = pd0_avg*10**-6
-        pdt = pdt_avg*10**-6
+        pd0 = pd0_avg*10**-3
+        pdt = pdt_avg*10**-3
 
     elif isinstance(number, str):
         print('only string average is available')
@@ -88,8 +88,8 @@ def ding_subject_parameters(number):
             Tau2 = Tau2[number-1]
             Km = Km[number-1]
             a_scale = a_scale[number-1]
-            pd0 = pd0[number-1]*10**-6
-            pdt = pdt[number-1]*10**-6
+            pd0 = pd0[number-1]*10**-3
+            pdt = pdt[number-1]*10**-3
 
     print('Values for subject n°', number, 'are ', 'Tau1:', Tau1, 'Tau2:', Tau2, 'Km:', Km, 'a_scale:', a_scale, 'pd0:', pd0, 'pdt:', pdt)
     return Tau1, Tau2, Km, a_scale, pd0, pdt
@@ -180,17 +180,17 @@ def create_impulse(frequency, impulse_time, active_period, rest_period, starting
     return u, impulse_time
 
 
-u0, impulse_time0 = create_impulse(33, 0.000150, 1000, 1000, 0, 1500)  # parameters for stimulation train, frequency : 33Hz, pulse duration : 150 µs
-u1, impulse_time1 = create_impulse(80, 0.000150, 1000, 1000, 0, 1500)  # parameters for stimulation train, frequency : 80Hz, pulse duration : 150 µs
-u2, impulse_time2 = create_impulse(12.5, 0.000250, 1000, 1000, 0, 1500)  # parameters for stimulation train, frequency : 12.5Hz, pulse duration : 250 µs
-u3, impulse_time3 = create_impulse(33, 0.000250, 1000, 1000, 0, 1500)  # parameters for stimulation train, frequency : 33Hz, pulse duration : 250 µs
-u4, impulse_time4 = create_impulse(80, 0.000250, 1000, 1000, 0, 1500)  # parameters for stimulation train, frequency : 80Hz, pulse duration : 250 µs
-u5, impulse_time5 = create_impulse(12.5, 0.000350, 1000, 1000, 0, 1500)  # parameters for stimulation train, frequency : 12.5Hz, pulse duration : 350 µs
-u6, impulse_time6 = create_impulse(33, 0.000350, 1000, 1000, 0, 1500)  # parameters for stimulation train, frequency : 33Hz, pulse duration : 350 µs
-u7, impulse_time7 = create_impulse(80, 0.000350, 1000, 1000, 0, 1500)  # parameters for stimulation train, frequency : 80Hz, pulse duration : 350 µs
-u8, impulse_time8 = create_impulse(12.5, 0.000600, 1000, 1000, 0, 1500)  # parameters for stimulation train, frequency : 12.5Hz, pulse duration : 600 µs
-u9, impulse_time9 = create_impulse(33, 0.000600, 1000, 1000, 0, 1500)  # parameters for stimulation train, frequency : 33Hz, pulse duration : 600 µs
-u10, impulse_time10 = create_impulse(80, 0.000600, 1000, 1000, 0, 1500)  # parameters for stimulation train, frequency : 80Hz, pulse duration : 600 µs
+u0, impulse_time0 = create_impulse(33, 0.150, 1000, 1000, 0, 1500)  # parameters for stimulation train, frequency : 33Hz, pulse duration : 150 µs
+u1, impulse_time1 = create_impulse(80, 0.150, 1000, 1000, 0, 1500)  # parameters for stimulation train, frequency : 80Hz, pulse duration : 150 µs
+u2, impulse_time2 = create_impulse(12.5, 0.250, 1000, 1000, 0, 1500)  # parameters for stimulation train, frequency : 12.5Hz, pulse duration : 250 µs
+u3, impulse_time3 = create_impulse(33, 0.250, 1000, 1000, 0, 1500)  # parameters for stimulation train, frequency : 33Hz, pulse duration : 250 µs
+u4, impulse_time4 = create_impulse(80, 0.250, 1000, 1000, 0, 1500)  # parameters for stimulation train, frequency : 80Hz, pulse duration : 250 µs
+u5, impulse_time5 = create_impulse(12.5, 0.350, 1000, 1000, 0, 1500)  # parameters for stimulation train, frequency : 12.5Hz, pulse duration : 350 µs
+u6, impulse_time6 = create_impulse(33, 0.350, 1000, 1000, 0, 1500)  # parameters for stimulation train, frequency : 33Hz, pulse duration : 350 µs
+u7, impulse_time7 = create_impulse(80, 0.350, 1000, 1000, 0, 1500)  # parameters for stimulation train, frequency : 80Hz, pulse duration : 350 µs
+u8, impulse_time8 = create_impulse(12.5, 0.600, 1000, 1000, 0, 1500)  # parameters for stimulation train, frequency : 12.5Hz, pulse duration : 600 µs
+u9, impulse_time9 = create_impulse(33, 0.600, 1000, 1000, 0, 1500)  # parameters for stimulation train, frequency : 33Hz, pulse duration : 600 µs
+u10, impulse_time10 = create_impulse(80, 0.600, 1000, 1000, 0, 1500)  # parameters for stimulation train, frequency : 80Hz, pulse duration : 600 µs
 
 # Computation of the model for every subject
 for i in range(1, 11):
@@ -208,85 +208,87 @@ for i in range(1, 11):
     time_vector_euler9, all_x_euler9 = perform_integration(final_time, dt, x_initial, x_dot, u9, impulse_time9, euler)  # computation for parameters, frequency : 33Hz, pulse duration : 600 µs
     time_vector_euler10, all_x_euler10 = perform_integration(final_time, dt, x_initial, x_dot, u10, impulse_time10, euler)  # computation for parameters, frequency : 80Hz, pulse duration : 600 µs
 
+
     fig = plt.figure(figsize=(12, 12))  # Set figure
     fig.suptitle('Processed data for subject n°{:03d}'.format(i), fontsize=16)  # Set figure's title
 
     ax0 = plt.subplot(4, 3, 2)  # subplot position
-    ax0.plot(time_vector_euler0/1000, all_x_euler0[1, :], 'blue')  # subplot for parameters, frequency : 33Hz, pulse duration : 150 µs
-    ax0.set_title("33HZ/150us")  # subplot title
+    ax0.plot(time_vector_euler0, all_x_euler0[1, :], 'blue')  # subplot for parameters, frequency : 33Hz, pulse duration : 150 µs
+    ax0.set_title("33HZ/150µs")  # subplot title
     ax0.set_ylabel('F (N)')  # subplot y label
-    ax0.set_xlabel('Time (s)')  # subplot x label
+    ax0.set_xlabel('Time (ms)')  # subplot x label
     ax0.set_ylim([0, 40])  # subplot y-axis bound
 
     ax1 = plt.subplot(4, 3, 3)  # subplot position
-    ax1.plot(time_vector_euler1/1000, all_x_euler1[1, :], 'blue')  # subplot for parameters, frequency : 80Hz, pulse duration : 150 µs
-    ax1.set_title("80HZ/150us")  # subplot title
+    ax1.plot(time_vector_euler1, all_x_euler1[1, :], 'blue')  # subplot for parameters, frequency : 80Hz, pulse duration : 150 µs
+    ax1.set_title("80HZ/150µs")  # subplot title
     ax1.set_ylabel('F (N)')  # subplot y label
     ax1.set_xlabel('Time (s)')  # subplot x label
     ax1.set_ylim([0, 40])  # subplot y-axis bound
 
     ax2 = plt.subplot(4, 3, 4)  # subplot position
-    ax2.plot(time_vector_euler2/1000, all_x_euler2[1, :], 'blue')  # subplot for parameters, frequency : 12.5Hz, pulse duration : 250 µs
-    ax2.set_title("12.5HZ/250us")  # subplot title
+    ax2.plot(time_vector_euler2, all_x_euler2[1, :], 'blue')  # subplot for parameters, frequency : 12.5Hz, pulse duration : 250 µs
+    ax2.set_title("12.5HZ/250µs")  # subplot title
     ax2.set_ylabel('F (N)')  # subplot y label
-    ax2.set_xlabel('Time (s)')  # subplot x label
+    ax2.set_xlabel('Time (ms)')  # subplot x label
     ax2.set_ylim([0, 40])  # subplot y-axis bound
 
     ax3 = plt.subplot(4, 3, 5)  # subplot position
-    ax3.plot(time_vector_euler3/1000, all_x_euler3[1, :], 'blue')  # subplot for parameters, frequency : 33Hz, pulse duration : 250 µs
-    ax3.set_title("33HZ/250us")  # subplot title
+    ax3.plot(time_vector_euler3, all_x_euler3[1, :], 'blue')  # subplot for parameters, frequency : 33Hz, pulse duration : 250 µs
+    ax3.set_title("33HZ/250µs")  # subplot title
     ax3.set_ylabel('F (N)')  # subplot y label
-    ax3.set_xlabel('Time (s)')  # subplot x label
+    ax3.set_xlabel('Time (ms)')  # subplot x label
     ax3.set_ylim([0, 40])  # subplot y-axis bound
 
     ax4 = plt.subplot(4, 3, 6)  # subplot position
-    ax4.plot(time_vector_euler4/1000, all_x_euler4[1, :], 'blue')  # subplot for parameters, frequency : 80Hz, pulse duration : 250 µs
-    ax4.set_title("80HZ/250us")  # subplot title
+    ax4.plot(time_vector_euler4, all_x_euler4[1, :], 'blue')  # subplot for parameters, frequency : 80Hz, pulse duration : 250 µs
+    ax4.set_title("80HZ/250µs")  # subplot title
     ax4.set_ylabel('F (N)')  # subplot y label
-    ax4.set_xlabel('Time (s)')  # subplot x label
+    ax4.set_xlabel('Time (ms)')  # subplot x label
     ax4.set_ylim([0, 40])  # subplot y-axis bound
 
     ax5 = plt.subplot(4, 3, 7)  # subplot position
-    ax5.plot(time_vector_euler5/1000, all_x_euler5[1, :], 'blue')  # subplot for parameters, frequency : 12.5Hz, pulse duration : 350 µs
-    ax5.set_title("12.5HZ/350us")  # subplot title
+    ax5.plot(time_vector_euler5, all_x_euler5[1, :], 'blue')  # subplot for parameters, frequency : 12.5Hz, pulse duration : 350 µs
+    ax5.set_title("12.5HZ/350µs")  # subplot title
     ax5.set_ylabel('F (N)')  # subplot y label
-    ax5.set_xlabel('Time (s)')  # subplot x label
+    ax5.set_xlabel('Time (ms)')  # subplot x label
     ax5.set_ylim([0, 40])  # subplot y-axis bound
 
     ax6 = plt.subplot(4, 3, 8)  # subplot position
-    ax6.plot(time_vector_euler6/1000, all_x_euler6[1, :], 'blue')  # subplot for parameters, frequency : 33Hz, pulse duration : 350 µs
-    ax6.set_title("33HZ/350us")  # subplot title
+    ax6.plot(time_vector_euler6, all_x_euler6[1, :], 'blue')  # subplot for parameters, frequency : 33Hz, pulse duration : 350 µs
+    ax6.set_title("33HZ/350µs")  # subplot title
     ax6.set_ylabel('F (N)')  # subplot y label
-    ax6.set_xlabel('Time (s)')  # subplot x label
+    ax6.set_xlabel('Time (ms)')  # subplot x label
     ax6.set_ylim([0, 40])  # subplot y-axis bound
 
     ax7 = plt.subplot(4, 3, 9)  # subplot position
-    ax7.plot(time_vector_euler7/1000, all_x_euler7[1, :], 'blue')  # subplot for parameters, frequency : 80Hz, pulse duration : 350 µs
-    ax7.set_title("80HZ/350us")  # subplot title
+    ax7.plot(time_vector_euler7, all_x_euler7[1, :], 'blue')  # subplot for parameters, frequency : 80Hz, pulse duration : 350 µs
+    ax7.set_title("80HZ/350µs")  # subplot title
     ax7.set_ylabel('F (N)')  # subplot y label
-    ax7.set_xlabel('Time (s)')  # subplot x label
+    ax7.set_xlabel('Time (ms)')  # subplot x label
     ax7.set_ylim([0, 40])  # subplot y-axis bound
 
     ax8 = plt.subplot(4, 3, 10)  # subplot position
-    ax8.plot(time_vector_euler8/1000, all_x_euler8[1, :], 'blue')  # subplot for parameters, frequency : 12.5Hz, pulse duration : 600 µs
-    ax8.set_title("12.5HZ/600us")  # subplot title
+    ax8.plot(time_vector_euler8, all_x_euler8[1, :], 'blue')  # subplot for parameters, frequency : 12.5Hz, pulse duration : 600 µs
+    ax8.set_title("12.5HZ/600µs")  # subplot title
     ax8.set_ylabel('F (N)')  # subplot y label
-    ax8.set_xlabel('Time (s)')  # subplot x label
+    ax8.set_xlabel('Time (ms)')  # subplot x label
     ax8.set_ylim([0, 40])  # subplot y-axis bound
 
     ax9 = plt.subplot(4, 3, 11)  # subplot position
-    ax9.plot(time_vector_euler9/1000, all_x_euler9[1, :], 'blue')  # subplot for parameters, frequency : 33Hz, pulse duration : 600 µs
-    ax9.set_title("33HZ/600us")  # subplot title
+    ax9.plot(time_vector_euler9, all_x_euler9[1, :], 'blue')  # subplot for parameters, frequency : 33Hz, pulse duration : 600 µs
+    ax9.set_title("33HZ/600µs")  # subplot title
     ax9.set_ylabel('F (N)')  # subplot y label
-    ax9.set_xlabel('Time (s)')  # subplot x label
+    ax9.set_xlabel('Time (ms)')  # subplot x label
     ax9.set_ylim([0, 40])  # subplot y-axis bound
 
     ax10 = plt.subplot(4, 3, 12)  # subplot position
-    ax10.plot(time_vector_euler10/1000, all_x_euler10[1, :], 'blue')  # subplot for parameters, frequency : 80Hz, pulse duration : 600 µs
-    ax10.set_title("80HZ/600us")  # subplot title
+    ax10.plot(time_vector_euler10, all_x_euler10[1, :], 'blue')  # subplot for parameters, frequency : 80Hz, pulse duration : 600 µs
+    ax10.set_title("80HZ/600µs")  # subplot title
     ax10.set_ylabel('F (N)')  # subplot y label
-    ax10.set_xlabel('Time (s)')  # subplot x label
+    ax10.set_xlabel('Time (ms)')  # subplot x label
     ax10.set_ylim([0, 40])  # subplot y-axis bound
+
 
     axes = [ax0, ax1, ax2, ax3, ax4, ax5, ax6, ax7, ax8, ax9, ax10]  # merging the subplot on one figure
     plt.tight_layout()  # spacing the subplot
