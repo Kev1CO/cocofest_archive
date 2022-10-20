@@ -3,12 +3,14 @@ from matplotlib.gridspec import GridSpec  # Import matplotlib Grid Spec for subp
 from brokenaxes import brokenaxes  # Import brokenaxes for subplot graphics
 from casadi import *  # Import CasADi for optimization, casadi * also imports numpy package as np
 
+
 ############################
 # Ding's Muscle Model 2003 #
 ############################
 
-class ding_model_2003(object):
+class DingModel2003(object):
 
+    # INITIALIZE all the necessary inputs
     def __init__(self):
         """
         Inputs
@@ -18,8 +20,10 @@ class ding_model_2003(object):
         Alpha_A : (s^-2) Coefficient for force-model parameter A in the fatigue model.
         Tau1_rest : (ms) Time constant of force decline at the absence of strongly bound cross-bridges when rested.
         Alpha_Tau1 : (N^-1) Coefficient for force-model parameter tc in the fatigue model.
-        Tau2 : (ms) Time constant of force decline due to the extra friction between actin and myosin resulting from the presence of cross-bridges.
-        Tau_fat : (ms) Time constant controlling the recovery of the three force-model parameters (A,R0,tc) during fatigue.
+        Tau2 : (ms) Time constant of force decline due to the extra friction between actin and myosin resulting from the
+               presence of cross-bridges.
+        Tau_fat : (ms) Time constant controlling the recovery of the three force-model parameters (A,R0,tc) during
+                  fatigue.
         Km_rest : (-) Sensitivity of strongly bound cross-bridges to CN when rested.
         Alpha_Km : (s^-1*N^-1) Coefficient for K1m and K2m in the fatigue model.
         R0 : (-) Mathematical term characterizing the magnitude of enhancement in CN from the following stimuli.
@@ -45,33 +49,18 @@ class ding_model_2003(object):
 
         # Stimulation parameters :
         self.u_counter = -1  # Stimulation index
-        self.frequency = 33  # (Hz) Stimulation frequency, 33 Hz is the best for identification of A_rest, Tau2 and Km_rest [1]
+        self.frequency = 33  # (Hz) Stimulation frequency, 33 Hz is the best for identification [1]
         self.rest_time = 1000  # (ms) Time without electrical stimulation on the muscle
-        self.active_time = 1000  # (ms) Time which the electrical stimulation can be activated at frequency timing on the muscle
-        self.starting_time = 0  # (ms) Time of the simulation when the first train of electrical stimulation start on the muscle
+        self.active_time = 1000  # (ms) Time which the electrical stimulation is activated for frequency timing
+        self.starting_time = 0  # (ms) Time of the simulation when the first train of electrical stimulation starts
 
         # Simulation parameters :
         self.final_time = 10000  # Stop at x milliseconds, 300000 is Ding's experimentation time [1]
         self.dt = 1  # Integration step in milliseconds, needs to be smaller than the 1/frequency
 
-    # Euler integration method
-    def euler(self, dt, x, dot_fun, other_param, casadi_fun):
-        """
-        Parameters
-        ----------
-        dt : step time int type
-        x : used in the casadi function, CasADi SX type
-        dot_fun : class function used for each step either x_dot to include fatigue or x_dot_nf to exclude the fatigue
-        other_param : used in the casadi function and can not be in x, CasADi SX type
-        casadi_fun : CasADi function, i.e : Funct:(i0,i1,i2,i3,i4,i5,i6,i7)->(o0[2]) SXFunction
-
-        # Returns : parameters value multiplied by the primitive after a step dt in CasADi SX type
-        -------
-        """
-        return x + dot_fun(x, other_param, casadi_fun) * dt
-
+    # CREATE FUNCTIONS FOR INCLUDE FATIGUE AND NON INCLUDE FATIGUE
     # Fatigue CasADi function building
-    def initialize_fat_fun(self):
+    def fatigue_fun(self):
         """
         From the class rested model parameters (float/int type)
         Returns a CasADi function that includes fatigue : Funct:(i0,i1,i2,i3,i4,i5,i6)->(o0[5]) SXFunction
@@ -99,7 +88,7 @@ class ding_model_2003(object):
         return Funct
 
     # Non fatigue CasADi function building
-    def initialize_nf_fun(self):
+    def non_fatigue_fun(self):
         """
         From the class model parameters (float/int type)
         Returns a CasADi function that exclude fatigue : Funct:(i0,i1,i2,i3,i4,i5,i6,i7)->(o0[2]) SXFunction
@@ -114,8 +103,8 @@ class ding_model_2003(object):
         Tau2 = SX.sym('Tau2')
         Ri_multiplier = SX.sym('Ri_multiplier')
         Sum_multiplier = SX.sym('Sum_multiplier')
-
         R0 = Km + 1.04  # Simplification [1]
+
         CNdot = (1 / self.Tauc) * ((1 + (R0 - 1) * Ri_multiplier) * Sum_multiplier) - (CN / self.Tauc)  # Eq(1)
         Fdot = A * (CN / (Km + CN)) - (F / (Tau1 + Tau2 * (CN / (Km + CN))))  # Eq(2)
 
@@ -130,16 +119,21 @@ class ding_model_2003(object):
         ----------
         x : computed parameters in CasADi SX type
         other_param : other parameter that can not be in x in CasADi SX type
-        fun : CasADi function from class function initialize_fat_fun in CasADi Function type
+        fun : CasADi function from class function fatigue_fun in CasADi Function type
+
+        Fk inputs :
+        CN_value = x[0], F_value = x[1], A_value = x[2], Tau1_value = x[3], Km_value = x[4]
+        Ri_multiplier_value = other_param[0], Sum_multiplier_value = other_param[1]
+
+        Fk output :
+        CNdot = Fk['o0'][0], Fdot = Fk['o0'][1], Adot = Fk['o0'][2], Tau1dot = Fk['o0'][3], Kmdot = Fk['o0'][4]
 
         Returns a vertical concatenation of CasADi SX type
         -------
         """
         self.fatigue = True  # Setting the fatigue state
-        # CN_value = x[0], F_value = x[1], A_value = x[2], Tau1_value = x[3], Km_value = x[4]
-        # Ri_multiplier_value = other_param[0], Sum_multiplier_value = other_param[1]
-        Fk = fun(i0=x[0], i1=x[1], i2=x[2], i3=x[3], i4=x[4], i5=other_param[0], i6=other_param[1])  # Casting the CasADi function with parameters input
-        # CNdot = Fk['o0'][0], Fdot = Fk['o0'][1], Adot = Fk['o0'][2], Tau1dot = Fk['o0'][3], Kmdot = Fk['o0'][4]
+        Fk = fun(i0=x[0], i1=x[1], i2=x[2], i3=x[3], i4=x[4], i5=other_param[0],
+                 i6=other_param[1])  # Casting the CasADi function with parameters input
         return vertcat(Fk['o0'][0], Fk['o0'][1], Fk['o0'][2], Fk['o0'][3], Fk['o0'][4])
 
     def x_dot_nf(self, x, other_param, fun):
@@ -148,18 +142,39 @@ class ding_model_2003(object):
         ----------
         x : computed parameters in CasADi SX type
         other_param : other parameter that can not be in x in CasADi SX type
-        fun : CasADi function from class function initialize_nf_fun in CasADi Function type
+        fun : CasADi function from class function non_fatigue_fun in CasADi Function type
+
+        Fk input :
+        CN_value = x[0], F_value = x[1]
+        A_value = other_param[0], Tau1_value = other_param[1], Tau2_value = other_param[2], Km_value = other_param[3]
+        Ri_multiplier_value = other_param[4], Sum_multiplier_value = other_param[5]
+
+        Fk output :
+        CNdot = Fk['o0'][0], Fdot = Fk['o0'][1]
 
         Returns a vertical concatenation of CasADi SX type
         -------
         """
         self.fatigue = False  # Setting the non fatigue state
-        # CN_value = x[0], F_value = x[1]
-        # A_value = other_param[0], Tau1_value = other_param[1], Tau2_value = other_param[2], Km_value = other_param[3]
-        # Ri_multiplier_value = other_param[4], Sum_multiplier_value = other_param[5]
-        Fk = fun(i0=x[0], i1=x[1], i2=other_param[0], i3=other_param[1], i4=other_param[2], i5=other_param[3], i6=other_param[4], i7=other_param[5])  # Casting the CasADi function with parameters input
-        # CNdot = Fk['o0'][0], Fdot = Fk['o0'][1]
+        Fk = fun(i0=x[0], i1=x[1], i2=other_param[0], i3=other_param[1], i4=other_param[2], i5=other_param[3],
+                 i6=other_param[4], i7=other_param[5])  # Casting the CasADi function with parameters input
         return vertcat(Fk['o0'][0], Fk['o0'][1])
+
+    # INTEGRATION METHODE
+    def euler(self, dt, x, dot_fun, other_param, casadi_fun):
+        """
+        Parameters
+        ----------
+        dt : step time int type
+        x : used in the casadi function, CasADi SX type
+        dot_fun : class function used for each step either x_dot to include fatigue or x_dot_nf to exclude the fatigue
+        other_param : used in the casadi function and can not be in x, CasADi SX type
+        casadi_fun : CasADi function, i.e : Funct:(i0,i1,i2,i3,i4,i5,i6,i7)->(o0[2]) SXFunction
+
+        # Returns : parameters value multiplied by the primitive after a step dt in CasADi SX type
+        -------
+        """
+        return x + dot_fun(x, other_param, casadi_fun) * dt
 
     def perform_integration_casadi(self):
         """
@@ -181,7 +196,7 @@ class ding_model_2003(object):
             input_x = vertcat(CN, F, A, Tau1, Km, Ri_multiplier, Sum_multiplier)
             other_param = vertcat(Ri_multiplier, Sum_multiplier)
             X0 = vertcat(CN, F, A, Tau1, Km)
-            casadi_fun = self.initialize_fat_fun()
+            casadi_fun = self.fatigue_fun()
             function = self.x_dot
             self.initial_x = vertcat(self.CN, self.F, self.A_rest, self.Tau1_rest, self.Km_rest)
 
@@ -191,7 +206,7 @@ class ding_model_2003(object):
             input_x = vertcat(CN, F, A, Tau1, Tau2, Km, Ri_multiplier, Sum_multiplier)
             other_param = vertcat(A, Tau1, Tau2, Km, Ri_multiplier, Sum_multiplier)
             X0 = vertcat(CN, F)
-            casadi_fun = self.initialize_nf_fun()
+            casadi_fun = self.non_fatigue_fun()
             function = self.x_dot_nf
             self.initial_x = vertcat(self.CN, self.F)
 
@@ -200,7 +215,6 @@ class ding_model_2003(object):
 
         return Integration_Function
 
-    # Now assuming some initial values, we can perform the integration up to a required final time
     def perform_integration(self):
         """
         Depends on the fatigue state True or False will compute the CasADi function with the model parameter while the
@@ -214,7 +228,7 @@ class ding_model_2003(object):
         all_x = [self.initial_x]  # Creating the list that will contain our results with the initial values at time 0
 
         while time_vector[-1] <= self.final_time:  # As long as we did not get to the final time continue
-            if round(time_vector[-1], 5) in self.stim_time: # See if t is equal to our activation time (round up time_vector to prevent flot issues)
+            if round(time_vector[-1], 5) in self.stim_time:  # See if t is equal to our activation time (round up time_vector to prevent flot issues)
                 self.u_counter += 1  # Add +1 to our counter if t == any of our values in stim_time list
 
             if self.u_counter < 0:
@@ -229,9 +243,11 @@ class ding_model_2003(object):
                 Sum_multiplier = exp(-(time_vector[-1] - (self.stim_time[self.u_counter])) / self.Tauc)  # Eq from [1]
 
             if self.fatigue is True:  # X0 is different regarding our fatigue state
-                X0 = vertcat(all_x[-1][0], all_x[-1][1], all_x[-1][2], all_x[-1][3], all_x[-1][4], DM(Ri_multiplier), DM(Sum_multiplier))
+                X0 = vertcat(all_x[-1][0], all_x[-1][1], all_x[-1][2], all_x[-1][3], all_x[-1][4], DM(Ri_multiplier),
+                             DM(Sum_multiplier))
             else:
-                X0 = vertcat(all_x[-1][0], all_x[-1][1], self.A_rest, self.Tau1_rest, self.Tau2, self.Km_rest, SX(Ri_multiplier), SX(Sum_multiplier))
+                X0 = vertcat(all_x[-1][0], all_x[-1][1], self.A_rest, self.Tau1_rest, self.Tau2, self.Km_rest,
+                             SX(Ri_multiplier), SX(Sum_multiplier))
 
             Fk = Fun(i0=X0)  # Running the CasADi integration function with the X0 input parameters
             all_x.append(Fk['o0'])
@@ -239,6 +255,7 @@ class ding_model_2003(object):
         time_vector = np.array(time_vector)  # Format the time vector, so it's easier to use
         return time_vector, all_x
 
+    # PULSE DEFINITION
     # Function to create the list of pulsation apparition at a time t regarding the stimulation frequency
     def create_impulse(self):
         """
@@ -260,75 +277,90 @@ class ding_model_2003(object):
             t += dt
         return u
 
-    # Creating the function to minimize Tau2 for the CasADi NLP solver
-    def Gnf(self, p):
+    # PARAMETERS IDENTIFICATION FUNCTION
+    # Creating the function to minimize A_rest, Km_rest, Tau1 and Tau2 for the CasADi NLP solver
+    def Gnf(self, p, Fexp):
         """
         Parameters
         ----------
         p : values to modify in order to minimize the function in CasADi SX type
+        Fexp : Force to compare to with in list type
 
         Returns the value to minimize in CasADi SX type
         -------
         """
+        Fexp = Fexp[self.starting_time:self.starting_time+self.active_time]
         self.fatigue = False  # Setting the non fatigue state
-        self.A_rest, self.Km_rest, self.Tau2 = p  # Fluctuating values to optimize
-        self.Tau1_rest = SX(self.Tau1_rest)  # Turning Tau1_rest into a CasADi SX
-        self.final_time = 1000  # Stop at 1 second as recommended [1]
+        self.A_rest, self.Km_rest, self.Tau1_rest, self.Tau2 = p  # Fluctuating values to optimize
+        final_time = self.final_time
+        self.final_time = 1000  # Stop at 1 second for identification as recommended [1]
         time, x_euler = self.perform_integration()
+        self.final_time = final_time  # Set back the final time to the experimental time
         X = 0
-        for i in range(len(time)):
-            X += (x_euler[i][1] - all_x_euler[i][1])**2  # Eq(3) [1]
+        for i in range(len(Fexp)):
+            X += (x_euler[i][1] - Fexp[i])**2  # Eq(3) [1]
         return X
 
-    # Creating the function to minimize A_rest and Km_rest for the CasADi NLP solver
-    def Gfat(self, p):
+    # Creating the function to minimize Alpha_A, Alpha_Km, Alpha_Tau1 and Tau_fat for the CasADi NLP solver
+    def Gfat_alpha(self, p, Fexp):
         """
         Parameters
         ----------
         p : values to modify in order to minimize the function in CasADi SX type
+        Fexp : Force to compare to with in list type
 
         Returns the value to minimize in CasADi SX type
         -------
         """
         self.fatigue = True  # Setting the fatigue state
-        self.A_rest, self.Km_rest = p  # Fluctuating values to optimize
-        self.Tau1_rest = SX(self.Tau1_rest)  # Turning Tau1_rest into a CasADi SX
-        self.final_time = 1000  # Stop at 1 second as recommended [1]
+        self.Scaled_A, self.Scaled_Km, self.Scaled_Tau1, self.Scaled_Tau_fat = p
+        self.A_rest = SX(self.A_rest)
+        self.Km_rest = SX(self.Km_rest)
+        self.Tau1_rest = SX(self.Tau1_rest)
+        self.Alpha_A = self.Scaled_A * -1e-7
+        self.Alpha_Km = self.Scaled_Km * 1e-8
+        self.Alpha_Tau1 = self.Scaled_Tau1 * 1e-5
+        self.Tau_fat = self.Scaled_Tau_fat * 1e5
         time, x_euler = a.perform_integration()
         X = 0
         for i in range(len(time)):
-            X += (x_euler[i][1] - all_x_euler[i][1])**2  # Eq(4) [1]
+            if Fexp[i] != 0:
+                X += (1-x_euler[i][1]/Fexp[i]) ** 2  # Eq(4) [1]
         return X
 
     # Create the CasADi NLP solver and runs it
-    def casadi_optimization(self, id_num=1):
+    def casadi_optimization(self, Fexp, id_num=1):
         """
         Parameters
         ----------
         id_num : number of the optimization desired in int type, 1 = eq(3) [1] and 2 = eq(4) [1]
+        Fexp : Force to compare to with in list type
 
         Returns optimized values in float type from the NLP CasADi optimization
         -------
         """
-
         if id_num == 1:  # For non fatigue optimization
             A = SX.sym('A')
             Km = SX.sym('Km')
             Tau2 = SX.sym('Tau2')
-            nlp = {'x': vertcat(A, Km, Tau2), 'f': self.Gnf((A, Km, Tau2))}  # Creating the NLP solver
+            Tau1 = SX.sym('Tau1')
+            nlp = {'x': vertcat(A, Km, Tau1, Tau2), 'f': self.Gnf((A, Km, Tau1, Tau2), Fexp)}  # Creating the NLP solver
             S = nlpsol('S', 'ipopt', nlp)
-            r = S(x0=[1, 1, 1],
-                  lbg=0, ubg=0, lbx=[0, 0, 0])  # Sets the initial inputs, the limits and constraints
+            r = S(x0=[1, 1, 1, 1],
+                  lbg=0, ubg=0, lbx=[0, 0, 0, 0])  # Sets the initial inputs, the limits and constraints
             x_opt = r['x']  # Runs the solver
             print('x_opt: ', x_opt)  # Prints the detail of the optimization
 
         elif id_num == 2:  # For fatigue optimization
-            A_rest = SX.sym('A_rest')
-            Km_rest = SX.sym('Km_rest')
-            nlp = {'x': vertcat(A_rest, Km_rest), 'f': self.Gfat((A_rest, Km_rest))}  # Creating the NLP solver
+            Scaled_A = SX.sym('Scaled_A')
+            Scaled_Km = SX.sym('Scaled_Km')
+            Scaled_Tau1 = SX.sym('Scaled_Tau1')
+            Scaled_Tau_fat = SX.sym('Scaled_Tau_fat')
+            nlp = {'x': vertcat(Scaled_A, Scaled_Km, Scaled_Tau1, Scaled_Tau_fat),
+                   'f': self.Gfat_alpha((Scaled_A, Scaled_Km, Scaled_Tau1, Scaled_Tau_fat), Fexp)}  # Creating NLP solver
             S = nlpsol('S', 'ipopt', nlp)
-            r = S(x0=[1, 1],
-                  lbg=0, ubg=0, lbx=[0, 0])  # Sets the initial inputs, the limits and constraints
+            r = S(x0=[1, 1, 1, 1], lbg=0, ubg=0, lbx=[0.01, 0.01, 0.01, 0.01],
+                  ubx=[100, 100, 100, 100])  # Sets the initial inputs, the limits and constraints
             x_opt = r['x']  # Runs the solver
             print('x_opt: ', x_opt)  # Prints the detail of the optimization
 
@@ -337,15 +369,15 @@ class ding_model_2003(object):
 
         return x_opt
 
+    # GRAPHIC PLOT
     # Function to create graphics
     def plot_graphs(self):
         """
         Returns a graphic from the computed values
         -------
         """
-        fig = plt.figure(figsize=(12, 6))
-
-        Cn = [float(i[0]) for i in all_x_euler]
+        fig = plt.figure(figsize=(22, 9))
+        # Cn = [float(i[0]) for i in all_x_euler]
         Force = [float(i[1]) for i in all_x_euler]
         A = [float(i[2]) for i in all_x_euler]
         Tau1 = [float(i[3]) for i in all_x_euler]
@@ -391,19 +423,76 @@ class ding_model_2003(object):
         plt.tight_layout()
         plt.show()
 
+    def plot_force_graph(self, time, force_1, force_2):
+        """
+        Parameters
+        ----------
+        time : time of the simulation in array type
+        force_1 : Real force in list type
+        force_2 : Calculated force in list type
+
+        Returns a graphic from the computed values
+        -------
+        """
+
+        Force1 = [float(i[1]) for i in force_1]
+        Force2 = [float(i[1]) for i in force_2]
+        diff = 0
+        diff_list = []
+        for i in range(len(Force1)):
+            diff += abs(Force1[i] - Force2[i])
+            diff_list.append(abs(Force1[i] - Force2[i]))
+        percentage_diff = round((diff / sum(Force1))*100, 2)
+
+        plt.figure(figsize=(22, 9))
+        plt.plot(time/1000, Force1, label='Real force')
+        plt.plot(time/1000, Force2, label='Calculated force')
+        plt.ylim([0, 270])
+        plt.xlim([0, 300])
+        plt.title('Calculated and real force')
+        plt.text(240, 240, 'Force percentage difference = ' + str(percentage_diff) + '%', fontsize=10)
+        plt.xlabel("Time (s)")
+        plt.ylabel("Force (N)")
+        plt.legend()
+        plt.show()
+
+        plt.figure(figsize=(22, 9))
+        plt.plot(time / 1000, diff_list, label='diff force')
+        plt.xlim([0, 300])
+        plt.title('Difference between real and calculated force')
+        plt.xlabel("Time (s)")
+        plt.ylabel("Force (N)")
+        plt.legend()
+        plt.show()
+
+        return
+
 
 if __name__ == '__main__':
-    a = ding_model_2003()
-    a.stim_time = a.create_impulse()
-    time_vector_euler, all_x_euler = a.perform_integration()
-    result = a.casadi_optimization(id_num=1)
-    a.Tau2 = float(result[2])
-    result = a.casadi_optimization(id_num=2)
+    # RUN THE SIMULATION
+    a = DingModel2003()  # define class
+    a.stim_time = a.create_impulse()  # create impulse
+    time_vector_euler, all_x_euler = a.perform_integration()  # compute Ding's data
+    # a.plot_graphs()  # plot the associated graphs
+    Force = [float(i[1]) for i in all_x_euler]  # isolate the force from all outputs
+    result = a.casadi_optimization(Force, id_num=1)  # first identification function
+    # SET the identified parameters to continue our identification
     a.A_rest = float(result[0])
     a.Km_rest = float(result[1])
-    a.plot_graphs()
+    a.Tau1_rest = float(result[2])
+    a.Tau2 = float(result[3])
+    result = a.casadi_optimization(Force, id_num=2)  # second identification function
+    # SET the identified parameters to continue the computation of our force output
+    a.Alpha_A = float(result[0]) * -1e-7
+    a.Alpha_Km = float(result[1]) * 1e-8
+    a.Alpha_Tau1 = float(result[2]) * 1e-5
+    a.Tau_fat = float(result[3]) * 1e5
+    # print('Alpha_A :', a.Alpha_A, 'Alpha_Km :', a.Alpha_Km, 'Alpha_Tau1 :', a.Alpha_Tau1, 'Tau_fat :', a.Tau_fat) # display the identified parameters
+    time_vector_euler_optim_alpha, all_x_euler_optim_alpha = a.perform_integration()  # compute our identified data
+    a.plot_force_graph(time_vector_euler_optim_alpha, all_x_euler, all_x_euler_optim_alpha)  # compare our computed force with the identified parameters and the initial force input
 
-''' References :
+''' 
+References :
 Ding and al. 2003 : Mathematical models for fatigue minimization during functional electrical stimulation [1]
 Ding and al. 2007 : Mathematical model that predicts the force-intensity and force-frequency relationships after spinal cord injuries [2]
 '''
