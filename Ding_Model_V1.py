@@ -2,6 +2,7 @@ import matplotlib.pyplot as plt  # Import matplotlib for graphics
 from matplotlib.gridspec import GridSpec  # Import matplotlib Grid Spec for subplot graphics
 from brokenaxes import brokenaxes  # Import brokenaxes for subplot graphics
 from casadi import *  # Import CasADi for optimization, casadi * also imports numpy package as np
+from Data_processing import DataProcess
 
 
 ############################
@@ -50,13 +51,13 @@ class DingModel2003(object):
         # Stimulation parameters :
         self.u_counter = -1  # Stimulation index
         self.frequency = 33  # (Hz) Stimulation frequency, 33 Hz is the best for identification [1]
-        self.rest_time = 1000  # (ms) Time without electrical stimulation on the muscle
-        self.active_time = 1000  # (ms) Time which the electrical stimulation is activated for frequency timing
+        self.rest_time = 900  # (ms) Time without electrical stimulation on the muscle
+        self.active_time = 1100  # (ms) Time which the electrical stimulation is activated for frequency timing
         self.starting_time = 0  # (ms) Time of the simulation when the first train of electrical stimulation starts
 
         # Simulation parameters :
-        self.final_time = 10000  # Stop at x milliseconds, 300000 is Ding's experimentation time [1]
-        self.dt = 1  # Integration step in milliseconds, needs to be smaller than the 1/frequency
+        self.final_time = 300000  # Stop at x milliseconds, 300000 is Ding's experimentation time [1]
+        self.dt = 0.1  # Integration step in milliseconds, needs to be smaller than the 1/frequency
 
     # CREATE FUNCTIONS FOR INCLUDE FATIGUE AND NON INCLUDE FATIGUE
     # Fatigue CasADi function building
@@ -293,7 +294,8 @@ class DingModel2003(object):
         self.fatigue = False  # Setting the non fatigue state
         self.A_rest, self.Km_rest, self.Tau1_rest, self.Tau2 = p  # Fluctuating values to optimize
         final_time = self.final_time
-        self.final_time = 1000  # Stop at 1 second for identification as recommended [1]
+        # self.final_time = 1000  # Stop at 1 second for identification as recommended [1]
+        self.final_time = len(Fexp)  # Stop at 1 second for identification as recommended [1]
         time, x_euler = self.perform_integration()
         self.final_time = final_time  # Set back the final time to the experimental time
         X = 0
@@ -321,9 +323,10 @@ class DingModel2003(object):
         self.Alpha_Km = self.Scaled_Km * 1e-8
         self.Alpha_Tau1 = self.Scaled_Tau1 * 1e-5
         self.Tau_fat = self.Scaled_Tau_fat * 1e5
+        self.final_time = len(Fexp)
         time, x_euler = a.perform_integration()
         X = 0
-        for i in range(len(time)):
+        for i in range(len(Fexp)):
             if Fexp[i] != 0:
                 X += (1-x_euler[i][1]/Fexp[i]) ** 2  # Eq(4) [1]
         return X
@@ -347,7 +350,7 @@ class DingModel2003(object):
             nlp = {'x': vertcat(A, Km, Tau1, Tau2), 'f': self.Gnf((A, Km, Tau1, Tau2), Fexp)}  # Creating the NLP solver
             S = nlpsol('S', 'ipopt', nlp)
             r = S(x0=[1, 1, 1, 1],
-                  lbg=0, ubg=0, lbx=[0, 0, 0, 0])  # Sets the initial inputs, the limits and constraints
+                  lbg=0, ubg=0, lbx=[0.001, 0.001, 1, 1])  # Sets the initial inputs, the limits and constraints
             x_opt = r['x']  # Runs the solver
             print('x_opt: ', x_opt)  # Prints the detail of the optimization
 
@@ -469,30 +472,67 @@ class DingModel2003(object):
 
 
 if __name__ == '__main__':
-    # RUN THE SIMULATION
+    # TEST
     a = DingModel2003()  # define class
-    a.stim_time = a.create_impulse()  # create impulse
-    time_vector_euler, all_x_euler = a.perform_integration()  # compute Ding's data
+    # time_vector_euler, all_x_euler = a.perform_integration()  # compute Ding's data
     # a.plot_graphs()  # plot the associated graphs
-    Force = [float(i[1]) for i in all_x_euler]  # isolate the force from all outputs
+
+    b = DataProcess()
+    a.stim_time, Force, Time = b.get_wanted_data(data_path=r'D:\These\Experiences\Ergometre_isocinetique\Mickael\Experience_17_11_2022\Mickael_Fatigue_17_11_2022.c3d',
+                                                 info='both', time='window',  plot=True)
     result = a.casadi_optimization(Force, id_num=1)  # first identification function
     # SET the identified parameters to continue our identification
     a.A_rest = float(result[0])
     a.Km_rest = float(result[1])
     a.Tau1_rest = float(result[2])
     a.Tau2 = float(result[3])
+
+    time_vector_euler, all_x_euler = a.perform_integration()  # compute Ding's data
+
+    
+    # Force1 = [float(i[1]) for i in all_x_euler]
+    # plt.figure(figsize=(22, 9))
+    # plt.plot(time_vector_euler/1000, Force1, label='Calculated force')
+    # plt.plot(Time, Force, label='Real force')
+    # plt.title('Calculated and real force')
+    # plt.xlabel("Time (s)")
+    # plt.ylabel("Force (N)")
+    # plt.legend()
+    # plt.show()
+
+
+
+    # # RUN THE SIMULATION
+    # a = DingModel2003()  # define class
+    # a.stim_time = a.create_impulse()  # create impulse
+    # time_vector_euler, all_x_euler = a.perform_integration()  # compute Ding's data
+    # # a.plot_graphs()  # plot the associated graphs
+    # Force = [float(i[1]) for i in all_x_euler]  # isolate the force from all outputs
+    # result = a.casadi_optimization(Force, id_num=1)  # first identification function
+    # # SET the identified parameters to continue our identification
+    # a.A_rest = float(result[0])
+    # a.Km_rest = float(result[1])
+    # a.Tau1_rest = float(result[2])
+    # a.Tau2 = float(result[3])
+
+    a.stim_time, Force, Time = b.get_wanted_data(
+        data_path=r'D:\These\Experiences\Ergometre_isocinetique\Mickael\Experience_17_11_2022\Mickael_Fatigue_17_11_2022.c3d',
+        info='both', time='full', plot=True)
+
     result = a.casadi_optimization(Force, id_num=2)  # second identification function
     # SET the identified parameters to continue the computation of our force output
     a.Alpha_A = float(result[0]) * -1e-7
     a.Alpha_Km = float(result[1]) * 1e-8
     a.Alpha_Tau1 = float(result[2]) * 1e-5
     a.Tau_fat = float(result[3]) * 1e5
-    # print('Alpha_A :', a.Alpha_A, 'Alpha_Km :', a.Alpha_Km, 'Alpha_Tau1 :', a.Alpha_Tau1, 'Tau_fat :', a.Tau_fat) # display the identified parameters
+    print('Alpha_A :', a.Alpha_A, 'Alpha_Km :', a.Alpha_Km, 'Alpha_Tau1 :', a.Alpha_Tau1, 'Tau_fat :', a.Tau_fat) # display the identified parameters
     time_vector_euler_optim_alpha, all_x_euler_optim_alpha = a.perform_integration()  # compute our identified data
-    a.plot_force_graph(time_vector_euler_optim_alpha, all_x_euler, all_x_euler_optim_alpha)  # compare our computed force with the identified parameters and the initial force input
+    a.plot_force_graph(time_vector_euler_optim_alpha, Force, all_x_euler_optim_alpha)  # compare our computed force with the identified parameters and the initial force input
 
 ''' 
 References :
 Ding and al. 2003 : Mathematical models for fatigue minimization during functional electrical stimulation [1]
 Ding and al. 2007 : Mathematical model that predicts the force-intensity and force-frequency relationships after spinal cord injuries [2]
 '''
+
+
