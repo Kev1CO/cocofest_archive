@@ -1,6 +1,7 @@
 """
 This example will do a 10 phase example with Ding's input parameter for FES
 """
+from casadi import MX
 import numpy as np
 import biorbd_casadi as biorbd
 from bioptim import (
@@ -21,14 +22,18 @@ from bioptim import (
     Node,
 )
 
+
 from custom_package.custom_dynamics import (
     custom_dynamics,
     declare_ding_variables,
 )
 
+from custom_package.custom_objectives import track_muscle_force_custom
+
 from custom_package.my_model import (
     DingModel
 )
+
 
 def prepare_ocp(
         time_min: list,
@@ -76,11 +81,15 @@ def prepare_ocp(
         constraints.add(ConstraintFcn.TIME_CONSTRAINT, node=Node.END, min_bound=time_min[i], max_bound=time_max[i], phase=i)
 
     objective_functions = ObjectiveList()
-    for i in range(10):
-        # objective_functions.add(ObjectiveFcn.Lagrange.TARGET_F, weight=1, phase=i)
-        objective_functions.add(ObjectiveFcn.Mayer.TRACK_MUSCLE_FORCE_CUSTOM, weight=1, phase=i)
-        # todo : create a target_F fun, custom objectif -» mayer et pas lagrange
-        pass
+    objective_functions.add(
+        track_muscle_force_custom,
+        custom_type=ObjectiveFcn.Mayer,
+        node=Node.END,
+        quadratic=True,
+        weight=1,
+        phase=9,
+        force=25,
+    )
 
     x_bounds = BoundsList()
 
@@ -109,7 +118,6 @@ def prepare_ocp(
     for i in range(10):
         if i == 0:
             x_bounds.add(x_start_min, x_start_max, interpolation=InterpolationType.CONSTANT_WITH_FIRST_AND_LAST_DIFFERENT)
-
         else:
             x_bounds.add(x_after_start_min, x_after_start_max, interpolation=InterpolationType.CONSTANT_WITH_FIRST_AND_LAST_DIFFERENT)
 
