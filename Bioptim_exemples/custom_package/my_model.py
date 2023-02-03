@@ -44,6 +44,10 @@ class DingModel:
 
     # ---- Needed for the example ---- #
     @property
+    def name_dof(self):
+        return ["cn", "f", "a", "tau1", "km"]
+
+    @property
     def nb_state(self):
         return 5
 
@@ -51,9 +55,11 @@ class DingModel:
     def name(self):
         return self._name
 
-    def system_dynamics(self, cn: MX, f: MX, a: MX, tau1: MX, km: MX, t: MX, final_time: MX, t_stim_prev: list[MX]):
+    def system_dynamics(self, cn: MX, f: MX, a: MX, tau1: MX, km: MX, t: MX, final_time: MX, t_stim_prev: list[MX]) -> MX:
         # todo : Question : Comment effectuer la dynamique du systeme sans faire f1(x, tf), f2(x, tf)...
         #                   et f(t0, x, tf), f(t1, x, tf)... ou
+        #                   f0(x,tf)=f(t0,x,tf)
+        #                   f1(x,tf)=f(t1,x,tf)
         #                   en faisant une loop for avec une liste de t, tf, t_stim_prev
         #                   Préférence pour le f(t0, x, tf), f(t1, x, tf)... de la dynamiaue du systeme
         #
@@ -63,8 +69,8 @@ class DingModel:
         a_dot = self.a_dot_fun(a, f)
         tau1_dot = self.tau1_dot_fun(tau1, f)
         km_dot = self.km_dot_fun(km, f)
-        xdot = vertcat(cn_dot, f_dot, a_dot, tau1_dot, km_dot)
-        return xdot
+
+        return vertcat(cn_dot, f_dot, a_dot, tau1_dot, km_dot)
 
     def exp_time_fun(self, t: MX, t_stim_prev: list[MX]):
         return exp(-(t[-1] - (t_stim_prev[-1])) / self.tauc)  # Eq from [1]
@@ -96,5 +102,3 @@ class DingModel:
     def km_dot_fun(self, km: MX, f: MX):
         return -(km - self.km_rest) / self.tau_fat + self.alpha_km * f  # Eq(11)
 
-    # def system_dynamics(self, *args):
-    # This is where you can implement your system dynamics with casadi if you are dealing with other systems
