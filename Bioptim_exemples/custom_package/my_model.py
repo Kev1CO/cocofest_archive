@@ -56,13 +56,6 @@ class DingModel:
         return self._name
 
     def system_dynamics(self, cn: MX, f: MX, a: MX, tau1: MX, km: MX, t: MX, final_time: MX, t_stim_prev: list[MX]) -> MX:
-        # todo : Question : Comment effectuer la dynamique du systeme sans faire f1(x, tf), f2(x, tf)...
-        #                   et f(t0, x, tf), f(t1, x, tf)... ou
-        #                   f0(x,tf)=f(t0,x,tf)
-        #                   f1(x,tf)=f(t1,x,tf)
-        #                   en faisant une loop for avec une liste de t, tf, t_stim_prev
-        #                   Préférence pour le f(t0, x, tf), f(t1, x, tf)... de la dynamiaue du systeme
-        #
         r0 = km + self.r0_km_relationship
         cn_dot = self.cn_dot_fun(cn, r0, t, final_time, t_stim_prev)
         f_dot = self.f_dot_fun(cn, f, a, tau1, km)
@@ -73,15 +66,18 @@ class DingModel:
         return vertcat(cn_dot, f_dot, a_dot, tau1_dot, km_dot)
 
     def exp_time_fun(self, t: MX, t_stim_prev: list[MX]):
-        return exp(-(t[-1] - (t_stim_prev[-1])) / self.tauc)  # Eq from [1]
+        return exp(-(t - (t_stim_prev[-1])) / self.tauc)  # Eq from [1]
 
-    def ri_fun(self, r0: MX, final_time: MX):
-        return 1+(r0-1)*exp(-final_time / self.tauc)  # Eq from [1]
+    def ri_fun(self, r0: MX, time_between_stim: MX):
+        return 1+(r0-1)*exp(time_between_stim / self.tauc)  # Eq from [1]
 
-    def cn_sum_fun(self, r0: MX, t: MX, t_stim_prev: list[MX], final_time: MX):
+    def cn_sum_fun(self, r0: MX, t: MX, t_stim_prev: list[MX], final_time: list[MX]):
         sum_multiplier = 0
+
+        # count = len([i for i in t_stim_prev if i < t]) todo : faire le calcul avec les stim précédente de t et pas après t
+
         for i in range(len(t_stim_prev)):  # Eq from [1]
-            ri = self.ri_fun(r0, final_time - t_stim_prev[i])
+            ri = self.ri_fun(r0, final_time[i] - t_stim_prev[i])
             exp_time = self.exp_time_fun(t, t_stim_prev)
             sum_multiplier += ri * exp_time
         return sum_multiplier

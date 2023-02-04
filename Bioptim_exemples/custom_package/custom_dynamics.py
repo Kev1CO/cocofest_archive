@@ -10,6 +10,7 @@ from bioptim import (
     NonLinearProgram,
     ConfigureProblem,
     DynamicsEvaluation,
+    DynamicsFunctions,
 )
 
 from .my_model import DingModel
@@ -43,31 +44,32 @@ def custom_dynamics(
 
     """
 
-    # t = []
-    # inter_t_phase = []
-    # final_time = []
-    # t_prev_stim = []
+    final_time = []
+    for i in range(len(all_ocp.nlp)):
+        if i == 0:
+            final_time.append(parameters[i])
+        else:
+            final_time.append(final_time[-1] + parameters[i])
 
-    # for j in range(len(all_ocp.nlp)):
-    #     for i in range(0, all_ocp.nlp[j].ns):
-    #         inter_t_phase.append((all_ocp.nlp[j].tf / all_ocp.nlp[j].ns)*(i+1))
-    #     t.append(inter_t_phase)
-    #     final_time.append(all_ocp.nlp[j].tf)
-    #     t_prev_stim.append(all_ocp.nlp[j].t0)
-    # t =[0]
-    # t = MX.sym("t")  #  Si 1 dynamique pour 1 node shooting t = inter_t_phase.append((all_ocp.nlp[j].tf / all_ocp.nlp[j].ns)*(i+1))
-    # Sinon t n'existe pas ici pour une dynamique de tout le systeme ? écriture en symbolique
+    t_prev_stim = [my_nlp.t0 for my_nlp in all_ocp.nlp]
 
-    final_time = nlp.tf  # todo : addition of time_phase
-    # todo : get tf from parameters
-    t_prev_stim = [my_nlp.t0 for my_nlp in all_ocp.nlp]  # temps de phase précédente
+    return DynamicsEvaluation(dxdt=nlp.model.system_dynamics(states[0],
+                                                             states[1],
+                                                             states[2],
+                                                             states[3],
+                                                             states[4],
+                                                             t,
+                                                             final_time,
+                                                             t_prev_stim), defects=None)
 
-    # todo : build t, t_final, t_prev.
-    return DynamicsEvaluation(
-        # dxdt=nlp.model.system_dynamics(states[0], states[1], states[2], states[3], states[4], states[5], states[6],
-                                       # states[7]), defects=None)
-        # dxdt=DingModel.system_dynamics(DingModel(), states[0], states[1], states[2], states[3], states[4], t, final_time, t_prev_stim), defects=None)
-        dxdt=nlp.model.system_dynamics(states[0], states[1], states[2], states[3], states[4], t, final_time, t_prev_stim), defects=None)
+
+def dynamic_fun(custom_dynamics, nlp: NonLinearProgram, extra_params, x, u, p, t):
+    extra_params['t'] = t
+    dynamics_eval = custom_dynamics(x, u, p, nlp, **extra_params)
+    dynamics_dxdt = dynamics_eval.dxdt
+    if isinstance(dynamics_dxdt, (list, tuple)):
+        dynamics_dxdt = vertcat(*dynamics_dxdt)
+    return dynamics_eval, dynamics_dxdt
 
 
 def custom_configure_dynamics_function(ocp, nlp, dyn_func, expand: bool = True, **extra_params):
@@ -89,43 +91,24 @@ def custom_configure_dynamics_function(ocp, nlp, dyn_func, expand: bool = True, 
     nlp.parameters = ocp.v.parameters_in_list
     DynamicsFunctions.apply_parameters(nlp.parameters.mx, nlp)
 
-    dynamics_eval = dyn_func(
-        nlp.states["scaled"].mx_reduced, nlp.controls["scaled"].mx_reduced, nlp.parameters.mx, nlp, **extra_params
-    )
-    dynamics_dxdt = dynamics_eval.dxdt
-    if isinstance(dynamics_dxdt, (list, tuple)):
-        dynamics_dxdt = vertcat(*dynamics_dxdt)
+    # node_shooting_sum = sum([node_shooting.ns for node_shooting in extra_params['all_ocp'].nlp])
+    dynamics_func_list = []
+    state = MX(vertcat(0, 0, 3.09, 60, 0.103))
+    for j in range(len(extra_params['all_ocp'].nlp)):
+        node_shooting = extra_params['all_ocp'].nlp[j].ns
+        for i in range(node_shooting):
+            if i == 0:
+                t = extra_params['all_ocp'].nlp[j].t0
+            else:
+                t = (extra_params['all_ocp'].nlp[j].tf / (extra_params['all_ocp'].nlp[j].ns+1))*i
 
-    # todo : Function with t as extra input
-    phase_function = Function(
-        "ForwardDyn",
-        [nlp.states["scaled"].mx_reduced, nlp.controls["scaled"].mx_reduced, nlp.parameters.mx, add t here],
-        [dynamics_dxdt],
-        ["x", "u", "p"],
-        ["xdot"],
-    )
+            node_fun, state = dynamic_fun(dyn_func, nlp, extra_params, nlp.states["scaled"].mx_reduced, nlp.controls["scaled"].mx_reduced, nlp.parameters.mx,  t)
 
-    # nlp.dynamics_func = Function(
-    #     "ForwardDyn",
-    #     [nlp.states["scaled"].mx_reduced, nlp.controls["scaled"].mx_reduced, nlp.parameters.mx],
-    #     [dynamics_dxdt],
-    #     ["x", "u", "p"],
-    #     ["xdot"],
-    # )
-    # todo : the for loop
-    dynamics_func_list
-
-    Function(
-        "ForwardDyn",
-        [nlp.states["scaled"].mx_reduced, nlp.controls["scaled"].mx_reduced, nlp.parameters.mx],
-        [dynamics_dxdt],
-        ["x", "u", "p"],
-        ["xdot"],
-    )
+            dynamics_func_list.append(node_fun)
 
     if expand:
         nlp.dynamics_func = nlp.dynamics_func.expand()
-
+    return
 
 def declare_ding_variables(ocp: OptimalControlProgram, nlp: NonLinearProgram):
     """
@@ -148,6 +131,8 @@ def declare_ding_variables(ocp: OptimalControlProgram, nlp: NonLinearProgram):
 
     # ConfigureProblem.configure_dynamics_function(ocp, nlp, custom_dynamics, expand=True, all_ocp=ocp, t=t)
     custom_configure_dynamics_function(ocp, nlp, custom_dynamics, expand=True, all_ocp=ocp, t=t)
+
+
 
 
 def configure_ca_troponin_complex(ocp, nlp, as_states: bool, as_controls: bool, as_states_dot: bool = False):

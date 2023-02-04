@@ -15,7 +15,6 @@ from bioptim import (
     DynamicsFcn,
     BoundsList,
     InterpolationType,
-    QAndQDotBounds,
     InitialGuessList,
     OdeSolver,
     Solver,
@@ -75,7 +74,6 @@ def prepare_ocp(
     for i in range(10):
         dynamics.add(declare_ding_variables, dynamic_function=custom_dynamics,  phase=i)
 
-    # Pas de dynamics
     constraints = ConstraintList()
     for i in range(10):
         constraints.add(ConstraintFcn.TIME_CONSTRAINT, node=Node.END, min_bound=time_min[i], max_bound=time_max[i], phase=i)

@@ -1,10 +1,5 @@
 from bioptim import PenaltyNodeList
-
-
-# Todo : Question : que signifi le _rt
-#                 : appeler la fonction minimize force difference plutôt ?
-#                 Est-ce que minimize est uniquement pour la minimisation
-#                 d'une valeur et non pas pour une différence?
+from bioptim.interfaces.biorbd_model import BiorbdModel
 
 def track_muscle_force_custom(all_pn: PenaltyNodeList, force: int | float):
     """
@@ -18,7 +13,7 @@ def track_muscle_force_custom(all_pn: PenaltyNodeList, force: int | float):
     force: Union[int, str]
         The name or index of the segment
     """
-    from ..interfaces.biorbd_model import BiorbdModel
+
 
     penalty.quadratic = True if penalty.quadratic is None else penalty.quadratic
 
