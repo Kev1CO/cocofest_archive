@@ -11,7 +11,6 @@ from bioptim import (
     DynamicsList,
     DynamicsFcn,
     BoundsList,
-    QAndQDotBounds,
     InitialGuessList,
     OdeSolver,
     Solver,
@@ -57,7 +56,7 @@ def prepare_ocp(
 
     x_bounds = BoundsList()
     for i in range(10):
-        x_bounds.add(bounds=QAndQDotBounds(bio_model[i]))
+        x_bounds.add(bounds=bio_model[i].bounds_from_ranges(["q", "qdot"]))
     x_bounds[0][:, 0] = 0
     x_bounds[-1][:2, -1] = 1
     x_bounds[-1][2:, -1] = 0
