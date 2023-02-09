@@ -91,8 +91,9 @@ def custom_configure_dynamics_function(ocp, nlp, dyn_func, expand: bool = True, 
     nlp.parameters = ocp.v.parameters_in_list
     DynamicsFunctions.apply_parameters(nlp.parameters.mx, nlp)
 
-    # node_shooting_sum = sum([node_shooting.ns for node_shooting in extra_params['all_ocp'].nlp])
+    dynamics_dxdt = None
     dynamics_func_list = []
+    dynamics_state_list = []
     state = MX(vertcat(0, 0, 3.09, 60, 0.103))
     for j in range(len(extra_params['all_ocp'].nlp)):
         node_shooting = extra_params['all_ocp'].nlp[j].ns
@@ -103,11 +104,20 @@ def custom_configure_dynamics_function(ocp, nlp, dyn_func, expand: bool = True, 
                 t = (extra_params['all_ocp'].nlp[j].tf / (extra_params['all_ocp'].nlp[j].ns+1))*i
 
             node_fun, state = dynamic_fun(dyn_func, nlp, extra_params, nlp.states["scaled"].mx_reduced, nlp.controls["scaled"].mx_reduced, nlp.parameters.mx,  t)
-
+            dynamics_state_list.append(state)
             dynamics_func_list.append(node_fun)
 
-    if expand:
-        nlp.dynamics_func = nlp.dynamics_func.expand()
+    if isinstance(dynamics_state_list, (list, tuple)):
+        dynamics_dxdt = vertcat(*dynamics_state_list)
+
+    nlp.dynamics_func = Function(
+        "ForwardDyn",
+        [nlp.states["scaled"].mx_reduced, nlp.controls["scaled"].mx_reduced, nlp.parameters.mx],
+        [dynamics_dxdt],
+        ["x", "u", "p"],
+        ["xdot"],
+    )
+
     return
 
 def declare_ding_variables(ocp: OptimalControlProgram, nlp: NonLinearProgram):
