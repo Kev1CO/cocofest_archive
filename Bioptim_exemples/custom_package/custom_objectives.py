@@ -1,6 +1,7 @@
 from bioptim import PenaltyNodeList
 from bioptim.interfaces.biorbd_model import BiorbdModel
 
+
 def track_muscle_force_custom(all_pn: PenaltyNodeList, force: int | float):
     """
     Minimize the difference of the model muscle force produiced and the targeted muscle force
@@ -14,16 +15,13 @@ def track_muscle_force_custom(all_pn: PenaltyNodeList, force: int | float):
         The name or index of the segment
     """
 
-
     penalty.quadratic = True if penalty.quadratic is None else penalty.quadratic
 
     nlp = all_pn.nlp
     force_index = nlp.model.segment_index(force) if isinstance(force, str) else force
 
     if not isinstance(nlp.model, BiorbdModel):
-        raise NotImplementedError(
-            "The track_muscle_force_custom penalty can only be called with a BiorbdModel"
-        )
+        raise NotImplementedError("The track_muscle_force_custom penalty can only be called with a BiorbdModel")
     model: BiorbdModel = nlp.model
 
     current_force = nlp.model  # Comment recuperer la force ?

@@ -16,9 +16,9 @@ from bioptim import (
     Solver,
 )
 
+
 def prepare_ocp(
-        biorbd_model_path: str = None,
-        ode_solver: OdeSolver = OdeSolver.RK1(), long_optim: bool = False
+    biorbd_model_path: str = None, ode_solver: OdeSolver = OdeSolver.RK1(), long_optim: bool = False
 ) -> OptimalControlProgram:
     """
     Prepare the ocp
@@ -68,8 +68,10 @@ def prepare_ocp(
     tau_min, tau_max, tau_init = -50, 50, 0
     u_bounds = BoundsList()
     for i in range(10):
-        u_bounds.add([tau_min] * bio_model[i].nb_tau,
-                 [tau_max] * bio_model[i].nb_tau,)
+        u_bounds.add(
+            [tau_min] * bio_model[i].nb_tau,
+            [tau_max] * bio_model[i].nb_tau,
+        )
 
     u_init = InitialGuessList()
     for i in range(10):
@@ -95,7 +97,8 @@ def main():
     """
 
     ocp = prepare_ocp(
-        biorbd_model_path="/home/lim/Documents/Kevin_CO/These/Programmation/Bioptim/bioptim/bioptim/examples/muscle_driven_ocp/models/arm26.bioMod")
+        biorbd_model_path="/home/lim/Documents/Kevin_CO/These/Programmation/Bioptim/bioptim/bioptim/examples/muscle_driven_ocp/models/arm26.bioMod"
+    )
 
     # --- Solve the program --- #
     sol = ocp.solve(Solver.IPOPT(show_online_optim=False))

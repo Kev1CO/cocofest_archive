@@ -14,18 +14,17 @@ class DingModel:
     As CustomModel is an abstract class, some methods must be implemented.
     """
 
-    def __init__(self,
-                 name: str = None):
+    def __init__(self, name: str = None):
         self._name = name
         # custom values for the example
         self.tauc = 20  # Value from Ding's experimentation [1]
         self.r0_km_relationship = 1.04
         # Different values for each person :
-        self.alpha_a = -4.0 * 10 ** -7  # Value from Ding's experimentation [1]
-        self.alpha_tau1 = 2.1 * 10 ** -5  # Value from Ding's experimentation [1]
+        self.alpha_a = -4.0 * 10**-7  # Value from Ding's experimentation [1]
+        self.alpha_tau1 = 2.1 * 10**-5  # Value from Ding's experimentation [1]
         self.tau2 = 60  # Close value from Ding's experimentation [2]
         self.tau_fat = 127000  # Value from Ding's experimentation [1]
-        self.alpha_km = 1.9 * 10 ** -8  # Value from Ding's experimentation [1]
+        self.alpha_km = 1.9 * 10**-8  # Value from Ding's experimentation [1]
         self.a_rest = 3.009  # Value from Ding's experimentation [1]
         self.tau1_rest = 50.957  # Value from Ding's experimentation [1]
         self.km_rest = 0.103  # Value from Ding's experimentation [1]
@@ -38,6 +37,7 @@ class DingModel:
         # This is where you can serialize your model
         # This is useful if you want to save your model and load it later
         return DingModel, dict()  # todo : pas compris comment remplir le dict
+
     # essai de dict : dict(("tauc", self.tauc), ("a_rest", self.a_rest), ("tau1_rest", self.tau1_rest),
     #                      ("km_rest", self.km_rest), ("tau2", self.tau2), ("alpha_a", self.alpha_a),
     #                      ("alpha_tau1", self.alpha_tau1),("alpha_km", self.alpha_km),("tau_fat", self.tau_fat))
@@ -55,7 +55,9 @@ class DingModel:
     def name(self):
         return self._name
 
-    def system_dynamics(self, cn: MX, f: MX, a: MX, tau1: MX, km: MX, t: MX, final_time: MX, t_stim_prev: list[MX]) -> MX:
+    def system_dynamics(
+        self, cn: MX, f: MX, a: MX, tau1: MX, km: MX, t: MX, t_stim_prev: list[MX]
+    ) -> MX:
         """
         The system dynamics is the function that describes the model.
 
@@ -73,9 +75,6 @@ class DingModel:
             The value of the cross_bridges
         t: MX
             The current time at which the dynamics is evaluated
-        final_time: MX
-            The final time of the current phase, ie: the duration of the phase
-            # todo: rename in phase_time, duration of the phase
         t_stim_prev: list[MX]
             The list of the time of the previous stimulations
 
@@ -83,8 +82,8 @@ class DingModel:
         -------
         The value of the derivative of each state dx/dt at the current time t
         """
-        r0 = km + self.r0_km_relationship
-        cn_dot = self.cn_dot_fun(cn, r0, t, final_time, t_stim_prev)
+        r0 = km + MX(self.r0_km_relationship)
+        cn_dot = self.cn_dot_fun(cn, r0, t, t_stim_prev)
         f_dot = self.f_dot_fun(cn, f, a, tau1, km)
         a_dot = self.a_dot_fun(a, f)
         tau1_dot = self.tau1_dot_fun(tau1, f)
@@ -92,26 +91,28 @@ class DingModel:
 
         return vertcat(cn_dot, f_dot, a_dot, tau1_dot, km_dot)
 
-    def exp_time_fun(self, t: MX, t_stim_prev: list[MX]):
-        return exp(-(t - (t_stim_prev[-1])) / self.tauc)  # Eq from [1]
+    def exp_time_fun(self, t: MX, t_last_previous_stim: MX):
+        return exp(-(t - t_last_previous_stim) / self.tauc)  # Eq from [1]
 
     def ri_fun(self, r0: MX, time_between_stim: MX):
-        return 1+(r0-1)*exp(time_between_stim / self.tauc)  # Eq from [1]
+        return 1 + (r0 - 1) * exp(time_between_stim / self.tauc)  # Eq from [1]
 
-    def cn_sum_fun(self, r0: MX, t: MX, t_stim_prev: list[MX], final_time: list[MX]):
+    def cn_sum_fun(self, r0: MX, t: MX, t_stim_prev: list[MX]):
         sum_multiplier = 0
 
-        # count = len([i for i in t_stim_prev if i < t]) todo : faire le calcul avec les stim précédente de t et pas après t
-
         for i in range(len(t_stim_prev)):  # Eq from [1]
-            ri = self.ri_fun(r0, final_time[i] - t_stim_prev[i])
+            if i == 0:  # Eq from Bakir et al.
+                ri = 1
+            else:
+                previous_phase_time = t_stim_prev[i] - t_stim_prev[i - 1]
+                ri = self.ri_fun(r0, previous_phase_time)
             # todo : check t or final time. I think it's final time
-            exp_time = self.exp_time_fun(t, t_stim_prev)
+            exp_time = self.exp_time_fun(t, t_stim_prev[i])
             sum_multiplier += ri * exp_time
         return sum_multiplier
 
-    def cn_dot_fun(self, cn: MX, r0: MX, t: MX, final_time: MX, t_stim_prev: list[MX]):
-        sum_multiplier = self.cn_sum_fun(r0, t, t_stim_prev, final_time)
+    def cn_dot_fun(self, cn: MX, r0: MX, t: MX, t_stim_prev: list[MX]):
+        sum_multiplier = self.cn_sum_fun(r0, t, t_stim_prev)
         return (1 / self.tauc) * sum_multiplier - (cn / self.tauc)  # Eq(1)
 
     def f_dot_fun(self, cn: MX, f: MX, a: MX, tau1: MX, km: MX):
@@ -125,4 +126,3 @@ class DingModel:
 
     def km_dot_fun(self, km: MX, f: MX):
         return -(km - self.km_rest) / self.tau_fat + self.alpha_km * f  # Eq(11)
-

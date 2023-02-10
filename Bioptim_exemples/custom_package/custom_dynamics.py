@@ -13,16 +13,14 @@ from bioptim import (
     DynamicsFunctions,
 )
 
-from .my_model import DingModel
 
 def custom_dynamics(
-        states: MX,  # CN, F, A, Tau1, Km
-        controls: MX,
-        parameters: MX,
-        nlp: NonLinearProgram,
-        all_ocp=None,
-        t=None,
- #       todo : ajouter les temps precedents
+    states: list[MX],  # CN, F, A, Tau1, Km
+    controls: MX,
+    parameters: list[MX],  # Final time phases
+    nlp: NonLinearProgram,
+    all_ocp=None,
+    t=None,  # This t is used to set the dynamics as t is a symbolic
 ) -> DynamicsEvaluation:
     """
     Parameters
@@ -37,27 +35,31 @@ def custom_dynamics(
         A reference to the phase
     all_ocp: OptimalControlProgram
         A reference to the ocp
+    t: MX
+        Current node time
     Returns
     -------
     The derivative of the states in the tuple[Union[MX, SX]] format
-
     """
-    # duration of the phase
-    final_time = parameters[nlp.phase_idx]
-    # all the instants of stimulation, i.e.: the beginning of each phase
-    t_stim_prev = []
+    # phase_time = parameters[nlp.phase_idx]  # Current phase duration
+
+    t_stim_prev = []  # Every stimulation instant before the current phase, i.e.: the beginning of each phase
     for i in range(nlp.phase_idx + 1):
         t_stim_prev.append(all_ocp.nlp[i].t0)
+        # todo : maybe this parameters[i] that should used /// all_ocp.nlp[i].t0 no need to sum to get the correct time
 
-    return DynamicsEvaluation(dxdt=nlp.model.system_dynamics(cn=states[0],
-                                                             f=states[1],
-                                                             a=states[2],
-                                                             tau1=states[3],
-                                                             km=states[4],
-                                                             t=t,
-                                                             final_time=final_time,
-                                                             t_stim_prev=t_stim_prev),
-                              defects=None)
+    return DynamicsEvaluation(
+        dxdt=nlp.model.system_dynamics(
+            cn=states[0],
+            f=states[1],
+            a=states[2],
+            tau1=states[3],
+            km=states[4],
+            t=t,
+            t_stim_prev=t_stim_prev,
+        ),
+        defects=None,
+    )
 
 
 def custom_configure_dynamics_function(ocp, nlp, dyn_func, expand: bool = True, **extra_params):
@@ -91,13 +93,15 @@ def custom_configure_dynamics_function(ocp, nlp, dyn_func, expand: bool = True, 
     for i in range(ns):
         if i == 0:
             # todo: verification des temps. et refactor
-            t = MX.zeros(1) if nlp.phase_idx == 0 else sum1(nlp.parameters.mx[0:nlp.phase_idx+1])
+            t = MX.zeros(1) if nlp.phase_idx == 0 else sum1(nlp.parameters.mx[0 : nlp.phase_idx + 1])
         else:
-            t = sum1(nlp.parameters.mx[0:nlp.phase_idx-1]) + nlp.parameters.mx[nlp.phase_idx] / (nlp.ns + 1) * i
+            t = sum1(nlp.parameters.mx[0 : nlp.phase_idx - 1]) + nlp.parameters.mx[nlp.phase_idx] / (nlp.ns + 1) * i
 
-        extra_params['t'] = t
+        extra_params["t"] = t
 
-        dynamics_eval = custom_dynamics(nlp.states["scaled"].mx_reduced, nlp.controls["scaled"].mx_reduced, nlp.parameters.mx, nlp, **extra_params)
+        dynamics_eval = custom_dynamics(
+            nlp.states["scaled"].mx_reduced, nlp.controls["scaled"].mx_reduced, nlp.parameters.mx, nlp, **extra_params
+        )
 
         dynamics_eval_function = Function(
             "ForwardDyn",
@@ -110,6 +114,7 @@ def custom_configure_dynamics_function(ocp, nlp, dyn_func, expand: bool = True, 
         nlp.dynamics_func.append(dynamics_eval_function)
 
     print("hello")
+
 
 def declare_ding_variables(ocp: OptimalControlProgram, nlp: NonLinearProgram):
     """
@@ -130,10 +135,7 @@ def declare_ding_variables(ocp: OptimalControlProgram, nlp: NonLinearProgram):
 
     t = MX.sym("t")
 
-    # ConfigureProblem.configure_dynamics_function(ocp, nlp, custom_dynamics, expand=True, all_ocp=ocp, t=t)
     custom_configure_dynamics_function(ocp, nlp, custom_dynamics, expand=True, all_ocp=ocp, t=t)
-
-
 
 
 def configure_ca_troponin_complex(ocp, nlp, as_states: bool, as_controls: bool, as_states_dot: bool = False):
@@ -256,8 +258,9 @@ def configure_cross_bridges(ocp, nlp, as_states: bool, as_controls: bool, as_sta
     )
 
 
-def configure_time_state_force_no_cross_bridge(ocp, nlp, as_states: bool, as_controls: bool,
-                                               as_states_dot: bool = False):
+def configure_time_state_force_no_cross_bridge(
+    ocp, nlp, as_states: bool, as_controls: bool, as_states_dot: bool = False
+):
     """
     Configure a new variable for time constant of force decline at the absence of strongly bound cross-bridges (ms)
 

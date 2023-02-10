@@ -29,16 +29,13 @@ from custom_package.custom_dynamics import (
 
 from custom_package.custom_objectives import track_muscle_force_custom
 
-from custom_package.my_model import (
-    DingModel
-)
+from custom_package.my_model import DingModel
 
 
 def prepare_ocp(
-        time_min: list,
-        time_max: list,
-        ode_solver: OdeSolver = OdeSolver.RK1(),
-
+    time_min: list,
+    time_max: list,
+    ode_solver: OdeSolver = OdeSolver.RK1(),
 ) -> OptimalControlProgram:
     """
     Prepare the ocp
@@ -72,11 +69,13 @@ def prepare_ocp(
 
     dynamics = DynamicsList()
     for i in range(10):
-        dynamics.add(declare_ding_variables, dynamic_function=custom_dynamics,  phase=i)
+        dynamics.add(declare_ding_variables, dynamic_function=custom_dynamics, phase=i)
 
     constraints = ConstraintList()
     for i in range(10):
-        constraints.add(ConstraintFcn.TIME_CONSTRAINT, node=Node.END, min_bound=time_min[i], max_bound=time_max[i], phase=i)
+        constraints.add(
+            ConstraintFcn.TIME_CONSTRAINT, node=Node.END, min_bound=time_min[i], max_bound=time_max[i], phase=i
+        )
 
     objective_functions = ObjectiveList()
     objective_functions.add(
@@ -115,9 +114,15 @@ def prepare_ocp(
 
     for i in range(10):
         if i == 0:
-            x_bounds.add(x_start_min, x_start_max, interpolation=InterpolationType.CONSTANT_WITH_FIRST_AND_LAST_DIFFERENT)
+            x_bounds.add(
+                x_start_min, x_start_max, interpolation=InterpolationType.CONSTANT_WITH_FIRST_AND_LAST_DIFFERENT
+            )
         else:
-            x_bounds.add(x_after_start_min, x_after_start_max, interpolation=InterpolationType.CONSTANT_WITH_FIRST_AND_LAST_DIFFERENT)
+            x_bounds.add(
+                x_after_start_min,
+                x_after_start_max,
+                interpolation=InterpolationType.CONSTANT_WITH_FIRST_AND_LAST_DIFFERENT,
+            )
 
     x_init = InitialGuessList()
     for i in range(10):

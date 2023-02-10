@@ -19,11 +19,13 @@ from bioptim import (
     Node,
 )
 
+
 def prepare_ocp(
-        time_min: list,
-        time_max: list,
-        biorbd_model_path: str = None,
-        ode_solver: OdeSolver = OdeSolver.RK1(), long_optim: bool = False
+    time_min: list,
+    time_max: list,
+    biorbd_model_path: str = None,
+    ode_solver: OdeSolver = OdeSolver.RK1(),
+    long_optim: bool = False,
 ) -> OptimalControlProgram:
     """
     Prepare the ocp
@@ -61,11 +63,15 @@ def prepare_ocp(
 
     constraints = ConstraintList()
     for i in range(10):
-        constraints.add(ConstraintFcn.TIME_CONSTRAINT, node=Node.END, min_bound=time_min[i], max_bound=time_max[i], phase=i)
+        constraints.add(
+            ConstraintFcn.TIME_CONSTRAINT, node=Node.END, min_bound=time_min[i], max_bound=time_max[i], phase=i
+        )
 
     objective_functions = ObjectiveList()
     for i in range(10):
-        objective_functions.add(ObjectiveFcn.Lagrange.MINIMIZE_CONTROL, key="tau", weight=1, phase=i)  # Minimize torque ?
+        objective_functions.add(
+            ObjectiveFcn.Lagrange.MINIMIZE_CONTROL, key="tau", weight=1, phase=i
+        )  # Minimize torque ?
 
     x_bounds = BoundsList()
     for i in range(10):
@@ -81,8 +87,10 @@ def prepare_ocp(
     tau_min, tau_max, tau_init = -50, 50, 0
     u_bounds = BoundsList()
     for i in range(10):
-        u_bounds.add([tau_min] * bio_model[i].nb_tau,
-                 [tau_max] * bio_model[i].nb_tau,)
+        u_bounds.add(
+            [tau_min] * bio_model[i].nb_tau,
+            [tau_max] * bio_model[i].nb_tau,
+        )
 
     u_init = InitialGuessList()
     for i in range(10):
@@ -108,8 +116,11 @@ def main():
     """
     time_min = [0.01, 0.03, 0.05, 0.02, 0.01, 0.03, 0.01, 0.02, 0.04, 0.02]
     time_max = [0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1]
-    ocp = prepare_ocp(time_min=time_min, time_max=time_max,
-        biorbd_model_path="/home/lim/Documents/Kevin_CO/These/Programmation/Bioptim/bioptim/bioptim/examples/muscle_driven_ocp/models/arm26.bioMod")
+    ocp = prepare_ocp(
+        time_min=time_min,
+        time_max=time_max,
+        biorbd_model_path="/home/lim/Documents/Kevin_CO/These/Programmation/Bioptim/bioptim/bioptim/examples/muscle_driven_ocp/models/arm26.bioMod",
+    )
 
     # --- Solve the program --- #
     sol = ocp.solve(Solver.IPOPT(show_online_optim=False))
@@ -118,6 +129,7 @@ def main():
     # sol.animate(show_meshes=True)
 
     sol.graphs()
+
 
 if __name__ == "__main__":
     main()
