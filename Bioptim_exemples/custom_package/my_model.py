@@ -56,6 +56,33 @@ class DingModel:
         return self._name
 
     def system_dynamics(self, cn: MX, f: MX, a: MX, tau1: MX, km: MX, t: MX, final_time: MX, t_stim_prev: list[MX]) -> MX:
+        """
+        The system dynamics is the function that describes the model.
+
+        Parameters
+        ----------
+        cn: MX
+            The value of the ca_troponin_complex
+        f: MX
+            The value of the force
+        a: MX
+            The value of the scaling factor
+        tau1: MX
+            The value of the time_state_force_no_cross_bridge
+        km: MX
+            The value of the cross_bridges
+        t: MX
+            The current time at which the dynamics is evaluated
+        final_time: MX
+            The final time of the current phase, ie: the duration of the phase
+            # todo: rename in phase_time, duration of the phase
+        t_stim_prev: list[MX]
+            The list of the time of the previous stimulations
+
+        Returns
+        -------
+        The value of the derivative of each state dx/dt at the current time t
+        """
         r0 = km + self.r0_km_relationship
         cn_dot = self.cn_dot_fun(cn, r0, t, final_time, t_stim_prev)
         f_dot = self.f_dot_fun(cn, f, a, tau1, km)
@@ -78,6 +105,7 @@ class DingModel:
 
         for i in range(len(t_stim_prev)):  # Eq from [1]
             ri = self.ri_fun(r0, final_time[i] - t_stim_prev[i])
+            # todo : check t or final time. I think it's final time
             exp_time = self.exp_time_fun(t, t_stim_prev)
             sum_multiplier += ri * exp_time
         return sum_multiplier
