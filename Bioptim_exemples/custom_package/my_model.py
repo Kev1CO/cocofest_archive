@@ -29,7 +29,7 @@ class DingModel:
         self.tau1_rest = 50.957  # Value from Ding's experimentation [1]
         self.km_rest = 0.103  # Value from Ding's experimentation [1]
 
-    def standard_rest_values(self):
+    def standard_rest_values(self) -> np.array:
         return np.array([[0], [0], [self.a_rest], [self.tau1_rest], [self.km_rest]])
 
     # ---- Absolutely needed methods ---- #

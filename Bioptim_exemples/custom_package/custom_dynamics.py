@@ -16,13 +16,15 @@ from bioptim import (
 
 def custom_dynamics(
     states: list[MX],  # CN, F, A, Tau1, Km
-    controls: MX,
-    parameters: list[MX],  # Final time phases
+    controls: MX,  # None
+    parameters: list[MX],  # Final time of each phase
     nlp: NonLinearProgram,
-    all_ocp=None,
+    all_ocp=None,  # Mandatory to get each beginning time of the phase corresponding to the stimulation apparition
     t=None,  # This t is used to set the dynamics as t is a symbolic
 ) -> DynamicsEvaluation:
     """
+    Functional electrical stimulation dynamic
+
     Parameters
     ----------
     states: Union[MX, SX]
@@ -42,11 +44,11 @@ def custom_dynamics(
     The derivative of the states in the tuple[Union[MX, SX]] format
     """
     # phase_time = parameters[nlp.phase_idx]  # Current phase duration
-
     t_stim_prev = []  # Every stimulation instant before the current phase, i.e.: the beginning of each phase
     for i in range(nlp.phase_idx + 1):
         t_stim_prev.append(all_ocp.nlp[i].t0)
-        # todo : maybe this parameters[i] that should used /// all_ocp.nlp[i].t0 no need to sum to get the correct time
+        # todo : maybe this parameters[i] that should used
+        #  /// all_ocp.nlp[i].t0 do not need to be sum to get the correct time where as parameters[nlp.phase_idx] does
 
     return DynamicsEvaluation(
         dxdt=nlp.model.system_dynamics(
@@ -62,7 +64,7 @@ def custom_dynamics(
     )
 
 
-def custom_configure_dynamics_function(ocp, nlp, dyn_func, expand: bool = True, **extra_params):
+def custom_configure_dynamics_function(ocp, nlp, **extra_params):
     """
     Configure the dynamics of the system
 
@@ -72,24 +74,18 @@ def custom_configure_dynamics_function(ocp, nlp, dyn_func, expand: bool = True, 
         A reference to the ocp
     nlp: NonLinearProgram
         A reference to the phase
-    dyn_func: Callable[states, controls, param]
-        The function to get the derivative of the states
-    expand: bool
-        If the dynamics should be expanded with casadi
     """
 
     nlp.parameters = ocp.v.parameters_in_list
     DynamicsFunctions.apply_parameters(nlp.parameters.mx, nlp)
 
-    dynamics_dxdt = None
-
     nlp.dynamics_func = []
-
     ns = nlp.ns
 
     # 1 calculer le temps de au debut de la phase
     # 2 ajouter le temps jusqu'au noeud i
 
+    # Gets every time node for the current phase
     for i in range(ns):
         if i == 0:
             # todo: verification des temps. et refactor
@@ -113,8 +109,6 @@ def custom_configure_dynamics_function(ocp, nlp, dyn_func, expand: bool = True, 
 
         nlp.dynamics_func.append(dynamics_eval_function)
 
-    print("hello")
-
 
 def declare_ding_variables(ocp: OptimalControlProgram, nlp: NonLinearProgram):
     """
@@ -135,7 +129,7 @@ def declare_ding_variables(ocp: OptimalControlProgram, nlp: NonLinearProgram):
 
     t = MX.sym("t")
 
-    custom_configure_dynamics_function(ocp, nlp, custom_dynamics, expand=True, all_ocp=ocp, t=t)
+    custom_configure_dynamics_function(ocp, nlp, all_ocp=ocp, t=t)
 
 
 def configure_ca_troponin_complex(ocp, nlp, as_states: bool, as_controls: bool, as_states_dot: bool = False):
@@ -228,36 +222,6 @@ def configure_scaling_factor(ocp, nlp, as_states: bool, as_controls: bool, as_st
     )
 
 
-def configure_cross_bridges(ocp, nlp, as_states: bool, as_controls: bool, as_states_dot: bool = False):
-    """
-    Configure a new variable for sensitivity of strongly bound cross-bridges to Cn (unitless)
-
-    Parameters
-    ----------
-    ocp: OptimalControlProgram
-        A reference to the ocp
-    nlp: NonLinearProgram
-        A reference to the phase
-    as_states: bool
-        If the generalized coordinates should be a state
-    as_controls: bool
-        If the generalized coordinates should be a control
-    as_states_dot: bool
-        If the generalized velocities should be a state_dot
-    """
-    name = "Km"
-    name_km = [name]
-    ConfigureProblem.configure_new_variable(
-        name,
-        name_km,
-        ocp,
-        nlp,
-        as_states,
-        as_controls,
-        as_states_dot,
-    )
-
-
 def configure_time_state_force_no_cross_bridge(
     ocp, nlp, as_states: bool, as_controls: bool, as_states_dot: bool = False
 ):
@@ -282,6 +246,36 @@ def configure_time_state_force_no_cross_bridge(
     ConfigureProblem.configure_new_variable(
         name,
         name_tau1,
+        ocp,
+        nlp,
+        as_states,
+        as_controls,
+        as_states_dot,
+    )
+
+
+def configure_cross_bridges(ocp, nlp, as_states: bool, as_controls: bool, as_states_dot: bool = False):
+    """
+    Configure a new variable for sensitivity of strongly bound cross-bridges to Cn (unitless)
+
+    Parameters
+    ----------
+    ocp: OptimalControlProgram
+        A reference to the ocp
+    nlp: NonLinearProgram
+        A reference to the phase
+    as_states: bool
+        If the generalized coordinates should be a state
+    as_controls: bool
+        If the generalized coordinates should be a control
+    as_states_dot: bool
+        If the generalized velocities should be a state_dot
+    """
+    name = "Km"
+    name_km = [name]
+    ConfigureProblem.configure_new_variable(
+        name,
+        name_km,
         ocp,
         nlp,
         as_states,
