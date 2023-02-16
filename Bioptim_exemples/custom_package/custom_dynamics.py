@@ -74,6 +74,11 @@ def custom_configure_dynamics_function(ocp, nlp, **extra_params):
         A reference to the ocp
     nlp: NonLinearProgram
         A reference to the phase
+    **extra_params: all_ocp, t
+        all_ocp: OptimalControlProgram
+            A reference to the ocp
+        t: MX
+            Current node time
     """
 
     nlp.parameters = ocp.v.parameters_in_list
@@ -81,9 +86,6 @@ def custom_configure_dynamics_function(ocp, nlp, **extra_params):
 
     nlp.dynamics_func = []
     ns = nlp.ns
-
-    # 1 calculer le temps de au debut de la phase
-    # 2 ajouter le temps jusqu'au noeud i
 
     # Gets every time node for the current phase
     for i in range(ns):
@@ -94,6 +96,15 @@ def custom_configure_dynamics_function(ocp, nlp, **extra_params):
             t = sum1(nlp.parameters.mx[0 : nlp.phase_idx - 1]) + nlp.parameters.mx[nlp.phase_idx] / (nlp.ns + 1) * i
 
         extra_params["t"] = t
+
+        # 0
+        # (mac(ones(1x9), vertcat(time_MX, time_MX, time_MX, time_MX, time_MX, time_MX, time_MX, time_MX, time_MX, time_MX)[:9], 0)+(time_MX / 11))
+        # (mac(ones(1x9), vertcat(time_MX, time_MX, time_MX, time_MX, time_MX, time_MX, time_MX, time_MX, time_MX, time_MX)[:9], 0)+(2 * (time_MX / 11)))
+        # (mac(ones(1x9), vertcat(time_MX, time_MX, time_MX, time_MX, time_MX, time_MX, time_MX, time_MX, time_MX, time_MX)[:9], 0)+(3 * (time_MX / 11)))
+        # (mac(ones(1x9), vertcat(time_MX, time_MX, time_MX, time_MX, time_MX, time_MX, time_MX, time_MX, time_MX, time_MX)[:9], 0)+(4 * (time_MX / 11)))
+        # (mac(ones(1x9), vertcat(time_MX, time_MX, time_MX, time_MX, time_MX, time_MX, time_MX, time_MX, time_MX, time_MX)[:9], 0)+(5 * (time_MX / 11)))
+
+        # CODE CRASHES AT I=5 FOR dynamics_eval
 
         dynamics_eval = custom_dynamics(
             nlp.states["scaled"].mx_reduced, nlp.controls["scaled"].mx_reduced, nlp.parameters.mx, nlp, **extra_params
@@ -127,7 +138,7 @@ def declare_ding_variables(ocp: OptimalControlProgram, nlp: NonLinearProgram):
     configure_cross_bridges(ocp, nlp, as_states=True, as_controls=False)
     configure_time_state_force_no_cross_bridge(ocp, nlp, as_states=True, as_controls=False)
 
-    t = MX.sym("t")
+    t = MX.sym("t")  # t needs a symbolic value to start computing in custom_configure_dynamics_function
 
     custom_configure_dynamics_function(ocp, nlp, all_ocp=ocp, t=t)
 

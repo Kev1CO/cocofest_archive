@@ -63,20 +63,23 @@ def prepare_ocp(
     The OptimalControlProgram ready to be solved
     """
 
-    ding_models = [DingModel() for i in range(10)]
-    n_shooting = [10 for i in range(10)]
-    final_time = [0.1 for i in range(10)]
+    ding_models = [DingModel() for i in range(10)]  # Gives DingModel as model for n phases
+    n_shooting = [10 for i in range(10)]  # Gives m node shooting for my n phases problem
+    final_time = [0.1 for i in range(10)]  # Set the final time for all my n phases
 
+    # Creates the system's dynamic for my n phases
     dynamics = DynamicsList()
     for i in range(10):
         dynamics.add(declare_ding_variables, dynamic_function=custom_dynamics, phase=i)
 
+    # Creates the constraint for my n phases
     constraints = ConstraintList()
     for i in range(10):
         constraints.add(
             ConstraintFcn.TIME_CONSTRAINT, node=Node.END, min_bound=time_min[i], max_bound=time_max[i], phase=i
         )
 
+    # Creates the target force objective function for my n phases
     objective_functions = ObjectiveList()
     objective_functions.add(
         track_muscle_force_custom,
@@ -88,6 +91,7 @@ def prepare_ocp(
         force=25,
     )
 
+    # Sets the bound for all the phases
     x_bounds = BoundsList()
 
     x_min_start = ding_models[0].standard_rest_values()
