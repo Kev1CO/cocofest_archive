@@ -15,9 +15,9 @@ from bioptim import (
 
 
 def custom_dynamics(
-    states: list[MX],  # CN, F, A, Tau1, Km
+    states: list[MX],  # CN, F, A, Tau1, Km # todo: remove list
     controls: MX,  # None
-    parameters: list[MX],  # Final time of each phase
+    parameters: list[MX],  # Final time of each phase # todo: remove list
     nlp: NonLinearProgram,
     all_ocp=None,  # Mandatory to get each beginning time of the phase corresponding to the stimulation apparition
     t=None,  # This t is used to set the dynamics as t is a symbolic
@@ -88,23 +88,11 @@ def custom_configure_dynamics_function(ocp, nlp, **extra_params):
     ns = nlp.ns
 
     # Gets every time node for the current phase
+    t0_phase_in_ocp = sum1(nlp.parameters.mx[0: nlp.phase_idx])
     for i in range(ns):
-        if i == 0:
-            # todo: verification des temps. et refactor
-            t = MX.zeros(1) if nlp.phase_idx == 0 else sum1(nlp.parameters.mx[0 : nlp.phase_idx + 1])
-        else:
-            t = sum1(nlp.parameters.mx[0 : nlp.phase_idx - 1]) + nlp.parameters.mx[nlp.phase_idx] / (nlp.ns + 1) * i
-
-        extra_params["t"] = t
-
-        # 0
-        # (mac(ones(1x9), vertcat(time_MX, time_MX, time_MX, time_MX, time_MX, time_MX, time_MX, time_MX, time_MX, time_MX)[:9], 0)+(time_MX / 11))
-        # (mac(ones(1x9), vertcat(time_MX, time_MX, time_MX, time_MX, time_MX, time_MX, time_MX, time_MX, time_MX, time_MX)[:9], 0)+(2 * (time_MX / 11)))
-        # (mac(ones(1x9), vertcat(time_MX, time_MX, time_MX, time_MX, time_MX, time_MX, time_MX, time_MX, time_MX, time_MX)[:9], 0)+(3 * (time_MX / 11)))
-        # (mac(ones(1x9), vertcat(time_MX, time_MX, time_MX, time_MX, time_MX, time_MX, time_MX, time_MX, time_MX, time_MX)[:9], 0)+(4 * (time_MX / 11)))
-        # (mac(ones(1x9), vertcat(time_MX, time_MX, time_MX, time_MX, time_MX, time_MX, time_MX, time_MX, time_MX, time_MX)[:9], 0)+(5 * (time_MX / 11)))
-
-        # CODE CRASHES AT I=5 FOR dynamics_eval
+        t_node_in_phase = nlp.parameters.mx[nlp.phase_idx] / (nlp.ns + 1) * i
+        t_node_in_ocp = t0_phase_in_ocp + t_node_in_phase
+        extra_params["t"] = t_node_in_ocp
 
         dynamics_eval = custom_dynamics(
             nlp.states["scaled"].mx_reduced, nlp.controls["scaled"].mx_reduced, nlp.parameters.mx, nlp, **extra_params
