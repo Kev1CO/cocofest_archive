@@ -1,18 +1,15 @@
 """
 This example will do a 10 phase example with Ding's input parameter for FES
 """
-from casadi import MX
+
 import numpy as np
-import biorbd_casadi as biorbd
 from bioptim import (
-    BiorbdModel,
     OptimalControlProgram,
     ObjectiveList,
     ObjectiveFcn,
     ConstraintList,
     ConstraintFcn,
     DynamicsList,
-    DynamicsFcn,
     BoundsList,
     InterpolationType,
     InitialGuessList,
@@ -20,7 +17,6 @@ from bioptim import (
     Solver,
     Node,
 )
-
 
 from custom_package.custom_dynamics import (
     custom_dynamics,
@@ -42,19 +38,10 @@ def prepare_ocp(
 
     Parameters
     ----------
-    biorbd_model_path: str
-        The path to the bioMod
-    final_time: float
-        The time at the final node
     time_min: list
         The minimal time for each phase
     time_max: list
         The maximal time for each phase
-    n_shooting: int
-        The number of shooting points
-    weight: float
-        The weight applied to the SUPERIMPOSE_MARKERS final objective function. The bigger this number is, the greater
-        the model will try to reach the marker. This is in relation with the other objective functions
     ode_solver: OdeSolver
         The ode solver to use
 
@@ -151,7 +138,7 @@ def prepare_ocp(
         u_bounds,
         objective_functions,
         constraints=constraints,
-        ode_solver=ode_solver,
+        ode_solver=ode_solver,  # todo : OdeSolverBase not available for RK1
     )
 
 
@@ -159,7 +146,9 @@ def main():
     """
     Prepare and solve and animate a reaching task ocp
     """
+    # minimum time between two phase (stimulation)
     time_min = [0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01]
+    # maximum time between two phase (stimulation)
     time_max = [0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1]
     ocp = prepare_ocp(time_min=time_min, time_max=time_max)
 
