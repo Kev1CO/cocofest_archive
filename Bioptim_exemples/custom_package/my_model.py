@@ -20,7 +20,7 @@ class DingModel:
         self.tauc = 20  # Value from Ding's experimentation [1] (ms)
         self.r0_km_relationship = 1.04  # (unitless)
         # Different values for each person :
-        self.alpha_a = -4.0 * 10**-7  # Value from Ding's experimentation [1] (ms^-2)
+        self.alpha_a = -4.0 * 10**-7  # Value from Ding's experimentation [1] (ms^-2)   #todo: e-7, etc...
         self.alpha_tau1 = 2.1 * 10**-5  # Value from Ding's experimentation [1] (N^-1)
         self.tau2 = 60  # Close value from Ding's experimentation [2] (ms)
         self.tau_fat = 127000  # Value from Ding's experimentation [1] (ms)
@@ -150,7 +150,7 @@ class DingModel:
             else:
                 previous_phase_time = t_stim_prev[i] - t_stim_prev[i - 1]
                 ri = self.ri_fun(r0, previous_phase_time)
-            # todo : ask equation n°1 sum if exp_time is included and if -cn/tc is as well
+
             exp_time = self.exp_time_fun(t, t_stim_prev[i])
             sum_multiplier += ri * exp_time
         return sum_multiplier
