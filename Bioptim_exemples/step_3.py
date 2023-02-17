@@ -31,7 +31,7 @@ from custom_package.my_model import DingModel
 def prepare_ocp(
     time_min: list,
     time_max: list,
-    ode_solver: OdeSolver = OdeSolver.RK1(),
+    ode_solver: OdeSolver = OdeSolver.RK1(n_integration_steps=1),
 ) -> OptimalControlProgram:
     """
     Prepare the ocp
@@ -138,7 +138,7 @@ def prepare_ocp(
         u_bounds,
         objective_functions,
         constraints=constraints,
-        ode_solver=ode_solver,  # todo : OdeSolverBase not available for RK1
+        ode_solver=ode_solver,
     )
 
 

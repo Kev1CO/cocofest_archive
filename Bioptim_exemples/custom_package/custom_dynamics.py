@@ -15,40 +15,36 @@ from bioptim import (
 
 
 def custom_dynamics(
-    states: list[MX],  # CN, F, A, Tau1, Km # todo: remove list
-    controls: MX,  # None
-    parameters: list[MX],  # Final time of each phase # todo: remove list
+    states: MX,
+    controls: MX,
+    parameters: MX,
     nlp: NonLinearProgram,
-    all_ocp=None,  # Mandatory to get each beginning time of the phase corresponding to the stimulation apparition
-    t=None,  # This t is used to set the dynamics as t is a symbolic
+    t=None,
 ) -> DynamicsEvaluation:
     """
     Functional electrical stimulation dynamic
 
     Parameters
     ----------
-    states: Union[MX, SX]
-        The state of the system
-    controls: Union[MX, SX]
-        The controls of the system
-    parameters: Union[MX, SX]
-        The parameters acting on the system
+    states: MX | SX
+        The state of the system CN, F, A, Tau1, Km
+    controls: MX | SX
+        The controls of the system, none
+    parameters: MX | SX
+        The parameters acting on the system, final time of each phase
     nlp: NonLinearProgram
         A reference to the phase
-    all_ocp: OptimalControlProgram
-        A reference to the ocp
     t: MX
-        Current node time
+        Current node time, this t is used to set the dynamics and as to be a symbolic
     Returns
     -------
-    The derivative of the states in the tuple[Union[MX, SX]] format
+    The derivative of the states in the tuple[MX | SX]] format
     """
-    # phase_time = parameters[nlp.phase_idx]  # Current phase duration
+
     t_stim_prev = []  # Every stimulation instant before the current phase, i.e.: the beginning of each phase
-    for i in range(nlp.phase_idx + 1):
-        t_stim_prev.append(all_ocp.nlp[i].t0)
-        # todo : maybe this parameters[i] that should used
-        #  /// all_ocp.nlp[i].t0 do not need to be sum to get the correct time where as parameters[nlp.phase_idx] does
+
+    for i in range(nlp.phase_idx):
+        t_stim_prev.append(sum1(nlp.parameters.mx[0: i]))
 
     return DynamicsEvaluation(
         dxdt=nlp.model.system_dynamics(
@@ -65,6 +61,7 @@ def custom_dynamics(
 
 
 def custom_configure_dynamics_function(ocp, nlp, **extra_params):
+    # todo : is it relevant to call **extra_params as all_ocp doesn't exists anymore (replace extra_params with t) ?
     """
     Configure the dynamics of the system
 
@@ -74,9 +71,7 @@ def custom_configure_dynamics_function(ocp, nlp, **extra_params):
         A reference to the ocp
     nlp: NonLinearProgram
         A reference to the phase
-    **extra_params: all_ocp, t
-        all_ocp: OptimalControlProgram
-            A reference to the ocp
+    **extra_params: t
         t: MX
             Current node time
     """
@@ -87,8 +82,9 @@ def custom_configure_dynamics_function(ocp, nlp, **extra_params):
     nlp.dynamics_func = []
     ns = nlp.ns
 
-    # Gets every time node for the current phase
+    # Gets the t0 time for the current phase
     t0_phase_in_ocp = sum1(nlp.parameters.mx[0: nlp.phase_idx])
+    # Gets every time node for the current phase
     for i in range(ns):
         t_node_in_phase = nlp.parameters.mx[nlp.phase_idx] / (nlp.ns + 1) * i
         t_node_in_ocp = t0_phase_in_ocp + t_node_in_phase
@@ -128,7 +124,7 @@ def declare_ding_variables(ocp: OptimalControlProgram, nlp: NonLinearProgram):
 
     t = MX.sym("t")  # t needs a symbolic value to start computing in custom_configure_dynamics_function
 
-    custom_configure_dynamics_function(ocp, nlp, all_ocp=ocp, t=t)
+    custom_configure_dynamics_function(ocp, nlp, t=t)
 
 
 def configure_ca_troponin_complex(ocp, nlp, as_states: bool, as_controls: bool, as_states_dot: bool = False):
