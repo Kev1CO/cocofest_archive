@@ -44,7 +44,7 @@ def custom_dynamics(
     t_stim_prev = []  # Every stimulation instant before the current phase, i.e.: the beginning of each phase
 
     for i in range(nlp.phase_idx+1):
-        t_stim_prev.append(sum1(nlp.parameters.mx[0: i])*100)
+        t_stim_prev.append(sum1(nlp.parameters.mx[0: i]))
 
     return DynamicsEvaluation(
         dxdt=nlp.model.system_dynamics(
@@ -87,7 +87,7 @@ def custom_configure_dynamics_function(ocp, nlp, **extra_params):
     for i in range(ns):
         t_node_in_phase = nlp.parameters.mx[nlp.phase_idx] / (nlp.ns + 1) * i
         t_node_in_ocp = t0_phase_in_ocp + t_node_in_phase
-        extra_params["t"] = t_node_in_ocp*100
+        extra_params["t"] = t_node_in_ocp
 
         dynamics_eval = custom_dynamics(
             nlp.states["scaled"].mx_reduced, nlp.controls["scaled"].mx_reduced, nlp.parameters.mx, nlp, **extra_params
