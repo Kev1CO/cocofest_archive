@@ -61,7 +61,6 @@ def custom_dynamics(
 
 
 def custom_configure_dynamics_function(ocp, nlp, **extra_params):
-    # todo : is it relevant to call **extra_params as all_ocp doesn't exists anymore (replace extra_params with t) ?
     """
     Configure the dynamics of the system
 
@@ -116,11 +115,11 @@ def declare_ding_variables(ocp: OptimalControlProgram, nlp: NonLinearProgram):
     nlp: NonLinearProgram
         A reference to the phase
     """
-    configure_force(ocp, nlp, as_states=True, as_controls=False)
     configure_ca_troponin_complex(ocp, nlp, as_states=True, as_controls=False)
+    configure_force(ocp, nlp, as_states=True, as_controls=False)
     configure_scaling_factor(ocp, nlp, as_states=True, as_controls=False)
-    configure_cross_bridges(ocp, nlp, as_states=True, as_controls=False)
     configure_time_state_force_no_cross_bridge(ocp, nlp, as_states=True, as_controls=False)
+    configure_cross_bridges(ocp, nlp, as_states=True, as_controls=False)
 
     t = MX.sym("t")  # t needs a symbolic value to start computing in custom_configure_dynamics_function
 

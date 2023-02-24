@@ -68,15 +68,10 @@ def prepare_ocp(
 
     # Creates the target force objective function for my n phases
     objective_functions = ObjectiveList()
-    objective_functions.add(
-        track_muscle_force_custom,
-        custom_type=ObjectiveFcn.Mayer,
-        node=Node.END,
-        quadratic=True,
-        weight=1,
-        phase=9,
-        force=25,
-    )
+    for i in range(10):
+        objective_functions.add(
+            ObjectiveFcn.Mayer.MINIMIZE_STATE, target=25, key="F", node=Node.END, quadratic=True, weight=1,
+            phase=i)
 
     # Sets the bound for all the phases
     x_bounds = BoundsList()
