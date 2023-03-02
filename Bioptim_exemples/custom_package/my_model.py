@@ -5,7 +5,7 @@ but it is possible to use bioptim without biorbd. This is an example of how to u
 from typing import Callable
 
 import numpy as np
-from casadi import sin, MX, exp, vertcat
+from casadi import MX, exp, vertcat
 
 
 class DingModel:
@@ -17,22 +17,15 @@ class DingModel:
     def __init__(self, name: str = None):
         self._name = name
         # custom values for the example
-        # self.tauc = 20  # Value from Ding's experimentation [1] (ms)
         self.tauc = 0.020  # Value from Ding's experimentation [1] (s)
         self.r0_km_relationship = 1.04  # (unitless)
         # Different values for each person :
-        # self.alpha_a = -4.0 * 10e-7  # Value from Ding's experimentation [1] (ms^-2)
-        self.alpha_a = -4.0 * 10e-3  # Value from Ding's experimentation [1] (s^-2)
+        self.alpha_a = -4.0 * 10e-1  # Value from Ding's experimentation [1] (s^-2)
         self.alpha_tau1 = 2.1 * 10e-5  # Value from Ding's experimentation [1] (N^-1)
-        self.tau2 = 0.060  # Close value from Ding's experimentation [2] (ms)
-        # self.tau2 = 60  # Close value from Ding's experimentation [2] (ms)
-        # self.tau_fat = 12700  # Value from Ding's experimentation [1] (ms)
+        self.tau2 = 0.060  # Close value from Ding's experimentation [2] (s)
         self.tau_fat = 127  # Value from Ding's experimentation [1] (s)
-        # self.alpha_km = 1.9 * 10e-8  # Value from Ding's experimentation [1] (ms^-1.N^-1)
-        self.alpha_km = 1.9 * 10e-4  # Value from Ding's experimentation [1] (ms^-1.N^-1)
-        # self.a_rest = 3.009  # Value from Ding's experimentation [1] (N.ms-1)
-        self.a_rest = 300.9  # Value from Ding's experimentation [1] (N.s-1)
-        # self.tau1_rest = 50.957  # Value from Ding's experimentation [1] (ms)
+        self.alpha_km = 1.9 * 10e-5  # Value from Ding's experimentation [1] (s^-1.N^-1)
+        self.a_rest = 3009  # Value from Ding's experimentation [1] (N.s-1)
         self.tau1_rest = 0.050957  # Value from Ding's experimentation [1] (s)
         self.km_rest = 0.103  # Value from Ding's experimentation [1] (unitless)
 
@@ -185,6 +178,8 @@ class DingModel:
         The value of the derivative ca_troponin_complex (unitless)
         """
         sum_multiplier = self.cn_sum_fun(r0, t, t_stim_prev)
+
+
         return (1 / self.tauc) * sum_multiplier - (cn / self.tauc)  # Eq(1)
 
     def f_dot_fun(self, cn: MX, f: MX, a: MX, tau1: MX, km: MX):

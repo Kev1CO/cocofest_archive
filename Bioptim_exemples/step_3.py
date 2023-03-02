@@ -29,10 +29,10 @@ from custom_package.my_model import DingModel
 
 
 def prepare_ocp(
-    n_stim: int,
-    time_min: list,
-    time_max: list,
-    ode_solver: OdeSolver = OdeSolver.RK4(n_integration_steps=1),
+        n_stim: int,
+        time_min: list,
+        time_max: list,
+        ode_solver: OdeSolver = OdeSolver.RK4(n_integration_steps=1),
 ) -> OptimalControlProgram:
     """
     Prepare the ocp
@@ -52,7 +52,7 @@ def prepare_ocp(
     """
 
     ding_models = [DingModel() for i in range(n_stim)]  # Gives DingModel as model for n phases
-    n_shooting = [5 for i in range(n_stim)]  # Gives m node shooting for my n phases problem
+    n_shooting = [20 for i in range(n_stim)]  # Gives m node shooting for my n phases problem
     final_time = [0.01 for i in range(n_stim)]  # Set the final time for all my n phases
 
     # Creates the system's dynamic for my n phases
@@ -71,25 +71,34 @@ def prepare_ocp(
     objective_functions = ObjectiveList()
     for i in range(n_stim):
         objective_functions.add(
-            ObjectiveFcn.Mayer.MINIMIZE_STATE, target=25, key="F", node=Node.END, quadratic=True, weight=1,
+            ObjectiveFcn.Mayer.MINIMIZE_STATE, target=250, key="F", node=Node.END, quadratic=True, weight=1,
             phase=i)
+
+        ### STATE BOUNDS REPRESENTATION ###
+
+    #                    |‾‾‾‾‾‾‾‾‾‾x_max_middle‾‾‾‾‾‾‾‾‾‾‾|
+    #                    |                                 |
+    #                    |                                 |
+    #       _x_max_start_|                                 |_x_max_end_
+    #       ‾x_min_start‾|                                 |‾x_min_end‾
+    #                    |                                 |
+    #                    |                                 |
+    #                     ‾‾‾‾‾‾‾‾‾‾x_min_middle‾‾‾‾‾‾‾‾‾‾‾
 
     # Sets the bound for all the phases
     x_bounds = BoundsList()
 
-    x_min_start = ding_models[0].standard_rest_values()
-    # x_min_start[0] = 0.01
+    x_min_start = ding_models[0].standard_rest_values()  # Model initial values
+    x_max_start = ding_models[0].standard_rest_values()  # Model initial values
+
+    # Model execution lower bound values (Cn, F, Tau1, Km, cannot be lower than their initial values)
     x_min_middle = ding_models[0].standard_rest_values()
-    x_min_middle[2] = 0
+    x_min_middle[2] = 0  # Model execution lower bound values (A, will decrease from fatigue and cannot be lower than 0)
     x_min_end = x_min_middle
 
-    x_max_start = ding_models[0].standard_rest_values()
-    # x_max_start[0] = 0.01
     x_max_middle = ding_models[0].standard_rest_values()
-    x_max_middle[0] = 1000
-    x_max_middle[1] = 1000
-    x_max_middle[3] = 1000
-    x_max_middle[4] = 1
+    x_max_middle[0:2] = 1000
+    x_max_middle[3:5] = 1
     x_max_end = x_max_middle
 
     x_start_min = np.concatenate((x_min_start, x_min_middle, x_min_end), axis=1)
@@ -145,11 +154,11 @@ def main():
     Prepare and solve and animate a reaching task ocp
     """
     # number of stimulation corresponding to phases
-    n = 30
+    n = 10
     # minimum time between two phase (stimulation)
     time_min = [0.01 for _ in range(n)]
     # maximum time between two phase (stimulation)
-    time_max = [0.033 for _ in range(n)]
+    time_max = [0.1 for _ in range(n)]
     ocp = prepare_ocp(n_stim=n, time_min=time_min, time_max=time_max)
 
     # --- Solve the program --- #
@@ -161,6 +170,7 @@ def main():
     # TODO : Plot live compilation
 
     sol.graphs()
+    # TODO : PR to remove graph title by phase
 
 
 if __name__ == "__main__":
