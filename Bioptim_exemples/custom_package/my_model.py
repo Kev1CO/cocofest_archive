@@ -31,7 +31,9 @@ class DingModel:
 
         # TODO : Check tau1 and Km value as well as tau1/km alphas
         # TODO : Fix the error at the beginning of the F curve
+        # Works better with RK4 or RK8, COLLOCATION methode doesn't work
         # TODO : Constrain nodes for constant stimulation interval
+        # Where to code, in prepare ocp, create a new constrain func ?
         # TODO : Add intensity as parameter to the model
 
     def standard_rest_values(self) -> np.array:
@@ -178,7 +180,6 @@ class DingModel:
         The value of the derivative ca_troponin_complex (unitless)
         """
         sum_multiplier = self.cn_sum_fun(r0, t, t_stim_prev)
-
 
         return (1 / self.tauc) * sum_multiplier - (cn / self.tauc)  # Eq(1)
 

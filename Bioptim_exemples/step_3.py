@@ -32,6 +32,7 @@ def prepare_ocp(
         n_stim: int,
         time_min: list,
         time_max: list,
+        stim_freq: int,
         ode_solver: OdeSolver = OdeSolver.RK4(n_integration_steps=1),
 ) -> OptimalControlProgram:
     """
@@ -52,7 +53,7 @@ def prepare_ocp(
     """
 
     ding_models = [DingModel() for i in range(n_stim)]  # Gives DingModel as model for n phases
-    n_shooting = [20 for i in range(n_stim)]  # Gives m node shooting for my n phases problem
+    n_shooting = [5 for i in range(n_stim)]  # Gives m node shooting for my n phases problem
     final_time = [0.01 for i in range(n_stim)]  # Set the final time for all my n phases
 
     # Creates the system's dynamic for my n phases
@@ -67,12 +68,24 @@ def prepare_ocp(
             ConstraintFcn.TIME_CONSTRAINT, node=Node.END, min_bound=time_min[i], max_bound=time_max[i], phase=i
         )
 
-    # Creates the target force objective function for my n phases
+    # Frequency test
+    # for i in range(n_stim):
+    #     constraints.add(
+    #         ConstraintFcn.TIME_CONSTRAINT, node=Node.END, min_bound=1, max_bound=0.01, phase=i
+    #     )
+
     objective_functions = ObjectiveList()
-    for i in range(n_stim):
-        objective_functions.add(
-            ObjectiveFcn.Mayer.MINIMIZE_STATE, target=250, key="F", node=Node.END, quadratic=True, weight=1,
-            phase=i)
+    # Objective function to target force
+    # for i in range(n_stim):
+    objective_functions.add(
+        ObjectiveFcn.Mayer.MINIMIZE_STATE, target=250, key="F", node=Node.END, quadratic=True, weight=1,
+        phase=9)
+
+    # Objective function to minimize muscle fatigue
+    # for i in range(n_stim):
+    #     objective_functions.add(
+    #         ObjectiveFcn.Mayer.MINIMIZE_STATE, target=3009, key="A", node=Node.END, quadratic=True, weight=1,
+    #         phase=i)
 
         ### STATE BOUNDS REPRESENTATION ###
 
@@ -156,18 +169,20 @@ def main():
     # number of stimulation corresponding to phases
     n = 10
     # minimum time between two phase (stimulation)
-    time_min = [0.01 for _ in range(n)]
+    time_min = [0.03 for _ in range(n)]
     # maximum time between two phase (stimulation)
-    time_max = [0.1 for _ in range(n)]
-    ocp = prepare_ocp(n_stim=n, time_min=time_min, time_max=time_max)
+    time_max = [0.03 for _ in range(n)]
+    ocp = prepare_ocp(n_stim=n, time_min=time_min, time_max=time_max, stim_freq=33)
+
+    # ocp = prepare_ocp(n_stim=n, stim_freq=33)
 
     # --- Solve the program --- #
-    sol = ocp.solve(Solver.IPOPT(show_online_optim=False))
-    # TODO : Use MA57
+    sol = ocp.solve(Solver.IPOPT(show_online_optim=False, _linear_solver="MA57"))
+    # 10 phases, 5 node shooting, RK4 : 4,52 sec
 
     # --- Show results --- #
     # sol.animate(show_meshes=True)
-    # TODO : Plot live compilation
+    # TODO : PR to enable Plot animation with other model than biorbd models
 
     sol.graphs()
     # TODO : PR to remove graph title by phase
