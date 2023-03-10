@@ -20,16 +20,15 @@ class DingModel:
         self.tauc = 0.020  # Value from Ding's experimentation [1] (s)
         self.r0_km_relationship = 1.04  # (unitless)
         # Different values for each person :
-        self.alpha_a = -4.0 * 10e-1  # Value from Ding's experimentation [1] (s^-2)
+        self.alpha_a = -4.0 * 10e-7  # Value from Ding's experimentation [1] (s^-2)
         self.alpha_tau1 = 2.1 * 10e-5  # Value from Ding's experimentation [1] (N^-1)
         self.tau2 = 0.060  # Close value from Ding's experimentation [2] (s)
         self.tau_fat = 127  # Value from Ding's experimentation [1] (s)
-        self.alpha_km = 1.9 * 10e-5  # Value from Ding's experimentation [1] (s^-1.N^-1)
+        self.alpha_km = 1.9 * 10e-8  # Value from Ding's experimentation [1] (s^-1.N^-1)
         self.a_rest = 3009  # Value from Ding's experimentation [1] (N.s-1)
         self.tau1_rest = 0.050957  # Value from Ding's experimentation [1] (s)
         self.km_rest = 0.103  # Value from Ding's experimentation [1] (unitless)
 
-        # TODO : Check tau1 and Km value as well as tau1/km alphas
         # TODO : Fix the error at the beginning of the F curve
         # Works better with RK4 or RK8, COLLOCATION methode doesn't work
         # TODO : Constrain nodes for constant stimulation interval

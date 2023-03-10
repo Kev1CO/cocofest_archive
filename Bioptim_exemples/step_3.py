@@ -151,7 +151,7 @@ def prepare_ocp(
         ding_models,
         dynamics,
         n_shooting,
-        final_time,
+        final_time,  # frequency
         x_init,
         u_init,
         x_bounds,
@@ -169,9 +169,9 @@ def main():
     # number of stimulation corresponding to phases
     n = 10
     # minimum time between two phase (stimulation)
-    time_min = [0.03 for _ in range(n)]
+    time_min = [0.01 for _ in range(n)]
     # maximum time between two phase (stimulation)
-    time_max = [0.03 for _ in range(n)]
+    time_max = [0.1 for _ in range(n)]
     ocp = prepare_ocp(n_stim=n, time_min=time_min, time_max=time_max, stim_freq=33)
 
     # ocp = prepare_ocp(n_stim=n, stim_freq=33)
