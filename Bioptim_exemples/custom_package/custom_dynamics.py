@@ -3,7 +3,7 @@ This script implements a custom dynamics to work with bioptim. Bioptim has a dee
 but it is possible to use bioptim without biorbd.
 This is an example of how to use bioptim with a custom dynamics.
 """
-from casadi import MX, Function, sum1
+from casadi import MX, Function, sum1, horzcat
 
 from bioptim import (
     OptimalControlProgram,
@@ -75,15 +75,18 @@ def custom_configure_dynamics_function(ocp, nlp, **extra_params):
             Current node time
     """
 
+    global dynamics_eval_horzcat
     nlp.parameters = ocp.v.parameters_in_list
     DynamicsFunctions.apply_parameters(nlp.parameters.mx, nlp)
 
-    nlp.dynamics_func = []
+    # nlp.dynamics_func = []
     ns = nlp.ns
 
     # Gets the t0 time for the current phase
     t0_phase_in_ocp = sum1(nlp.parameters.mx[0: nlp.phase_idx])
     # Gets every time node for the current phase
+    dynamics_eval_list = []
+
     for i in range(ns):
         t_node_in_phase = nlp.parameters.mx[nlp.phase_idx] / (nlp.ns + 1) * i
         t_node_in_ocp = t0_phase_in_ocp + t_node_in_phase
@@ -92,16 +95,35 @@ def custom_configure_dynamics_function(ocp, nlp, **extra_params):
         dynamics_eval = custom_dynamics(
             nlp.states["scaled"].mx_reduced, nlp.controls["scaled"].mx_reduced, nlp.parameters.mx, nlp, **extra_params
         )
+        if i == 0:
+            dynamics_eval_horzcat = horzcat(dynamics_eval.dxdt)
+        else:
+            dynamics_eval_horzcat = horzcat(dynamics_eval_horzcat, dynamics_eval.dxdt)
 
-        dynamics_eval_function = Function(
-            "ForwardDyn",
-            [nlp.states["scaled"].mx_reduced, nlp.controls["scaled"].mx_reduced, nlp.parameters.mx],
-            [dynamics_eval.dxdt],
-            ["x", "u", "p"],
-            ["xdot"],
-        )
+    # dynamics_eval_function = Function(
+    #     "ForwardDyn",
+    #     [nlp.states["scaled"].mx_reduced, nlp.controls["scaled"].mx_reduced, nlp.parameters.mx],
+    #     [dynamics_eval_horzcat],
+    #     ["x", "u", "p"],
+    #     ["xdot"],
+    # )
 
-        nlp.dynamics_func.append(dynamics_eval_function)
+    nlp.dynamics_func = Function(
+        "ForwardDyn",
+        [nlp.states["scaled"].mx_reduced, nlp.controls["scaled"].mx_reduced, nlp.parameters.mx],
+        [dynamics_eval_horzcat],
+        ["x", "u", "p"],
+        ["xdot"],
+    )
+
+
+    # nlp.dynamics_func = Function(
+    #     "ForwardDyn",
+    #     [nlp.states["scaled"].mx_reduced, nlp.controls["scaled"].mx_reduced, nlp.parameters.mx],
+    #     [dynamics_eval.dxdt],
+    #     ["x", "u", "p"],
+    #     ["xdot"],
+    # )
 
 
 def declare_ding_variables(ocp: OptimalControlProgram, nlp: NonLinearProgram):
