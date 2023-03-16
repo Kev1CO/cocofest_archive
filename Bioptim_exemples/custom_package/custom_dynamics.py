@@ -79,15 +79,11 @@ def custom_configure_dynamics_function(ocp, nlp, **extra_params):
     nlp.parameters = ocp.v.parameters_in_list
     DynamicsFunctions.apply_parameters(nlp.parameters.mx, nlp)
 
-    # nlp.dynamics_func = []
-    ns = nlp.ns
-
     # Gets the t0 time for the current phase
     t0_phase_in_ocp = sum1(nlp.parameters.mx[0: nlp.phase_idx])
     # Gets every time node for the current phase
-    dynamics_eval_list = []
 
-    for i in range(ns):
+    for i in range(nlp.ns):
         t_node_in_phase = nlp.parameters.mx[nlp.phase_idx] / (nlp.ns + 1) * i
         t_node_in_ocp = t0_phase_in_ocp + t_node_in_phase
         extra_params["t"] = t_node_in_ocp
@@ -95,18 +91,8 @@ def custom_configure_dynamics_function(ocp, nlp, **extra_params):
         dynamics_eval = custom_dynamics(
             nlp.states["scaled"].mx_reduced, nlp.controls["scaled"].mx_reduced, nlp.parameters.mx, nlp, **extra_params
         )
-        if i == 0:
-            dynamics_eval_horzcat = horzcat(dynamics_eval.dxdt)
-        else:
-            dynamics_eval_horzcat = horzcat(dynamics_eval_horzcat, dynamics_eval.dxdt)
 
-    # dynamics_eval_function = Function(
-    #     "ForwardDyn",
-    #     [nlp.states["scaled"].mx_reduced, nlp.controls["scaled"].mx_reduced, nlp.parameters.mx],
-    #     [dynamics_eval_horzcat],
-    #     ["x", "u", "p"],
-    #     ["xdot"],
-    # )
+        dynamics_eval_horzcat = horzcat(dynamics_eval.dxdt) if i == 0 else horzcat(dynamics_eval_horzcat, dynamics_eval.dxdt)
 
     nlp.dynamics_func = Function(
         "ForwardDyn",
@@ -115,15 +101,6 @@ def custom_configure_dynamics_function(ocp, nlp, **extra_params):
         ["x", "u", "p"],
         ["xdot"],
     )
-
-
-    # nlp.dynamics_func = Function(
-    #     "ForwardDyn",
-    #     [nlp.states["scaled"].mx_reduced, nlp.controls["scaled"].mx_reduced, nlp.parameters.mx],
-    #     [dynamics_eval.dxdt],
-    #     ["x", "u", "p"],
-    #     ["xdot"],
-    # )
 
 
 def declare_ding_variables(ocp: OptimalControlProgram, nlp: NonLinearProgram):

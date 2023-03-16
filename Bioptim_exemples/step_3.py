@@ -9,6 +9,7 @@ from bioptim import (
     ObjectiveFcn,
     ConstraintList,
     ConstraintFcn,
+    ControlType,
     DynamicsList,
     BoundsList,
     InterpolationType,
@@ -159,6 +160,8 @@ def prepare_ocp(
         objective_functions,
         constraints=constraints,
         ode_solver=ode_solver,
+        control_type=ControlType.NONE,
+        use_sx=True,
     )
 
 
@@ -177,7 +180,8 @@ def main():
     # ocp = prepare_ocp(n_stim=n, stim_freq=33)
 
     # --- Solve the program --- #
-    sol = ocp.solve(Solver.IPOPT(show_online_optim=False, _linear_solver="MA57"))
+    sol = ocp.solve(Solver.IPOPT(show_online_optim=False))
+    # , _linear_solver="MA57"
     # 10 phases, 5 node shooting, RK4 : 4,52 sec
 
     # --- Show results --- #
