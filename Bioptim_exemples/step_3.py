@@ -14,6 +14,8 @@ from bioptim import (
     BoundsList,
     InterpolationType,
     InitialGuessList,
+    MultinodeConstraintList,
+    MultinodeConstraintFcn,
     OdeSolver,
     Solver,
     Node,
@@ -24,7 +26,9 @@ from custom_package.custom_dynamics import (
     declare_ding_variables,
 )
 
-from custom_package.custom_objectives import track_muscle_force_custom
+from custom_package.custom_objectives import (
+    custom_objective,
+)
 
 from custom_package.my_model import DingModel
 
@@ -33,7 +37,6 @@ def prepare_ocp(
         n_stim: int,
         time_min: list,
         time_max: list,
-        stim_freq: int,
         ode_solver: OdeSolver = OdeSolver.RK4(n_integration_steps=1),
 ) -> OptimalControlProgram:
     """
@@ -64,29 +67,70 @@ def prepare_ocp(
 
     # Creates the constraint for my n phases
     constraints = ConstraintList()
+    multinode_constraints = MultinodeConstraintList()
+
     for i in range(n_stim):
         constraints.add(
             ConstraintFcn.TIME_CONSTRAINT, node=Node.END, min_bound=time_min[i], max_bound=time_max[i], phase=i
         )
 
-    # Frequency test
-    # for i in range(n_stim):
-    #     constraints.add(
-    #         ConstraintFcn.TIME_CONSTRAINT, node=Node.END, min_bound=1, max_bound=0.01, phase=i
+    # for i in range(1, n_stim):
+    #     multinode_constraints.add(
+    #         MultinodeConstraintFcn.TIME_CONSTRAINT,
+    #         phase_first_idx=0,
+    #         phase_second_idx=i,
+    #         first_node=Node.END,
+    #         second_node=Node.END,
     #     )
+    # todo : add time constraint between each phase for the same length of stim
+
+### GET FORCE ###
+    import numpy as np
+    import csv
+
+    datas = []
+
+    with open(
+            'D:\These\Experiences\Pedales_instrumentees\Donnees\Results-pedalage_15rpm_001.lvm',
+            'r') as file:
+        reader = csv.reader(file, delimiter='\t')
+        for row in reader:
+            row_bis = [float(i) for i in row]
+            datas.append(row_bis)
+
+    datas = np.array(datas)
+    force = np.array(np.sqrt(datas[:, 21]**2+datas[:, 22]**2+datas[:, 23]**2))[17000:19500]
+    force2d = force[np.newaxis, :]
 
     objective_functions = ObjectiveList()
     # Objective function to target force
     # for i in range(n_stim):
-    objective_functions.add(
-        ObjectiveFcn.Mayer.MINIMIZE_STATE, target=250, key="F", node=Node.END, quadratic=True, weight=1,
-        phase=9)
+    # objective_functions.add(
+    #     ObjectiveFcn.Mayer.MINIMIZE_STATE, target=250, key="F", node=Node.END, quadratic=True, weight=1,
+    #     phase=9)
 
-    # Objective function to minimize muscle fatigue
+    # objective_functions.add(
+    #         ObjectiveFcn.Mayer.TRACK_STATE, target=force2d, key="F", node=Node.ALL, quadratic=True, weight=1)
+
+    # objective_functions.add(
+    #     ObjectiveFcn.Mayer.CUSTOM, objective_functions=minimize_states_from_time,
+    #     target=force2d, key="F", node=Node.ALL, quadratic=True, weight=1)
+
+    objective_functions.add(
+        custom_objective.track_state_from_time,
+        custom_type=ObjectiveFcn.Mayer,
+        force=force2d,
+        key="F",
+        node=Node.ALL,
+        quadratic=True,
+        weight=1,
+    )
+
     # for i in range(n_stim):
     #     objective_functions.add(
-    #         ObjectiveFcn.Mayer.MINIMIZE_STATE, target=3009, key="A", node=Node.END, quadratic=True, weight=1,
-    #         phase=i)
+    #         ObjectiveFcn.Mayer.MINIMIZE_TIME, node=Node.END, phase=i, weight=1e-5
+    #     )
+
 
         ### STATE BOUNDS REPRESENTATION ###
 
@@ -152,13 +196,14 @@ def prepare_ocp(
         ding_models,
         dynamics,
         n_shooting,
-        final_time,  # frequency
+        final_time,
         x_init,
         u_init,
         x_bounds,
         u_bounds,
         objective_functions,
         constraints=constraints,
+        multinode_constraints=multinode_constraints,
         ode_solver=ode_solver,
         control_type=ControlType.NONE,
         use_sx=True,
@@ -175,12 +220,13 @@ def main():
     time_min = [0.01 for _ in range(n)]
     # maximum time between two phase (stimulation)
     time_max = [0.1 for _ in range(n)]
-    ocp = prepare_ocp(n_stim=n, time_min=time_min, time_max=time_max, stim_freq=33)
+    ocp = prepare_ocp(n_stim=n, time_min=time_min, time_max=time_max)
 
     # ocp = prepare_ocp(n_stim=n, stim_freq=33)
 
     # --- Solve the program --- #
     sol = ocp.solve(Solver.IPOPT(show_online_optim=False))
+    # todo : try to solve in SQP
     # , _linear_solver="MA57"
     # 10 phases, 5 node shooting, RK4 : 4,52 sec
 
