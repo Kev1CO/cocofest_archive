@@ -3,7 +3,6 @@ This example will do a 10 phase example with Ding's input parameter for FES
 """
 
 import numpy as np
-import csv
 from bioptim import (
     OptimalControlProgram,
     ObjectiveList,
@@ -31,7 +30,7 @@ from custom_package.custom_objectives import (
     custom_objective,
 )
 
-from custom_package.my_model import DingModel
+from custom_package.my_model_2 import DingModel
 
 
 def prepare_ocp(
@@ -45,8 +44,6 @@ def prepare_ocp(
 
     Parameters
     ----------
-    n_stim: int
-        Corresponds to the problem phase number (one stimulation equals to one phase)
     time_min: list
         The minimal time for each phase
     time_max: list
@@ -88,6 +85,8 @@ def prepare_ocp(
     # todo : add time constraint between each phase for the same length of stim
 
 ### GET FORCE ###
+    import numpy as np
+    import csv
 
     datas = []
 
@@ -103,33 +102,29 @@ def prepare_ocp(
     force = np.array(np.sqrt(datas[:, 21]**2+datas[:, 22]**2+datas[:, 23]**2))[17000:19500]
     force2d = force[np.newaxis, :]
 
-
     objective_functions = ObjectiveList()
-    # Objective function to target force at the node end point of each phase
+    # Objective function to target force
     # for i in range(n_stim):
     # objective_functions.add(
     #     ObjectiveFcn.Mayer.MINIMIZE_STATE, target=250, key="F", node=Node.END, quadratic=True, weight=1,
     #     phase=9)
 
-    # Objective function to target force at the node end point
     # objective_functions.add(
     #         ObjectiveFcn.Mayer.TRACK_STATE, target=force2d, key="F", node=Node.ALL, quadratic=True, weight=1)
 
-    # Test Objective function to target force at all time
     # objective_functions.add(
     #     ObjectiveFcn.Mayer.CUSTOM, objective_functions=minimize_states_from_time,
     #     target=force2d, key="F", node=Node.ALL, quadratic=True, weight=1)
 
-    # Test Objective function to target force at all time
-    # objective_functions.add(
-    #     custom_objective.track_state_from_time,
-    #     custom_type=ObjectiveFcn.Mayer,
-    #     force=force2d,
-    #     key="F",
-    #     node=Node.ALL,
-    #     quadratic=True,
-    #     weight=1,
-    # )
+    objective_functions.add(
+        custom_objective.track_state_from_time,
+        custom_type=ObjectiveFcn.Mayer,
+        force=force2d,
+        key="F",
+        node=Node.ALL,
+        quadratic=True,
+        weight=1,
+    )
 
     # for i in range(n_stim):
     #     objective_functions.add(
