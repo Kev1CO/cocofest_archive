@@ -43,8 +43,12 @@ def custom_dynamics(
 
     t_stim_prev = []  # Every stimulation instant before the current phase, i.e.: the beginning of each phase
 
-    for i in range(nlp.phase_idx+1):
-        t_stim_prev.append(sum1(nlp.parameters.mx[0: i]))
+    if nlp.parameters.mx.shape[0] == 1:  # todo : if bimapping is True instead
+        for i in range(nlp.phase_idx+1):
+            t_stim_prev.append(nlp.parameters.mx*i)
+    else:
+        for i in range(nlp.phase_idx+1):
+            t_stim_prev.append(sum1(nlp.parameters.mx[0: i]))
 
     return DynamicsEvaluation(
         dxdt=nlp.model.system_dynamics(
@@ -80,13 +84,19 @@ def custom_configure_dynamics_function(ocp, nlp, **extra_params):
     DynamicsFunctions.apply_parameters(nlp.parameters.mx, nlp)
 
     # Gets the t0 time for the current phase
-    t0_phase_in_ocp = sum1(nlp.parameters.mx[0: nlp.phase_idx])
-    # Gets every time node for the current phase
+    if nlp.parameters.mx.shape[0] != 1:  # todo : if bimapping is True instead
+        t0_phase_in_ocp = sum1(nlp.parameters.mx[0: nlp.phase_idx])
 
+    # Gets every time node for the current phase
     for i in range(nlp.ns):
-        t_node_in_phase = nlp.parameters.mx[nlp.phase_idx] / (nlp.ns + 1) * i
-        t_node_in_ocp = t0_phase_in_ocp + t_node_in_phase
-        extra_params["t"] = t_node_in_ocp
+        if nlp.parameters.mx.shape[0] == 1:  # todo : if bimapping is True instead
+            t_node_in_phase = nlp.parameters.mx * nlp.phase_idx / (nlp.ns + 1) * i
+            t_node_in_ocp = nlp.parameters.mx * nlp.phase_idx + t_node_in_phase
+            extra_params["t"] = t_node_in_ocp
+        else:
+            t_node_in_phase = nlp.parameters.mx[nlp.phase_idx] / (nlp.ns + 1) * i
+            t_node_in_ocp = t0_phase_in_ocp + t_node_in_phase
+            extra_params["t"] = t_node_in_ocp
 
         dynamics_eval = custom_dynamics(
             nlp.states["scaled"].mx_reduced, nlp.controls["scaled"].mx_reduced, nlp.parameters.mx, nlp, **extra_params
