@@ -3,25 +3,22 @@ This example will do a 10 phase example with Ding's input parameter for FES
 """
 
 import numpy as np
-import csv
 from bioptim import (
-    BiMapping,
     BiMappingList,
-    OptimalControlProgram,
-    ObjectiveList,
-    ObjectiveFcn,
-    ConstraintList,
+    BoundsList,
     ConstraintFcn,
+    ConstraintList,
     ControlType,
     DynamicsList,
-    BoundsList,
-    InterpolationType,
     InitialGuessList,
-    MultinodeConstraintList,
-    MultinodeConstraintFcn,
+    InterpolationType,
+    ObjectiveFcn,
+    ObjectiveList,
     OdeSolver,
-    Solver,
+    OptimalControlProgram,
+    MultinodeConstraintList,
     Node,
+    Solver,
 )
 
 from custom_package.custom_dynamics import (
@@ -29,11 +26,21 @@ from custom_package.custom_dynamics import (
     declare_ding_variables,
 )
 
-# from custom_package.custom_objectives import (
-#     custom_objective,
-# )
+from custom_package.custom_objectives import (
+    CustomObjective,
+)
 
-from custom_package.my_model import DingModel
+from custom_package.fourier_approx import (
+    FourierSeries,
+)
+
+from custom_package.read_data import (
+    ExtractData,
+)
+
+from custom_package.my_model import (
+    DingModel,
+)
 
 
 def prepare_ocp(
@@ -79,12 +86,20 @@ def prepare_ocp(
             ConstraintFcn.TIME_CONSTRAINT, node=Node.END, min_bound=time_min[i], max_bound=time_max[i], phase=i
         )
 
+    datas = ExtractData().data('D:\These\Experiences\Pedales_instrumentees\Donnees\Results-pedalage_15rpm_001.lvm')
+    time, force = ExtractData().time_force(datas, 68.044, 78.04)
+
     objective_functions = ObjectiveList()
-    # Objective function to target force at the node end point of each phase
-    for i in range(5, n_stim):
-        objective_functions.add(
-            ObjectiveFcn.Mayer.MINIMIZE_STATE, target=250, key="F", node=Node.END, quadratic=True, weight=1,
-            phase=i)
+    fourier_fun = FourierSeries().compute_real_fourier_coeffs(time, force, 50)
+    objective_functions.add(
+        CustomObjective.track_state_from_time,
+        custom_type=ObjectiveFcn.Mayer,
+        node=Node.ALL,
+        fourier_function=fourier_fun,
+        key="F",
+        quadratic=True,
+        weight=1,
+    )
 
     bimapping = BiMappingList()
     bimapping.add(name="time", to_second=[0 for _ in range(n_stim)], to_first=[0])
@@ -173,7 +188,7 @@ def main():
     Prepare and solve and animate a reaching task ocp
     """
     # number of stimulation corresponding to phases
-    n = 25
+    n = 30
     # minimum time between two phase (stimulation)
     time_min = [0.01 for _ in range(n)]
     # maximum time between two phase (stimulation)
@@ -184,7 +199,6 @@ def main():
 
     # --- Solve the program --- #
     sol = ocp.solve(Solver.IPOPT(show_online_optim=False))
-    # todo : try to solve in SQP
     # , _linear_solver="MA57"
     # 10 phases, 5 node shooting, RK4 : 4,52 sec
 

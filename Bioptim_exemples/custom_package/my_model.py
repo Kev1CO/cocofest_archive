@@ -151,14 +151,19 @@ class DingModel:
         sum_multiplier = 0
 
         for i in range(len(t_stim_prev)):  # Eq from [1]
-            if i == 0:  # Eq from Bakir et al.
+            if i == 0 and len(t_stim_prev) == 1:  # Eq from Bakir et al.
                 ri = 1
+            # elif i == 0 and len(t_stim_prev) > 1:
+            #     previous_phase_time = t_stim_prev[i+1] - t_stim_prev[i]
+            #     ri = 0
             else:
                 previous_phase_time = t_stim_prev[i] - t_stim_prev[i - 1]
                 ri = self.ri_fun(r0, previous_phase_time)
 
             exp_time = self.exp_time_fun(t, t_stim_prev[i])
-            sum_multiplier += ri * exp_time
+            # if i in [10, 11, 12, 13, 14]:
+            #     ri = 0
+            sum_multiplier = ri * exp_time
         return sum_multiplier
 
     def cn_dot_fun(self, cn: MX, r0: MX, t: MX, t_stim_prev: list[MX]):
