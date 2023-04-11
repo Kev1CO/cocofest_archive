@@ -4,39 +4,49 @@ This example will do a 10 phase example with Ding's input parameter for FES
 
 import numpy as np
 from bioptim import (
-    OptimalControlProgram,
-    ObjectiveList,
-    ObjectiveFcn,
-    ConstraintList,
+    BiMappingList,
+    Bounds,
+    BoundsList,
     ConstraintFcn,
+    ConstraintList,
     ControlType,
     DynamicsList,
-    BoundsList,
-    InterpolationType,
+    InitialGuess,
     InitialGuessList,
-    MultinodeConstraintList,
-    MultinodeConstraintFcn,
-    OdeSolver,
-    Solver,
+    InterpolationType,
     Node,
+    ObjectiveFcn,
+    ObjectiveList,
+    OdeSolver,
+    OptimalControlProgram,
+    ParameterList,
+    Solver,
 )
 
-from custom_package.custom_dynamics import (
-    custom_dynamics,
-    declare_ding_variables,
+from custom_package.ding_model import (
+    DingModelPulseDurationFrequency,
+    CustomDynamicsPulseDurationFrequency
 )
 
 from custom_package.custom_objectives import (
-    custom_objective,
+    CustomObjective,
 )
 
-from custom_package.my_model_2 import DingModel
+from custom_package.fourier_approx import (
+    FourierSeries,
+)
+
+from custom_package.read_data import (
+    ExtractData,
+)
 
 
 def prepare_ocp(
         n_stim: int,
         time_min: list,
         time_max: list,
+        pulse_duration_min: list,
+        pulse_duration_max: list,
         ode_solver: OdeSolver = OdeSolver.RK4(n_integration_steps=1),
 ) -> OptimalControlProgram:
     """
@@ -48,6 +58,10 @@ def prepare_ocp(
         The minimal time for each phase
     time_max: list
         The maximal time for each phase
+    pulse_duration_min: list
+        The minimal duration for each pulsation
+    pulse_duration_max: list
+        The maximal duration for each pulsation
     ode_solver: OdeSolver
         The ode solver to use
 
@@ -56,83 +70,55 @@ def prepare_ocp(
     The OptimalControlProgram ready to be solved
     """
 
-    ding_models = [DingModel() for i in range(n_stim)]  # Gives DingModel as model for n phases
+    ding_models = [DingModelPulseDurationFrequency() for i in range(n_stim)]  # Gives DingModel as model for n phases
     n_shooting = [5 for i in range(n_stim)]  # Gives m node shooting for my n phases problem
     final_time = [0.01 for i in range(n_stim)]  # Set the final time for all my n phases
 
     # Creates the system's dynamic for my n phases
     dynamics = DynamicsList()
     for i in range(n_stim):
-        dynamics.add(declare_ding_variables, dynamic_function=custom_dynamics, phase=i)
+        dynamics.add(CustomDynamicsPulseDurationFrequency.declare_ding_variables,
+                     dynamic_function=CustomDynamicsPulseDurationFrequency.custom_dynamics, phase=i)
 
     # Creates the constraint for my n phases
     constraints = ConstraintList()
-    multinode_constraints = MultinodeConstraintList()
-
     for i in range(n_stim):
         constraints.add(
             ConstraintFcn.TIME_CONSTRAINT, node=Node.END, min_bound=time_min[i], max_bound=time_max[i], phase=i
         )
 
-    # for i in range(1, n_stim):
-    #     multinode_constraints.add(
-    #         MultinodeConstraintFcn.TIME_CONSTRAINT,
-    #         phase_first_idx=0,
-    #         phase_second_idx=i,
-    #         first_node=Node.END,
-    #         second_node=Node.END,
-    #     )
-    # todo : add time constraint between each phase for the same length of stim
+    parameters = ParameterList()
+    for i in range(n_stim):
+        stim_duration_bounds = Bounds(np.array(pulse_duration_min[i] * 3), np.array(pulse_duration_max[i] * 3),
+                                      interpolation=InterpolationType.CONSTANT)
+        initial_duration_guess = InitialGuess(np.array(0.000250 * 3))
+        parameters.add(parameter_name="pulse_duration",
+                       function=DingModelPulseDurationFrequency.set_impulse_duration,
+                       initial_guess=initial_duration_guess,
+                       bounds=stim_duration_bounds,
+                       size=1,
+                       )
 
-### GET FORCE ###
-    import numpy as np
-    import csv
-
-    datas = []
-
-    with open(
-            'D:\These\Experiences\Pedales_instrumentees\Donnees\Results-pedalage_15rpm_001.lvm',
-            'r') as file:
-        reader = csv.reader(file, delimiter='\t')
-        for row in reader:
-            row_bis = [float(i) for i in row]
-            datas.append(row_bis)
-
-    datas = np.array(datas)
-    force = np.array(np.sqrt(datas[:, 21]**2+datas[:, 22]**2+datas[:, 23]**2))[17000:19500]
-    force2d = force[np.newaxis, :]
+    datas = ExtractData().data('D:\These\Experiences\Pedales_instrumentees\Donnees\Results-pedalage_15rpm_001.lvm')
+    time, force = ExtractData().time_force(datas, 68.044, 78.04)
 
     objective_functions = ObjectiveList()
-    # Objective function to target force
-    # for i in range(n_stim):
-    # objective_functions.add(
-    #     ObjectiveFcn.Mayer.MINIMIZE_STATE, target=250, key="F", node=Node.END, quadratic=True, weight=1,
-    #     phase=9)
-
-    # objective_functions.add(
-    #         ObjectiveFcn.Mayer.TRACK_STATE, target=force2d, key="F", node=Node.ALL, quadratic=True, weight=1)
-
-    # objective_functions.add(
-    #     ObjectiveFcn.Mayer.CUSTOM, objective_functions=minimize_states_from_time,
-    #     target=force2d, key="F", node=Node.ALL, quadratic=True, weight=1)
-
+    fourier_fun = FourierSeries().compute_real_fourier_coeffs(time, force, 50)
     objective_functions.add(
-        custom_objective.track_state_from_time,
+        CustomObjective.track_state_from_time,
         custom_type=ObjectiveFcn.Mayer,
-        force=force2d,
-        key="F",
         node=Node.ALL,
+        fourier_function=fourier_fun,
+        key="F",
         quadratic=True,
         weight=1,
     )
 
-    # for i in range(n_stim):
-    #     objective_functions.add(
-    #         ObjectiveFcn.Mayer.MINIMIZE_TIME, node=Node.END, phase=i, weight=1e-5
-    #     )
+    bimapping = BiMappingList()
+    bimapping.add(name="time", to_second=[0 for _ in range(n_stim)], to_first=[0])
+    bimapping.add(name="pulse_duration", to_second=[0 for _ in range(n_stim)], to_first=[0])
 
-
-        ### STATE BOUNDS REPRESENTATION ###
+    # ---- STATE BOUNDS REPRESENTATION ---- #
 
     #                    |‾‾‾‾‾‾‾‾‾‾x_max_middle‾‾‾‾‾‾‾‾‾‾‾|
     #                    |                                 |
@@ -203,10 +189,11 @@ def prepare_ocp(
         u_bounds,
         objective_functions,
         constraints=constraints,
-        multinode_constraints=multinode_constraints,
         ode_solver=ode_solver,
         control_type=ControlType.NONE,
         use_sx=True,
+        parameter_mappings=bimapping,
+        parameters=parameters,
     )
 
 
@@ -214,21 +201,18 @@ def main():
     """
     Prepare and solve and animate a reaching task ocp
     """
-    # number of stimulation corresponding to phases
-    n = 10
-    # minimum time between two phase (stimulation)
-    time_min = [0.01 for _ in range(n)]
-    # maximum time between two phase (stimulation)
-    time_max = [0.1 for _ in range(n)]
-    ocp = prepare_ocp(n_stim=n, time_min=time_min, time_max=time_max)
+    n = 10  # number of stimulation corresponding to phases
+    time_min = [0.01 for _ in range(n)]  # minimum time between two phase (stimulation)
+    time_max = [0.1 for _ in range(n)]  # maximum time between two phase (stimulation)
+    pulse_duration_min = [0.000002 for _ in range(n)]  # minimum pulse duration during the phase (stimulation)
+    pulse_duration_max = [0.00005 for _ in range(n)]  # maximum pulse duration during the phase (stimulation)
 
-    # ocp = prepare_ocp(n_stim=n, stim_freq=33)
+    ocp = prepare_ocp(n_stim=n, time_min=time_min, time_max=time_max,
+                      pulse_duration_min=pulse_duration_min, pulse_duration_max=pulse_duration_max)
 
     # --- Solve the program --- #
     sol = ocp.solve(Solver.IPOPT(show_online_optim=False))
-    # todo : try to solve in SQP
     # , _linear_solver="MA57"
-    # 10 phases, 5 node shooting, RK4 : 4,52 sec
 
     # --- Show results --- #
     # sol.animate(show_meshes=True)
