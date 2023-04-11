@@ -11,17 +11,12 @@ from bioptim import (
     DynamicsList,
     InitialGuessList,
     InterpolationType,
+    Node,
     ObjectiveFcn,
     ObjectiveList,
     OdeSolver,
     OptimalControlProgram,
-    Node,
     Solver,
-)
-
-from custom_package.custom_dynamics import (
-    custom_dynamics,
-    declare_ding_variables,
 )
 
 from custom_package.custom_objectives import (
@@ -36,8 +31,8 @@ from custom_package.read_data import (
     ExtractData,
 )
 
-from custom_package.my_model import (
-    DingModel,
+from custom_package.ding_model import (
+    DingModelFrequency, CustomDynamicsFrequency
 )
 
 
@@ -66,14 +61,15 @@ def prepare_ocp(
     The OptimalControlProgram ready to be solved
     """
 
-    ding_models = [DingModel() for i in range(n_stim)]  # Gives DingModel as model for n phases
+    ding_models = [DingModelFrequency() for i in range(n_stim)]  # Gives DingModel as model for n phases
     n_shooting = [5 for i in range(n_stim)]  # Gives m node shooting for my n phases problem
     final_time = [0.01 for i in range(n_stim)]  # Set the final time for all my n phases
 
     # Creates the system's dynamic for my n phases
     dynamics = DynamicsList()
     for i in range(n_stim):
-        dynamics.add(declare_ding_variables, dynamic_function=custom_dynamics, phase=i)
+        dynamics.add(CustomDynamicsFrequency.declare_ding_variables,
+                     dynamic_function=CustomDynamicsFrequency.custom_dynamics, phase=i)
 
     # Creates the constraint for my n phases
     constraints = ConstraintList()
