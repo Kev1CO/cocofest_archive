@@ -284,7 +284,7 @@ class DingModelPulseDurationFrequency(DingModelFrequency):
                                                  "pd0": self.pd0, "pdt": self.pdt}
 
     def system_dynamics(
-        self, cn: MX, f: MX, a: MX, tau1: MX, km: MX, t: MX, t_stim_prev: list[MX], impulse_time: list[MX],
+        self, cn: MX, f: MX, a: MX, tau1: MX, km: MX, t: MX, t_stim_prev: list[MX], impulse_time: MX,
         intensity_stim: None,
     ) -> MX:
         """
@@ -319,7 +319,7 @@ class DingModelPulseDurationFrequency(DingModelFrequency):
         r0 = km + MX(self.r0_km_relationship)  # Simplification
         cn_dot = self.cn_dot_fun(cn, r0, t, t_stim_prev)  # Equation n°1
         f_dot = self.f_dot_fun(cn, f, a, tau1, km)  # Equation n°2
-        a = self.a_calculation(self.impulse_time[len(t_stim_prev)-1])
+        a = self.a_calculation(impulse_time)
         a_dot = self.a_dot_fun(a, f)  # Equation n°5
         tau1_dot = self.tau1_dot_fun(tau1, f)  # Equation n°9
         km_dot = self.km_dot_fun(km, f)  # Equation n°11
@@ -351,6 +351,19 @@ class DingModelPulseDurationAndIntensityFrequency(DingModelPulseDurationFrequenc
         self.bs = 0.026  # (-) Fiber muscle recruitment constant identification.
         self.Is = 63.1  # (mA) Muscle saturation intensity.
         self.cr = 0.833  # (-) Translation of axis coordinates.
+        self.impulse_intensity = None
+
+    # ---- Absolutely needed methods ---- #
+    def serialize(self) -> tuple[Callable, dict]:
+        # This is where you can serialize your model
+        # This is useful if you want to save your model and load it later
+        return DingModelPulseDurationAndIntensityFrequency, {"tauc": self.tauc, "a_rest": self.a_rest,
+                                                             "tau1_rest": self.tau1_rest, "km_rest": self.km_rest,
+                                                             "tau2": self.tau2, "alpha_a": self.alpha_a,
+                                                             "alpha_tau1": self.alpha_tau1, "alpha_km": self.alpha_km,
+                                                             "tau_fat": self.tau_fat, "a_scale": self.a_scale,
+                                                             "pd0": self.pd0, "pdt": self.pdt, "ar": self.ar,
+                                                             "bs": self.bs, "Is": self.Is, "cr": self.cr}
 
     def system_dynamics(
         self, cn: MX, f: MX, a: MX, tau1: MX, km: MX, t: MX, t_stim_prev: list[MX], impulse_time: MX,
@@ -435,6 +448,9 @@ class DingModelPulseDurationAndIntensityFrequency(DingModelPulseDurationFrequenc
             sum_multiplier = lambda_i * ri * exp_time
 
         return sum_multiplier
+
+    def set_impulse_intensity(self, value: MX):
+        self.impulse_intensity = value
 
 
 """
@@ -760,14 +776,25 @@ class CustomDynamicsPulseDurationFrequency(CustomDynamicsFrequency):
 
         t_stim_prev = []  # Every stimulation instant before the current phase, i.e.: the beginning of each phase
 
-        if nlp.parameters.mx.shape[0] == 1:  # todo : if bimapping is True instead,  # TODO : Check correct index
+        frequency_param_list = []
+        pulse_duration_param_list = []
+        for j in range(nlp.parameters.mx.shape[0]):
+            if nlp.parameters.mx[j].name() == "time_MX":
+                frequency_param_list.append(nlp.parameters.mx[j])
+            elif nlp.parameters.mx[j].name() == "pulse_duration_MX":
+                pulse_duration_param_list.append(nlp.parameters.mx[j])
+
+        if len(frequency_param_list) == 1:  # todo : if bimapping is True instead,  # TODO : Check correct index
             for i in range(nlp.phase_idx+1):
-                t_stim_prev.append(nlp.parameters.mx*i)  # TODO : Check correct index
+                t_stim_prev.append(frequency_param_list[0]*i)  # TODO : Check correct index
         else:
             for i in range(nlp.phase_idx+1):
-                t_stim_prev.append(sum1(nlp.parameters.mx[0: i]))  # TODO : Check correct index
+                t_stim_prev.append(sum1(frequency_param_list[0: i]))  # TODO : Check correct index
 
-        impulse_time = nlp.parameters.mx[1][nlp.phase_idx]  # TODO : FUTURE ERROR POSSIBLE, TO CHECK
+        if len(pulse_duration_param_list) == 1:  # todo : if bimapping is True instead,  # TODO : Check correct index
+            impulse_time = pulse_duration_param_list[0]
+        else:
+            impulse_time = pulse_duration_param_list[nlp.phase_idx]
 
         return DynamicsEvaluation(
             dxdt=nlp.model.system_dynamics(
@@ -803,18 +830,26 @@ class CustomDynamicsPulseDurationFrequency(CustomDynamicsFrequency):
         nlp.parameters = ocp.v.parameters_in_list
         DynamicsFunctions.apply_parameters(nlp.parameters.mx, nlp)
 
+        frequency_param_list = []
+        pulse_duration_param_list = []
+        for j in range(nlp.parameters.mx.shape[0]):
+            if nlp.parameters.mx[j].name() == "time_MX":
+                frequency_param_list.append(nlp.parameters.mx[j])
+            elif nlp.parameters.mx[j].name() == "pulse_duration_MX":
+                pulse_duration_param_list.append(nlp.parameters.mx[j])
+
         # Gets the t0 time for the current phase
-        if nlp.parameters.mx.shape[0] != 1:  # todo : if bimapping is True instead
-            CustomDynamicsPulseDurationFrequency.t0_phase_in_ocp = sum1(nlp.parameters.mx[0: nlp.phase_idx])
+        if len(frequency_param_list) != 1:  # todo : if bimapping is True instead
+            CustomDynamicsPulseDurationFrequency.t0_phase_in_ocp = sum1(frequency_param_list[0: nlp.phase_idx])
 
         # Gets every time node for the current phase
         for i in range(nlp.ns):
-            if nlp.parameters.mx.shape[0] == 1:  # todo : if bimapping is True instead
-                t_node_in_phase = nlp.parameters.mx * nlp.phase_idx / (nlp.ns + 1) * i
-                t_node_in_ocp = nlp.parameters.mx * nlp.phase_idx + t_node_in_phase
+            if len(frequency_param_list) == 1:  # todo : if bimapping is True instead
+                t_node_in_phase = frequency_param_list[0] * nlp.phase_idx / (nlp.ns + 1) * i
+                t_node_in_ocp = frequency_param_list[0] * nlp.phase_idx + t_node_in_phase
                 extra_params["t"] = t_node_in_ocp
             else:
-                t_node_in_phase = nlp.parameters.mx[nlp.phase_idx] / (nlp.ns + 1) * i
+                t_node_in_phase = frequency_param_list[nlp.phase_idx] / (nlp.ns + 1) * i
                 t_node_in_ocp = CustomDynamicsPulseDurationFrequency.t0_phase_in_ocp + t_node_in_phase
                 extra_params["t"] = t_node_in_ocp
 
@@ -832,6 +867,29 @@ class CustomDynamicsPulseDurationFrequency(CustomDynamicsFrequency):
             ["x", "u", "p"],
             ["xdot"],
         )
+
+    @staticmethod
+    def declare_ding_variables(ocp: OptimalControlProgram, nlp: NonLinearProgram):
+        """
+        Tell the program which variables are states and controls.
+        The user is expected to use the ConfigureProblem.configure_xxx functions.
+        Parameters
+        ----------
+        ocp: OptimalControlProgram
+            A reference to the ocp
+        nlp: NonLinearProgram
+            A reference to the phase
+        """
+        CustomDynamicsFrequency.configure_ca_troponin_complex(ocp=ocp, nlp=nlp, as_states=True, as_controls=False)
+        CustomDynamicsFrequency.configure_force(ocp=ocp, nlp=nlp, as_states=True, as_controls=False)
+        CustomDynamicsFrequency.configure_scaling_factor(ocp=ocp, nlp=nlp, as_states=True, as_controls=False)
+        CustomDynamicsFrequency.configure_time_state_force_no_cross_bridge(ocp=ocp, nlp=nlp, as_states=True,
+                                                                           as_controls=False)
+        CustomDynamicsFrequency.configure_cross_bridges(ocp=ocp, nlp=nlp, as_states=True, as_controls=False)
+
+        t = MX.sym("t")  # t needs a symbolic value to start computing in custom_configure_dynamics_function
+
+        CustomDynamicsPulseDurationFrequency.custom_configure_dynamics_function(ocp, nlp, t=t)
 
 
 class CustomDynamicsPulseDurationAndIntensityFrequency(CustomDynamicsPulseDurationFrequency):
@@ -945,3 +1003,26 @@ class CustomDynamicsPulseDurationAndIntensityFrequency(CustomDynamicsPulseDurati
             ["x", "u", "p"],
             ["xdot"],
         )
+
+    @staticmethod
+    def declare_ding_variables(ocp: OptimalControlProgram, nlp: NonLinearProgram):
+        """
+        Tell the program which variables are states and controls.
+        The user is expected to use the ConfigureProblem.configure_xxx functions.
+        Parameters
+        ----------
+        ocp: OptimalControlProgram
+            A reference to the ocp
+        nlp: NonLinearProgram
+            A reference to the phase
+        """
+        CustomDynamicsFrequency.configure_ca_troponin_complex(ocp=ocp, nlp=nlp, as_states=True, as_controls=False)
+        CustomDynamicsFrequency.configure_force(ocp=ocp, nlp=nlp, as_states=True, as_controls=False)
+        CustomDynamicsFrequency.configure_scaling_factor(ocp=ocp, nlp=nlp, as_states=True, as_controls=False)
+        CustomDynamicsFrequency.configure_time_state_force_no_cross_bridge(ocp=ocp, nlp=nlp, as_states=True,
+                                                                           as_controls=False)
+        CustomDynamicsFrequency.configure_cross_bridges(ocp=ocp, nlp=nlp, as_states=True, as_controls=False)
+
+        t = MX.sym("t")  # t needs a symbolic value to start computing in custom_configure_dynamics_function
+
+        CustomDynamicsPulseDurationAndIntensityFrequency.custom_configure_dynamics_function(ocp, nlp, t=t)
