@@ -1,5 +1,9 @@
 import numpy as np
 import csv
+from biosiglive import load
+import matplotlib.pyplot as plt
+from math import ceil
+from bioptim import BiorbdModel
 
 
 class ExtractData:
@@ -23,3 +27,33 @@ class ExtractData:
         time = datas[:, 20][idx_start:idx_end]
         time = time - time[0]
         return time, force
+
+    @staticmethod
+    def load_data(path: str) -> np.array:
+
+        data = load(path)
+
+        force = data["f_est"][17, :100] - min(data["f_est"][17, :100])
+        time = np.linspace(0, 1, 100)
+        return time, force
+
+    @staticmethod
+    def plot_data(path: str):
+        data = load(path)
+        n_line = 4
+
+        if data["f_est"].shape[0] <= n_line:
+            n_column = 1
+        else:
+            n_column = ceil(data["f_est"].shape[0] / n_line)
+
+        for i in range(data["f_est"].shape[0]):
+            plt.subplot(n_line, n_column, i + 1)
+            plt.plot(data["f_est"][i, :100], color='b')
+            plt.grid()
+        plt.legend()
+        plt.show()
+
+if __name__ == "__main__":
+    ExtractData.load_data()
+
