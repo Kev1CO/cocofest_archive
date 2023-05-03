@@ -9,7 +9,6 @@ from custom_package.fourier_approx import FourierSeries
 
 
 class CustomObjective:
-
     @staticmethod
     def track_state_from_time(all_pn: PenaltyNodeList, fourier_coeff: np.ndarray, key: str) -> MX | SX:
         """
@@ -34,11 +33,16 @@ class CustomObjective:
         # todo: ocp.time(node_number=x,phase_num=N) PR in BIOPTIM
         # todo: nlp.time(node_number=x) PR, first this one.
 
-        t_node_in_phase = (( all_pn.ocp.nlp[all_pn.nlp.phase_idx].tf - all_pn.ocp.nlp[all_pn.nlp.phase_idx].t0) / all_pn.ocp.nlp[all_pn.nlp.phase_idx].ns) * all_pn.t[0]
+        t_node_in_phase = (
+            (all_pn.ocp.nlp[all_pn.nlp.phase_idx].tf - all_pn.ocp.nlp[all_pn.nlp.phase_idx].t0)
+            / all_pn.ocp.nlp[all_pn.nlp.phase_idx].ns
+        ) * all_pn.t[0]
         # get the time of the node in the OCP
         t_node_in_ocp = all_pn.ocp.nlp[all_pn.nlp.phase_idx].t0 + t_node_in_phase
 
         # get the approximated force value from the fourrier series at the node time
-        value_from_fourier = FourierSeries().fit_func_by_fourier_series_with_real_coeffs(t_node_in_ocp, fourier_coeff, mode="casadi")
+        value_from_fourier = FourierSeries().fit_func_by_fourier_series_with_real_coeffs(
+            t_node_in_ocp, fourier_coeff, mode="casadi"
+        )
         #
-        return  value_from_fourier - all_pn.nlp.states[key].cx
+        return value_from_fourier - all_pn.nlp.states[key].cx
