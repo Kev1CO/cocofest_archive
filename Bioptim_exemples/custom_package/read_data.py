@@ -10,8 +10,8 @@ class ExtractData:
     @staticmethod
     def data(path: str) -> np.array:
         datas = []
-        with open(path, 'r') as file:
-            reader = csv.reader(file, delimiter='\t')
+        with open(path, "r") as file:
+            reader = csv.reader(file, delimiter="\t")
             for row in reader:
                 row_bis = [float(i) for i in row]
                 datas.append(row_bis)
@@ -30,7 +30,6 @@ class ExtractData:
 
     @staticmethod
     def load_data(path: str) -> np.array:
-
         data = load(path)
 
         force = data["f_est"][17, :100] - min(data["f_est"][17, :100])
@@ -49,11 +48,11 @@ class ExtractData:
 
         for i in range(data["f_est"].shape[0]):
             plt.subplot(n_line, n_column, i + 1)
-            plt.plot(data["f_est"][i, :100], color='b')
+            plt.plot(data["f_est"][i, :100], color="b")
             plt.grid()
         plt.legend()
         plt.show()
 
+
 if __name__ == "__main__":
     ExtractData.load_data()
-
