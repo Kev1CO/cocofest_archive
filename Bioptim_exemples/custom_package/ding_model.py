@@ -185,14 +185,14 @@ class DingModelFrequency:
                 previous_phase_time = extra_arguments["t_stim_prev"][i+1] - extra_arguments["t_stim_prev"][i]
                 ri = self.ri_fun(r0, previous_phase_time)  # Part of Eq n°1
             else:
-                previous_phase_time = extra_arguments["t_stim_prev"][i] - extra_arguments["t_stim_prev"][i - 1]
+                previous_phase_time = (extra_arguments["t_stim_prev"][i] - extra_arguments["t_stim_prev"][i - 1])
                 ri = self.ri_fun(r0, previous_phase_time)  # Part of Eq n°1
             exp_time = self.exp_time_fun(t, extra_arguments["t_stim_prev"][i])  # Part of Eq n°1
             sum_multiplier += ri * exp_time  # Part of Eq n°1
         return sum_multiplier
 
     def cn_dot_fun(
-            self, cn: MX | SX, r0: float | MX | SX, t: MX | SX, **extra_arguments: list[MX] | list[SX]
+            self, cn: MX | SX, r0: float | MX | SX, t: MX | SX, **extra_arguments: MX | SX | list[MX] | list[SX]
     ) -> float | MX | SX:
         """
         Parameters
@@ -304,8 +304,6 @@ class DingModelFrequency:
             The parameters acting on the system, final time of each phase
         nlp: NonLinearProgram
             A reference to the phase
-        ocp: OptimalControlProgram
-            A reference to the ocp
         t: MX | SX
             Current node time, this t is used to set the dynamics and as to be a symbolic
         Returns
@@ -554,39 +552,51 @@ class DingModelFrequency:
 
     @staticmethod
     def get_time_parameters(nlp_parameters: ParameterList) -> MX | SX:
+        """
+        Get the nlp list of time parameters
+
+        Parameters
+        ----------
+        nlp_parameters: ParameterList
+            The nlp list parameter
+
+        Returns
+        -------
+        The list of list of time parameters
+        """
         time_parameters = vertcat()
         for j in range(nlp_parameters.cx.shape[0]):
             if "time" in str(nlp_parameters.cx[j]):
                 time_parameters = vertcat(time_parameters, nlp_parameters.cx[j])
         return time_parameters
 
-'''
+
 class DingModelPulseDurationFrequency(DingModelFrequency):
     def __init__(self):
         super().__init__()
         self.impulse_time = None
-        self.a_scale = 492
-        self.pd0 = 0.000131405
-        self.pdt = 0.000194138
-        self.tau1_rest = 0.060601  # Value from Ding's experimentation [1] (s)
-        self.tau2 = 0.001
-        self.km = 0.137
-        self.tauc = 0.011
+        self.a_scale = 492  # Value from Ding's 2007 article (N/s)
+        self.pd0 = 0.000131405  # Value from Ding's 2007 article (s)
+        self.pdt = 0.000194138  # Value from Ding's 2007 article (s)
+        self.tau1_rest = 0.060601  # Value from Ding's 2003 article (s)
+        self.tau2 = 0.001  # Value from Ding's 2007 article (s)
+        self.km = 0.137  # Value from Ding's 2007 article (unitless)
+        self.tauc = 0.011  # Value from Ding's 2007 article (s)
 
     # ---- Absolutely needed methods ---- #
     @property
-    def name_dof(self):
+    def name_dof(self) -> list[str]:
         return ["cn", "f", "tau1", "km"]
 
     @property
-    def nb_state(self):
+    def nb_state(self) -> int:
         return 4
 
     def standard_rest_values(self) -> np.array:
         """
         Returns
         -------
-        The rested values of Cn, F, A, Tau1, Km
+        The rested values of Cn, F, Tau1, Km
         """
         return np.array([[0], [0], [self.tau1_rest], [self.km_rest]])
 
@@ -610,78 +620,222 @@ class DingModelPulseDurationFrequency(DingModelFrequency):
 
     def system_dynamics(
             self,
-            cn: MX,
-            f: MX,
-            tau1: MX,
-            km: MX,
-            t: MX,
-            t_stim_prev: list[MX],
-            impulse_time: MX,
-            intensity_stim: None,
-    ) -> MX:
+            cn: MX | SX,
+            f: MX | SX,
+            tau1: MX | SX,
+            km: MX | SX,
+            t: MX | SX,
+            **extra_arguments: list[MX] | list[SX]
+    ) -> MX | SX:
         """
         The system dynamics is the function that describes the model.
 
         Parameters
         ----------
-        cn: MX
+        cn: MX | SX
             The value of the ca_troponin_complex (unitless)
-        f: MX
+        f: MX | SX
             The value of the force (N)
-        tau1: MX
+        tau1: MX | SX
             The value of the time_state_force_no_cross_bridge (ms)
-        km: MX
+        km: MX | SX
             The value of the cross_bridges (unitless)
-        t: MX
+        t: MX | SX
             The current time at which the dynamics is evaluated (ms)
-        t_stim_prev: list[MX]
-            The list of the time of the previous stimulations (ms)
-        impulse_time: MX
-            The pulsation duration of the current stimulation (ms)
-        intensity_stim: None
-            The pulsation intensity of the current stimulation (mA). Not used for this model
+        **extra_arguments: list[MX] | list[SX]
+            t_stim_prev: list[MX] | list[SX]
+                The time list of the previous stimulations (ms)
+            impulse_time: None
+                The pulsation duration of the current stimulation (ms). Not used for this model
+            intensity_stim: None # TODO : remove this docstring when the other models are parametered
+                The pulsation intensity of the current stimulation (mA). Not used for this model
 
         Returns
         -------
         The value of the derivative of each state dx/dt at the current time t
         """
-        # from Ding's 2003 article
-        r0 = MX(5)  # Simplification
-        # r0 = km + MX(self.r0_km_relationship)  # Simplification
-        cn_dot = self.cn_dot_fun(cn, r0, t, t_stim_prev)  # Equation n°1
-        a = self.a_calculation(impulse_time)
-        f_dot = self.f_dot_fun(cn, f, a, tau1, km)  # Equation n°2
-        tau1_dot = self.tau1_dot_fun(tau1, f)  # Equation n°9
-        km_dot = self.km_dot_fun(km, f)  # Equation n°11
-
+        r0 = MX(5) if t.type_name() == "MX" else SX(5)  # Simplification
+        cn_dot = self.cn_dot_fun(cn, r0, t, t_stim_prev=extra_arguments['t_stim_prev'])  # Equation n°1 from Ding's 2003 article
+        a = self.a_calculation(impulse_time=extra_arguments['impulse_time'])  # Equation n°3 from Ding's 2007 article
+        f_dot = self.f_dot_fun(cn, f, a, tau1, km)  # Equation n°2 from Ding's 2003 article
+        tau1_dot = self.tau1_dot_fun(tau1, f)  # Equation n°9 from Ding's 2003 article
+        km_dot = self.km_dot_fun(km, f)  # Equation n°11 from Ding's 2003 article
         return vertcat(cn_dot, f_dot, tau1_dot, km_dot)
 
-    def a_calculation(self, impulse_time: MX):
+    def a_calculation(self, impulse_time: list[MX] | list[SX]) -> MX | SX:
         """
         Parameters
         ----------
-        impulse_time: MX
-            The pulsation duration of the current stimulation (ms)
+        impulse_time: list[MX] | list[SX]
+            The pulsation duration of the current stimulation (s)
 
         Returns
         -------
         The value of scaling factor (unitless)
         """
-        # new equation to include impulse time [2]
-        return self.a_scale * (1 - np.exp(-(impulse_time - self.pd0) / self.pdt))
+        return self.a_scale * (1 - np.exp(-(impulse_time[0] - self.pd0) / self.pdt))  # Equation n°3 from Ding's 2007 article
 
-    def set_impulse_duration(self, value: MX):
+    def set_impulse_duration(self, value: list[MX] | list[SX]):
+        """
+        Sets the impulse time for each pulse (phases) according to the ocp parameter "impulse_time"
+
+        Parameters
+        ----------
+        value: list[MX] | list[SX]
+            The pulsation duration list (s)
+        """
         self.impulse_time = value
 
     @staticmethod
-    def get_pulse_duration_parameters(nlp_parameters):
+    def get_pulse_duration_parameters(nlp_parameters: ParameterList) -> MX | SX:
+        """
+        Get the nlp list of pulse_duration parameters
+
+        Parameters
+        ----------
+        nlp_parameters: ParameterList
+            The nlp list parameter
+
+        Returns
+        -------
+        The list of list of pulse_duration parameters
+        """
         pulse_duration_parameters = vertcat()
-        for j in range(nlp_parameters.mx.shape[0]):
-            if "pulse_duration_" in nlp_parameters.mx[j].name():
-                pulse_duration_parameters = vertcat(pulse_duration_parameters, nlp_parameters.mx[j])
+        for j in range(nlp_parameters.cx.shape[0]):
+            if "pulse_duration" in nlp_parameters.cx[j].name():
+                pulse_duration_parameters = vertcat(pulse_duration_parameters, nlp_parameters.cx[j])
         return pulse_duration_parameters
 
+    @staticmethod
+    def custom_dynamics(
+            states: MX | SX,
+            controls: MX | SX,
+            parameters: MX | SX,
+            nlp: NonLinearProgram,
+            t=None,
+    ) -> DynamicsEvaluation:
+        """
+        Functional electrical stimulation dynamic
 
+        Parameters
+        ----------
+        states: MX | SX
+            The state of the system CN, F, A, Tau1, Km
+        controls: MX | SX
+            The controls of the system, none
+        parameters: MX | SX
+            The parameters acting on the system, final time of each phase
+        nlp: NonLinearProgram
+            A reference to the phase
+        t: MX | SX
+            Current node time, this t is used to set the dynamics and as to be a symbolic
+        Returns
+        -------
+        The derivative of the states in the tuple[MX | SX]] format
+        """
+
+        t_stim_prev = []  # Every stimulation instant before the current phase, i.e.: the beginning of each phase
+        time_parameters = DingModelFrequency.get_time_parameters(nlp.parameters)
+        pulse_duration_parameters = DingModelPulseDurationFrequency.get_pulse_duration_parameters(nlp.parameters)
+
+        if time_parameters.shape[0] == 1:  # check if time is mapped
+            for i in range(nlp.phase_idx + 1):
+                t_stim_prev.append(time_parameters[0] * i)
+        else:
+            for i in range(nlp.phase_idx + 1):
+                t_stim_prev.append(sum1(time_parameters[0: i]))
+
+        if pulse_duration_parameters.shape[0] == 1:  # check if pulse duration is mapped
+            impulse_time = pulse_duration_parameters[0]
+        else:
+            impulse_time = pulse_duration_parameters[nlp.phase_idx]
+
+        return DynamicsEvaluation(
+            dxdt=DingModelPulseDurationFrequency.system_dynamics(
+                DingModelPulseDurationFrequency(),
+                cn=states[0],
+                f=states[1],
+                tau1=states[2],
+                km=states[3],
+                t=t,
+                t_stim_prev=t_stim_prev,
+                impulse_time=impulse_time,
+            ),
+            defects=None,
+        )
+
+    @staticmethod
+    def custom_configure_dynamics_function(ocp, nlp, **extra_params):
+        """
+        Configure the dynamics of the system
+
+        Parameters
+        ----------
+        ocp: OptimalControlProgram
+            A reference to the ocp
+        nlp: NonLinearProgram
+            A reference to the phase
+        **extra_params:
+            t: MX | SX
+                Current node time
+        """
+
+        nlp.parameters = ocp.v.parameters_in_list
+        DynamicsFunctions.apply_parameters(nlp.parameters.cx, nlp)
+
+        # Gets every time node for the current phase
+        for i in range(nlp.ns):
+            extra_params["t"] = ocp.time(phase_idx=nlp.phase_idx, node_idx=i)
+
+            dynamics_eval = DingModelPulseDurationFrequency.custom_dynamics(
+                nlp.states["scaled"].cx,
+                nlp.controls["scaled"].cx,
+                nlp.parameters.cx,
+                nlp,
+                **extra_params
+            )
+
+            DingModelPulseDurationFrequency.dynamics_eval_horzcat = (
+                horzcat(dynamics_eval.dxdt)
+                if i == 0
+                else horzcat(DingModelPulseDurationFrequency.dynamics_eval_horzcat, dynamics_eval.dxdt)
+            )
+
+        nlp.dynamics_func = Function(
+            "ForwardDyn",
+            [nlp.states["scaled"].cx, nlp.controls["scaled"].cx, nlp.parameters.cx],
+            [DingModelPulseDurationFrequency.dynamics_eval_horzcat],
+            ["x", "u", "p"],
+            ["xdot"],
+        )
+
+    @staticmethod
+    def declare_ding_variables(ocp: OptimalControlProgram, nlp: NonLinearProgram):
+        """
+        Tell the program which variables are states and controls.
+        The user is expected to use the ConfigureProblem.configure_xxx functions.
+        Parameters
+        ----------
+        ocp: OptimalControlProgram
+            A reference to the ocp
+        nlp: NonLinearProgram
+            A reference to the phase
+        """
+        DingModelPulseDurationFrequency.configure_ca_troponin_complex(ocp=ocp, nlp=nlp, as_states=True, as_controls=False)
+        DingModelPulseDurationFrequency.configure_force(ocp=ocp, nlp=nlp, as_states=True, as_controls=False)
+        DingModelPulseDurationFrequency.configure_time_state_force_no_cross_bridge(
+            ocp=ocp, nlp=nlp, as_states=True, as_controls=False
+        )
+        DingModelPulseDurationFrequency.configure_cross_bridges(ocp=ocp, nlp=nlp, as_states=True, as_controls=False)
+
+        t = (
+            MX.sym("t") if nlp.cx.type_name() == "MX" else SX.sym("t")
+        )  # t needs a symbolic value to start computing in custom_configure_dynamics_function
+
+        DingModelPulseDurationFrequency.custom_configure_dynamics_function(ocp, nlp, t=t)
+
+
+'''
 class DingModelIntensityFrequency(DingModelFrequency):
     def __init__(self):
         super().__init__()
