@@ -169,18 +169,18 @@ class DingModelFrequency:
         -------
         A part of the n°1 equation
         """
+
         sum_multiplier = 0
-        for i in range(len(extra_arguments["t_stim_prev"])):
-            if i == 0 and len(extra_arguments["t_stim_prev"]) == 1:
-                ri = 1  # Eq from Bakir et al.
-            elif i == 0 and len(extra_arguments["t_stim_prev"]) > 1:
-                previous_phase_time = extra_arguments["t_stim_prev"][i + 1] - extra_arguments["t_stim_prev"][i]
-                ri = self.ri_fun(r0, previous_phase_time)  # Part of Eq n°1
-            else:
+        if len(extra_arguments["t_stim_prev"]) == 1:
+            ri = 1  # Eq from Bakir et al. YEAR ?
+            exp_time = self.exp_time_fun(t, extra_arguments["t_stim_prev"][0])  # Part of Eq n°1
+            sum_multiplier += ri * exp_time  # Part of Eq n°1
+        else:
+            for i in range(1, len(extra_arguments["t_stim_prev"])):
                 previous_phase_time = extra_arguments["t_stim_prev"][i] - extra_arguments["t_stim_prev"][i - 1]
                 ri = self.ri_fun(r0, previous_phase_time)  # Part of Eq n°1
-            exp_time = self.exp_time_fun(t, extra_arguments["t_stim_prev"][i])  # Part of Eq n°1
-            sum_multiplier += ri * exp_time  # Part of Eq n°1
+                exp_time = self.exp_time_fun(t, extra_arguments["t_stim_prev"][i])  # Part of Eq n°1
+                sum_multiplier += ri * exp_time  # Part of Eq n°1
         return sum_multiplier
 
     def cn_dot_fun(
@@ -340,14 +340,14 @@ class DingModelFrequency:
                 Current node time
         """
         nlp.parameters = ocp.v.parameters_in_list
-        DynamicsFunctions.apply_parameters(nlp.parameters.cx, nlp)
+        DynamicsFunctions.apply_parameters(nlp.parameters.cx_start, nlp)
 
         # Gets every time node for the current phase
         for i in range(nlp.ns):
-            extra_params["t"] = ocp.time(phase_idx=nlp.phase_idx, node_idx=i)
+            extra_params["t"] = ocp.node_time(phase_idx=nlp.phase_idx, node_idx=i)
 
             dynamics_eval = DingModelFrequency.custom_dynamics(
-                nlp.states["scaled"].cx, nlp.controls["scaled"].cx, nlp.parameters.cx, nlp, **extra_params
+                nlp.states.scaled[0].cx_start, nlp.controls.scaled[0].cx_start, nlp.parameters.cx_start, nlp, **extra_params
             )
 
             DingModelFrequency.dynamics_eval_horzcat = (
@@ -358,7 +358,7 @@ class DingModelFrequency:
 
         nlp.dynamics_func = Function(
             "ForwardDyn",
-            [nlp.states["scaled"].cx, nlp.controls["scaled"].cx, nlp.parameters.cx],
+            [nlp.states.scaled[0].cx_start, nlp.controls.scaled[0].cx_start, nlp.parameters.cx_start],
             [DingModelFrequency.dynamics_eval_horzcat],
             ["x", "u", "p"],
             ["xdot"],
@@ -585,9 +585,9 @@ class DingModelFrequency:
         The list of time parameters
         """
         time_parameters = vertcat()
-        for j in range(nlp_parameters.cx.shape[0]):
-            if "time" in str(nlp_parameters.cx[j]):
-                time_parameters = vertcat(time_parameters, nlp_parameters.cx[j])
+        for j in range(nlp_parameters.cx_start.shape[0]):
+            if "time" in str(nlp_parameters.cx_start[j]):
+                time_parameters = vertcat(time_parameters, nlp_parameters.cx_start[j])
         return time_parameters
 
 
@@ -717,9 +717,9 @@ class DingModelPulseDurationFrequency(DingModelFrequency):
         The list of list of pulse_duration parameters
         """
         pulse_duration_parameters = vertcat()
-        for j in range(nlp_parameters.cx.shape[0]):
-            if "pulse_duration" in nlp_parameters.cx[j].name():
-                pulse_duration_parameters = vertcat(pulse_duration_parameters, nlp_parameters.cx[j])
+        for j in range(nlp_parameters.cx_start.shape[0]):
+            if "pulse_duration" in nlp_parameters.cx_start[j].name():
+                pulse_duration_parameters = vertcat(pulse_duration_parameters, nlp_parameters.cx_start[j])
         return pulse_duration_parameters
 
     @staticmethod
@@ -797,14 +797,14 @@ class DingModelPulseDurationFrequency(DingModelFrequency):
         """
 
         nlp.parameters = ocp.v.parameters_in_list
-        DynamicsFunctions.apply_parameters(nlp.parameters.cx, nlp)
+        DynamicsFunctions.apply_parameters(nlp.parameters.cx_start, nlp)
 
         # Gets every time node for the current phase
         for i in range(nlp.ns):
-            extra_params["t"] = ocp.time(phase_idx=nlp.phase_idx, node_idx=i)
+            extra_params["t"] = ocp.node_time(phase_idx=nlp.phase_idx, node_idx=i)
 
             dynamics_eval = DingModelPulseDurationFrequency.custom_dynamics(
-                nlp.states["scaled"].cx, nlp.controls["scaled"].cx, nlp.parameters.cx, nlp, **extra_params
+                nlp.states.scaled[0].cx_start, nlp.controls.scaled[0].cx_start, nlp.parameters.cx_start, nlp, **extra_params
             )
 
             DingModelPulseDurationFrequency.dynamics_eval_horzcat = (
@@ -815,7 +815,7 @@ class DingModelPulseDurationFrequency(DingModelFrequency):
 
         nlp.dynamics_func = Function(
             "ForwardDyn",
-            [nlp.states["scaled"].cx, nlp.controls["scaled"].cx, nlp.parameters.cx],
+            [nlp.states.scaled[0].cx_start, nlp.controls.scaled[0].cx_start, nlp.parameters.cx_start],
             [DingModelPulseDurationFrequency.dynamics_eval_horzcat],
             ["x", "u", "p"],
             ["xdot"],
@@ -1030,9 +1030,9 @@ class DingModelIntensityFrequency(DingModelFrequency):
         The list of intensity parameters
         """
         intensity_parameters = vertcat()
-        for j in range(nlp_parameters.cx.shape[0]):
-            if "pulse_intensity" in str(nlp_parameters.cx[j]):
-                intensity_parameters = vertcat(intensity_parameters, nlp_parameters.cx[j])
+        for j in range(nlp_parameters.cx_start.shape[0]):
+            if "pulse_intensity" in str(nlp_parameters.cx_start[j]):
+                intensity_parameters = vertcat(intensity_parameters, nlp_parameters.cx_start[j])
         return intensity_parameters
 
     @staticmethod
@@ -1116,14 +1116,14 @@ class DingModelIntensityFrequency(DingModelFrequency):
         """
 
         nlp.parameters = ocp.v.parameters_in_list
-        DynamicsFunctions.apply_parameters(nlp.parameters.cx, nlp)
+        DynamicsFunctions.apply_parameters(nlp.parameters.cx_start, nlp)
 
         # Gets every time node for the current phase
         for i in range(nlp.ns):
-            extra_params["t"] = ocp.time(phase_idx=nlp.phase_idx, node_idx=i)
+            extra_params["t"] = ocp.node_time(phase_idx=nlp.phase_idx, node_idx=i)
 
             dynamics_eval = DingModelIntensityFrequency.custom_dynamics(
-                nlp.states["scaled"].cx, nlp.controls["scaled"].cx, nlp.parameters.cx, nlp, **extra_params
+                nlp.states.scaled[0].cx_start, nlp.controls.scaled[0].cx_start, nlp.parameters.cx_start, nlp, **extra_params
             )
 
             DingModelIntensityFrequency.dynamics_eval_horzcat = (
@@ -1134,7 +1134,7 @@ class DingModelIntensityFrequency(DingModelFrequency):
 
         nlp.dynamics_func = Function(
             "ForwardDyn",
-            [nlp.states["scaled"].cx, nlp.controls["scaled"].cx, nlp.parameters.cx],
+            [nlp.states.scaled[0].cx_start, nlp.controls.scaled[0].cx_start, nlp.parameters.cx_start],
             [DingModelIntensityFrequency.dynamics_eval_horzcat],
             ["x", "u", "p"],
             ["xdot"],
