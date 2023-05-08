@@ -8,10 +8,14 @@ from bioptim import (
     BoundsList,
     InterpolationType,
     InitialGuessList,
+    ParameterList,
+    Bounds,
+    InitialGuess,
 )
 
 
 def prepare_ocp_for_fes(model, number_phase, node_shooting, **extra_parameter):
+    parameters = None
 
     ding_models = [model] * number_phase  # Gives DingModel as model for n phases
     n_shooting = [node_shooting] * number_phase  # Gives m node shooting for my n phases problem
@@ -89,4 +93,40 @@ def prepare_ocp_for_fes(model, number_phase, node_shooting, **extra_parameter):
     for i in range(number_phase):
         u_init.add([])
 
-    return ding_models, n_shooting, initial_guess_final_time, dynamics, constraints, x_bounds, x_init, u_bounds, u_init
+    if "pulse_duration_min" in extra_parameter.keys() and "pulse_duration_max" in extra_parameter.keys():
+        # Creates the pulse duration parameter in a list type
+        parameters = ParameterList()
+        stim_intensity_bounds = Bounds(
+            np.array(extra_parameter["pulse_duration_min"] * number_phase),
+            np.array(extra_parameter["pulse_duration_max"] * number_phase),
+            interpolation=InterpolationType.CONSTANT,
+        )
+        initial_intensity_guess = InitialGuess(np.array([0] * number_phase))
+        parameters.add(
+            parameter_name="pulse_duration",
+            function=model.set_impulse_duration,
+            initial_guess=initial_intensity_guess,
+            bounds=stim_intensity_bounds,
+            size=number_phase,
+        )
+
+    if "pulse_intensity_min" in extra_parameter.keys() and "pulse_intensity_max" in extra_parameter.keys():
+        # Creates the pulse intensity parameter in a list type
+        parameters = ParameterList() if parameters is not None else parameters
+        stim_intensity_bounds = Bounds(
+            np.array([extra_parameter["pulse_intensity_min"]] * number_phase),
+            np.array([extra_parameter["pulse_intensity_max"]] * number_phase),
+            interpolation=InterpolationType.CONSTANT,
+        )
+        initial_intensity_guess = InitialGuess(np.array([0] * number_phase))
+        parameters.add(
+            parameter_name="pulse_intensity",
+            function=model.set_impulse_intensity,
+            initial_guess=initial_intensity_guess,
+            bounds=stim_intensity_bounds,
+            size=number_phase,
+        )
+    else:
+        parameters = ParameterList()
+
+    return ding_models, n_shooting, initial_guess_final_time, dynamics, constraints, x_bounds, x_init, u_bounds, u_init, parameters
