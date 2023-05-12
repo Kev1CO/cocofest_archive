@@ -151,7 +151,7 @@ class DingModelFrequency:
         -------
         A part of the n°1 equation
         """
-        return 1 + (r0 - 1) * exp(time_between_stim / self.tauc)  # Part of Eq n°1
+        return 1 + (r0 - 1) * exp(-time_between_stim / self.tauc)  # Part of Eq n°1
 
     def cn_sum_fun(self, r0: float | MX | SX, t: MX | SX, **extra_arguments: list[MX] | list[SX]) -> float | MX | SX:
         """
@@ -169,7 +169,6 @@ class DingModelFrequency:
         -------
         A part of the n°1 equation
         """
-
         sum_multiplier = 0
         if len(extra_arguments["t_stim_prev"]) == 1:
             ri = 1  # Eq from Bakir et al. YEAR ?
@@ -1165,3 +1164,38 @@ class DingModelIntensityFrequency(DingModelFrequency):
         )  # t needs a symbolic value to start computing in custom_configure_dynamics_function
 
         DingModelIntensityFrequency.custom_configure_dynamics_function(ocp, nlp, t=t)
+
+#
+# class SumMultiplication(DingModelFrequency):
+#     def __init__(self):
+#         super().__init__()
+#         self.sum_multiplier = []
+#
+#     def test_for_sum_multiplier(self, value):
+#         self.sum_multiplier = []
+#         for i in range(value.shape[0]):
+#             self.sum_multiplier.append(value[i])
+#
+#     def cn_dot_fun(
+#         self, cn: MX | SX, r0: float | MX | SX, t: MX | SX, **extra_arguments: MX | SX | list[MX] | list[SX]
+#     ) -> float | MX | SX:
+#         """
+#         Parameters
+#         ----------
+#         cn: MX | SX
+#             The previous step value of ca_troponin_complex (unitless)
+#         r0: MX | SX
+#             Mathematical term characterizing the magnitude of enhancement in CN from the following stimuli (unitless)
+#         t: MX | SX
+#             The current time at which the dynamics is evaluated (ms)
+#         **extra_arguments: list[MX] | list[SX]
+#             t_stim_prev: list[MX] | list[SX]
+#                 The time list of the previous stimulations (ms)
+#
+#         Returns
+#         -------
+#         The value of the derivative ca_troponin_complex (unitless)
+#         """
+#         sum_multiplier = self.cn_sum_fun(r0, t, t_stim_prev=extra_arguments["t_stim_prev"])  # Part of Eq n°1
+#
+#         return (1 / self.tauc) * sum_multiplier - (cn / self.tauc)  # Equation n°1
