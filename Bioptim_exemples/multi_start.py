@@ -208,6 +208,7 @@ def prepare_ocp(
         parameter_mappings=bimapping,
         parameters=parameters,
         assume_phase_dynamics=False,
+        n_threads=1,
     )
 
 
@@ -303,18 +304,18 @@ def main():
     # --- Prepare the multi-start and run it --- #
     combinatorial_parameters = {
         "n_stim": n_stim_list,
-        "time_min": time_min,
-        "time_max": time_max,
-        "pulse_intensity_min": pulse_intensity_min,
-        "pulse_intensity_max": pulse_intensity_max,
-        "fourier_coeff": [fourier_coeff, fourier_coeff],
+        # "time_min": [0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01],
+        # "time_max": [0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1],
+        # "pulse_intensity_min": pulse_intensity_min,
+        # "pulse_intensity_max": pulse_intensity_max,
+        # "fourier_coeff": [fourier_coeff],
     }
 
     save_folder = "./temporary_results"
     multi_start = prepare_multi_start(
         combinatorial_parameters=combinatorial_parameters,
         save_folder=save_folder,
-        n_pools=2,  # question
+        n_pools=6,
     )
 
     multi_start.solve()
