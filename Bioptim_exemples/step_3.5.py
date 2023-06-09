@@ -170,6 +170,7 @@ def prepare_ocp(
         ode_solver=ode_solver,
         control_type=ControlType.NONE,
         use_sx=True,
+        assume_phase_dynamics=True,
         # parameter_mappings=bimapping,
     )
 
@@ -179,7 +180,7 @@ def main():
     Prepare and solve and animate a reaching task ocp
     """
     n = 10  # number of stimulation corresponding to phases
-    time_min = [0.01 for _ in range(n)]  # minimum time between two phase (stimulation)
+    time_min = [0.05 for _ in range(n)]  # minimum time between two phase (stimulation)
     time_max = [0.1 for _ in range(n)]  # maximum time between two phase (stimulation)
 
     # --- Get the objective function to match --- #
@@ -203,6 +204,27 @@ def main():
     # --- Show results --- #
     # sol.animate(show_meshes=True)  # TODO : PR to enable Plot animation with other model than biorbd models
     sol.graphs()  # TODO : PR to remove graph title by phase
+
+    import matplotlib.pyplot as plt
+    sol_merged = sol.merge_phases()
+    # datas = ExtractData().data('D:/These/Experiences/Pedales_instrumentees/Donnees/Results-pedalage_15rpm_001.lvm')
+    # target_time, target_force = ExtractData().time_force(datas, 75.25, 76.25)
+    target_time, target_force = ExtractData.load_data("D:\These\Donnees\Force_musculaire\pedalage_3_proc_result_duration_0.08.bio")  # muscle
+    target_force = target_force - target_force[0]
+
+    fourier_fun = FourierSeries()
+    fourier_fun.p = 76.25 - 75.25
+    fourier_coef = fourier_fun.compute_real_fourier_coeffs(target_time, target_force, 50)
+
+    y_approx = FourierSeries().fit_func_by_fourier_series_with_real_coeffs(target_time, fourier_coef)
+    # plot, in the range from 0 to P, the true f(t) in blue and the approximation in red
+    plt.plot(target_time, y_approx, color='red', linewidth=1)
+    # target_time, target_force = ExtractData().load_data()
+    target_force = target_force - target_force[0]
+
+    plt.plot(sol_merged.time, sol_merged.states["F"].squeeze())
+    plt.plot(target_time, target_force)
+    plt.show()
 
 
 if __name__ == "__main__":

@@ -73,7 +73,7 @@ def prepare_ocp(
     """
 
     ding_models = [DingModelIntensityFrequency()] * n_stim  # Gives DingModel as model for n phases
-    n_shooting = [5] * n_stim  # Gives m node shooting for my n phases problem
+    n_shooting = [10] * n_stim  # Gives m node shooting for my n phases problem
     final_time = [0.01] * n_stim  # Set the final time for all my n phases
 
     # Creates the system's dynamic for my n phases
@@ -128,7 +128,7 @@ def prepare_ocp(
     bimapping = BiMappingList()
     bimapping.add(name="time", to_second=[0 for _ in range(n_stim)], to_first=[0])
     # TODO : Fix intensity bimapping
-    bimapping.add(name="pulse_intensity", to_second=[0 for _ in range(n_stim)], to_first=[0])
+    # bimapping.add(name="pulse_intensity", to_second=[0 for _ in range(n_stim)], to_first=[0])
 
     # ---- STATE BOUNDS REPRESENTATION ---- #
 
@@ -201,6 +201,7 @@ def prepare_ocp(
         use_sx=True,
         parameter_mappings=bimapping,
         parameters=parameters,
+        assume_phase_dynamics=True,
     )
 
 
@@ -208,9 +209,9 @@ def main():
     """
     Prepare and solve and animate a reaching task ocp
     """
-    n = 10  # number of stimulation corresponding to the number of phases
+    n = 15  # number of stimulation corresponding to the number of phases
     time_min = [0.01 for _ in range(n)]  # minimum time between two phase (stimulation)
-    time_max = [1 for _ in range(n)]  # maximum time between two phase (stimulation)
+    time_max = [0.1 for _ in range(n)]  # maximum time between two phase (stimulation)
     pulse_intensity_min = 0  # minimum pulse intensity during the phase (stimulation)
     pulse_intensity_max = 150  # maximum pulse intensity during the phase (stimulation)
 
@@ -242,13 +243,13 @@ def main():
     # sol.animate(show_meshes=True) TODO : PR to enable Plot animation with other model than biorbd models
     sol.graphs()  # TODO : PR to remove graph title by phase
 
-    """
-    # --- Show results from solution --- #
+    #
+    # # --- Show results from solution --- #
     import matplotlib.pyplot as plt
     sol_merged = sol.merge_phases()
     # datas = ExtractData().data('D:/These/Experiences/Pedales_instrumentees/Donnees/Results-pedalage_15rpm_001.lvm')
     # target_time, target_force = ExtractData().time_force(datas, 75.25, 76.25)
-    target_time, target_force = ExtractData.load_data()  # muscle
+    target_time, target_force = ExtractData.load_data("D:\These\Donnees\Force_musculaire\pedalage_3_proc_result_duration_0.08.bio")  # muscle
     target_force = target_force - target_force[0]
 
     fourier_fun = FourierSeries()
@@ -264,10 +265,10 @@ def main():
     plt.plot(sol_merged.time, sol_merged.states["F"].squeeze())
     plt.plot(target_time, target_force)
     plt.show()
-
-    sol.detailed_cost_values()
-    sol.print_cost()
-    """
+    #
+    # sol.detailed_cost_values()
+    # sol.print_cost()
+    # # """
 
 
 if __name__ == "__main__":

@@ -212,6 +212,7 @@ def prepare_ocp(
         use_sx=True,
         parameter_mappings=bimapping,
         parameters=parameters,
+        assume_phase_dynamics=False,
     )
 
 

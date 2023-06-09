@@ -10,7 +10,7 @@ from custom_package.fourier_approx import FourierSeries
 
 class CustomObjective:
     @staticmethod
-    def track_state_from_time(all_pn: PenaltyController, fourier_coeff: np.ndarray, key: str) -> MX | SX:
+    def track_state_from_time(controller: PenaltyController, fourier_coeff: np.ndarray, key: str) -> MX | SX:
         """
         Minimize the states variables.
         By default, this function is quadratic, meaning that it minimizes towards the target.
@@ -18,7 +18,7 @@ class CustomObjective:
 
         Parameters
         ----------
-        all_pn: PenaltyNodeList
+        controller: PenaltyController
             The penalty node elements
         fourier_coeff: np.ndarray
             The values to aim for
@@ -31,6 +31,6 @@ class CustomObjective:
         """
         # get the approximated force value from the fourrier series at the node time
         value_from_fourier = FourierSeries().fit_func_by_fourier_series_with_real_coeffs(
-            all_pn.ocp.node_time(phase_idx=all_pn.nlp.phase_idx, node_idx=all_pn.t[0]), fourier_coeff, mode="casadi"
+            controller.ocp.node_time(phase_idx=controller.get_nlp.phase_idx, node_idx=controller.t[0]), fourier_coeff, mode="casadi"
         )
-        return value_from_fourier - all_pn.nlp.states[key].cx_start
+        return value_from_fourier - controller.get_nlp.states[key].cx_start
