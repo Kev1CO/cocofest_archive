@@ -27,7 +27,7 @@ def prepare_ocp(
     n_stim: int,
     time_min: list,
     time_max: list,
-    ode_solver: OdeSolver = OdeSolver.RK4(n_integration_steps=1),
+    ode_solver: OdeSolver = OdeSolver.RK8(n_integration_steps=1),
 ) -> OptimalControlProgram:
     """
     Prepare the ocp
@@ -49,8 +49,8 @@ def prepare_ocp(
     """
 
     ding_models = [DingModelFrequency()] * n_stim  # Gives DingModel as model for n phases
-    n_shooting = [5] * n_stim  # Gives m node shooting for my n phases problem
-    final_time = [0.01] * n_stim  # Set the final time for all my n phases
+    n_shooting = [50] * n_stim  # Gives m node shooting for my n phases problem
+    final_time = [1] * n_stim  # Set the final time for all my n phases
 
     # Creates the system's dynamic for my n phases
     dynamics = DynamicsList()
@@ -76,8 +76,8 @@ def prepare_ocp(
         key="F",
         quadratic=True,
         weight=1,
-        target=300,
-        phase=9,
+        target=100,
+        phase=n_stim-1,
     )
 
     # --- STATE BOUNDS REPRESENTATION ---#
@@ -100,7 +100,7 @@ def prepare_ocp(
     x_min_middle[2] = 0  # Model execution lower bound values (A, will decrease from fatigue and cannot be lower than 0)
     x_min_end = x_min_middle
     x_max_middle = ding_models[0].standard_rest_values()
-    x_max_middle[0:2] = 1000
+    x_max_middle[0:2] = 2000
     x_max_middle[3:5] = 1
     x_max_end = x_max_middle
     x_start_min = np.concatenate((x_min_start, x_min_middle, x_min_end), axis=1)
@@ -154,6 +154,7 @@ def prepare_ocp(
         control_type=ControlType.NONE,
         use_sx=True,
         parameter_mappings=bimapping,
+        assume_phase_dynamics=False,
     )
 
 
@@ -170,11 +171,43 @@ def main():
 
     # --- Solve the program --- #
     sol = ocp.solve(Solver.IPOPT(show_online_optim=False))  # , _linear_solver="MA57"
-    # 10 phases, 5 node shooting, RK4 : 4,52 sec
 
     # --- Show results --- #
     # sol.animate(show_meshes=True)  # TODO : PR to enable Plot animation with other model than biorbd models
     sol.graphs()  # TODO : PR to remove graph title by phase
+
+    # # --- Show results from solution --- #
+    # import matplotlib.pyplot as plt
+    # from custom_package.fourier_approx import (
+    #     FourierSeries,
+    # )
+    #
+    # from custom_package.read_data import (
+    #     ExtractData,
+    # )
+    #
+    # sol_merged = sol.merge_phases()
+    # # datas = ExtractData().data('D:/These/Experiences/Pedales_instrumentees/Donnees/Results-pedalage_15rpm_001.lvm')
+    # # target_time, target_force = ExtractData().time_force(datas, 75.25, 76.25)
+    # target_time, target_force = ExtractData.load_data()  # muscle
+    # target_force = target_force - target_force[0]
+    # #
+    # fourier_fun = FourierSeries()
+    # fourier_fun.p = 76.25 - 75.25
+    # fourier_coef = fourier_fun.compute_real_fourier_coeffs(target_time, target_force, 50)
+    #
+    # y_approx = FourierSeries().fit_func_by_fourier_series_with_real_coeffs(target_time, fourier_coef)
+    # # plot, in the range from 0 to P, the true f(t) in blue and the approximation in red
+    # plt.plot(target_time, y_approx, color='red', linewidth=1)
+    # target_time, target_force = ExtractData().load_data()
+    # target_force = target_force - target_force[0]
+    #
+    # plt.plot(sol_merged.time, sol_merged.states["Cn"].squeeze())
+    # plt.plot(target_time, target_force)
+    # plt.show()
+    #
+    # sol.detailed_cost_values()
+    # sol.print_cost()
 
 
 if __name__ == "__main__":

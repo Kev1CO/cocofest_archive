@@ -207,7 +207,7 @@ def prepare_ocp(
         use_sx=True,
         parameter_mappings=bimapping,
         parameters=parameters,
-        assume_phase_dynamics=True,
+        assume_phase_dynamics=False,
     )
 
 
@@ -302,11 +302,11 @@ def main():
 
     # --- Prepare the multi-start and run it --- #
     combinatorial_parameters = {
-        "n_stim": [n_stim_list[0], n_stim_list[1], n_stim_list[2], n_stim_list[3], n_stim_list[4]],
-        "time_min": [time_min[0], time_min[1], time_min[2], time_min[3], time_min[4]],
-        "time_max": [time_max[0], time_max[1], time_max[2], time_max[3], time_max[4]],
-        "pulse_intensity_min": [pulse_intensity_min],
-        "pulse_intensity_max": [pulse_intensity_max],
+        "n_stim": n_stim_list,
+        "time_min": time_min,
+        "time_max": time_max,
+        "pulse_intensity_min": pulse_intensity_min,
+        "pulse_intensity_max": pulse_intensity_max,
         "fourier_coeff": [fourier_coeff, fourier_coeff],
     }
 

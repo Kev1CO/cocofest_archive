@@ -201,7 +201,7 @@ def prepare_ocp(
         use_sx=True,
         parameter_mappings=bimapping,
         parameters=parameters,
-        assume_phase_dynamics=True,
+        assume_phase_dynamics=False,
     )
 
 
@@ -237,7 +237,7 @@ def main():
     )
 
     # --- Solve the program --- #
-    sol = ocp.solve(Solver.IPOPT(show_online_optim=False))  # , _linear_solver="MA57"
+    sol = ocp.solve(Solver.IPOPT(show_online_optim=False, _max_iter=3000))  # , _linear_solver="MA57"
 
     # --- Show results --- #
     # sol.animate(show_meshes=True) TODO : PR to enable Plot animation with other model than biorbd models

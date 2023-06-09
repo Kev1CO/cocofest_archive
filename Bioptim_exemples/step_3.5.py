@@ -64,7 +64,7 @@ def prepare_ocp(
     """
 
     ding_models = [DingModelFrequency()] * n_stim  # Gives DingModel as model for n phases
-    n_shooting = [5] * n_stim  # Gives m node shooting for my n phases problem
+    n_shooting = [50] * n_stim  # Gives m node shooting for my n phases problem
     final_time = [0.01] * n_stim  # Set the final time for all my n phases
 
     # Creates the system's dynamic for my n phases
@@ -99,8 +99,8 @@ def prepare_ocp(
             )
 
     # Creates bimapping (in this case, the values of time in the n phases must be the same as the phase n°1)
-    # bimapping = BiMappingList()
-    # bimapping.add(name="time", to_second=[0 for _ in range(n_stim)], to_first=[0])
+    bimapping = BiMappingList()
+    bimapping.add(name="time", to_second=[0 for _ in range(n_stim)], to_first=[0])
 
     # --- STATE BOUNDS REPRESENTATION --- #
 
@@ -170,7 +170,7 @@ def prepare_ocp(
         ode_solver=ode_solver,
         control_type=ControlType.NONE,
         use_sx=True,
-        assume_phase_dynamics=True,
+        assume_phase_dynamics=False,
         # parameter_mappings=bimapping,
     )
 
