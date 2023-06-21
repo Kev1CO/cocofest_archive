@@ -31,6 +31,8 @@ class CustomObjective:
         """
         # get the approximated force value from the fourrier series at the node time
         value_from_fourier = FourierSeries().fit_func_by_fourier_series_with_real_coeffs(
-            controller.ocp.node_time(phase_idx=controller.phase_idx, node_idx=controller.t[0]), fourier_coeff, mode="casadi"
+            controller.ocp.node_time(phase_idx=controller.phase_idx, node_idx=controller.t[0]),
+            fourier_coeff,
+            mode="casadi",
         )
         return value_from_fourier - controller.states[key].cx

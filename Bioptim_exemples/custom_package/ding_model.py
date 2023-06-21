@@ -279,6 +279,7 @@ class DingModelFrequency:
         parameters: MX | SX,
         nlp: NonLinearProgram,
         t=None,
+        ocp=None,
     ) -> DynamicsEvaluation:
         """
         Functional electrical stimulation dynamic
@@ -301,7 +302,8 @@ class DingModelFrequency:
         """
 
         t_stim_prev = []  # Every stimulation instant before the current phase, i.e.: the beginning of each phase
-        time_parameters = DingModelFrequency.get_time_parameters(nlp.parameters)
+        # time_parameters = DingModelFrequency.get_time_parameters(nlp.parameters)
+        time_parameters = DingModelFrequency.get_time_parameters(ocp)
         if time_parameters.shape[0] == 1:  # check if time is mapped
             for i in range(nlp.phase_idx + 1):
                 t_stim_prev.append(time_parameters[0] * i)
@@ -344,6 +346,7 @@ class DingModelFrequency:
         # Gets every time node for the current phase
         for i in range(nlp.ns):
             extra_params["t"] = ocp.node_time(phase_idx=nlp.phase_idx, node_idx=i)
+            extra_params["ocp"] = ocp
 
             dynamics_eval = DingModelFrequency.custom_dynamics(
                 nlp.states.scaled.cx_start, nlp.controls.scaled.cx_start, nlp.parameters.cx_start, nlp, **extra_params
@@ -570,7 +573,8 @@ class DingModelFrequency:
         )
 
     @staticmethod
-    def get_time_parameters(nlp_parameters: ParameterList) -> MX | SX:
+    # def get_time_parameters(nlp_parameters: ParameterList) -> MX | SX:
+    def get_time_parameters(ocp: OptimalControlProgram) -> MX | SX:
         """
         Get the nlp list of time parameters
 
@@ -584,9 +588,13 @@ class DingModelFrequency:
         The list of time parameters
         """
         time_parameters = vertcat()
-        for j in range(nlp_parameters.cx_start.shape[0]):
-            if "time" in str(nlp_parameters.cx_start[j]):
-                time_parameters = vertcat(time_parameters, nlp_parameters.cx_start[j])
+        if "time" in ocp.nlp[0].parameters:
+            for j in range(ocp.nlp[0].parameters.cx_start.shape[0]):
+                if "time" in str(ocp.nlp[0].parameters.cx_start[j]):
+                    time_parameters = vertcat(time_parameters, ocp.nlp[0].parameters.cx_start[j])
+        else:
+            for j in range(len(ocp.nlp)):
+                time_parameters = vertcat(time_parameters, ocp.nlp[j].tf)
         return time_parameters
 
 
@@ -1041,6 +1049,7 @@ class DingModelIntensityFrequency(DingModelFrequency):
         parameters: MX | SX,
         nlp: NonLinearProgram,
         t=None,
+        ocp=None,
     ) -> DynamicsEvaluation:
         """
         Functional electrical stimulation dynamic
@@ -1057,6 +1066,8 @@ class DingModelIntensityFrequency(DingModelFrequency):
             A reference to the phase
         t: MX | SX
             Current node time, this t is used to set the dynamics and as to be a symbolic
+        ocp: OptimalControlProgram
+            A reference to the ocp
         Returns
         -------
         The derivative of the states in the tuple[MX | SX]] format
@@ -1066,7 +1077,8 @@ class DingModelIntensityFrequency(DingModelFrequency):
             []
         )  # Every stimulation intensity before the current phase, i.e.: the intensity of each phase
 
-        time_parameters = DingModelFrequency.get_time_parameters(nlp.parameters)
+        # time_parameters = DingModelFrequency.get_time_parameters(nlp.parameters)
+        time_parameters = DingModelFrequency.get_time_parameters(ocp)
         intensity_parameters = DingModelIntensityFrequency.get_intensity_parameters(nlp.parameters)
 
         if time_parameters.shape[0] == 1:  # check if time is mapped
@@ -1120,6 +1132,7 @@ class DingModelIntensityFrequency(DingModelFrequency):
         # Gets every time node for the current phase
         for i in range(nlp.ns):
             extra_params["t"] = ocp.node_time(phase_idx=nlp.phase_idx, node_idx=i)
+            extra_params["ocp"] = ocp
 
             dynamics_eval = DingModelIntensityFrequency.custom_dynamics(
                 nlp.states.scaled.cx_start, nlp.controls.scaled.cx_start, nlp.parameters.cx_start, nlp, **extra_params
@@ -1164,6 +1177,7 @@ class DingModelIntensityFrequency(DingModelFrequency):
         )  # t needs a symbolic value to start computing in custom_configure_dynamics_function
 
         DingModelIntensityFrequency.custom_configure_dynamics_function(ocp, nlp, t=t)
+
 
 #
 # class SumMultiplication(DingModelFrequency):
