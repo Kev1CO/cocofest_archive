@@ -217,10 +217,10 @@ def main():
 
     # --- Get the objective function to match --- #
     # --- instrumented handle file --- #
-    # datas = ExtractData().data('D:/These/Experiences/Pedales_instrumentees/Donnees/Results-pedalage_15rpm_001.lvm')
+    # datas = ExtractData().data('../../../../Experiences/Pedales_instrumentees/Donnees/Results-pedalage_15rpm_001.lvm')
     # time, force = ExtractData().time_force(datas, 75.25, 76.25)  # instrumented handle
     # --- mhe muscle file --- #
-    time, force = ExtractData.load_data("D:/These/Donnees/Force_musculaire/pedalage_3_proc_result_duration_0.08.bio")
+    time, force = ExtractData.load_data("../../../../Donnees/Force_musculaire/pedalage_3_proc_result_duration_0.08.bio")
     force = force - force[0]
     fourier_fun = FourierSeries()
     fourier_fun.p = 1
