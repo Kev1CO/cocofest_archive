@@ -29,9 +29,46 @@ from ding_model import DingModelIntensityFrequency
 
 
 class FunctionalElectricStimulationOptimalControlProgram(OptimalControlProgram):
+    """
+    The main class to define an ocp. This class prepares the full program and gives all
+    the needed parameters to solve a functional electrical stimulation ocp
+
+    Attributes
+    ----------
+    ding_model: DingModelFrequency | DingModelPulseDurationFrequency| DingModelIntensityFrequency
+        The model type used for the ocp
+    n_stim: int
+        Number of stimulation that will occur during the ocp, it is as well refer as phases
+    n_shooting: int
+        Number of shooting point for each individual phases
+    final_time: float
+        Refers to the final time of the ocp
+    final_phase_time_bounds: Tuple
+        Refers to the final time of each phase,
+        ig: ((time_min_phase1, time_max_phase1),(time_min_phase2, time_max_phase2), ...)
+    time_pulse_bounds: Tuple
+        Refers to the pulse time bound of each phase. Mandatory when using DingModelPulseDurationFrequency model
+        ig: ((time_pulse_min_phase1, time_pulse_max_phase1),(time_pulse_min_phase2, time_pulse_max_phase2), ...)
+    intensity_bounds: Tuple
+        Refers to the pulse intensity bound of each phase. Mandatory when using DingModelIntensityFrequency model
+        ig: ((intensity_min_phase1, intensity_max_phase1),(intensity_min_phase2, intensity_max_phase2), ...)
+    force_fourrier_coef: np.ndarray
+        Fourrier coefficients used in objective to track a curve (ig: force curve)
+
+    Methods
+    -------
+    from_frequency_and_final_time(self, frequency: int | float, final_time: float, round_down: bool)
+        Calculates the number of stim (phases) for the ocp from frequency and final time
+    from_frequency_and_n_stim(self, frequency: int | float, n_stim: int)
+        Calculates the final ocp time from frequency and stimulation number
+    from_n_stim_and_final_time(self, n_stim: int, final_time: float)
+        Calculates the frequency from stimulation number and final time
+    """
+
     def __init__(self,
-                 ding_model: DingModelFrequency,
+                 ding_model: DingModelFrequency | DingModelPulseDurationFrequency| DingModelIntensityFrequency,
                  n_stim: int = None,
+                 n_shooting: int = None,
                  final_time: float = None,
                  final_phase_time_bounds: tuple = None,
                  time_pulse_bounds: tuple = None,
@@ -44,55 +81,31 @@ class FunctionalElectricStimulationOptimalControlProgram(OptimalControlProgram):
                  ):
 
         self.ding_model = ding_model
-        self.ding_model.__init__(self.ding_model)
+        self.n_shooting = n_shooting
         self.force_fourrier_coef = force_fourrier_coef
         self.constraints = None
         self.parameter_mappings = None
         self.parameters = None
 
-        if 'ode_solver' not in kwargs:
-            kwargs['ode_solver'] = OdeSolver.RK4(n_integration_steps=1)
-        self.ode_solver = kwargs['ode_solver']
-
-        if 'use_sx' not in kwargs:
-            kwargs['use_sx'] = True
-        self.use_sx = kwargs['use_sx']
-
-        if 'n_threads' not in kwargs:
-            kwargs['n_threads'] = 1
-        self.n_threads = kwargs['n_threads']
-
-        if 'node_shooting' not in kwargs:
-            kwargs['node_shooting'] = 50
-        self.node_shooting = kwargs['node_shooting']
-
-        if 'frequency' not in kwargs:
-            kwargs['frequency'] = None
-
-        if sum(x is None for x in [n_stim, final_time, kwargs["frequency"]]) > 2:
-            raise RuntimeWarning(
-                "2 of the 3 inputs form number of stim, final time and frequency must be entered"
-            )
-
-        if n_stim is None :
-            self.n_stim = self.from_frequency_and_final_time(kwargs['frequency'], final_time, round_down=True)
+        if n_stim is None:
+            self.n_stim = self.from_frequency_and_final_time(frequency=kwargs['frequency'], final_time=final_time, round_down=True)
         else:
             self.n_stim = n_stim
 
         if final_time is None:
-            self.final_time = self.from_frequency_and_n_stim(kwargs['frequency'], n_stim)
+            self.final_time = self.from_frequency_and_n_stim(frequency=kwargs['frequency'], n_stim=n_stim)
         else:
             self.final_time = final_time
 
-        # if kwargs['frequency'] is None:
-        #     kwargs['frequency'] = self.from_n_stim_and_final_time(n_stim, final_time)
-        # else:
+        # if 'frequency' in kwargs:
         #     self.frequency = kwargs['frequency']
+        # else:
+        #     kwargs['frequency'] = self.from_n_stim_and_final_time(n_stim=n_stim, final_time=final_time)
 
         self.ding_models = [ding_model] * n_stim
 
         if kwargs['frequency'] and final_phase_time_bounds is None:
-            raise RuntimeWarning(
+            raise ValueError(
                 "final_time_bounds can't be None if frequency is not entered"
             )
 
@@ -100,7 +113,7 @@ class FunctionalElectricStimulationOptimalControlProgram(OptimalControlProgram):
             pass
 
         elif len(final_phase_time_bounds) != 2 or len(final_phase_time_bounds) != n_stim * 2:
-            raise RuntimeWarning(
+            raise ValueError(
                 "For a bimmaped time constraint, time_bounds is a tuple that requires 2 values, one for the lower time bound and one for the upper bound."
                 "Otherwise, it requires as many lower and upper time bound for each stimulations"
             )
@@ -115,7 +128,7 @@ class FunctionalElectricStimulationOptimalControlProgram(OptimalControlProgram):
 
         elif kwargs['frequency'] is None and len(final_phase_time_bounds) == 2 :
             if kwargs['time_min'] is None or kwargs['time_max'] is None:
-                raise RuntimeWarning(
+                raise ValueError(
                     "time_min and time_max between two stimulation needs to be filled in optional arguments"
                 )
             # Creates the constraint for my n phases
@@ -127,11 +140,11 @@ class FunctionalElectricStimulationOptimalControlProgram(OptimalControlProgram):
 
         elif kwargs['frequency'] is None and len(final_phase_time_bounds) == 2 * n_stim:
             if kwargs['time_min'] is None or kwargs['time_max'] is None:
-                raise RuntimeWarning(
+                raise ValueError(
                     "time_min and time_max between two stimulation needs to be filled in optional arguments"
                 )
             elif len(kwargs['time_min'])< self.n_stim or len(kwargs['time_max'])< self.n_stim:
-                raise RuntimeWarning(
+                raise ValueError(
                     "time_min and time_max between two stimulation needs to be filled for each stimulation in optional arguments"
                 )
             # Creates the constraint for my n phases
@@ -143,12 +156,12 @@ class FunctionalElectricStimulationOptimalControlProgram(OptimalControlProgram):
         parameters = ParameterList()
         if ding_model == DingModelPulseDurationFrequency:
             if time_pulse_bounds is None:
-                raise RuntimeWarning(
+                raise ValueError(
                     "Time pulse bounds need to be set for this model"
                 )
 
             elif len(time_pulse_bounds) != 2 or len(time_pulse_bounds) != self.n_stim * 2:
-                raise RuntimeWarning(
+                raise ValueError(
                     "For a bimmaped time pulse constraint, time_pulse_bounds is a tuple that requires 2 values, one for the lower time pulse bound and one for the upper bound."
                     "Otherwise, it requires as many lower and upper time pulse bound for each stimulations"
                 )
@@ -191,18 +204,18 @@ class FunctionalElectricStimulationOptimalControlProgram(OptimalControlProgram):
                 )
 
         elif time_pulse_bounds is not None:
-            raise RuntimeWarning(
+            raise ValueError(
                 "time_pulse_bounds filled out but the model using intensity is not used"
             )
 
         if ding_model == DingModelIntensityFrequency:
             if intensity_bounds is None:
-                raise RuntimeWarning(
+                raise ValueError(
                     "Intensity bounds need to be set for this model"
                 )
 
             elif len(intensity_bounds) != 2 or len(intensity_bounds) != n_stim * 2:
-                raise RuntimeWarning(
+                raise ValueError(
                     "For a bimmaped intensity constraint, intensity_bounds is a tuple that requires 2 values, one for the lower intensity bound and one for the upper bound."
                     "Otherwise, it requires as many lower and upper intensity bound for each stimulations"
                 )
@@ -245,7 +258,7 @@ class FunctionalElectricStimulationOptimalControlProgram(OptimalControlProgram):
                 )
 
         elif intensity_bounds is not None:
-            raise RuntimeWarning(
+            raise ValueError(
                 "intensity_bounds filled out but the model using intensity is not used"
             )
 
@@ -253,9 +266,27 @@ class FunctionalElectricStimulationOptimalControlProgram(OptimalControlProgram):
         self._set_bounds()
         self._set_objective()
 
+        if 'ode_solver' in kwargs:
+            if not isinstance(kwargs['ode_solver'], OdeSolver):
+                raise ValueError(
+                    "ode_solver kwarg must be a OdeSolver type"
+                )
+
+        if 'use_sx' in kwargs:
+            if not isinstance(kwargs['use_sx'], bool):
+                raise ValueError(
+                    "use_sx kwarg must be a bool type"
+                )
+
+        if 'n_thread' in kwargs:
+            if not isinstance(kwargs['n_thread'], int):
+                raise ValueError(
+                    "n_thread kwarg must be a int type"
+                )
+
         super().__init__(bio_model=self.ding_models,
                          dynamics=self.dynamics,
-                         n_shooting=self.node_shooting,
+                         n_shooting=self.n_shooting,
                          phase_time=self.final_time_phase,
                          x_init=self.x_init,
                          u_init=self.u_init,
@@ -263,13 +294,13 @@ class FunctionalElectricStimulationOptimalControlProgram(OptimalControlProgram):
                          u_bounds=self.u_bounds,
                          objective_functions=self.objective_functions,
                          constraints=self.constraints,
-                         ode_solver=self.ode_solver,
+                         ode_solver=kwargs['ode_solver'] if 'ode_solver' in kwargs else OdeSolver.RK4(n_integration_steps=1),
                          control_type=ControlType.NONE,
-                         use_sx=self.use_sx,
+                         use_sx=kwargs['use_sx'] if 'use_sx' in kwargs else False,
                          parameter_mappings=self.parameter_mappings,
                          parameters=self.parameters,
                          assume_phase_dynamics=False,
-                         n_threads=self.n_threads,)
+                         n_threads=kwargs['n_thread'] if 'n_thread' in kwargs else 1)
         #
         # self.ocp = OptimalControlProgram(
         #     self.ding_models,
@@ -388,25 +419,12 @@ class FunctionalElectricStimulationOptimalControlProgram(OptimalControlProgram):
                         phase=phase,
                     )
 
-
-    # @classmethod
-    # def from_frequency_and_final_time(cls,
-    #                    frequency: float,
-    #                    final_time: float,
-    #                    round_down: bool = False,
-    #                    ):
-    #     n_stim = final_time * frequency
-    #     if round_down:
-    #         n_stim = int(n_stim)
-    #     else:
-    #     #check if a int else raise an error
-    #
-    # return cls(n_stim=,
-    #            final_time=,
-    #            )
-
-    @staticmethod
-    def from_frequency_and_final_time(final_time, frequency, round_down: bool = False):
+    @classmethod
+    def from_frequency_and_final_time(cls,
+                                      frequency: float,
+                                      final_time: float,
+                                      round_down: bool = False,
+                                      ):
         n_stim = final_time * frequency
         if round_down:
             n_stim = int(n_stim)
@@ -414,48 +432,33 @@ class FunctionalElectricStimulationOptimalControlProgram(OptimalControlProgram):
             raise RuntimeWarning(
                 "The number of stimulation in the final time t needs to be round down in order to work, set round down to True"
             )
-        return n_stim
+        return cls(n_stim=n_stim,
+                   final_time=final_time,
+                   )
 
-
-    # @classmethod
-    # def from_frequency_and_n_stim(cls
-    #                               frequency=,
-    #                               n_stim=,
-    #                               ):
-    #     final_time = n_stim / frequency
-    #
-    # return cls(n_stim=, final_time)
-    #
-    # )
-
-    @staticmethod
-    def from_frequency_and_n_stim(frequency, n_stim):
+    @classmethod
+    def from_frequency_and_n_stim(cls,
+                                  frequency: float,
+                                  n_stim: int,
+                                  ):
         final_time = n_stim / frequency
-        return final_time
+        return cls(n_stim=n_stim, final_time=final_time)
 
-
-    # @classmethod
-    # def from_n_stim_and_final_time(cls
-    #     n_stim =,
-    #     final_time=,
-    #     ):
-    #
-    #
-    # return cls(n_stim=, final_time)
-    #
-    # )
-
-    @staticmethod
-    def from_n_stim_and_final_time(n_stim, final_time):
+    @classmethod
+    def from_n_stim_and_final_time(cls,
+                                   n_stim: int,
+                                   final_time: float,
+                                   ):
         frequency = n_stim / final_time
-        return frequency
+        return cls(n_stim=n_stim, final_time=final_time, frequency=frequency)
 
 
 if __name__ == "__main__":
-    a = FunctionalElectricStimulationOptimalControlProgram(ding_model=DingModelFrequency,
+    a = FunctionalElectricStimulationOptimalControlProgram(ding_model=DingModelFrequency(),
                                                            n_stim=10,
                                                            final_time=5,
-                                                           final_phase_time_bounds=None)
+                                                           final_phase_time_bounds=None,
+                                                           )
 
     # ding_model: DingModelFrequency,
     # n_stim: int = None,

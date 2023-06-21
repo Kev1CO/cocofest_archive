@@ -304,11 +304,6 @@ def main():
     # --- Prepare the multi-start and run it --- #
     combinatorial_parameters = {
         "n_stim": n_stim_list,
-        # "time_min": [0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01],
-        # "time_max": [0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1],
-        # "pulse_intensity_min": pulse_intensity_min,
-        # "pulse_intensity_max": pulse_intensity_max,
-        # "fourier_coeff": [fourier_coeff],
     }
 
     save_folder = "./temporary_results"

@@ -237,7 +237,7 @@ def main():
     )
 
     # --- Solve the program --- #
-    sol = ocp.solve(Solver.IPOPT(show_online_optim=False, _max_iter=3000))  # , _linear_solver="MA57"
+    sol = ocp.solve(Solver.IPOPT(show_online_optim=False, _max_iter=1000))  # , _linear_solver="MA57"
 
     # --- Show results --- #
     # sol.animate(show_meshes=True) TODO : PR to enable Plot animation with other model than biorbd models
@@ -249,7 +249,7 @@ def main():
     sol_merged = sol.merge_phases()
     # datas = ExtractData().data('D:/These/Experiences/Pedales_instrumentees/Donnees/Results-pedalage_15rpm_001.lvm')
     # target_time, target_force = ExtractData().time_force(datas, 75.25, 76.25)
-    target_time, target_force = ExtractData.load_data("D:\These\Donnees\Force_musculaire\pedalage_3_proc_result_duration_0.08.bio")  # muscle
+    target_time, target_force = ExtractData.load_data("../../../../Donnees/Force_musculaire/pedalage_3_proc_result_duration_0.08.bio")  # muscle
     target_force = target_force - target_force[0]
 
     fourier_fun = FourierSeries()
