@@ -302,7 +302,6 @@ class DingModelFrequency:
         """
 
         t_stim_prev = []  # Every stimulation instant before the current phase, i.e.: the beginning of each phase
-        # time_parameters = DingModelFrequency.get_time_parameters(nlp.parameters)
         time_parameters = DingModelFrequency.get_time_parameters(ocp)
         if time_parameters.shape[0] == 1:  # check if time is mapped
             for i in range(nlp.phase_idx + 1):
@@ -573,7 +572,6 @@ class DingModelFrequency:
         )
 
     @staticmethod
-    # def get_time_parameters(nlp_parameters: ParameterList) -> MX | SX:
     def get_time_parameters(ocp: OptimalControlProgram) -> MX | SX:
         """
         Get the nlp list of time parameters
@@ -602,7 +600,7 @@ class DingModelPulseDurationFrequency(DingModelFrequency):
     def __init__(self):
         super().__init__()
         self.impulse_time = None
-        self.a_scale = 492  # Value from Ding's 2007 article (N/s)
+        self.a_scale = 4920  # Value from Ding's 2007 article (N/s)
         self.pd0 = 0.000131405  # Value from Ding's 2007 article (s)
         self.pdt = 0.000194138  # Value from Ding's 2007 article (s)
         self.tau1_rest = 0.060601  # Value from Ding's 2003 article (s)
@@ -673,7 +671,7 @@ class DingModelPulseDurationFrequency(DingModelFrequency):
         -------
         The value of the derivative of each state dx/dt at the current time t
         """
-        r0 = MX(5) if t.type_name() == "MX" else SX(5)  # Simplification
+        r0 = km + self.r0_km_relationship  # Simplification
         cn_dot = self.cn_dot_fun(
             cn, r0, t, t_stim_prev=extra_arguments["t_stim_prev"]
         )  # Equation n°1 from Ding's 2003 article
@@ -694,9 +692,11 @@ class DingModelPulseDurationFrequency(DingModelFrequency):
         -------
         The value of scaling factor (unitless)
         """
-        return self.a_scale * (
-            1 - np.exp(-(impulse_time[0] - self.pd0) / self.pdt)
-        )  # Equation n°3 from Ding's 2007 article
+        return if_else(
+            self.a_scale * (1 - exp(-(impulse_time[0] - self.pd0) / self.pdt)) < 0,
+            0,
+            self.a_scale * (1 - exp(-(impulse_time[0] - self.pd0) / self.pdt)),
+        )
 
     def set_impulse_duration(self, value: list[MX] | list[SX]):
         """
@@ -736,6 +736,7 @@ class DingModelPulseDurationFrequency(DingModelFrequency):
         parameters: MX | SX,
         nlp: NonLinearProgram,
         t=None,
+        ocp=None,
     ) -> DynamicsEvaluation:
         """
         Functional electrical stimulation dynamic
@@ -752,13 +753,15 @@ class DingModelPulseDurationFrequency(DingModelFrequency):
             A reference to the phase
         t: MX | SX
             Current node time, this t is used to set the dynamics and as to be a symbolic
+        ocp: OptimalControlProgram
+            A reference to the ocp
         Returns
         -------
         The derivative of the states in the tuple[MX | SX]] format
         """
 
         t_stim_prev = []  # Every stimulation instant before the current phase, i.e.: the beginning of each phase
-        time_parameters = DingModelFrequency.get_time_parameters(nlp.parameters)
+        time_parameters = DingModelFrequency.get_time_parameters(ocp)
         pulse_duration_parameters = DingModelPulseDurationFrequency.get_pulse_duration_parameters(nlp.parameters)
 
         if time_parameters.shape[0] == 1:  # check if time is mapped
@@ -809,6 +812,7 @@ class DingModelPulseDurationFrequency(DingModelFrequency):
         # Gets every time node for the current phase
         for i in range(nlp.ns):
             extra_params["t"] = ocp.node_time(phase_idx=nlp.phase_idx, node_idx=i)
+            extra_params["ocp"] = ocp
 
             dynamics_eval = DingModelPulseDurationFrequency.custom_dynamics(
                 nlp.states.scaled.cx_start, nlp.controls.scaled.cx_start, nlp.parameters.cx_start, nlp, **extra_params
@@ -1077,7 +1081,6 @@ class DingModelIntensityFrequency(DingModelFrequency):
             []
         )  # Every stimulation intensity before the current phase, i.e.: the intensity of each phase
 
-        # time_parameters = DingModelFrequency.get_time_parameters(nlp.parameters)
         time_parameters = DingModelFrequency.get_time_parameters(ocp)
         intensity_parameters = DingModelIntensityFrequency.get_intensity_parameters(nlp.parameters)
 
@@ -1177,39 +1180,3 @@ class DingModelIntensityFrequency(DingModelFrequency):
         )  # t needs a symbolic value to start computing in custom_configure_dynamics_function
 
         DingModelIntensityFrequency.custom_configure_dynamics_function(ocp, nlp, t=t)
-
-
-#
-# class SumMultiplication(DingModelFrequency):
-#     def __init__(self):
-#         super().__init__()
-#         self.sum_multiplier = []
-#
-#     def test_for_sum_multiplier(self, value):
-#         self.sum_multiplier = []
-#         for i in range(value.shape[0]):
-#             self.sum_multiplier.append(value[i])
-#
-#     def cn_dot_fun(
-#         self, cn: MX | SX, r0: float | MX | SX, t: MX | SX, **extra_arguments: MX | SX | list[MX] | list[SX]
-#     ) -> float | MX | SX:
-#         """
-#         Parameters
-#         ----------
-#         cn: MX | SX
-#             The previous step value of ca_troponin_complex (unitless)
-#         r0: MX | SX
-#             Mathematical term characterizing the magnitude of enhancement in CN from the following stimuli (unitless)
-#         t: MX | SX
-#             The current time at which the dynamics is evaluated (ms)
-#         **extra_arguments: list[MX] | list[SX]
-#             t_stim_prev: list[MX] | list[SX]
-#                 The time list of the previous stimulations (ms)
-#
-#         Returns
-#         -------
-#         The value of the derivative ca_troponin_complex (unitless)
-#         """
-#         sum_multiplier = self.cn_sum_fun(r0, t, t_stim_prev=extra_arguments["t_stim_prev"])  # Part of Eq n°1
-#
-#         return (1 / self.tauc) * sum_multiplier - (cn / self.tauc)  # Equation n°1
