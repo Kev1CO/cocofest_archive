@@ -110,17 +110,17 @@ def prepare_ocp(
     # TODO : Fix this
     # Creates the pulse intensity parameter in a list type
     parameters = ParameterList()
-    stim_intensity_bounds = Bounds(
+    stim_pulse_bounds = Bounds(
         np.array([pulse_duration_min] * n_stim),
         np.array([pulse_duration_max] * n_stim),
         interpolation=InterpolationType.CONSTANT,
     )
-    initial_intensity_guess = InitialGuess(np.array([0] * n_stim))
+    initial_duration_guess = InitialGuess(np.array([0] * n_stim))
     parameters.add(
         parameter_name="pulse_duration",
         function=DingModelPulseDurationFrequency.set_impulse_duration,
-        initial_guess=initial_intensity_guess,
-        bounds=stim_intensity_bounds,
+        initial_guess=initial_duration_guess,
+        bounds=stim_pulse_bounds,
         size=n_stim,
     )
 
@@ -223,8 +223,8 @@ def main():
     n = 10  # number of stimulation corresponding to phases
     time_min = [0.01 for _ in range(n)]  # minimum time between two phase (stimulation)
     time_max = [0.1 for _ in range(n)]  # maximum time between two phase (stimulation)
-    pulse_duration_min = 0.000002  # minimum pulse duration during the phase (stimulation) [0.000002 for _ in range(n)]
-    pulse_duration_max = 0.00005  # maximum pulse duration during the phase (stimulation) [0.00005 for _ in range(n)]
+    pulse_duration_min = 0  # minimum pulse duration during the phase (stimulation) [0.000002 for _ in range(n)]
+    pulse_duration_max = 0.0006  # maximum pulse duration during the phase (stimulation) [0.00005 for _ in range(n)]
 
     # --- Get the objective function to match --- #
     # --- instrumented handle file --- #
@@ -255,29 +255,29 @@ def main():
 
     """
     # --- Show results from solution --- #
-    import matplotlib.pyplot as plt
-    sol_merged = sol.merge_phases()
-    # datas = ExtractData().data('D:/These/Experiences/Pedales_instrumentees/Donnees/Results-pedalage_15rpm_001.lvm')
-    # target_time, target_force = ExtractData().time_force(datas, 75.25, 76.25)
-    target_time, target_force = ExtractData.load_data()  # muscle
-    target_force = target_force - target_force[0]
+    # import matplotlib.pyplot as plt
+    # sol_merged = sol.merge_phases()
+    # # datas = ExtractData().data('D:/These/Experiences/Pedales_instrumentees/Donnees/Results-pedalage_15rpm_001.lvm')
+    # # target_time, target_force = ExtractData().time_force(datas, 75.25, 76.25)
+    # target_time, target_force = ExtractData.load_data("../../../../Donnees/Force_musculaire/pedalage_3_proc_result_duration_0.08.bio")  # muscle
+    # target_force = target_force - target_force[0]
+    # 
+    # fourier_fun = FourierSeries()
+    # fourier_fun.p = 76.25 - 75.25
+    # fourier_coef = fourier_fun.compute_real_fourier_coeffs(target_time, target_force, 50)
+    # 
+    # y_approx = FourierSeries().fit_func_by_fourier_series_with_real_coeffs(target_time, fourier_coef)
+    # # plot, in the range from 0 to P, the true f(t) in blue and the approximation in red
+    # plt.plot(target_time, y_approx, color='red', linewidth=1)
+    # # target_time, target_force = ExtractData().load_data()
+    # target_force = target_force - target_force[0]
+    # 
+    # plt.plot(sol_merged.time, sol_merged.states["F"].squeeze())
+    # plt.plot(target_time, target_force)
+    # plt.show()
 
-    fourier_fun = FourierSeries()
-    fourier_fun.p = 76.25 - 75.25
-    fourier_coef = fourier_fun.compute_real_fourier_coeffs(target_time, target_force, 50)
-
-    y_approx = FourierSeries().fit_func_by_fourier_series_with_real_coeffs(target_time, fourier_coef)
-    # plot, in the range from 0 to P, the true f(t) in blue and the approximation in red
-    plt.plot(target_time, y_approx, color='red', linewidth=1)
-    # target_time, target_force = ExtractData().load_data()
-    target_force = target_force - target_force[0]
-
-    plt.plot(sol_merged.time, sol_merged.states["F"].squeeze())
-    plt.plot(target_time, target_force)
-    plt.show()
-
-    sol.detailed_cost_values()
-    sol.print_cost()
+    # sol.detailed_cost_values()
+    # sol.print_cost()
     """
 
 
