@@ -339,7 +339,7 @@ class DingModelFrequency:
             t: MX | SX
                 Current node time
         """
-        nlp.parameters = ocp.v.parameters_in_list
+        nlp.parameters = ocp.parameters
         DynamicsFunctions.apply_parameters(nlp.parameters.cx_start, nlp)
 
         # Gets every time node for the current phase
@@ -806,7 +806,7 @@ class DingModelPulseDurationFrequency(DingModelFrequency):
                 Current node time
         """
 
-        nlp.parameters = ocp.v.parameters_in_list
+        nlp.parameters = ocp.parameters
         DynamicsFunctions.apply_parameters(nlp.parameters.cx_start, nlp)
 
         # Gets every time node for the current phase
@@ -1129,7 +1129,7 @@ class DingModelIntensityFrequency(DingModelFrequency):
                 Current node time
         """
 
-        nlp.parameters = ocp.v.parameters_in_list
+        nlp.parameters = ocp.parameters
         DynamicsFunctions.apply_parameters(nlp.parameters.cx_start, nlp)
 
         # Gets every time node for the current phase

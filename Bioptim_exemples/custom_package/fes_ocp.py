@@ -1,12 +1,10 @@
 from bioptim import (
     BiMappingList,
-    Bounds,
     BoundsList,
     ConstraintFcn,
     ConstraintList,
     ControlType,
     DynamicsList,
-    InitialGuess,
     InitialGuessList,
     InterpolationType,
     Node,
@@ -55,7 +53,7 @@ class FunctionalElectricStimulationOptimalControlProgram(OptimalControlProgram):
     force_fourrier_coef: np.ndarray
         Fourrier coefficients used in objective to track a curve (ig: force curve)
     **kwargs:
-        time_min: int | float
+        time_min: list[int] | list[float]
             Minimum time for a phase
         time_max: list[int] | list[float]
             Maximum time for a phase
@@ -63,17 +61,17 @@ class FunctionalElectricStimulationOptimalControlProgram(OptimalControlProgram):
             Set phase time constant
         time_pulse: int | float
             Setting a chosen pulse time among phases
-        time_pulse_min: list[int] | list[float]
+        time_pulse_min: int | float
             Minimum pulse time for a phase
-        time_pulse_max: list[int] | list[float]
+        time_pulse_max: int | float
             Maximum pulse time for a phase
         time_pulse_bimapping: bool
             Set pulse time constant among phases
         intensity_pulse: int | float
             Setting a chosen pulse intensity among phases
-        intensity_pulse_min: list[int] | list[float]
+        intensity_pulse_min: int | float
             Minimum pulse intensity for a phase
-        intensity_pulse_max: list[int] | list[float]
+        intensity_pulse_max: int | float
             Maximum pulse intensity for a phase
         intensity_pulse_bimapping: bool
             Set pulse intensity constant among phases
@@ -142,6 +140,8 @@ class FunctionalElectricStimulationOptimalControlProgram(OptimalControlProgram):
             self.final_time_phase = [0.01] * n_stim
 
         parameters = ParameterList()
+        parameters_bounds = BoundsList()
+        parameters_init = InitialGuessList()
         if isinstance(ding_model, DingModelPulseDurationFrequency):
             if "time_pulse" not in kwargs and "time_pulse_min" not in kwargs and "time_pulse_max" not in kwargs:
                 raise ValueError("Time pulse or Time pulse min max bounds need to be set for this model")
@@ -157,37 +157,37 @@ class FunctionalElectricStimulationOptimalControlProgram(OptimalControlProgram):
 
             if "time_pulse" in kwargs:
                 if isinstance(kwargs["time_pulse"], int | float):
-                    stim_intensity_bounds = Bounds(
-                        np.array([kwargs["time_pulse"]] * n_stim),
-                        np.array([kwargs["time_pulse"]] * n_stim),
+                    parameters_bounds.add(
+                        "pulse_duration",
+                        min_bound=np.array([kwargs["time_pulse"]] * n_stim),
+                        max_bound=np.array([kwargs["time_pulse"]] * n_stim),
                         interpolation=InterpolationType.CONSTANT,
                     )
-                    initial_time_pulse_guess = InitialGuess(np.array([kwargs["time_pulse"]] * n_stim))
+                    parameters_init["pulse_duration"] = np.array([kwargs["time_pulse"]] * n_stim)
                     parameters.add(
                         parameter_name="pulse_duration",
                         function=DingModelPulseDurationFrequency.set_impulse_duration,
-                        initial_guess=initial_time_pulse_guess,
-                        bounds=stim_intensity_bounds,
                         size=n_stim,
                     )
                 else:
                     raise ValueError("Wrong time_pulse type, only int or float accepted")
 
             elif "time_pulse_min" in kwargs and "time_pulse_max" in kwargs:
-                if len(kwargs["time_pulse_min"]) != n_stim or len(kwargs["time_pulse_max"]) != n_stim:
-                    raise ValueError("Length of time_pulse_min and time_pulse_max must be equal to n_stim")
+                if not isinstance(kwargs["time_pulse_min"], int | float) or not isinstance(
+                    kwargs["time_pulse_max"], int | float
+                ):
+                    raise ValueError("time_pulse_min and time_pulse_max must be equal int or float type")
 
-                stim_intensity_bounds = Bounds(
-                    np.array(kwargs["time_pulse_min"]),
-                    np.array(kwargs["time_pulse_max"]),
+                parameters_bounds.add(
+                    "pulse_duration",
+                    min_bound=[kwargs["time_pulse_min"]],
+                    max_bound=[kwargs["time_pulse_max"]],
                     interpolation=InterpolationType.CONSTANT,
                 )
-                initial_time_pulse_guess = InitialGuess(np.array([0] * n_stim))
+                parameters_init["pulse_duration"] = np.array([0] * n_stim)
                 parameters.add(
                     parameter_name="pulse_duration",
                     function=DingModelPulseDurationFrequency.set_impulse_duration,
-                    initial_guess=initial_time_pulse_guess,
-                    bounds=stim_intensity_bounds,
                     size=n_stim,
                 )
 
@@ -223,39 +223,37 @@ class FunctionalElectricStimulationOptimalControlProgram(OptimalControlProgram):
 
             if "intensity_pulse" in kwargs:
                 if isinstance(kwargs["intensity_pulse"], int | float):
-                    stim_intensity_bounds = Bounds(
-                        np.array([kwargs["intensity_pulse"]] * n_stim),
-                        np.array([kwargs["intensity_pulse"]] * n_stim),
+                    parameters_bounds.add(
+                        "pulse_intensity",
+                        min_bound=np.array([kwargs["intensity_pulse"]] * n_stim),
+                        max_bound=np.array([kwargs["intensity_pulse"]] * n_stim),
                         interpolation=InterpolationType.CONSTANT,
                     )
-                    initial_intensity_pulse_guess = InitialGuess(np.array([kwargs["intensity_pulse"]] * n_stim))
+                    parameters_init["pulse_intensity"] = np.array([kwargs["intensity_pulse"]] * n_stim)
                     parameters.add(
                         parameter_name="pulse_intensity",
                         function=DingModelIntensityFrequency.set_impulse_intensity,
-                        initial_guess=initial_intensity_pulse_guess,
-                        bounds=stim_intensity_bounds,
                         size=n_stim,
                     )
                 else:
                     raise ValueError("Wrong intensity_pulse type, only int or float accepted")
 
             elif "intensity_pulse_min" in kwargs and "intensity_pulse_max" in kwargs:
-                if len(kwargs["intensity_pulse_min"]) != n_stim or len(kwargs["intensity_pulse_max"]) != n_stim:
-                    raise ValueError("Length of intensity_pulse_min and intensity_pulse_max must be equal to n_stim")
-
-                stim_intensity_bounds = Bounds(
-                    np.array(kwargs["intensity_pulse_min"]),
-                    np.array(kwargs["intensity_pulse_max"]),
+                if not isinstance(kwargs["intensity_pulse_min"], int | float) or not isinstance(
+                    kwargs["intensity_pulse_max"], int | float
+                ):
+                    raise ValueError("intensity_pulse_min and intensity_pulse_max must be int or float type")
+                parameters_bounds.add(
+                    "pulse_intensity",
+                    min_bound=[kwargs["intensity_pulse_min"]],
+                    max_bound=[kwargs["intensity_pulse_max"]],
                     interpolation=InterpolationType.CONSTANT,
                 )
-                full_bound_intensity_list = kwargs["intensity_pulse_min"] + kwargs["intensity_pulse_max"]
-                intensity_avg = sum(full_bound_intensity_list) / len(full_bound_intensity_list)
-                initial_intensity_pulse_guess = InitialGuess(np.array([intensity_avg] * n_stim))
+                intensity_avg = (kwargs["intensity_pulse_min"] + kwargs["intensity_pulse_max"]) / 2
+                parameters_init["pulse_intensity"] = np.array([intensity_avg] * n_stim)
                 parameters.add(
                     parameter_name="pulse_intensity",
                     function=DingModelIntensityFrequency.set_impulse_intensity,
-                    initial_guess=initial_intensity_pulse_guess,
-                    bounds=stim_intensity_bounds,
                     size=n_stim,
                 )
 
@@ -301,8 +299,9 @@ class FunctionalElectricStimulationOptimalControlProgram(OptimalControlProgram):
             ode_solver=kwargs["ode_solver"] if "ode_solver" in kwargs else OdeSolver.RK4(n_integration_steps=1),
             control_type=ControlType.NONE,
             use_sx=kwargs["use_sx"] if "use_sx" in kwargs else False,
-            parameter_mappings=bimapping,
             parameters=parameters,
+            parameter_bounds=parameters_bounds,
+            parameter_init=parameters_init,
             assume_phase_dynamics=False,
             n_threads=kwargs["n_thread"] if "n_thread" in kwargs else 1,
         )
@@ -328,7 +327,6 @@ class FunctionalElectricStimulationOptimalControlProgram(OptimalControlProgram):
         #                    |                                 |
         #                     ‾‾‾‾‾‾‾‾‾‾x_min_middle‾‾‾‾‾‾‾‾‾‾‾
 
-        # self.ding_model.__init__(self.ding_model)
         # Sets the bound for all the phases
         self.x_bounds = BoundsList()
         if isinstance(self.ding_model, DingModelPulseDurationFrequency):
@@ -371,27 +369,130 @@ class FunctionalElectricStimulationOptimalControlProgram(OptimalControlProgram):
         for i in range(self.n_stim):
             if i == 0:
                 self.x_bounds.add(
-                    x_start_min, x_start_max, interpolation=InterpolationType.CONSTANT_WITH_FIRST_AND_LAST_DIFFERENT
-                )
-            else:
-                self.x_bounds.add(
-                    x_after_start_min,
-                    x_after_start_max,
+                    "Cn",
+                    min_bound=np.array([x_start_min[0]]),
+                    max_bound=np.array([x_start_max[0]]),
+                    phase=i,
                     interpolation=InterpolationType.CONSTANT_WITH_FIRST_AND_LAST_DIFFERENT,
                 )
+                self.x_bounds.add(
+                    "F",
+                    min_bound=np.array([x_start_min[1]]),
+                    max_bound=np.array([x_start_max[1]]),
+                    phase=i,
+                    interpolation=InterpolationType.CONSTANT_WITH_FIRST_AND_LAST_DIFFERENT,
+                )
+                if isinstance(self.ding_model, DingModelPulseDurationFrequency):
+                    self.x_bounds.add(
+                        "Tau1",
+                        min_bound=np.array([x_start_min[2]]),
+                        max_bound=np.array([x_start_max[2]]),
+                        phase=i,
+                        interpolation=InterpolationType.CONSTANT_WITH_FIRST_AND_LAST_DIFFERENT,
+                    )
+                    self.x_bounds.add(
+                        "Km",
+                        min_bound=np.array([x_start_min[3]]),
+                        max_bound=np.array([x_start_max[3]]),
+                        phase=i,
+                        interpolation=InterpolationType.CONSTANT_WITH_FIRST_AND_LAST_DIFFERENT,
+                    )
+                else:
+                    self.x_bounds.add(
+                        "A",
+                        min_bound=np.array([x_start_min[2]]),
+                        max_bound=np.array([x_start_max[2]]),
+                        phase=i,
+                        interpolation=InterpolationType.CONSTANT_WITH_FIRST_AND_LAST_DIFFERENT,
+                    )
+                    self.x_bounds.add(
+                        "Tau1",
+                        min_bound=np.array([x_start_min[3]]),
+                        max_bound=np.array([x_start_max[3]]),
+                        phase=i,
+                        interpolation=InterpolationType.CONSTANT_WITH_FIRST_AND_LAST_DIFFERENT,
+                    )
+                    self.x_bounds.add(
+                        "Km",
+                        min_bound=np.array([x_start_min[4]]),
+                        max_bound=np.array([x_start_max[4]]),
+                        phase=i,
+                        interpolation=InterpolationType.CONSTANT_WITH_FIRST_AND_LAST_DIFFERENT,
+                    )
+            else:
+                self.x_bounds.add(
+                    "Cn",
+                    min_bound=np.array([x_after_start_min[0]]),
+                    max_bound=np.array([x_after_start_max[0]]),
+                    phase=i,
+                    interpolation=InterpolationType.CONSTANT_WITH_FIRST_AND_LAST_DIFFERENT,
+                )
+                self.x_bounds.add(
+                    "F",
+                    min_bound=np.array([x_after_start_min[1]]),
+                    max_bound=np.array([x_after_start_max[1]]),
+                    phase=i,
+                    interpolation=InterpolationType.CONSTANT_WITH_FIRST_AND_LAST_DIFFERENT,
+                )
+                if isinstance(self.ding_model, DingModelPulseDurationFrequency):
+                    self.x_bounds.add(
+                        "Tau1",
+                        min_bound=np.array([x_after_start_min[2]]),
+                        max_bound=np.array([x_after_start_max[2]]),
+                        phase=i,
+                        interpolation=InterpolationType.CONSTANT_WITH_FIRST_AND_LAST_DIFFERENT,
+                    )
+                    self.x_bounds.add(
+                        "Km",
+                        min_bound=np.array([x_after_start_min[3]]),
+                        max_bound=np.array([x_after_start_max[3]]),
+                        phase=i,
+                        interpolation=InterpolationType.CONSTANT_WITH_FIRST_AND_LAST_DIFFERENT,
+                    )
+                else:
+                    self.x_bounds.add(
+                        "A",
+                        min_bound=np.array([x_after_start_min[2]]),
+                        max_bound=np.array([x_after_start_max[2]]),
+                        phase=i,
+                        interpolation=InterpolationType.CONSTANT_WITH_FIRST_AND_LAST_DIFFERENT,
+                    )
+                    self.x_bounds.add(
+                        "Tau1",
+                        min_bound=np.array([x_after_start_min[3]]),
+                        max_bound=np.array([x_after_start_max[3]]),
+                        phase=i,
+                        interpolation=InterpolationType.CONSTANT_WITH_FIRST_AND_LAST_DIFFERENT,
+                    )
+                    self.x_bounds.add(
+                        "Km",
+                        min_bound=np.array([x_after_start_min[4]]),
+                        max_bound=np.array([x_after_start_max[4]]),
+                        phase=i,
+                        interpolation=InterpolationType.CONSTANT_WITH_FIRST_AND_LAST_DIFFERENT,
+                    )
 
         self.x_init = InitialGuessList()
         for i in range(self.n_stim):
-            self.x_init.add(self.ding_model.standard_rest_values())
+            self.x_init.add("Cn", self.ding_model.standard_rest_values()[0])
+            self.x_init.add("F", self.ding_model.standard_rest_values()[1])
+
+            if isinstance(self.ding_model, DingModelPulseDurationFrequency):
+                self.x_init.add("Tau1", self.ding_model.standard_rest_values()[2])
+                self.x_init.add("Km", self.ding_model.standard_rest_values()[3])
+            else:
+                self.x_init.add("A", self.ding_model.standard_rest_values()[2])
+                self.x_init.add("Tau1", self.ding_model.standard_rest_values()[3])
+                self.x_init.add("Km", self.ding_model.standard_rest_values()[4])
 
         # Creates the controls of our problem (in our case, equals to an empty list)
         self.u_bounds = BoundsList()
         for i in range(self.n_stim):
-            self.u_bounds.add([], [])
+            self.u_bounds.add("", min_bound=[], max_bound=[])
 
         self.u_init = InitialGuessList()
         for i in range(self.n_stim):
-            self.u_init.add([])
+            self.u_init.add("", min_bound=[], max_bound=[])
 
     def _set_objective(self):
         # Creates the objective for our problem (in this case, match a force curve)
@@ -553,8 +654,8 @@ if __name__ == "__main__":
         # time_max=[0.1 for _ in range(10)],
         # time_bimapping=True,
         time_pulse=0.0002,
-        # time_pulse_min=[0 for _ in range(10)],
-        # time_pulse_max=[0.0006 for _ in range(10)],
+        # time_pulse_min=0,
+        # time_pulse_max=0.0006,
         # time_pulse_bimapping=True,
         use_sx=True,
     )
@@ -569,8 +670,8 @@ if __name__ == "__main__":
         # time_max=[0.1 for _ in range(10)],
         # time_bimapping=True
         # time_pulse=0.0002,
-        time_pulse_min=[0 for _ in range(10)],
-        time_pulse_max=[0.0006 for _ in range(10)],
+        time_pulse_min=0,
+        time_pulse_max=0.0006,
         # time_pulse_bimapping=True,
         use_sx=True,
     )
@@ -585,8 +686,8 @@ if __name__ == "__main__":
         # time_max=[0.1 for _ in range(10)],
         # time_bimapping=True,
         # time_pulse=0.0002,
-        time_pulse_min=[0 for _ in range(10)],
-        time_pulse_max=[0.0006 for _ in range(10)],
+        time_pulse_min=0,
+        time_pulse_max=0.0006,
         time_pulse_bimapping=True,
         use_sx=True,
     )
@@ -602,8 +703,8 @@ if __name__ == "__main__":
         # time_max=[0.1 for _ in range(10)],
         # time_bimapping=True,
         intensity_pulse=20,
-        # intensity_pulse_min=[0 for _ in range(10)],
-        # intensity_pulse_max=[130 for _ in range(10)],
+        # intensity_pulse_min=0,
+        # intensity_pulse_max=130,
         # intensity_pulse_bimapping=True,
         use_sx=True,
     )
@@ -618,13 +719,13 @@ if __name__ == "__main__":
         # time_max=[0.1 for _ in range(10)],
         # time_bimapping=True
         # intensity_pulse=20,
-        intensity_pulse_min=[0 for _ in range(10)],
-        intensity_pulse_max=[130 for _ in range(10)],
+        intensity_pulse_min=0,
+        intensity_pulse_max=130,
         # intensity_pulse_bimapping=True,
         use_sx=True,
     )
 
-    i = FunctionalElectricStimulationOptimalControlProgram.from_n_stim_and_final_time(
+    j = FunctionalElectricStimulationOptimalControlProgram.from_n_stim_and_final_time(
         ding_model=DingModelIntensityFrequency(),
         n_shooting=20,
         n_stim=10,
@@ -634,13 +735,13 @@ if __name__ == "__main__":
         # time_max=[0.1 for _ in range(10)],
         # time_bimapping=True,
         # intensity_pulse=20,
-        intensity_pulse_min=[0 for _ in range(10)],
-        intensity_pulse_max=[130 for _ in range(10)],
+        intensity_pulse_min=0,
+        intensity_pulse_max=130,
         intensity_pulse_bimapping=True,
         use_sx=True,
     )
 
-    sol = i.ocp.solve(Solver.IPOPT(show_online_optim=False, _max_iter=1000))  # , _linear_solver="MA57"
+    sol = j.ocp.solve(Solver.IPOPT(show_online_optim=False, _max_iter=1000))  # , _linear_solver="MA57"
     sol.graphs()
 
     """
