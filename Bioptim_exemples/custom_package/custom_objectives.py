@@ -29,7 +29,7 @@ class CustomObjective:
         -------
         The difference between the two keys
         """
-        # get the approximated force value from the fourrier series at the node time
+        # get the approximated force value from the fourier series at the node time
         value_from_fourier = FourierSeries().fit_func_by_fourier_series_with_real_coeffs(
             controller.ocp.node_time(phase_idx=controller.phase_idx, node_idx=controller.t[0]),
             fourier_coeff,
