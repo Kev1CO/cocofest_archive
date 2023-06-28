@@ -725,7 +725,7 @@ class DingModelPulseDurationFrequency(DingModelFrequency):
         """
         pulse_duration_parameters = vertcat()
         for j in range(nlp_parameters.cx_start.shape[0]):
-            if "pulse_duration" in nlp_parameters.cx_start[j].name():
+            if "pulse_duration" in str(nlp_parameters.cx_start[j]):
                 pulse_duration_parameters = vertcat(pulse_duration_parameters, nlp_parameters.cx_start[j])
         return pulse_duration_parameters
 
