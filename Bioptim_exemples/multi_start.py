@@ -52,13 +52,18 @@ def save_results(
     save_folder = extra_parameters["save_folder"]
 
     file_path = construct_filepath(save_folder, n_stim)
-    states = sol.states
-    time = sol.time
-    time_list = []
-    for i in range(len(states)):
-        states[i]["time"] = np.expand_dims(time[i], axis=0)
-        # time_list.append({"time": time[i]})
-    # results = time_list + states
+    merged_phase = sol.merge_phases()
+    states = merged_phase.states
+    time = merged_phase.time
+    phase_time = []
+    for i in range(len(sol.time)):
+        phase_time.append(sol.time[i][0])
+    states["time"] = time
+    states["cost"] = sol.cost
+    states["computation_time"] = sol.real_time_to_optimize
+    states["parameters"] = sol.parameters
+    states["phase_time"] = np.array(phase_time)
+    states["status"] = sol.status
     with open(file_path, "wb") as file:
         pickle.dump(states, file)
 
