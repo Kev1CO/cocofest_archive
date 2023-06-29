@@ -69,7 +69,7 @@ class DingModelFrequency:
     # ---- Needed for the example ---- #
     @property
     def name_dof(self) -> list[str]:
-        return ["cn", "f", "a", "tau1", "km"]
+        return ["Cn", "F", "A", "Tau1", "Km"]
 
     @property
     def nb_state(self) -> int:
@@ -273,7 +273,7 @@ class DingModelFrequency:
         return -(km - self.km_rest) / self.tau_fat + self.alpha_km * f  # Equation n°11
 
     @staticmethod
-    def custom_dynamics(
+    def dynamics(
         states: MX | SX,
         controls: MX | SX,
         parameters: MX | SX,
@@ -347,7 +347,7 @@ class DingModelFrequency:
             extra_params["t"] = ocp.node_time(phase_idx=nlp.phase_idx, node_idx=i)
             extra_params["ocp"] = ocp
 
-            dynamics_eval = DingModelFrequency.custom_dynamics(
+            dynamics_eval = DingModelFrequency.dynamics(
                 nlp.states.scaled.cx_start, nlp.controls.scaled.cx_start, nlp.parameters.cx_start, nlp, **extra_params
             )
 
@@ -611,7 +611,7 @@ class DingModelPulseDurationFrequency(DingModelFrequency):
     # ---- Absolutely needed methods ---- #
     @property
     def name_dof(self) -> list[str]:
-        return ["cn", "f", "tau1", "km"]
+        return ["Cn", "F", "Tau1", "Km"]
 
     @property
     def nb_state(self) -> int:
@@ -730,7 +730,7 @@ class DingModelPulseDurationFrequency(DingModelFrequency):
         return pulse_duration_parameters
 
     @staticmethod
-    def custom_dynamics(
+    def dynamics(
         states: MX | SX,
         controls: MX | SX,
         parameters: MX | SX,
@@ -814,7 +814,7 @@ class DingModelPulseDurationFrequency(DingModelFrequency):
             extra_params["t"] = ocp.node_time(phase_idx=nlp.phase_idx, node_idx=i)
             extra_params["ocp"] = ocp
 
-            dynamics_eval = DingModelPulseDurationFrequency.custom_dynamics(
+            dynamics_eval = DingModelPulseDurationFrequency.dynamics(
                 nlp.states.scaled.cx_start, nlp.controls.scaled.cx_start, nlp.parameters.cx_start, nlp, **extra_params
             )
 
@@ -1047,7 +1047,7 @@ class DingModelIntensityFrequency(DingModelFrequency):
         return intensity_parameters
 
     @staticmethod
-    def custom_dynamics(
+    def dynamics(
         states: MX | SX,
         controls: MX | SX,
         parameters: MX | SX,
@@ -1137,7 +1137,7 @@ class DingModelIntensityFrequency(DingModelFrequency):
             extra_params["t"] = ocp.node_time(phase_idx=nlp.phase_idx, node_idx=i)
             extra_params["ocp"] = ocp
 
-            dynamics_eval = DingModelIntensityFrequency.custom_dynamics(
+            dynamics_eval = DingModelIntensityFrequency.dynamics(
                 nlp.states.scaled.cx_start, nlp.controls.scaled.cx_start, nlp.parameters.cx_start, nlp, **extra_params
             )
 

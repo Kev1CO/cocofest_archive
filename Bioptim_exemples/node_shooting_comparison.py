@@ -24,21 +24,21 @@ from bioptim import (
     PlotType,
 )
 
-from custom_package.ding_model import DingModelIntensityFrequency, DingModelFrequency
+from optistim.ding_model import DingModelIntensityFrequency, DingModelFrequency
 
-from custom_package.custom_objectives import (
+from optistim.custom_objectives import (
     CustomObjective,
 )
 
-from custom_package.fourier_approx import (
+from optistim.fourier_approx import (
     FourierSeries,
 )
 
-from custom_package.read_data import (
+from optistim.read_data import (
     ExtractData,
 )
 
-from custom_package.prepare_FES_in_OCP import (
+from optistim.prepare_FES_in_OCP import (
     prepare_ocp_for_fes,
 )
 

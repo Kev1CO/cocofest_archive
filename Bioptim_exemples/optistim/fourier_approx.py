@@ -2,7 +2,7 @@ from casadi import cos, sin
 import numpy as np
 import scipy.integrate as spi
 import matplotlib.pyplot as plt
-from custom_package.read_data import (
+from read_data import (
     ExtractData,
 )
 

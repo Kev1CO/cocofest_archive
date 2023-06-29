@@ -5,7 +5,7 @@ such as functional electro stimulation
 import numpy as np
 from bioptim import PenaltyController
 from casadi import MX, SX, minus, fabs
-from custom_package.fourier_approx import FourierSeries
+from optistim.fourier_approx import FourierSeries
 
 
 class CustomObjective:

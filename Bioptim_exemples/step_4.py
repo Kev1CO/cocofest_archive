@@ -24,17 +24,17 @@ from bioptim import (
     Solver,
 )
 
-from custom_package.ding_model import DingModelPulseDurationFrequency
+from optistim.ding_model import DingModelPulseDurationFrequency
 
-from custom_package.custom_objectives import (
+from optistim.custom_objectives import (
     CustomObjective,
 )
 
-from custom_package.fourier_approx import (
+from optistim.fourier_approx import (
     FourierSeries,
 )
 
-from custom_package.read_data import (
+from optistim.read_data import (
     ExtractData,
 )
 
@@ -80,7 +80,7 @@ def prepare_ocp(
     for i in range(n_stim):
         dynamics.add(
             DingModelPulseDurationFrequency.declare_ding_variables,
-            dynamic_function=DingModelPulseDurationFrequency.custom_dynamics,
+            dynamic_function=DingModelPulseDurationFrequency.dynamics,
             phase=i,
         )
 

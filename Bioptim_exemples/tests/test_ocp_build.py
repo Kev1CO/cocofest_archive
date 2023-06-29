@@ -1,13 +1,13 @@
 from bioptim import Solver
 import pytest
-from custom_package.fes_ocp import FunctionalElectricStimulationOptimalControlProgram
-from custom_package.fourier_approx import (
+from optistim.fes_ocp import FunctionalElectricStimulationOptimalControlProgram
+from optistim.fourier_approx import (
     FourierSeries,
 )
-from custom_package.read_data import (
+from optistim.read_data import (
     ExtractData,
 )
-from custom_package.ding_model import DingModelFrequency, DingModelPulseDurationFrequency, DingModelIntensityFrequency
+from optistim.ding_model import DingModelFrequency, DingModelPulseDurationFrequency, DingModelIntensityFrequency
 
 time, force = ExtractData.load_data(
     "../../../../../Donnees/Force_musculaire/pedalage_3_proc_result_duration_0.08.bio"

@@ -8,20 +8,20 @@ import shutil
 
 import numpy as np
 
+import optistim
 from bioptim import (
     Solver,
     MultiStart,
     Solution,
 )
 
-from custom_package.fes_ocp import FunctionalElectricStimulationOptimalControlProgram
-from custom_package.ding_model import DingModelIntensityFrequency, DingModelFrequency
+from optistim.ding_model import DingModelIntensityFrequency, DingModelFrequency
 
-from custom_package.fourier_approx import (
+from optistim.fourier_approx import (
     FourierSeries,
 )
 
-from custom_package.read_data import (
+from optistim.read_data import (
     ExtractData,
 )
 
@@ -92,7 +92,7 @@ def prepare_ocp(ding_model: DingModelFrequency | DingModelIntensityFrequency,
                 n_shooting: int,
                 final_time: int | float,
                 fourier_coeff: np.ndarray, ):
-    a = FunctionalElectricStimulationOptimalControlProgram.from_n_stim_and_final_time(ding_model=ding_model,
+    a = optistim.FunctionalElectricStimulationOptimalControlProgram.from_n_stim_and_final_time(ding_model=ding_model,
                                                                                       n_stim=n_stim,
                                                                                       n_shooting=n_shooting,
                                                                                       final_time=final_time,

@@ -20,7 +20,7 @@ from bioptim import (
     BiMappingList,
 )
 
-from custom_package.ding_model import DingModelFrequency
+from optistim.ding_model import DingModelFrequency
 
 
 def prepare_ocp(
@@ -57,7 +57,7 @@ def prepare_ocp(
     for i in range(n_stim):
         dynamics.add(
             DingModelFrequency.declare_ding_variables,
-            dynamic_function=DingModelFrequency.custom_dynamics,
+            dynamic_function=DingModelFrequency.dynamics,
             phase=i,
         )
 
@@ -178,11 +178,11 @@ def main():
 
     # # --- Show results from solution --- #
     # import matplotlib.pyplot as plt
-    # from custom_package.fourier_approx import (
+    # from optistim.fourier_approx import (
     #     FourierSeries,
     # )
     #
-    # from custom_package.read_data import (
+    # from optistim.read_data import (
     #     ExtractData,
     # )
     #
