@@ -5,35 +5,17 @@ This example is a variation of the pendulum example in getting_started/pendulum.
 import pickle
 import os
 import shutil
+
 import numpy as np
 
 from bioptim import (
-    ControlType,
-    DynamicsList,
-    ConstraintList,
-    ConstraintFcn,
-    Node,
-    ParameterList,
-    ObjectiveList,
-    BiMappingList,
-    InitialGuessList,
-    BoundsList,
-    OptimalControlProgram,
-    Bounds,
-    InitialGuess,
-    ObjectiveFcn,
-    OdeSolver,
     Solver,
-    InterpolationType,
     MultiStart,
     Solution,
 )
 
-from custom_package.ding_model import DingModelIntensityFrequency
-
-from custom_package.custom_objectives import (
-    CustomObjective,
-)
+from custom_package.fes_ocp import FunctionalElectricStimulationOptimalControlProgram
+from custom_package.ding_model import DingModelIntensityFrequency, DingModelFrequency
 
 from custom_package.fourier_approx import (
     FourierSeries,
@@ -44,182 +26,14 @@ from custom_package.read_data import (
 )
 
 
-def prepare_ocp(
-    n_stim: int,
-    time_min: list,
-    time_max: list,
-    pulse_intensity_min: int,
-    pulse_intensity_max: int,
-    fourier_coeff: list,
-    ode_solver: OdeSolver = OdeSolver.RK4(n_integration_steps=1),
-) -> OptimalControlProgram:
-    """
-    Prepare the ocp
-
-    Parameters
-    ----------
-    n_stim: int
-        The number of stimulation sent (corresponds to the problem phases number)
-    time_min: list
-        The minimal time for each phase
-    time_max: list
-        The maximal time for each phase
-    pulse_intensity_min: list
-        The minimal intensity for each pulsation
-    pulse_intensity_max: list
-        The maximal intensity for each pulsation
-    fourier_coeff: list
-        The fourier coefficient needed to match a function
-    ode_solver: OdeSolver
-        The ode solver to use
-
-    Returns
-    -------
-    The OptimalControlProgram ready to be solved
-    """
-
-    ding_models = [DingModelIntensityFrequency()] * n_stim  # Gives DingModel as model for n phases
-    n_shooting = [5] * n_stim  # Gives m node shooting for my n phases problem
-    final_time = [0.01] * n_stim  # Set the final time for all my n phases
-
-    # Creates the system's dynamic for my n phases
-    dynamics = DynamicsList()
-    for i in range(n_stim):
-        dynamics.add(
-            DingModelIntensityFrequency.declare_ding_variables,
-            dynamic_function=DingModelIntensityFrequency.custom_dynamics,
-            phase=i,
-        )
-
-    # Creates the constraint for my n phases
-    constraints = ConstraintList()
-    for i in range(n_stim):
-        constraints.add(
-            ConstraintFcn.TIME_CONSTRAINT, node=Node.END, min_bound=time_min[i], max_bound=time_max[i], phase=i
-        )
-
-    # Creates the pulse intensity parameter in a list type
-    parameters = ParameterList()
-    stim_intensity_bounds = Bounds(
-        np.array([pulse_intensity_min] * n_stim),
-        np.array([pulse_intensity_max] * n_stim),
-        interpolation=InterpolationType.CONSTANT,
-    )
-    initial_intensity_guess = InitialGuess(np.array([0] * n_stim))
-    parameters.add(
-        parameter_name="pulse_intensity",
-        function=DingModelIntensityFrequency.set_impulse_intensity,
-        initial_guess=initial_intensity_guess,
-        bounds=stim_intensity_bounds,
-        size=n_stim,
-    )
-
-    # Creates the objective for our problem (in this case, match a force curve)
-    objective_functions = ObjectiveList()
-    for phase in range(n_stim):
-        for i in range(n_shooting[phase]):
-            objective_functions.add(
-                CustomObjective.track_state_from_time,
-                custom_type=ObjectiveFcn.Mayer,
-                node=i,
-                fourier_coeff=fourier_coeff,
-                key="F",
-                quadratic=True,
-                weight=1,
-                phase=phase,
-            )
-
-    # Creates bimapping
-    # (in this case, the values of time and intensity in the n phases must be the same as the phase n°1)
-    bimapping = BiMappingList()
-    bimapping.add(name="time", to_second=[0 for _ in range(n_stim)], to_first=[0])
-    # TODO : Fix intensity bimapping
-    # bimapping.add(name="pulse_intensity", to_second=[0 for _ in range(n_stim)], to_first=[0])
-
-    # ---- STATE BOUNDS REPRESENTATION ---- #
-
-    #                    |‾‾‾‾‾‾‾‾‾‾x_max_middle‾‾‾‾‾‾‾‾‾‾‾|
-    #                    |                                 |
-    #                    |                                 |
-    #       _x_max_start_|                                 |_x_max_end_
-    #       ‾x_min_start‾|                                 |‾x_min_end‾
-    #                    |                                 |
-    #                    |                                 |
-    #                     ‾‾‾‾‾‾‾‾‾‾x_min_middle‾‾‾‾‾‾‾‾‾‾‾
-
-    # Sets the bound for all the phases
-    x_bounds = BoundsList()
-    x_min_start = ding_models[0].standard_rest_values()  # Model initial values
-    x_max_start = ding_models[0].standard_rest_values()  # Model initial values
-    # Model execution lower bound values (Cn, F, Tau1, Km, cannot be lower than their initial values)
-    x_min_middle = ding_models[0].standard_rest_values()
-    x_min_middle[2] = 0  # Model execution lower bound values (A, will decrease from fatigue and cannot be lower than 0)
-    x_min_end = x_min_middle
-    x_max_middle = ding_models[0].standard_rest_values()
-    x_max_middle[0:2] = 1000
-    x_max_middle[3:5] = 1
-    x_max_end = x_max_middle
-    x_start_min = np.concatenate((x_min_start, x_min_middle, x_min_end), axis=1)
-    x_start_max = np.concatenate((x_max_start, x_max_middle, x_max_end), axis=1)
-    x_min_start = x_min_middle
-    x_max_start = x_max_middle
-    x_after_start_min = np.concatenate((x_min_start, x_min_middle, x_min_end), axis=1)
-    x_after_start_max = np.concatenate((x_max_start, x_max_middle, x_max_end), axis=1)
-
-    for i in range(n_stim):
-        if i == 0:
-            x_bounds.add(
-                x_start_min, x_start_max, interpolation=InterpolationType.CONSTANT_WITH_FIRST_AND_LAST_DIFFERENT
-            )
-        else:
-            x_bounds.add(
-                x_after_start_min,
-                x_after_start_max,
-                interpolation=InterpolationType.CONSTANT_WITH_FIRST_AND_LAST_DIFFERENT,
-            )
-
-    x_init = InitialGuessList()
-    for i in range(n_stim):
-        x_init.add(ding_models[0].standard_rest_values())
-
-    # Creates the controls of our problem (in our case, equals to an empty list)
-    u_bounds = BoundsList()
-    for i in range(n_stim):
-        u_bounds.add([], [])
-
-    u_init = InitialGuessList()
-    for i in range(n_stim):
-        u_init.add([])
-
-    return OptimalControlProgram(
-        ding_models,
-        dynamics,
-        n_shooting,
-        final_time,
-        x_init,
-        u_init,
-        x_bounds,
-        u_bounds,
-        objective_functions,
-        constraints=constraints,
-        ode_solver=ode_solver,
-        control_type=ControlType.NONE,
-        use_sx=True,
-        parameter_mappings=bimapping,
-        parameters=parameters,
-        assume_phase_dynamics=False,
-        n_threads=1,
-    )
-
-
 def construct_filepath(save_path, n_shooting):
     return f"{save_path}/custom_multi_start_random_states_{n_shooting}.pkl"
 
 
 def save_results(
-    sol: Solution,
-    *combinatorial_parameters,
-    **extra_parameters,
+        sol: Solution,
+        *combinatorial_parameters,
+        **extra_parameters,
 ) -> None:
     """
     Callback of the post_optimization_callback, this can be used to save the results
@@ -233,12 +47,18 @@ def save_results(
     extra_parameters:
         All the non-combinatorial parameters sent by the user
     """
-    n_stim, time_min, time_max, pulse_intensity_min, pulse_intensity_max, fourier_coeff = combinatorial_parameters
+    ding_model, n_stim, n_shooting, final_time, force_fourier_coef = combinatorial_parameters
 
     save_folder = extra_parameters["save_folder"]
 
     file_path = construct_filepath(save_folder, n_stim)
     states = sol.states
+    time = sol.time
+    time_list = []
+    for i in range(len(states)):
+        states[i]["time"] = np.expand_dims(time[i], axis=0)
+        # time_list.append({"time": time[i]})
+    # results = time_list + states
     with open(file_path, "wb") as file:
         pickle.dump(states, file)
 
@@ -254,7 +74,7 @@ def should_solve(*combinatorial_parameters, **extra_parameters):
     extra_parameters:
         All the non-combinatorial parameters sent by the user
     """
-    n_stim, time_min, time_max, pulse_intensity_min, pulse_intensity_max, fourier_coeff = combinatorial_parameters
+    ding_model, n_stim, n_shooting, final_time, force_fourier_coef = combinatorial_parameters
 
     save_folder = extra_parameters["save_folder"]
 
@@ -262,10 +82,28 @@ def should_solve(*combinatorial_parameters, **extra_parameters):
     return not os.path.exists(file_path)
 
 
+def prepare_ocp(ding_model: DingModelFrequency | DingModelIntensityFrequency,
+                n_stim: int,
+                n_shooting: int,
+                final_time: int | float,
+                fourier_coeff: np.ndarray, ):
+    a = FunctionalElectricStimulationOptimalControlProgram.from_n_stim_and_final_time(ding_model=ding_model,
+                                                                                      n_stim=n_stim,
+                                                                                      n_shooting=n_shooting,
+                                                                                      final_time=final_time,
+                                                                                      force_fourier_coef=fourier_coeff,
+                                                                                      intensity_pulse_min=0,
+                                                                                      intensity_pulse_max=130,
+                                                                                      intensity_pulse_bimapping=True,
+                                                                                      use_sx=True,
+                                                                                      )
+    return a.ocp
+
+
 def prepare_multi_start(
-    combinatorial_parameters: dict,
-    save_folder: str = None,
-    n_pools: int = 1,
+        combinatorial_parameters: dict,
+        save_folder: str = None,
+        n_pools: int = 1,
 ) -> MultiStart:
     """
     The initialization of the multi-start
@@ -289,11 +127,7 @@ def main():
     """
     Prepare and solve and animate a reaching task ocp
     """
-    n_stim_list = [5, 6, 7, 8, 9, 10]
-    time_min = [[0.01 for _ in range(n_stim_list[i])] for i in range(len(n_stim_list))]
-    time_max = [[0.1 for _ in range(n_stim_list[i])] for i in range(len(n_stim_list))]
-    pulse_intensity_min = [0]  # minimum pulse intensity during the phase (stimulation)
-    pulse_intensity_max = [150]  # maximum pulse intensity during the phase (stimulation)
+
     # --- mhe muscle file --- #
     time, force = ExtractData.load_data("D:/These/Donnees/Force_musculaire/pedalage_3_proc_result_duration_0.08.bio")
     force = force - force[0]
@@ -301,9 +135,15 @@ def main():
     fourier_fun.p = 1
     fourier_coeff = fourier_fun.compute_real_fourier_coeffs(time, force, 50)
 
+    a = {"intensity_pulse_min": 0, "intensity_pulse_max": 130, "intensity_pulse_bimapping": True, "use_sx": True}
+
     # --- Prepare the multi-start and run it --- #
     combinatorial_parameters = {
-        "n_stim": n_stim_list,
+        "ding_model": [DingModelIntensityFrequency()],
+        "n_stim": [5, 6, 7, 8, 9, 10],
+        "n_shooting": [20],
+        "final_time": [1],
+        "force_fourier_coef": [fourier_coeff],
     }
 
     save_folder = "./temporary_results"
@@ -314,8 +154,68 @@ def main():
     )
 
     multi_start.solve()
+    n_stim = [5, 6, 7, 8, 9, 10]
+    with open(f"{save_folder}//custom_multi_start_random_states_{n_stim[0]}.pkl", "rb") as file:
+        multi_start_0 = pickle.load(file)
+    with open(f"{save_folder}//custom_multi_start_random_states_{n_stim[1]}.pkl", "rb") as file:
+        multi_start_1 = pickle.load(file)
+    with open(f"{save_folder}//custom_multi_start_random_states_{n_stim[2]}.pkl", "rb") as file:
+        multi_start_2 = pickle.load(file)
+    with open(f"{save_folder}//custom_multi_start_random_states_{n_stim[3]}.pkl", "rb") as file:
+        multi_start_3 = pickle.load(file)
+    with open(f"{save_folder}//custom_multi_start_random_states_{n_stim[4]}.pkl", "rb") as file:
+        multi_start_4 = pickle.load(file)
+    with open(f"{save_folder}//custom_multi_start_random_states_{n_stim[5]}.pkl", "rb") as file:
+        multi_start_5 = pickle.load(file)
 
-    # Delete the solutions
+    force_multi_start_0 = np.array([])
+    time_multi_start_0 = np.array([])
+    for i in range(len(multi_start_0)):
+        force_multi_start_0 = np.concatenate((force_multi_start_0, multi_start_0[i]["F"][0]))
+        time_multi_start_0 = np.concatenate((time_multi_start_0, multi_start_0[i]["time"][0]))
+    force_multi_start_1 = np.array([])
+    time_multi_start_1 = np.array([])
+    for i in range(len(multi_start_1)):
+        force_multi_start_1 = np.concatenate((force_multi_start_1, multi_start_1[i]["F"][0]))
+        time_multi_start_1 = np.concatenate((time_multi_start_1, multi_start_1[i]["time"][0]))
+    force_multi_start_2 = np.array([])
+    time_multi_start_2 = np.array([])
+    for i in range(len(multi_start_2)):
+        force_multi_start_2 = np.concatenate((force_multi_start_2, multi_start_2[i]["F"][0]))
+        time_multi_start_2 = np.concatenate((time_multi_start_2, multi_start_2[i]["time"][0]))
+    force_multi_start_3 = np.array([])
+    time_multi_start_3 = np.array([])
+    for i in range(len(multi_start_3)):
+        force_multi_start_3 = np.concatenate((force_multi_start_3, multi_start_3[i]["F"][0]))
+        time_multi_start_3 = np.concatenate((time_multi_start_3, multi_start_3[i]["time"][0]))
+    force_multi_start_4 = np.array([])
+    time_multi_start_4 = np.array([])
+    for i in range(len(multi_start_4)):
+        force_multi_start_4 = np.concatenate((force_multi_start_4, multi_start_4[i]["F"][0]))
+        time_multi_start_4 = np.concatenate((time_multi_start_4, multi_start_4[i]["time"][0]))
+    force_multi_start_5 = np.array([])
+    time_multi_start_5 = np.array([])
+    for i in range(len(multi_start_5)):
+        force_multi_start_5 = np.concatenate((force_multi_start_5, multi_start_5[i]["F"][0]))
+        time_multi_start_5 = np.concatenate((time_multi_start_5, multi_start_5[i]["time"][0]))
+
+    # # --- Show results from solution --- #
+    import matplotlib.pyplot as plt
+
+    y_approx = FourierSeries().fit_func_by_fourier_series_with_real_coeffs(time, fourier_coeff)
+    # plot, in the range from 0 to P, the true f(t) in blue and the approximation in red
+    plt.plot(time, y_approx, color='red', linewidth=1)
+
+    plt.plot(time_multi_start_0, force_multi_start_0, label="5 stim")
+    plt.plot(time_multi_start_1, force_multi_start_1, label="6 stim")
+    plt.plot(time_multi_start_2, force_multi_start_2, label="7 stim")
+    plt.plot(time_multi_start_3, force_multi_start_3, label="8 stim")
+    plt.plot(time_multi_start_4, force_multi_start_4, label="9 stim")
+    plt.plot(time_multi_start_5, force_multi_start_5, label="10 stim")
+    plt.legend()
+    plt.show()
+
+    # # Delete the solutions
     shutil.rmtree(save_folder)
 
 
