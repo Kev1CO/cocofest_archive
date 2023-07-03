@@ -22,15 +22,11 @@ from optistim.custom_objectives import (
     CustomObjective,
 )
 
-from fourier_approx import (
+from .fourier_approx import (
     FourierSeries,
 )
 
-from read_data import (
-    ExtractData,
-)
-
-from ding_model import DingModelFrequency, DingModelPulseDurationFrequency, DingModelIntensityFrequency
+from .ding_model import DingModelFrequency, DingModelPulseDurationFrequency, DingModelIntensityFrequency
 
 
 class FunctionalElectricStimulationOptimalControlProgram(OptimalControlProgram):
@@ -48,8 +44,10 @@ class FunctionalElectricStimulationOptimalControlProgram(OptimalControlProgram):
         Number of shooting point for each individual phases
     final_time: float
         Refers to the final time of the ocp
-    force_fourier_coef: np.ndarray
-        Fourier coefficients used in objective to track a curve (ig: force curve)
+    force_tracking: list[np.ndarray, np.ndarray]
+        List of time and associated force to track during ocp optimisation
+    end_node_tracking: int | float
+        Force objective value to reach at the last node
     time_min: list[int] | list[float]
         Minimum time for a phase
     time_max: list[int] | list[float]
@@ -73,6 +71,8 @@ class FunctionalElectricStimulationOptimalControlProgram(OptimalControlProgram):
     pulse_intensity_bimapping: bool
         Set pulse intensity constant among phases
     **kwargs:
+        objective: list[Objective]
+            Additional objective for the system
         ode_solver: OdeSolver
             The ode solver to use
         use_sx: bool
@@ -96,7 +96,8 @@ class FunctionalElectricStimulationOptimalControlProgram(OptimalControlProgram):
         n_stim: int = None,
         n_shooting: int = None,
         final_time: float = None,
-        force_fourier_coef: np.ndarray = None,
+        force_tracking: list[np.ndarray, np.ndarray] = None,
+        end_node_tracking: int | float = None,
         time_min: list[int] | list[float] = None,
         time_max: list[int] | list[float] = None,
         time_bimapping: bool = None,
@@ -112,7 +113,25 @@ class FunctionalElectricStimulationOptimalControlProgram(OptimalControlProgram):
     ):
 
         self.ding_model = ding_model
-        self.force_fourier_coef = force_fourier_coef
+
+        if force_tracking:
+            force_fourier_coef = FourierSeries()
+            if isinstance(force_tracking, list):
+                if isinstance(force_tracking[0], np.ndarray) and isinstance(force_tracking[1], np.ndarray):
+                    if len(force_tracking[0]) == len(force_tracking[1]) and len(force_tracking) == 2:
+                        force_fourier_coef = force_fourier_coef.compute_real_fourier_coeffs(force_tracking[0], force_tracking[1], 50)
+                    else:
+                        raise ValueError("force_tracking time and force argument must be same length and force_tracking "
+                                         "list size 2")
+                else:
+                    raise ValueError("force_tracking argument must be np.ndarray type")
+            else:
+                raise ValueError("force_tracking must be list type")
+            self.force_fourier_coef = force_fourier_coef
+        else:
+            self.force_fourier_coef = None
+
+        self.end_node_tracking = end_node_tracking
         self.parameter_mappings = None
         self.parameters = None
 
@@ -159,7 +178,7 @@ class FunctionalElectricStimulationOptimalControlProgram(OptimalControlProgram):
             if (
                 pulse_time_min is not None
                 and pulse_time_max is None
-                or pulse_time_min in None
+                or pulse_time_min is None
                 and pulse_time_max is not None
             ):
                 raise ValueError("Both Time pulse min max bounds need to be set for this model")
@@ -280,9 +299,6 @@ class FunctionalElectricStimulationOptimalControlProgram(OptimalControlProgram):
         self.n_stim = n_stim
         self._declare_dynamics()
         self._set_bounds()
-
-        if force_fourier_coef is None and kwargs["target"] is None:
-            raise ValueError("No objective was set, add a fourier coefficient or a target to match")
         self.kwargs = kwargs
         self._set_objective()
 
@@ -345,13 +361,12 @@ class FunctionalElectricStimulationOptimalControlProgram(OptimalControlProgram):
         starting_bounds, min_bounds, max_bounds = self.ding_model.standard_rest_values(), self.ding_model.standard_rest_values(), self.ding_model.standard_rest_values()
 
         for i in range(len(variable_bound_list)):
-            if variable_bound_list[i] == "A":
-                min_bounds[i] = 0
-        for i in range(len(variable_bound_list)):
             if variable_bound_list[i] == "Cn" or variable_bound_list[i] == "F":
                 max_bounds[i] = 1000
             elif variable_bound_list[i] == "Tau1" or variable_bound_list[i] == "Km":
                 max_bounds[i] = 1
+            elif variable_bound_list[i] == "A":
+                min_bounds[i] = 0
 
         starting_bounds_min = np.concatenate((starting_bounds, min_bounds, min_bounds), axis=1)
         starting_bounds_max = np.concatenate((starting_bounds, max_bounds, max_bounds), axis=1)
@@ -403,7 +418,7 @@ class FunctionalElectricStimulationOptimalControlProgram(OptimalControlProgram):
             else:
                 raise ValueError("All elements in objective kwarg must be an Objective type")
         # TODO : Test this new feature
-        if isinstance(self.force_fourier_coef, np.ndarray):
+        if self.force_fourier_coef is not None:
             for phase in range(self.n_stim):
                 for i in range(self.n_shooting[phase]):
                     self.objective_functions.add(
@@ -416,22 +431,20 @@ class FunctionalElectricStimulationOptimalControlProgram(OptimalControlProgram):
                         weight=1,
                         phase=phase,
                     )
-        else:
-            raise ValueError("fourier coefficient must be np.ndarray type")
 
-        if "target" in self.kwargs:
-            if isinstance(self.kwargs["target"], int | float):
+        if self.end_node_tracking:
+            if isinstance(self.end_node_tracking, int | float):
                 self.objective_functions.add(
                     ObjectiveFcn.Mayer.MINIMIZE_STATE,
                     node=Node.END,
                     key="F",
                     quadratic=True,
                     weight=1,
-                    target=self.kwargs["target"],
+                    target=self.end_node_tracking,
                     phase=self.n_stim - 1,
                 )
             else:
-                raise ValueError("target must be int or float type")
+                raise ValueError("end_node_tracking must be int or float type")
 
     @classmethod
     def from_frequency_and_final_time(
@@ -439,18 +452,30 @@ class FunctionalElectricStimulationOptimalControlProgram(OptimalControlProgram):
         ding_model: DingModelFrequency | DingModelPulseDurationFrequency | DingModelIntensityFrequency,
         n_shooting: int,
         final_time: float,
-        force_fourier_coef: np.ndarray = None,
-        frequency: float = None,
+        force_tracking: list[np.ndarray, np.ndarray] = None,
+        end_node_tracking: int | float = None,
+        frequency: int | float = None,
         round_down: bool = False,
+        time_min: list[int] | list[float] = None,
+        time_max: list[int] | list[float] = None,
+        time_bimapping: bool = None,
+        pulse_time: int | float = None,
+        pulse_time_min: int | float = None,
+        pulse_time_max: int | float = None,
+        pulse_time_bimapping: bool = None,
+        pulse_intensity: int | float = None,
+        pulse_intensity_min: int | float = None,
+        pulse_intensity_max: int | float = None,
+        pulse_intensity_bimapping: bool = None,
         **kwargs,
     ):
         n_stim = final_time * frequency
-        if round_down:
+        if round_down or n_stim.is_integer():
             n_stim = int(n_stim)
         else:
             raise ValueError(
-                "The number of stimulation in the final time t needs to be round down in order to work, set round down"
-                "to True"
+                "The number of stimulation needs to be integer within the final time t, set round down"
+                "to True or set final_time * frequency to make the result a integer."
             )
         return cls(
             ding_model=ding_model,
@@ -458,7 +483,19 @@ class FunctionalElectricStimulationOptimalControlProgram(OptimalControlProgram):
             n_shooting=n_shooting,
             final_time=final_time,
             frequency=frequency,
-            force_fourier_coef=force_fourier_coef,
+            force_tracking=force_tracking,
+            end_node_tracking=end_node_tracking,
+            time_min=time_min,
+            time_max=time_max,
+            time_bimapping=time_bimapping,
+            pulse_time=pulse_time,
+            pulse_time_min=pulse_time_min,
+            pulse_time_max=pulse_time_max,
+            pulse_time_bimapping=pulse_time_bimapping,
+            pulse_intensity=pulse_intensity,
+            pulse_intensity_min=pulse_intensity_min,
+            pulse_intensity_max=pulse_intensity_max,
+            pulse_intensity_bimapping=pulse_intensity_bimapping,
             **kwargs,
         )
 
@@ -468,8 +505,20 @@ class FunctionalElectricStimulationOptimalControlProgram(OptimalControlProgram):
         ding_model: DingModelFrequency | DingModelPulseDurationFrequency | DingModelIntensityFrequency,
         n_stim: int,
         n_shooting: int,
-        force_fourier_coef: np.ndarray,
-        frequency: float,
+        frequency: int | float = None,
+        force_tracking: list[np.ndarray, np.ndarray] = None,
+        end_node_tracking: int | float = None,
+        time_min: list[int] | list[float] = None,
+        time_max: list[int] | list[float] = None,
+        time_bimapping: bool = None,
+        pulse_time: int | float = None,
+        pulse_time_min: int | float = None,
+        pulse_time_max: int | float = None,
+        pulse_time_bimapping: bool = None,
+        pulse_intensity: int | float = None,
+        pulse_intensity_min: int | float = None,
+        pulse_intensity_max: int | float = None,
+        pulse_intensity_bimapping: bool = None,
         **kwargs,
     ):
         final_time = n_stim / frequency
@@ -479,205 +528,18 @@ class FunctionalElectricStimulationOptimalControlProgram(OptimalControlProgram):
             n_shooting=n_shooting,
             final_time=final_time,
             frequency=frequency,
-            force_fourier_coef=force_fourier_coef,
+            force_tracking=force_tracking,
+            end_node_tracking=end_node_tracking,
+            time_min=time_min,
+            time_max=time_max,
+            time_bimapping=time_bimapping,
+            pulse_time=pulse_time,
+            pulse_time_min=pulse_time_min,
+            pulse_time_max=pulse_time_max,
+            pulse_time_bimapping=pulse_time_bimapping,
+            pulse_intensity=pulse_intensity,
+            pulse_intensity_min=pulse_intensity_min,
+            pulse_intensity_max=pulse_intensity_max,
+            pulse_intensity_bimapping=pulse_intensity_bimapping,
             **kwargs,
         )
-
-    @classmethod
-    def from_n_stim_and_final_time(
-        cls,
-        ding_model: DingModelFrequency | DingModelPulseDurationFrequency | DingModelIntensityFrequency,
-        n_stim: int,
-        n_shooting: int,
-        final_time: float,
-        force_fourier_coef: np.ndarray,
-        **kwargs,
-    ):
-        frequency = n_stim / final_time
-        return cls(
-            ding_model=ding_model,
-            n_stim=n_stim,
-            n_shooting=n_shooting,
-            final_time=final_time,
-            frequency=frequency,
-            force_fourier_coef=force_fourier_coef,
-            **kwargs,
-        )
-
-
-if __name__ == "__main__":
-    time, force = ExtractData.load_data(
-        "../../../../../Donnees/Force_musculaire/pedalage_3_proc_result_duration_0.08.bio"
-    )
-    force = force - force[0]
-    fourier_fun = FourierSeries()
-    fourier_fun.p = 1
-    fourier_coeff = fourier_fun.compute_real_fourier_coeffs(time, force, 50)
-
-    a = FunctionalElectricStimulationOptimalControlProgram.from_frequency_and_final_time(
-        ding_model=DingModelFrequency(),
-        n_shooting=20,
-        final_time=1,
-        force_fourier_coef=fourier_coeff,
-        round_down=True,
-        frequency=10,
-        # time_min=[0.01 for _ in range(10)],
-        # time_max=[0.1 for _ in range(10)],
-        # time_bimapping=True,
-        use_sx=True,
-    )
-    sol = a.solve()
-    sol.graphs()
-    """
-    b = FunctionalElectricStimulationOptimalControlProgram.from_frequency_and_n_stim(
-        ding_model=DingModelFrequency(),
-        n_shooting=20,
-        n_stim=10,
-        force_fourier_coef=fourier_coeff,
-        frequency=10,
-        time_min=[0.01 for _ in range(10)],
-        time_max=[0.1 for _ in range(10)],
-        # time_bimapping=True,
-        use_sx=True,
-    )
-
-    c = FunctionalElectricStimulationOptimalControlProgram.from_n_stim_and_final_time(
-        ding_model=DingModelFrequency(),
-        n_shooting=20,
-        n_stim=10,
-        final_time=1.2,
-        force_fourier_coef=fourier_coeff,
-        time_min=[0.01 for _ in range(10)],
-        time_max=[0.1 for _ in range(10)],
-        time_bimapping=True,
-        use_sx=True,
-    )
-    
-    d = FunctionalElectricStimulationOptimalControlProgram.from_frequency_and_final_time(
-        ding_model=DingModelPulseDurationFrequency(),
-        n_shooting=20,
-        final_time=1,
-        force_fourier_coef=fourier_coeff,
-        round_down=True,
-        frequency=10,
-        # time_min=[0.01 for _ in range(10)],
-        # time_max=[0.1 for _ in range(10)],
-        # time_bimapping=True,
-        pulse_time=0.0002,
-        pulse_time_min=None,
-        # pulse_time_max=0.0006,
-        # pulse_time_bimapping=True,
-        use_sx=False,
-    )
-
-    
-    e = FunctionalElectricStimulationOptimalControlProgram.from_frequency_and_n_stim(
-        ding_model=DingModelPulseDurationFrequency(),
-        n_shooting=20,
-        n_stim=10,
-        force_fourier_coef=fourier_coeff,
-        frequency=10,
-        # time_min=[0.01 for _ in range(10)],
-        # time_max=[0.1 for _ in range(10)],
-        # time_bimapping=True
-        # pulse_time=0.0002,
-        pulse_time_min=0,
-        pulse_time_max=0.0006,
-        # pulse_time_bimapping=True,
-        use_sx=False,
-    )
-
-    f = FunctionalElectricStimulationOptimalControlProgram.from_n_stim_and_final_time(
-        ding_model=DingModelPulseDurationFrequency(),
-        n_shooting=20,
-        n_stim=10,
-        final_time=1,
-        force_fourier_coef=fourier_coeff,
-        # time_min=[0.01 for _ in range(10)],
-        # time_max=[0.1 for _ in range(10)],
-        # time_bimapping=True,
-        # pulse_time=0.0002,
-        pulse_time_min=0,
-        pulse_time_max=0.0006,
-        pulse_time_bimapping=True,
-        use_sx=True,
-    )
-
-    g = FunctionalElectricStimulationOptimalControlProgram.from_frequency_and_final_time(
-        ding_model=DingModelIntensityFrequency(),
-        n_shooting=20,
-        final_time=1,
-        force_fourier_coef=fourier_coeff,
-        round_down=True,
-        frequency=10,
-        # time_min=[0.01 for _ in range(10)],
-        # time_max=[0.1 for _ in range(10)],
-        # time_bimapping=True,
-        pulse_intensity=20,
-        # pulse_intensity_min=0,
-        # pulse_intensity_max=130,
-        # pulse_intensity_bimapping=True,
-        use_sx=True,
-    )
-
-    h = FunctionalElectricStimulationOptimalControlProgram.from_frequency_and_n_stim(
-        ding_model=DingModelIntensityFrequency(),
-        n_shooting=20,
-        n_stim=10,
-        force_fourier_coef=fourier_coeff,
-        frequency=10,
-        # time_min=[0.01 for _ in range(10)],
-        # time_max=[0.1 for _ in range(10)],
-        # time_bimapping=True
-        # pulse_intensity=20,
-        pulse_intensity_min=0,
-        pulse_intensity_max=130,
-        # pulse_intensity_bimapping=True,
-        use_sx=True,
-    )
-
-    j = FunctionalElectricStimulationOptimalControlProgram.from_n_stim_and_final_time(
-        ding_model=DingModelIntensityFrequency(),
-        n_shooting=20,
-        n_stim=10,
-        final_time=1,
-        force_fourier_coef=fourier_coeff,
-        # time_min=[0.01 for _ in range(10)],
-        # time_max=[0.1 for _ in range(10)],
-        # time_bimapping=True,
-        # pulse_intensity=20,
-        pulse_intensity_min=0,
-        pulse_intensity_max=130,
-        pulse_intensity_bimapping=True,
-        use_sx=True,
-    )
-    
-    sol = e.solve(Solver.IPOPT(show_online_optim=False, _max_iter=1000))  # , _linear_solver="MA57"
-    sol.graphs()
-    """
-
-    """
-    # --- Show results from solution --- #
-    import matplotlib.pyplot as plt
-
-    sol_merged = sol.merge_phases()
-    # datas = ExtractData().data('D:/These/Experiences/Pedales_instrumentees/Donnees/Results-pedalage_15rpm_001.lvm')
-    # target_time, target_force = ExtractData().time_force(datas, 75.25, 76.25)
-    target_time, target_force = ExtractData.load_data(
-        "../../../../../Donnees/Force_musculaire/pedalage_3_proc_result_duration_0.08.bio")  # muscle
-    target_force = target_force - target_force[0]
-
-    fourier_fun = FourierSeries()
-    fourier_fun.p = 76.25 - 75.25
-    fourier_coef = fourier_fun.compute_real_fourier_coeffs(target_time, target_force, 50)
-
-    y_approx = FourierSeries().fit_func_by_fourier_series_with_real_coeffs(target_time, fourier_coef)
-    # plot, in the range from 0 to P, the true f(t) in blue and the approximation in red
-    plt.plot(target_time, y_approx, color='red', linewidth=1)
-    # target_time, target_force = ExtractData().load_data()
-    target_force = target_force - target_force[0]
-
-    plt.plot(sol_merged.time, sol_merged.states["F"].squeeze())
-    plt.plot(target_time, target_force)
-    plt.show()
-    """
