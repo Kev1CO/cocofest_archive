@@ -1,34 +1,32 @@
-from bioptim import Solver
 import pytest
 from optistim.fes_ocp import FunctionalElectricStimulationOptimalControlProgram
-from optistim.fourier_approx import (
-    FourierSeries,
-)
+
 from optistim.read_data import (
     ExtractData,
 )
 from optistim.ding_model import DingModelFrequency, DingModelPulseDurationFrequency, DingModelIntensityFrequency
 
 time, force = ExtractData.load_data(
-    "../../../../../Donnees/Force_musculaire/pedalage_3_proc_result_duration_0.08.bio"
+    "../examples/data/cycling_motion_results.bio"
 )
-force = force - force[0]
-fourier_fun = FourierSeries()
-fourier_fun.p = 1
-fourier_coeff = fourier_fun.compute_real_fourier_coeffs(time, force, 50)
-n_stim = 3
-n_shooting = 6
+init_force = force - force[0]
+init_n_stim = 3
+init_final_time = 0.3
+init_frequency = 10
+init_n_shooting = 6
+init_force_tracking = [time, init_force]
+init_end_node_tracking = 40
 
 
 @pytest.mark.parametrize("model,"
-                         " time_pulse,"
-                         " time_pulse_min,"
-                         " time_pulse_max,"
-                         " time_pulse_bimapping,"
-                         " intensity_pulse,"
-                         " intensity_pulse_min,"
-                         " intensity_pulse_max,"
-                         " intensity_pulse_bimapping,",
+                         " pulse_time,"
+                         " pulse_time_min,"
+                         " pulse_time_max,"
+                         " pulse_time_bimapping,"
+                         " pulse_intensity,"
+                         " pulse_intensity_min,"
+                         " pulse_intensity_max,"
+                         " pulse_intensity_bimapping,",
                          [(DingModelFrequency(), None, None, None, None, None, None, None, None),
                           (DingModelPulseDurationFrequency(), 0.0002, None, None, None, None, None, None, None),
                           (DingModelPulseDurationFrequency(), None, 0, 0.0006, False, None, None, None, None),
@@ -38,88 +36,93 @@ n_shooting = 6
                           (DingModelIntensityFrequency(), None, None, None, None, None, 0, 130, True)])
 @pytest.mark.parametrize("time_min, time_max, time_bimapping",
                          [(None, None, None),
-                          ([0.01 for _ in range(n_stim)], [0.1 for _ in range(n_stim)], False),
-                          ([0.01 for _ in range(n_stim)], [0.1 for _ in range(n_stim)], True)])
+                          ([0.01 for _ in range(init_n_stim)], [0.1 for _ in range(init_n_stim)], False),
+                          ([0.01 for _ in range(init_n_stim)], [0.1 for _ in range(init_n_stim)], True)])
 @pytest.mark.parametrize("use_sx", [False, True])
-@pytest.mark.parametrize("n_stim, n_shooting, fourier_coeff", [(n_stim, n_shooting, fourier_coeff)])
-def test_ocp_normal(model,
-                    n_stim,
-                    n_shooting,
-                    fourier_coeff,
-                    time_min,
-                    time_max,
-                    time_bimapping,
-                    time_pulse,
-                    time_pulse_min,
-                    time_pulse_max,
-                    time_pulse_bimapping,
-                    intensity_pulse,
-                    intensity_pulse_min,
-                    intensity_pulse_max,
-                    intensity_pulse_bimapping,
-                    use_sx):
+@pytest.mark.parametrize("n_stim, final_time, frequency, n_shooting",
+                         [(init_n_stim, init_final_time, init_frequency, init_n_shooting)])
+@pytest.mark.parametrize("force_tracking, end_node_tracking",
+                         [(init_force_tracking, None), (None, init_end_node_tracking)])
+def test_ocp_building(model,
+                      n_stim,
+                      n_shooting,
+                      final_time,
+                      frequency,
+                      force_tracking,
+                      end_node_tracking,
+                      time_min,
+                      time_max,
+                      time_bimapping,
+                      pulse_time,
+                      pulse_time_min,
+                      pulse_time_max,
+                      pulse_time_bimapping,
+                      pulse_intensity,
+                      pulse_intensity_min,
+                      pulse_intensity_max,
+                      pulse_intensity_bimapping,
+                      use_sx):
 
-    a = FunctionalElectricStimulationOptimalControlProgram.from_frequency_and_final_time(
+    ocp_1 = FunctionalElectricStimulationOptimalControlProgram.from_frequency_and_final_time(
         ding_model=model,
         n_shooting=n_shooting,
-        final_time=0.3,
-        force_fourier_coef=fourier_coeff,
+        final_time=final_time,
+        force_tracking=force_tracking,
+        end_node_tracking=end_node_tracking,
         round_down=True,
-        frequency=10,
+        frequency=frequency,
         time_min=time_min,
         time_max=time_max,
         time_bimapping=time_bimapping,
-        time_pulse=time_pulse,
-        time_pulse_min=time_pulse_min,
-        time_pulse_max=time_pulse_max,
-        time_pulse_bimapping=time_pulse_bimapping,
-        intensity_pulse=intensity_pulse,
-        intensity_pulse_min=intensity_pulse_min,
-        intensity_pulse_max=intensity_pulse_max,
-        intensity_pulse_bimapping=intensity_pulse_bimapping,
+        pulse_time=pulse_time,
+        pulse_time_min=pulse_time_min,
+        pulse_time_max=pulse_time_max,
+        pulse_time_bimapping=pulse_time_bimapping,
+        pulse_intensity=pulse_intensity,
+        pulse_intensity_min=pulse_intensity_min,
+        pulse_intensity_max=pulse_intensity_max,
+        pulse_intensity_bimapping=pulse_intensity_bimapping,
         use_sx=use_sx,
     )
 
-    b = FunctionalElectricStimulationOptimalControlProgram.from_frequency_and_n_stim(
+    ocp_2 = FunctionalElectricStimulationOptimalControlProgram.from_frequency_and_n_stim(
         ding_model=model,
         n_shooting=n_shooting,
         n_stim=n_stim,
-        force_fourier_coef=fourier_coeff,
+        force_tracking=force_tracking,
+        end_node_tracking=end_node_tracking,
         frequency=10,
         time_min=time_min,
         time_max=time_max,
         time_bimapping=time_bimapping,
-        time_pulse=time_pulse,
-        time_pulse_min=time_pulse_min,
-        time_pulse_max=time_pulse_max,
-        time_pulse_bimapping=time_pulse_bimapping,
-        intensity_pulse=intensity_pulse,
-        intensity_pulse_min=intensity_pulse_min,
-        intensity_pulse_max=intensity_pulse_max,
-        intensity_pulse_bimapping=intensity_pulse_bimapping,
+        pulse_time=pulse_time,
+        pulse_time_min=pulse_time_min,
+        pulse_time_max=pulse_time_max,
+        pulse_time_bimapping=pulse_time_bimapping,
+        pulse_intensity=pulse_intensity,
+        pulse_intensity_min=pulse_intensity_min,
+        pulse_intensity_max=pulse_intensity_max,
+        pulse_intensity_bimapping=pulse_intensity_bimapping,
         use_sx=use_sx,
     )
 
-    c = FunctionalElectricStimulationOptimalControlProgram.from_n_stim_and_final_time(
+    ocp_3 = FunctionalElectricStimulationOptimalControlProgram(
         ding_model=model,
         n_shooting=n_shooting,
         n_stim=n_stim,
         final_time=0.3,
-        force_fourier_coef=fourier_coeff,
+        force_tracking=force_tracking,
+        end_node_tracking=end_node_tracking,
         time_min=time_min,
         time_max=time_max,
         time_bimapping=time_bimapping,
-        time_pulse=time_pulse,
-        time_pulse_min=time_pulse_min,
-        time_pulse_max=time_pulse_max,
-        time_pulse_bimapping=time_pulse_bimapping,
-        intensity_pulse=intensity_pulse,
-        intensity_pulse_min=intensity_pulse_min,
-        intensity_pulse_max=intensity_pulse_max,
-        intensity_pulse_bimapping=intensity_pulse_bimapping,
+        pulse_time=pulse_time,
+        pulse_time_min=pulse_time_min,
+        pulse_time_max=pulse_time_max,
+        pulse_time_bimapping=pulse_time_bimapping,
+        pulse_intensity=pulse_intensity,
+        pulse_intensity_min=pulse_intensity_min,
+        pulse_intensity_max=pulse_intensity_max,
+        pulse_intensity_bimapping=pulse_intensity_bimapping,
         use_sx=use_sx,
     )
-
-    sol_a = a.ocp.solve(Solver.IPOPT(show_online_optim=False, _max_iter=1000))
-    sol_b = b.ocp.solve(Solver.IPOPT(show_online_optim=False, _max_iter=1000))
-    sol_c = c.ocp.solve(Solver.IPOPT(show_online_optim=False, _max_iter=1000))
