@@ -111,7 +111,6 @@ class FunctionalElectricStimulationOptimalControlProgram(OptimalControlProgram):
         pulse_intensity_bimapping: bool = None,
         **kwargs,
     ):
-
         self.ding_model = ding_model
 
         if force_tracking:
@@ -119,10 +118,14 @@ class FunctionalElectricStimulationOptimalControlProgram(OptimalControlProgram):
             if isinstance(force_tracking, list):
                 if isinstance(force_tracking[0], np.ndarray) and isinstance(force_tracking[1], np.ndarray):
                     if len(force_tracking[0]) == len(force_tracking[1]) and len(force_tracking) == 2:
-                        force_fourier_coef = force_fourier_coef.compute_real_fourier_coeffs(force_tracking[0], force_tracking[1], 50)
+                        force_fourier_coef = force_fourier_coef.compute_real_fourier_coeffs(
+                            force_tracking[0], force_tracking[1], 50
+                        )
                     else:
-                        raise ValueError("force_tracking time and force argument must be same length and force_tracking "
-                                         "list size 2")
+                        raise ValueError(
+                            "force_tracking time and force argument must be same length and force_tracking "
+                            "list size 2"
+                        )
                 else:
                     raise ValueError("force_tracking argument must be np.ndarray type")
             else:
@@ -201,9 +204,7 @@ class FunctionalElectricStimulationOptimalControlProgram(OptimalControlProgram):
                     raise ValueError("Wrong pulse_time type, only int or float accepted")
 
             elif pulse_time_min is not None and pulse_time_max is not None:
-                if not isinstance(pulse_time_min, int | float) or not isinstance(
-                    pulse_time_max, int | float
-                ):
+                if not isinstance(pulse_time_min, int | float) or not isinstance(pulse_time_max, int | float):
                     raise ValueError("pulse_time_min and pulse_time_max must be equal int or float type")
 
                 parameters_bounds.add(
@@ -231,11 +232,7 @@ class FunctionalElectricStimulationOptimalControlProgram(OptimalControlProgram):
                     # TODO : Fix Bimapping in Bioptim, not working
 
         if isinstance(ding_model, DingModelIntensityFrequency):
-            if (
-                pulse_intensity is None
-                and pulse_intensity_min is None
-                and pulse_intensity_max is None
-            ):
+            if pulse_intensity is None and pulse_intensity_min is None and pulse_intensity_max is None:
                 raise ValueError("Intensity pulse or Intensity pulse min max bounds need to be set for this model")
             if pulse_intensity is not None and pulse_intensity_min is not None and pulse_intensity_max is not None:
                 raise ValueError(
@@ -267,9 +264,7 @@ class FunctionalElectricStimulationOptimalControlProgram(OptimalControlProgram):
                     raise ValueError("Wrong pulse_intensity type, only int or float accepted")
 
             elif pulse_intensity_min is not None and pulse_intensity_max is not None:
-                if not isinstance(pulse_intensity_min, int | float) or not isinstance(
-                    pulse_intensity_max, int | float
-                ):
+                if not isinstance(pulse_intensity_min, int | float) or not isinstance(pulse_intensity_max, int | float):
                     raise ValueError("pulse_intensity_min and pulse_intensity_max must be int or float type")
                 parameters_bounds.add(
                     "pulse_intensity",
@@ -314,25 +309,26 @@ class FunctionalElectricStimulationOptimalControlProgram(OptimalControlProgram):
             if not isinstance(kwargs["n_thread"], int):
                 raise ValueError("n_thread kwarg must be a int type")
 
-        super().__init__(bio_model=self.ding_models,
-                         dynamics=self.dynamics,
-                         n_shooting=self.n_shooting,
-                         phase_time=self.final_time_phase,
-                         x_init=self.x_init,
-                         u_init=self.u_init,
-                         x_bounds=self.x_bounds,
-                         u_bounds=self.u_bounds,
-                         objective_functions=self.objective_functions,
-                         constraints=constraints,
-                         ode_solver=kwargs["ode_solver"] if "ode_solver" in kwargs else OdeSolver.RK4(n_integration_steps=1),
-                         control_type=ControlType.NONE,
-                         use_sx=kwargs["use_sx"] if "use_sx" in kwargs else False,
-                         parameters=parameters,
-                         parameter_bounds=parameters_bounds,
-                         parameter_init=parameters_init,
-                         assume_phase_dynamics=False,
-                         n_threads=kwargs["n_thread"] if "n_thread" in kwargs else 1,
-                         )
+        super().__init__(
+            bio_model=self.ding_models,
+            dynamics=self.dynamics,
+            n_shooting=self.n_shooting,
+            phase_time=self.final_time_phase,
+            x_init=self.x_init,
+            u_init=self.u_init,
+            x_bounds=self.x_bounds,
+            u_bounds=self.u_bounds,
+            objective_functions=self.objective_functions,
+            constraints=constraints,
+            ode_solver=kwargs["ode_solver"] if "ode_solver" in kwargs else OdeSolver.RK4(n_integration_steps=1),
+            control_type=ControlType.NONE,
+            use_sx=kwargs["use_sx"] if "use_sx" in kwargs else False,
+            parameters=parameters,
+            parameter_bounds=parameters_bounds,
+            parameter_init=parameters_init,
+            assume_phase_dynamics=False,
+            n_threads=kwargs["n_thread"] if "n_thread" in kwargs else 1,
+        )
 
     def _declare_dynamics(self):
         self.dynamics = DynamicsList()
@@ -358,7 +354,11 @@ class FunctionalElectricStimulationOptimalControlProgram(OptimalControlProgram):
         # Sets the bound for all the phases
         self.x_bounds = BoundsList()
         variable_bound_list = self.ding_model.name_dof
-        starting_bounds, min_bounds, max_bounds = self.ding_model.standard_rest_values(), self.ding_model.standard_rest_values(), self.ding_model.standard_rest_values()
+        starting_bounds, min_bounds, max_bounds = (
+            self.ding_model.standard_rest_values(),
+            self.ding_model.standard_rest_values(),
+            self.ding_model.standard_rest_values(),
+        )
 
         for i in range(len(variable_bound_list)):
             if variable_bound_list[i] == "Cn" or variable_bound_list[i] == "F":
