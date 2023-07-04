@@ -18,13 +18,9 @@ from bioptim import (
 
 import numpy as np
 
-from optistim.custom_objectives import (
-    CustomObjective,
-)
+from optistim.custom_objectives import CustomObjective
 
-from .fourier_approx import (
-    FourierSeries,
-)
+from .fourier_approx import FourierSeries
 
 from .ding_model import DingModelFrequency, DingModelPulseDurationFrequency, DingModelIntensityFrequency
 
@@ -86,8 +82,6 @@ class FunctionalElectricStimulationOptimalControlProgram(OptimalControlProgram):
         Calculates the number of stim (phases) for the ocp from frequency and final time
     from_frequency_and_n_stim(self, frequency: int | float, n_stim: int)
         Calculates the final ocp time from frequency and stimulation number
-    from_n_stim_and_final_time(self, n_stim: int, final_time: float)
-        Calculates the frequency from stimulation number and final time
     """
 
     def __init__(
@@ -158,11 +152,7 @@ class FunctionalElectricStimulationOptimalControlProgram(OptimalControlProgram):
 
             for i in range(n_stim):
                 constraints.add(
-                    ConstraintFcn.TIME_CONSTRAINT,
-                    node=Node.END,
-                    min_bound=time_min[i],
-                    max_bound=time_max[i],
-                    phase=i,
+                    ConstraintFcn.TIME_CONSTRAINT, node=Node.END, min_bound=time_min[i], max_bound=time_max[i], phase=i,
                 )
 
             if time_bimapping is True:
@@ -334,9 +324,7 @@ class FunctionalElectricStimulationOptimalControlProgram(OptimalControlProgram):
         self.dynamics = DynamicsList()
         for i in range(self.n_stim):
             self.dynamics.add(
-                self.ding_models[i].declare_ding_variables,
-                dynamic_function=self.ding_models[i].dynamics,
-                phase=i,
+                self.ding_models[i].declare_ding_variables, dynamic_function=self.ding_models[i].dynamics, phase=i,
             )
 
     def _set_bounds(self):
