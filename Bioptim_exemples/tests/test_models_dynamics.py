@@ -14,8 +14,8 @@ from optistim.fes_ocp import FunctionalElectricStimulationOptimalControlProgram
 )
 def test_ocp_dynamics(model):
     if isinstance(model, DingModelPulseDurationFrequency):
-        assert DingModelPulseDurationFrequency.nb_state.__get__(DingModelPulseDurationFrequency) == 4
-        assert DingModelPulseDurationFrequency.name_dof.__get__(DingModelPulseDurationFrequency) == [
+        assert DingModelPulseDurationFrequency().nb_state == 4
+        assert DingModelPulseDurationFrequency().name_dof == [
             "Cn",
             "F",
             "Tau1",
@@ -88,8 +88,8 @@ def test_ocp_dynamics(model):
         )
 
     elif isinstance(model, DingModelIntensityFrequency):
-        assert DingModelIntensityFrequency.nb_state.__get__(DingModelIntensityFrequency) == 5
-        assert DingModelIntensityFrequency.name_dof.__get__(DingModelIntensityFrequency) == [
+        assert DingModelIntensityFrequency().nb_state == 5
+        assert DingModelIntensityFrequency().name_dof == [
             "Cn",
             "F",
             "A",
@@ -167,8 +167,8 @@ def test_ocp_dynamics(model):
         )
 
     elif isinstance(model, DingModelFrequency):
-        assert DingModelFrequency.nb_state.__get__(DingModelFrequency) == 5
-        assert DingModelFrequency.name_dof.__get__(DingModelFrequency) == ["Cn", "F", "A", "Tau1", "Km"]
+        assert DingModelFrequency().nb_state == 5
+        assert DingModelFrequency().name_dof == ["Cn", "F", "A", "Tau1", "Km"]
         np.testing.assert_almost_equal(
             model.standard_rest_values(), np.array([[0], [0], [model.a_rest], [model.tau1_rest], [model.km_rest]])
         )
