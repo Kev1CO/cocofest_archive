@@ -54,17 +54,20 @@ class DingModelFrequency:
     def serialize(self) -> tuple[Callable, dict]:
         # This is where you can serialize your model
         # This is useful if you want to save your model and load it later
-        return DingModelFrequency, {
-            "tauc": self.tauc,
-            "a_rest": self.a_rest,
-            "tau1_rest": self.tau1_rest,
-            "km_rest": self.km_rest,
-            "tau2": self.tau2,
-            "alpha_a": self.alpha_a,
-            "alpha_tau1": self.alpha_tau1,
-            "alpha_km": self.alpha_km,
-            "tau_fat": self.tau_fat,
-        }
+        return (
+            DingModelFrequency,
+            {
+                "tauc": self.tauc,
+                "a_rest": self.a_rest,
+                "tau1_rest": self.tau1_rest,
+                "km_rest": self.km_rest,
+                "tau2": self.tau2,
+                "alpha_a": self.alpha_a,
+                "alpha_tau1": self.alpha_tau1,
+                "alpha_km": self.alpha_km,
+                "tau_fat": self.tau_fat,
+            },
+        )
 
     # ---- Needed for the example ---- #
     @property
@@ -274,12 +277,7 @@ class DingModelFrequency:
 
     @staticmethod
     def dynamics(
-        states: MX | SX,
-        controls: MX | SX,
-        parameters: MX | SX,
-        nlp: NonLinearProgram,
-        t=None,
-        ocp=None,
+        states: MX | SX, controls: MX | SX, parameters: MX | SX, nlp: NonLinearProgram, t=None, nb_phases=None,
     ) -> DynamicsEvaluation:
         """
         Functional electrical stimulation dynamic
@@ -296,13 +294,15 @@ class DingModelFrequency:
             A reference to the phase
         t: MX | SX
             Current node time, this t is used to set the dynamics and as to be a symbolic
+        nb_phases: int
+            The number of phases in the ocp
         Returns
         -------
         The derivative of the states in the tuple[MX | SX]] format
         """
 
         t_stim_prev = []  # Every stimulation instant before the current phase, i.e.: the beginning of each phase
-        time_parameters = DingModelFrequency.get_time_parameters(ocp)
+        time_parameters = DingModelFrequency.get_time_parameters(nlp, nb_phases)
         if time_parameters.shape[0] == 1:  # check if time is mapped
             for i in range(nlp.phase_idx + 1):
                 t_stim_prev.append(time_parameters[0] * i)
@@ -345,7 +345,7 @@ class DingModelFrequency:
         # Gets every time node for the current phase
         for i in range(nlp.ns):
             extra_params["t"] = ocp.node_time(phase_idx=nlp.phase_idx, node_idx=i)
-            extra_params["ocp"] = ocp
+            extra_params["nb_phases"] = ocp.nlp.__len__()
 
             dynamics_eval = DingModelFrequency.dynamics(
                 nlp.states.scaled.cx_start, nlp.controls.scaled.cx_start, nlp.parameters.cx_start, nlp, **extra_params
@@ -418,13 +418,7 @@ class DingModelFrequency:
         name = "Cn"
         name_cn = [name]
         ConfigureProblem.configure_new_variable(
-            name,
-            name_cn,
-            ocp,
-            nlp,
-            as_states,
-            as_controls,
-            as_states_dot,
+            name, name_cn, ocp, nlp, as_states, as_controls, as_states_dot,
         )
 
     @staticmethod
@@ -454,13 +448,7 @@ class DingModelFrequency:
         name = "F"
         name_f = [name]
         ConfigureProblem.configure_new_variable(
-            name,
-            name_f,
-            ocp,
-            nlp,
-            as_states,
-            as_controls,
-            as_states_dot,
+            name, name_f, ocp, nlp, as_states, as_controls, as_states_dot,
         )
 
     @staticmethod
@@ -490,13 +478,7 @@ class DingModelFrequency:
         name = "A"
         name_a = [name]
         ConfigureProblem.configure_new_variable(
-            name,
-            name_a,
-            ocp,
-            nlp,
-            as_states,
-            as_controls,
-            as_states_dot,
+            name, name_a, ocp, nlp, as_states, as_controls, as_states_dot,
         )
 
     @staticmethod
@@ -526,13 +508,7 @@ class DingModelFrequency:
         name = "Tau1"
         name_tau1 = [name]
         ConfigureProblem.configure_new_variable(
-            name,
-            name_tau1,
-            ocp,
-            nlp,
-            as_states,
-            as_controls,
-            as_states_dot,
+            name, name_tau1, ocp, nlp, as_states, as_controls, as_states_dot,
         )
 
     @staticmethod
@@ -562,37 +538,33 @@ class DingModelFrequency:
         name = "Km"
         name_km = [name]
         ConfigureProblem.configure_new_variable(
-            name,
-            name_km,
-            ocp,
-            nlp,
-            as_states,
-            as_controls,
-            as_states_dot,
+            name, name_km, ocp, nlp, as_states, as_controls, as_states_dot,
         )
 
     @staticmethod
-    def get_time_parameters(ocp: OptimalControlProgram) -> MX | SX:
+    def get_time_parameters(nlp: NonLinearProgram, nb_phases: int) -> MX | SX:
         """
         Get the nlp list of time parameters
 
         Parameters
         ----------
-        nlp_parameters: ParameterList
-            The nlp list parameter
+        nlp: NonLinearProgram
+            The NonLinearProgram of the ocp of the current phase
+        nb_phases: int
+            The number of phases in the ocp
 
         Returns
         -------
         The list of time parameters
         """
         time_parameters = vertcat()
-        if "time" in ocp.nlp[0].parameters:
-            for j in range(ocp.nlp[0].parameters.cx_start.shape[0]):
-                if "time" in str(ocp.nlp[0].parameters.cx_start[j]):
-                    time_parameters = vertcat(time_parameters, ocp.nlp[0].parameters.cx_start[j])
+        if "time" in nlp.parameters:
+            for j in range(nlp.parameters.cx_start.shape[0]):
+                if "time" in str(nlp.parameters.cx_start[j]):
+                    time_parameters = vertcat(time_parameters, nlp.parameters.cx_start[j])
         else:
-            for j in range(len(ocp.nlp)):
-                time_parameters = vertcat(time_parameters, ocp.nlp[j].tf)
+            for j in range(nb_phases):
+                time_parameters = vertcat(time_parameters, nlp.tf)
         return time_parameters
 
 
@@ -628,20 +600,23 @@ class DingModelPulseDurationFrequency(DingModelFrequency):
     def serialize(self) -> tuple[Callable, dict]:
         # This is where you can serialize your model
         # This is useful if you want to save your model and load it later
-        return DingModelPulseDurationFrequency, {
-            "tauc": self.tauc,
-            "a_rest": self.a_rest,
-            "tau1_rest": self.tau1_rest,
-            "km_rest": self.km_rest,
-            "tau2": self.tau2,
-            "alpha_a": self.alpha_a,
-            "alpha_tau1": self.alpha_tau1,
-            "alpha_km": self.alpha_km,
-            "tau_fat": self.tau_fat,
-            "a_scale": self.a_scale,
-            "pd0": self.pd0,
-            "pdt": self.pdt,
-        }
+        return (
+            DingModelPulseDurationFrequency,
+            {
+                "tauc": self.tauc,
+                "a_rest": self.a_rest,
+                "tau1_rest": self.tau1_rest,
+                "km_rest": self.km_rest,
+                "tau2": self.tau2,
+                "alpha_a": self.alpha_a,
+                "alpha_tau1": self.alpha_tau1,
+                "alpha_km": self.alpha_km,
+                "tau_fat": self.tau_fat,
+                "a_scale": self.a_scale,
+                "pd0": self.pd0,
+                "pdt": self.pdt,
+            },
+        )
 
     def system_dynamics(
         self, cn: MX | SX, f: MX | SX, tau1: MX | SX, km: MX | SX, t: MX | SX, **extra_arguments: list[MX] | list[SX]
@@ -731,12 +706,7 @@ class DingModelPulseDurationFrequency(DingModelFrequency):
 
     @staticmethod
     def dynamics(
-        states: MX | SX,
-        controls: MX | SX,
-        parameters: MX | SX,
-        nlp: NonLinearProgram,
-        t=None,
-        ocp=None,
+        states: MX | SX, controls: MX | SX, parameters: MX | SX, nlp: NonLinearProgram, t=None, nb_phases=None,
     ) -> DynamicsEvaluation:
         """
         Functional electrical stimulation dynamic
@@ -753,15 +723,15 @@ class DingModelPulseDurationFrequency(DingModelFrequency):
             A reference to the phase
         t: MX | SX
             Current node time, this t is used to set the dynamics and as to be a symbolic
-        ocp: OptimalControlProgram
-            A reference to the ocp
+        nb_phases: int
+            The number of phases in the ocp
         Returns
         -------
         The derivative of the states in the tuple[MX | SX]] format
         """
 
         t_stim_prev = []  # Every stimulation instant before the current phase, i.e.: the beginning of each phase
-        time_parameters = DingModelFrequency.get_time_parameters(ocp)
+        time_parameters = DingModelFrequency.get_time_parameters(nlp, nb_phases)
         pulse_duration_parameters = DingModelPulseDurationFrequency.get_pulse_duration_parameters(nlp.parameters)
 
         if time_parameters.shape[0] == 1:  # check if time is mapped
@@ -812,7 +782,7 @@ class DingModelPulseDurationFrequency(DingModelFrequency):
         # Gets every time node for the current phase
         for i in range(nlp.ns):
             extra_params["t"] = ocp.node_time(phase_idx=nlp.phase_idx, node_idx=i)
-            extra_params["ocp"] = ocp
+            extra_params["nb_phases"] = ocp.nlp.__len__()
 
             dynamics_eval = DingModelPulseDurationFrequency.dynamics(
                 nlp.states.scaled.cx_start, nlp.controls.scaled.cx_start, nlp.parameters.cx_start, nlp, **extra_params
@@ -873,21 +843,24 @@ class DingModelIntensityFrequency(DingModelFrequency):
     def serialize(self) -> tuple[Callable, dict]:
         # This is where you can serialize your model
         # This is useful if you want to save your model and load it later
-        return DingModelIntensityFrequency, {
-            "tauc": self.tauc,
-            "a_rest": self.a_rest,
-            "tau1_rest": self.tau1_rest,
-            "km_rest": self.km_rest,
-            "tau2": self.tau2,
-            "alpha_a": self.alpha_a,
-            "alpha_tau1": self.alpha_tau1,
-            "alpha_km": self.alpha_km,
-            "tau_fat": self.tau_fat,
-            "ar": self.ar,
-            "bs": self.bs,
-            "Is": self.Is,
-            "cr": self.cr,
-        }
+        return (
+            DingModelIntensityFrequency,
+            {
+                "tauc": self.tauc,
+                "a_rest": self.a_rest,
+                "tau1_rest": self.tau1_rest,
+                "km_rest": self.km_rest,
+                "tau2": self.tau2,
+                "alpha_a": self.alpha_a,
+                "alpha_tau1": self.alpha_tau1,
+                "alpha_km": self.alpha_km,
+                "tau_fat": self.tau_fat,
+                "ar": self.ar,
+                "bs": self.bs,
+                "Is": self.Is,
+                "cr": self.cr,
+            },
+        )
 
     def system_dynamics(
         self,
@@ -1048,12 +1021,7 @@ class DingModelIntensityFrequency(DingModelFrequency):
 
     @staticmethod
     def dynamics(
-        states: MX | SX,
-        controls: MX | SX,
-        parameters: MX | SX,
-        nlp: NonLinearProgram,
-        t=None,
-        ocp=None,
+        states: MX | SX, controls: MX | SX, parameters: MX | SX, nlp: NonLinearProgram, t=None, nb_phases=None,
     ) -> DynamicsEvaluation:
         """
         Functional electrical stimulation dynamic
@@ -1070,8 +1038,8 @@ class DingModelIntensityFrequency(DingModelFrequency):
             A reference to the phase
         t: MX | SX
             Current node time, this t is used to set the dynamics and as to be a symbolic
-        ocp: OptimalControlProgram
-            A reference to the ocp
+        nb_phases: int
+            The number of phases in the ocp
         Returns
         -------
         The derivative of the states in the tuple[MX | SX]] format
@@ -1081,7 +1049,7 @@ class DingModelIntensityFrequency(DingModelFrequency):
             []
         )  # Every stimulation intensity before the current phase, i.e.: the intensity of each phase
 
-        time_parameters = DingModelFrequency.get_time_parameters(ocp)
+        time_parameters = DingModelFrequency.get_time_parameters(nlp, nb_phases)
         intensity_parameters = DingModelIntensityFrequency.get_intensity_parameters(nlp.parameters)
 
         if time_parameters.shape[0] == 1:  # check if time is mapped
@@ -1135,7 +1103,7 @@ class DingModelIntensityFrequency(DingModelFrequency):
         # Gets every time node for the current phase
         for i in range(nlp.ns):
             extra_params["t"] = ocp.node_time(phase_idx=nlp.phase_idx, node_idx=i)
-            extra_params["ocp"] = ocp
+            extra_params["nb_phases"] = ocp.nlp.__len__()
 
             dynamics_eval = DingModelIntensityFrequency.dynamics(
                 nlp.states.scaled.cx_start, nlp.controls.scaled.cx_start, nlp.parameters.cx_start, nlp, **extra_params
