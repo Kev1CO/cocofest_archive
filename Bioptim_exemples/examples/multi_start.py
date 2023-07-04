@@ -8,14 +8,15 @@ import shutil
 
 import numpy as np
 
-import optistim
+from optistim.fes_ocp import FunctionalElectricStimulationOptimalControlProgram
+
 from bioptim import (
     Solver,
     MultiStart,
     Solution,
 )
 
-from optistim.ding_model import DingModelIntensityFrequency, DingModelFrequency
+from optistim.ding_model import DingModelFrequency, DingModelPulseDurationFrequency, DingModelIntensityFrequency
 
 from optistim.fourier_approx import (
     FourierSeries,
@@ -47,7 +48,9 @@ def save_results(
     extra_parameters:
         All the non-combinatorial parameters sent by the user
     """
-    ding_model, n_stim, n_shooting, final_time, force_fourier_coef = combinatorial_parameters
+    ding_model, n_stim, n_shooting, final_time, force_tracking, end_node_tracking, time_min, time_max, \
+    time_bimapping, pulse_time, pulse_time_min, pulse_time_max, pulse_time_bimapping, pulse_intensity, \
+    pulse_intensity_min, pulse_intensity_max, pulse_intensity_bimapping = combinatorial_parameters
 
     save_folder = extra_parameters["save_folder"]
 
@@ -79,7 +82,9 @@ def should_solve(*combinatorial_parameters, **extra_parameters):
     extra_parameters:
         All the non-combinatorial parameters sent by the user
     """
-    ding_model, n_stim, n_shooting, final_time, force_fourier_coef = combinatorial_parameters
+    ding_model, n_stim, n_shooting, final_time, force_tracking, end_node_tracking, time_min, time_max,\
+    time_bimapping, pulse_time, pulse_time_min, pulse_time_max, pulse_time_bimapping, pulse_intensity, \
+    pulse_intensity_min, pulse_intensity_max, pulse_intensity_bimapping = combinatorial_parameters
 
     save_folder = extra_parameters["save_folder"]
 
@@ -87,22 +92,46 @@ def should_solve(*combinatorial_parameters, **extra_parameters):
     return not os.path.exists(file_path)
 
 
-def prepare_ocp(ding_model: DingModelFrequency | DingModelIntensityFrequency,
-                n_stim: int,
-                n_shooting: int,
-                final_time: int | float,
-                fourier_coeff: np.ndarray, ):
-    a = optistim.FunctionalElectricStimulationOptimalControlProgram.from_n_stim_and_final_time(ding_model=ding_model,
-                                                                                      n_stim=n_stim,
-                                                                                      n_shooting=n_shooting,
-                                                                                      final_time=final_time,
-                                                                                      force_fourier_coef=fourier_coeff,
-                                                                                      intensity_pulse_min=0,
-                                                                                      intensity_pulse_max=130,
-                                                                                      intensity_pulse_bimapping=True,
-                                                                                      use_sx=True,
-                                                                                      )
-    return a.ocp
+def prepare_ocp(ding_model: DingModelFrequency | DingModelPulseDurationFrequency | DingModelIntensityFrequency = None,
+                n_stim: int = None,
+                n_shooting: int = None,
+                final_time: int | float = None,
+                force_tracking: list[np.ndarray, np.ndarray] = None,
+                end_node_tracking: int | float = None,
+                time_min: list[int] | list[float] = None,
+                time_max: list[int] | list[float] = None,
+                time_bimapping: bool = None,
+                pulse_time: int | float = None,
+                pulse_time_min: int | float = None,
+                pulse_time_max: int | float = None,
+                pulse_time_bimapping: bool = None,
+                pulse_intensity: int | float = None,
+                pulse_intensity_min: int | float = None,
+                pulse_intensity_max: int | float = None,
+                pulse_intensity_bimapping: bool = None,
+                ):
+
+    ocp = FunctionalElectricStimulationOptimalControlProgram(ding_model=ding_model,
+                                                             n_stim=n_stim,
+                                                             n_shooting=n_shooting,
+                                                             final_time=final_time,
+                                                             force_tracking=force_tracking,
+                                                             end_node_tracking=end_node_tracking,
+                                                             time_min=time_min,
+                                                             time_max=time_max,
+                                                             time_bimapping=time_bimapping,
+                                                             pulse_time=pulse_time,
+                                                             pulse_time_min=pulse_time_min,
+                                                             pulse_time_max=pulse_time_max,
+                                                             pulse_time_bimapping=pulse_time_bimapping,
+                                                             pulse_intensity=pulse_intensity,
+                                                             pulse_intensity_min=pulse_intensity_min,
+                                                             pulse_intensity_max=pulse_intensity_max,
+                                                             pulse_intensity_bimapping=pulse_intensity_bimapping,
+                                                             use_sx=True,
+                                                             )
+
+    return ocp
 
 
 def prepare_multi_start(
@@ -134,21 +163,28 @@ def main():
     """
 
     # --- mhe muscle file --- #
-    time, force = ExtractData.load_data("D:/These/Donnees/Force_musculaire/pedalage_3_proc_result_duration_0.08.bio")
-    force = force - force[0]
-    fourier_fun = FourierSeries()
-    fourier_fun.p = 1
-    fourier_coeff = fourier_fun.compute_real_fourier_coeffs(time, force, 50)
-
-    a = {"intensity_pulse_min": 0, "intensity_pulse_max": 130, "intensity_pulse_bimapping": True, "use_sx": True}
+    time_tracking, force_tracking = ExtractData.load_data("data/cycling_motion_results.bio")
+    force_tracking = force_tracking - force_tracking[0]
 
     # --- Prepare the multi-start and run it --- #
     combinatorial_parameters = {
-        "ding_model": [DingModelIntensityFrequency()],
-        "n_stim": [5, 6, 7, 8, 9, 10],
+        "ding_model": [DingModelFrequency(), DingModelPulseDurationFrequency(), DingModelIntensityFrequency()],
+        "n_stim": [10],
         "n_shooting": [20],
         "final_time": [1],
-        "force_fourier_coef": [fourier_coeff],
+        "force_tracking": [[time_tracking, force_tracking]],
+        "end_node_tracking": [None],
+        "time_min": [[0.01 for _ in range(10)]],
+        "time_max": [[0.1 for _ in range(10)]],
+        "time_bimapping": [True],
+        "pulse_time": [None],
+        "pulse_time_min": [0],
+        "pulse_time_max": [0.0006],
+        "pulse_time_bimapping": [False],
+        "pulse_intensity": [None],
+        "pulse_intensity_min": [0],
+        "pulse_intensity_max": [130],
+        "pulse_intensity_bimapping": [False]
     }
 
     save_folder = "./temporary_results"
@@ -157,6 +193,9 @@ def main():
         save_folder=save_folder,
         n_pools=6,
     )
+
+
+
 
     multi_start.solve()
     n_stim = [5, 6, 7, 8, 9, 10]
