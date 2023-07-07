@@ -345,7 +345,7 @@ class DingModelFrequency:
         # Gets every time node for the current phase
         for i in range(nlp.ns):
             extra_params["t"] = ocp.node_time(phase_idx=nlp.phase_idx, node_idx=i)
-            extra_params["nb_phases"] = ocp.nlp.__len__()
+            extra_params["nb_phases"] = ocp.n_phases
 
             dynamics_eval = DingModelFrequency.dynamics(
                 nlp.states.scaled.cx_start, nlp.controls.scaled.cx_start, nlp.parameters.cx_start, nlp, **extra_params
@@ -782,7 +782,7 @@ class DingModelPulseDurationFrequency(DingModelFrequency):
         # Gets every time node for the current phase
         for i in range(nlp.ns):
             extra_params["t"] = ocp.node_time(phase_idx=nlp.phase_idx, node_idx=i)
-            extra_params["nb_phases"] = ocp.nlp.__len__()
+            extra_params["nb_phases"] = ocp.n_phases
 
             dynamics_eval = DingModelPulseDurationFrequency.dynamics(
                 nlp.states.scaled.cx_start, nlp.controls.scaled.cx_start, nlp.parameters.cx_start, nlp, **extra_params
@@ -1103,7 +1103,7 @@ class DingModelIntensityFrequency(DingModelFrequency):
         # Gets every time node for the current phase
         for i in range(nlp.ns):
             extra_params["t"] = ocp.node_time(phase_idx=nlp.phase_idx, node_idx=i)
-            extra_params["nb_phases"] = ocp.nlp.__len__()
+            extra_params["nb_phases"] = ocp.n_phases
 
             dynamics_eval = DingModelIntensityFrequency.dynamics(
                 nlp.states.scaled.cx_start, nlp.controls.scaled.cx_start, nlp.parameters.cx_start, nlp, **extra_params

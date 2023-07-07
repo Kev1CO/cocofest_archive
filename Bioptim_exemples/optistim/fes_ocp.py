@@ -1,4 +1,5 @@
 from bioptim import (
+    BiMapping,
     BiMappingList,
     BoundsList,
     ConstraintFcn,
@@ -137,6 +138,7 @@ class FunctionalElectricStimulationOptimalControlProgram(OptimalControlProgram):
 
         constraints = ConstraintList()
         bimapping = BiMappingList()
+        phase_time_bimapping = None
         if time_min is None and time_max is None:
             step = final_time / n_stim
             self.final_time_phase = (step,)
@@ -156,7 +158,8 @@ class FunctionalElectricStimulationOptimalControlProgram(OptimalControlProgram):
                 )
 
             if time_bimapping is True:
-                bimapping.add(name="time", to_second=[0 for _ in range(n_stim)], to_first=[0])
+                phase_time_bimapping = BiMapping(to_second=[0 for _ in range(n_stim)], to_first=[0])
+                # bimapping.add(name="time", to_second=[0 for _ in range(n_stim)], to_first=[0])
 
             self.final_time_phase = [0.01] * n_stim
 
@@ -309,6 +312,7 @@ class FunctionalElectricStimulationOptimalControlProgram(OptimalControlProgram):
             x_bounds=self.x_bounds,
             u_bounds=self.u_bounds,
             objective_functions=self.objective_functions,
+            time_phase_mapping=phase_time_bimapping,
             constraints=constraints,
             ode_solver=kwargs["ode_solver"] if "ode_solver" in kwargs else OdeSolver.RK4(n_integration_steps=1),
             control_type=ControlType.NONE,
@@ -398,13 +402,14 @@ class FunctionalElectricStimulationOptimalControlProgram(OptimalControlProgram):
         # Creates the objective for our problem (in this case, match a force curve)
         self.objective_functions = ObjectiveList()
         if "objective" in self.kwargs:
-            if not isinstance(self.kwargs["objective"], list):
-                raise ValueError("objective kwarg must be a list type")
-            if all(isinstance(x, Objective) for x in self.kwargs["objective"]):
-                for i in range(len(self.kwargs["objective"])):
-                    self.objective_functions.add(self.kwargs["objective"][i])
-            else:
-                raise ValueError("All elements in objective kwarg must be an Objective type")
+            if self.kwargs["objective"] is not None:
+                if not isinstance(self.kwargs["objective"], list):
+                    raise ValueError("objective kwarg must be a list type")
+                if all(isinstance(x, Objective) for x in self.kwargs["objective"]):
+                    for i in range(len(self.kwargs["objective"])):
+                        self.objective_functions.add(self.kwargs["objective"][i])
+                else:
+                    raise ValueError("All elements in objective kwarg must be an Objective type")
         # TODO : Test this new feature
         if self.force_fourier_coef is not None:
             for phase in range(self.n_stim):

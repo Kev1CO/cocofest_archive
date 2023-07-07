@@ -1,5 +1,6 @@
 import pytest
 from optistim.fes_ocp import FunctionalElectricStimulationOptimalControlProgram
+from optistim.fes_multi_start import FunctionalElectricStimulationMultiStart
 
 from optistim.read_data import (
     ExtractData,
@@ -134,4 +135,31 @@ def test_ocp_building(
         pulse_intensity_max=pulse_intensity_max,
         pulse_intensity_bimapping=pulse_intensity_bimapping,
         use_sx=use_sx,
+    )
+
+@pytest.mark.parametrize(
+    "force_tracking, end_node_tracking", [(init_force_tracking, None), (None, init_end_node_tracking)]
+)
+def test_multi_start_building(force_tracking, end_node_tracking):
+    multi_start = FunctionalElectricStimulationMultiStart(
+        methode="standard",
+        ding_model=[DingModelFrequency(), DingModelPulseDurationFrequency(), DingModelIntensityFrequency()],
+        n_stim=[10],
+        n_shooting=[20],
+        final_time=[1],
+        frequency=[None],
+        force_tracking=[force_tracking],
+        end_node_tracking=[end_node_tracking],
+        time_min=[[0.01 for _ in range(10)]],
+        time_max=[[0.1 for _ in range(10)]],
+        time_bimapping=[False],
+        pulse_time=[None],
+        pulse_time_min=[0],
+        pulse_time_max=[0.0006],
+        pulse_time_bimapping=[False],
+        pulse_intensity=[None],
+        pulse_intensity_min=[0],
+        pulse_intensity_max=[130],
+        pulse_intensity_bimapping=[None],
+        path_folder="./temp",
     )
