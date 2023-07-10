@@ -13,7 +13,6 @@ ocp = FunctionalElectricStimulationOptimalControlProgram(ding_model=DingModelInt
                                                          n_stim=10,
                                                          n_shooting=20,
                                                          final_time=1,
-                                                         force_tracking=None,
                                                          end_node_tracking=200,
                                                          pulse_intensity_min=0,
                                                          pulse_intensity_max=130,
