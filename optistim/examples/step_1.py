@@ -20,7 +20,7 @@ from bioptim import (
     BiMappingList,
 )
 
-from optistim.ding_model import DingModelFrequency
+from  ..optistim.ding_model import DingModelFrequency
 
 
 def prepare_ocp(
@@ -178,11 +178,11 @@ def main():
 
     # # --- Show results from solution --- #
     # import matplotlib.pyplot as plt
-    # from optistim.fourier_approx import (
+    # from  ..optistim.fourier_approx import (
     #     FourierSeries,
     # )
     #
-    # from optistim.read_data import (
+    # from  ..optistim.read_data import (
     #     ExtractData,
     # )
     #

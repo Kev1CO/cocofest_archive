@@ -1,1 +1,0 @@
-from .fes_ocp import FunctionalElectricStimulationOptimalControlProgram
