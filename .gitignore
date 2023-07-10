@@ -1,8 +1,9 @@
 
-Bioptim_exemples/custom_package/__pycache__/
-
 .idea/
 
 __pycache__/
 
-optistim/examples/data/debug.py
+.pytest_cache
+
+
+examples/data/debug.py
