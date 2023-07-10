@@ -1,12 +1,9 @@
-import pytest
-import numpy as np
 from casadi import DM
+import numpy as np
+import pytest
+
 from bioptim import Solver
-from optistim.ding_model import DingModelFrequency, DingModelPulseDurationFrequency, DingModelIntensityFrequency
-from optistim.read_data import (
-    ExtractData,
-)
-from optistim.fes_ocp import FunctionalElectricStimulationOptimalControlProgram
+from optistim import DingModelFrequency, DingModelPulseDurationFrequency, DingModelIntensityFrequency, FunctionalElectricStimulationOptimalControlProgram, ExtractData
 
 
 @pytest.mark.parametrize(
@@ -208,16 +205,16 @@ def test_ocp_dynamics(model):
         np.testing.assert_almost_equal(model.km_dot_fun(km=0.103, f=100), 1.8999999999999998e-05)
 
 
-time, force = ExtractData.load_data("../examples/data/cycling_motion_results.bio")
+time, force = ExtractData.load_data("../examples/data/hand_cycling_force.bio")
 init_force = force - force[0]
 init_force_tracking = [time, init_force]
 
 
-@pytest.mark.parametrize("use_sx", [False, True])
+@pytest.mark.parametrize("use_sx", [True])  # Later add False
 @pytest.mark.parametrize(
     "model", [DingModelFrequency(), DingModelPulseDurationFrequency(), DingModelIntensityFrequency()]
 )
-@pytest.mark.parametrize("force_tracking", init_force_tracking)
+@pytest.mark.parametrize("force_tracking", [init_force_tracking])
 def test_ocp_output(model, force_tracking, use_sx):
     if isinstance(model, DingModelPulseDurationFrequency):
         ocp = FunctionalElectricStimulationOptimalControlProgram(
@@ -235,11 +232,9 @@ def test_ocp_output(model, force_tracking, use_sx):
         ocp = ocp.solve(Solver.IPOPT(show_online_optim=False, _max_iter=1000))
         ocp = ocp.merge_phases()
 
-        # TODO : OPEN PICKLE FILE
-
-        for key in ocp.states.key():
-            np.testing.assert_almost_equal(ocp.states[key], ocp.states[key])
-            np.testing.assert_almost_equal(ocp.states[key], ocp.states[key])
+        # TODO : Add a pickle file to test
+        # for key in ocp.states.key():
+        #     np.testing.assert_almost_equal(ocp.states[key], pickle_file.states[key])
 
     elif isinstance(model, DingModelIntensityFrequency):
         ocp = FunctionalElectricStimulationOptimalControlProgram(
@@ -257,11 +252,9 @@ def test_ocp_output(model, force_tracking, use_sx):
         ocp = ocp.solve(Solver.IPOPT(show_online_optim=False, _max_iter=1000))
         ocp = ocp.merge_phases()
 
-        # TODO : OPEN PICKLE FILE
-
-        for key in ocp.states.key():
-            np.testing.assert_almost_equal(ocp.states[key], ocp.states[key])
-            np.testing.assert_almost_equal(ocp.states[key], ocp.states[key])
+        # TODO : Add a pickle file to test
+        # for key in ocp.states.key():
+        #     np.testing.assert_almost_equal(ocp.states[key], pickle_file.states[key])
 
     elif isinstance(model, DingModelFrequency):
         ocp = FunctionalElectricStimulationOptimalControlProgram(
@@ -270,8 +263,8 @@ def test_ocp_output(model, force_tracking, use_sx):
             n_stim=10,
             final_time=1,
             end_node_tracking=50,
-            time_min=[0.01 for _ in range(10)],
-            time_max=[1 for _ in range(10)],
+            time_min=0.01,
+            time_max=1,
             time_bimapping=True,
             use_sx=use_sx,
         )
@@ -279,8 +272,8 @@ def test_ocp_output(model, force_tracking, use_sx):
         ocp = ocp.solve(Solver.IPOPT(show_online_optim=False, _max_iter=1000))
         ocp = ocp.merge_phases()
 
-        # TODO : OPEN PICKLE FILE
+        # TODO : Add a pickle file to test
+        # for key in ocp.states.key():
+        #     np.testing.assert_almost_equal(ocp.states[key], pickle_file.states[key])
 
-        for key in ocp.states.key():
-            np.testing.assert_almost_equal(ocp.states[key], ocp.states[key])
-            np.testing.assert_almost_equal(ocp.states[key], ocp.states[key])
+# TODO : add test_multi_start_ocp

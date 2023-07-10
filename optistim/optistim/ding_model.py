@@ -5,8 +5,8 @@ different custom models.
 """
 from typing import Callable
 
-import numpy as np
 from casadi import MX, SX, exp, vertcat, Function, sum1, horzcat, tanh, if_else
+import numpy as np
 
 from bioptim import (
     ConfigureProblem,

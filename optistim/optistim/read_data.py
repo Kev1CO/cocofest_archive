@@ -1,9 +1,9 @@
-import numpy as np
 import csv
-from biosiglive import load
-import matplotlib.pyplot as plt
 from math import ceil
-from bioptim import BiorbdModel
+import matplotlib.pyplot as plt
+import numpy as np
+
+from biosiglive import load
 
 
 class ExtractData:
@@ -53,6 +53,3 @@ class ExtractData:
         plt.legend()
         plt.show()
 
-
-if __name__ == "__main__":
-    ExtractData.load_data()

@@ -1,13 +1,10 @@
 import pytest
-from optistim.fes_ocp import FunctionalElectricStimulationOptimalControlProgram
-from optistim.fes_multi_start import FunctionalElectricStimulationMultiStart
+import shutil
 
-from optistim.read_data import (
-    ExtractData,
-)
-from optistim.ding_model import DingModelFrequency, DingModelPulseDurationFrequency, DingModelIntensityFrequency
+from optistim import FunctionalElectricStimulationOptimalControlProgram, FunctionalElectricStimulationMultiStart, ExtractData, DingModelFrequency, DingModelPulseDurationFrequency, DingModelIntensityFrequency
 
-time, force = ExtractData.load_data("../examples/data/cycling_motion_results.bio")
+
+time, force = ExtractData.load_data("../examples/data/hand_cycling_force.bio")
 init_force = force - force[0]
 init_n_stim = 3
 init_final_time = 0.3
@@ -31,18 +28,18 @@ init_end_node_tracking = 40
         (DingModelFrequency(), None, None, None, None, None, None, None, None),
         (DingModelPulseDurationFrequency(), 0.0002, None, None, None, None, None, None, None),
         (DingModelPulseDurationFrequency(), None, 0, 0.0006, False, None, None, None, None),
-        (DingModelPulseDurationFrequency(), None, 0, 0.0006, True, None, None, None, None),
+        # (DingModelPulseDurationFrequency(), None, 0, 0.0006, True, None, None, None, None), parameter mapping not yet implemented
         (DingModelIntensityFrequency(), None, None, None, None, 20, None, None, None),
         (DingModelIntensityFrequency(), None, None, None, None, None, 0, 130, False),
-        (DingModelIntensityFrequency(), None, None, None, None, None, 0, 130, True),
+        # (DingModelIntensityFrequency(), None, None, None, None, None, 0, 130, True), parameter mapping not yet implemented
     ],
 )
 @pytest.mark.parametrize(
     "time_min, time_max, time_bimapping",
     [
         (None, None, None),
-        ([0.01 for _ in range(init_n_stim)], [0.1 for _ in range(init_n_stim)], False),
-        ([0.01 for _ in range(init_n_stim)], [0.1 for _ in range(init_n_stim)], True),
+        (0.01, 0.1, False),
+        (0.01, 0.1, True),
     ],
 )
 @pytest.mark.parametrize("use_sx", [False, True])
@@ -150,16 +147,19 @@ def test_multi_start_building(force_tracking, end_node_tracking):
         frequency=[None],
         force_tracking=[force_tracking],
         end_node_tracking=[end_node_tracking],
-        time_min=[[0.01 for _ in range(10)]],
-        time_max=[[0.1 for _ in range(10)]],
+        time_min=[0.01],
+        time_max=[0.1],
         time_bimapping=[False],
         pulse_time=[None],
         pulse_time_min=[0],
         pulse_time_max=[0.0006],
-        pulse_time_bimapping=[False],
+        pulse_time_bimapping=[None],
         pulse_intensity=[None],
         pulse_intensity_min=[0],
         pulse_intensity_max=[130],
         pulse_intensity_bimapping=[None],
         path_folder="./temp",
     )
+
+    # --- Delete the temp file ---#
+    shutil.rmtree("./temp")

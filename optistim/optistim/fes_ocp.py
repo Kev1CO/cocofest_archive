@@ -1,6 +1,8 @@
+import numpy as np
+
 from bioptim import (
     BiMapping,
-    BiMappingList,
+    # BiMappingList, parameter mapping not yet implemented
     BoundsList,
     ConstraintFcn,
     ConstraintList,
@@ -17,12 +19,8 @@ from bioptim import (
     ParameterList,
 )
 
-import numpy as np
-
-from optistim.custom_objectives import CustomObjective
-
+from .custom_objectives import CustomObjective
 from .fourier_approx import FourierSeries
-
 from .ding_model import DingModelFrequency, DingModelPulseDurationFrequency, DingModelIntensityFrequency
 
 
@@ -45,9 +43,9 @@ class FunctionalElectricStimulationOptimalControlProgram(OptimalControlProgram):
         List of time and associated force to track during ocp optimisation
     end_node_tracking: int | float
         Force objective value to reach at the last node
-    time_min: list[int] | list[float]
+    time_min: int | float
         Minimum time for a phase
-    time_max: list[int] | list[float]
+    time_max: int | float
         Maximum time for a phase
     time_bimapping: bool
         Set phase time constant
@@ -93,8 +91,8 @@ class FunctionalElectricStimulationOptimalControlProgram(OptimalControlProgram):
         final_time: float = None,
         force_tracking: list[np.ndarray, np.ndarray] = None,
         end_node_tracking: int | float = None,
-        time_min: list[int] | list[float] = None,
-        time_max: list[int] | list[float] = None,
+        time_min: int | float = None,
+        time_max: int | float = None,
         time_bimapping: bool = None,
         pulse_time: int | float = None,
         pulse_time_min: int | float = None,
@@ -108,7 +106,7 @@ class FunctionalElectricStimulationOptimalControlProgram(OptimalControlProgram):
     ):
         self.ding_model = ding_model
 
-        if force_tracking:
+        if force_tracking is not None:
             force_fourier_coef = FourierSeries()
             if isinstance(force_tracking, list):
                 if isinstance(force_tracking[0], np.ndarray) and isinstance(force_tracking[1], np.ndarray):
@@ -137,7 +135,7 @@ class FunctionalElectricStimulationOptimalControlProgram(OptimalControlProgram):
         self.n_shooting = [n_shooting] * n_stim
 
         constraints = ConstraintList()
-        bimapping = BiMappingList()
+        # parameter_bimapping = BiMappingList()
         phase_time_bimapping = None
         if time_min is None and time_max is None:
             step = final_time / n_stim
@@ -149,17 +147,13 @@ class FunctionalElectricStimulationOptimalControlProgram(OptimalControlProgram):
             raise ValueError("time_min and time_max must be both entered or none of them in order to work")
 
         else:
-            if len(time_min) != n_stim or len(time_max) != n_stim:
-                raise ValueError("Length of time_min and time_max must be equal to n_stim")
-
             for i in range(n_stim):
                 constraints.add(
-                    ConstraintFcn.TIME_CONSTRAINT, node=Node.END, min_bound=time_min[i], max_bound=time_max[i], phase=i,
+                    ConstraintFcn.TIME_CONSTRAINT, node=Node.END, min_bound=time_min, max_bound=time_max, phase=i,
                 )
 
             if time_bimapping is True:
                 phase_time_bimapping = BiMapping(to_second=[0 for _ in range(n_stim)], to_first=[0])
-                # bimapping.add(name="time", to_second=[0 for _ in range(n_stim)], to_first=[0])
 
             self.final_time_phase = [0.01] * n_stim
 
@@ -221,8 +215,11 @@ class FunctionalElectricStimulationOptimalControlProgram(OptimalControlProgram):
 
             if pulse_time_bimapping is not None:
                 if pulse_time_bimapping is True:
-                    bimapping.add(name="pulse_duration", to_second=[0 for _ in range(n_stim)], to_first=[0])
-                    # TODO : Fix Bimapping in Bioptim, not working
+                    raise ValueError(
+                        "Parameter mapping in bioptim not yet implemented"
+                    )
+                    # parameter_bimapping.add(name="pulse_duration", to_second=[0 for _ in range(n_stim)], to_first=[0])
+                    # TODO : Fix Bimapping in Bioptim
 
         if isinstance(ding_model, DingModelIntensityFrequency):
             if pulse_intensity is None and pulse_intensity_min is None and pulse_intensity_max is None:
@@ -281,8 +278,11 @@ class FunctionalElectricStimulationOptimalControlProgram(OptimalControlProgram):
 
             if pulse_intensity_bimapping is not None:
                 if pulse_intensity_bimapping is True:
-                    bimapping.add(name="pulse_intensity", to_second=[0 for _ in range(n_stim)], to_first=[0])
-                    # TODO : Fix Bimapping in Bioptim, not working
+                    raise ValueError(
+                        "Parameter mapping in bioptim not yet implemented"
+                    )
+                    # parameter_bimapping.add(name="pulse_intensity", to_second=[0 for _ in range(n_stim)], to_first=[0])
+                    # TODO : Fix Bimapping in Bioptim
 
         self.n_stim = n_stim
         self._declare_dynamics()
@@ -410,7 +410,7 @@ class FunctionalElectricStimulationOptimalControlProgram(OptimalControlProgram):
                         self.objective_functions.add(self.kwargs["objective"][i])
                 else:
                     raise ValueError("All elements in objective kwarg must be an Objective type")
-        # TODO : Test this new feature
+
         if self.force_fourier_coef is not None:
             for phase in range(self.n_stim):
                 for i in range(self.n_shooting[phase]):
@@ -449,8 +449,8 @@ class FunctionalElectricStimulationOptimalControlProgram(OptimalControlProgram):
         end_node_tracking: int | float = None,
         frequency: int | float = None,
         round_down: bool = False,
-        time_min: list[int] | list[float] = None,
-        time_max: list[int] | list[float] = None,
+        time_min: int | float = None,
+        time_max: int | float = None,
         time_bimapping: bool = None,
         pulse_time: int | float = None,
         pulse_time_min: int | float = None,
@@ -501,8 +501,8 @@ class FunctionalElectricStimulationOptimalControlProgram(OptimalControlProgram):
         frequency: int | float = None,
         force_tracking: list[np.ndarray, np.ndarray] = None,
         end_node_tracking: int | float = None,
-        time_min: list[int] | list[float] = None,
-        time_max: list[int] | list[float] = None,
+        time_min: int | float = None,
+        time_max: int | float = None,
         time_bimapping: bool = None,
         pulse_time: int | float = None,
         pulse_time_min: int | float = None,

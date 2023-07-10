@@ -3,9 +3,10 @@ This custom objective is to enable the tracking of a curve by a state at all nod
 such as functional electro stimulation
 """
 import numpy as np
-from bioptim import PenaltyController
 from casadi import MX, SX, minus, fabs
-from optistim.fourier_approx import FourierSeries
+
+from bioptim import PenaltyController
+from .fourier_approx import FourierSeries
 
 
 class CustomObjective:

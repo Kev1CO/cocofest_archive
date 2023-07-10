@@ -1,8 +1,7 @@
 from casadi import cos, sin
+import matplotlib.pyplot as plt
 import numpy as np
 import scipy.integrate as spi
-import matplotlib.pyplot as plt
-from .read_data import ExtractData
 
 
 class FourierSeries:
@@ -48,25 +47,3 @@ class FourierSeries:
         plt.plot(x, y_approx, color="red", linewidth=1)
         plt.show()
         return y_approx
-
-
-def main():
-    datas = ExtractData().data("D:\These\Experiences\Pedales_instrumentees\Donnees\Results-pedalage_15rpm_001.lvm")
-    time, force = ExtractData().time_force(datas, 75.25, 76.25)  # instrumented handle
-
-    # time, force = ExtractData.load_data()  # muscle
-
-    fourier_fun = FourierSeries()
-    # fourier_fun.p = 76.25 - 75.25
-    fourier_fun.p = 1
-    fourier_coef = fourier_fun.compute_real_fourier_coeffs(time, force, 10)
-
-    y_approx = FourierSeries().fit_func_by_fourier_series_with_real_coeffs(time, fourier_coef)
-    # plot, in the range from 0 to P, the true f(t) in blue and the approximation in red
-    plt.scatter(time, force, color="blue", s=5, marker=".")
-    plt.plot(time, y_approx, color="red", linewidth=1)
-    plt.show()
-
-
-if __name__ == "__main__":
-    main()
