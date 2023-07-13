@@ -277,7 +277,12 @@ class DingModelFrequency:
 
     @staticmethod
     def dynamics(
-        states: MX | SX, controls: MX | SX, parameters: MX | SX, nlp: NonLinearProgram, t=None, nb_phases=None,
+        states: MX | SX,
+        controls: MX | SX,
+        parameters: MX | SX,
+        nlp: NonLinearProgram,
+        t=None,
+        nb_phases=None,
     ) -> DynamicsEvaluation:
         """
         Functional electrical stimulation dynamic
@@ -418,7 +423,13 @@ class DingModelFrequency:
         name = "Cn"
         name_cn = [name]
         ConfigureProblem.configure_new_variable(
-            name, name_cn, ocp, nlp, as_states, as_controls, as_states_dot,
+            name,
+            name_cn,
+            ocp,
+            nlp,
+            as_states,
+            as_controls,
+            as_states_dot,
         )
 
     @staticmethod
@@ -448,7 +459,13 @@ class DingModelFrequency:
         name = "F"
         name_f = [name]
         ConfigureProblem.configure_new_variable(
-            name, name_f, ocp, nlp, as_states, as_controls, as_states_dot,
+            name,
+            name_f,
+            ocp,
+            nlp,
+            as_states,
+            as_controls,
+            as_states_dot,
         )
 
     @staticmethod
@@ -478,7 +495,13 @@ class DingModelFrequency:
         name = "A"
         name_a = [name]
         ConfigureProblem.configure_new_variable(
-            name, name_a, ocp, nlp, as_states, as_controls, as_states_dot,
+            name,
+            name_a,
+            ocp,
+            nlp,
+            as_states,
+            as_controls,
+            as_states_dot,
         )
 
     @staticmethod
@@ -508,7 +531,13 @@ class DingModelFrequency:
         name = "Tau1"
         name_tau1 = [name]
         ConfigureProblem.configure_new_variable(
-            name, name_tau1, ocp, nlp, as_states, as_controls, as_states_dot,
+            name,
+            name_tau1,
+            ocp,
+            nlp,
+            as_states,
+            as_controls,
+            as_states_dot,
         )
 
     @staticmethod
@@ -538,7 +567,13 @@ class DingModelFrequency:
         name = "Km"
         name_km = [name]
         ConfigureProblem.configure_new_variable(
-            name, name_km, ocp, nlp, as_states, as_controls, as_states_dot,
+            name,
+            name_km,
+            ocp,
+            nlp,
+            as_states,
+            as_controls,
+            as_states_dot,
         )
 
     @staticmethod
@@ -702,7 +737,12 @@ class DingModelPulseDurationFrequency(DingModelFrequency):
 
     @staticmethod
     def dynamics(
-        states: MX | SX, controls: MX | SX, parameters: MX | SX, nlp: NonLinearProgram, t=None, nb_phases=None,
+        states: MX | SX,
+        controls: MX | SX,
+        parameters: MX | SX,
+        nlp: NonLinearProgram,
+        t=None,
+        nb_phases=None,
     ) -> DynamicsEvaluation:
         """
         Functional electrical stimulation dynamic
@@ -1015,7 +1055,12 @@ class DingModelIntensityFrequency(DingModelFrequency):
 
     @staticmethod
     def dynamics(
-        states: MX | SX, controls: MX | SX, parameters: MX | SX, nlp: NonLinearProgram, t=None, nb_phases=None,
+        states: MX | SX,
+        controls: MX | SX,
+        parameters: MX | SX,
+        nlp: NonLinearProgram,
+        t=None,
+        nb_phases=None,
     ) -> DynamicsEvaluation:
         """
         Functional electrical stimulation dynamic

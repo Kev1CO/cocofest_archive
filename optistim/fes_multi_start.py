@@ -186,52 +186,54 @@ class FunctionalElectricStimulationMultiStart(MultiStart):
             pulse_intensity_bimapping,
         ) = combinatorial_parameters
 
-        if force_tracking is None :
+        if force_tracking is None:
             force_tracking_state = False
         else:
             force_tracking_state = True
-        if end_node_tracking is None :
+        if end_node_tracking is None:
             end_node_state = False
         else:
             end_node_state = True
-        if time_min or time_max is None :
+        if time_min or time_max is None:
             time_parameter = False
         else:
             time_parameter = True
 
         if frequency is None:
-            frequency = n_stim/final_time
+            frequency = n_stim / final_time
 
-        file_list = [f"{save_path}/DingModelPulseDurationFrequency_multi_start_{n_stim}_stimulation_{n_shooting}_node_shooting_force_tracking_{time_min}_min_{time_max}_max_time_bimapped{time_bimapping}_and_{pulse_time_min}_min_{pulse_time_max}_max_pulse_time_bimapped{pulse_time_bimapping}.pkl",
-                     f"{save_path}/DingModelPulseDurationFrequency_multi_start_{n_stim}_stimulation_{n_shooting}_node_shooting_{end_node_tracking}N_end_node_tracking_{time_min}_min_{time_max}_max_time_bimapped{time_bimapping}_and_{pulse_time_min}_min_{pulse_time_max}_max_pulse_time_bimapped{pulse_time_bimapping}.pkl",
-                     f"{save_path}/DingModelPulseDurationFrequency_multi_start_{n_stim}_stimulation_{n_shooting}_node_shooting_{time_min}_min_{time_max}_max_time_bimapped{time_bimapping}_and_{pulse_time_min}_min_{pulse_time_max}_max_pulse_time_bimapped{pulse_time_bimapping}.pkl",
-                     f"{save_path}/DingModelPulseDurationFrequency_multi_start_{n_stim}_stimulation_{n_shooting}_node_shooting_force_tracking_{frequency}_HZ_and_{pulse_time_min}_min_{pulse_time_max}_max_pulse_time_bimapped{pulse_time_bimapping}.pkl",
-                     f"{save_path}/DingModelPulseDurationFrequency_multi_start_{n_stim}_stimulation_{n_shooting}_node_shooting_{end_node_tracking}N_end_node_tracking_{frequency}_HZ_and_{pulse_time_min}_min_{pulse_time_max}_max_pulse_time_bimapped{pulse_time_bimapping}.pkl",
-                     f"{save_path}/DingModelPulseDurationFrequency_multi_start_{n_stim}_stimulation_{n_shooting}_node_shooting_{frequency}_HZ_and_{pulse_time_min}_min_{pulse_time_max}_max_pulse_time_bimapped{pulse_time_bimapping}.pkl",
-                     f"{save_path}/DingModelPulseDurationFrequency_multi_start_{n_stim}_stimulation_{n_shooting}_node_shooting_force_tracking_{time_min}_min_{time_max}_max_time_bimapped{time_bimapping}_and_{pulse_time}_pulse_time.pkl",
-                     f"{save_path}/DingModelPulseDurationFrequency_multi_start_{n_stim}_stimulation_{n_shooting}_node_shooting_{end_node_tracking}N_end_node_tracking_{time_min}_min_{time_max}_max_time_bimapped{time_bimapping}_and_{pulse_time}_pulse_time.pkl",
-                     f"{save_path}/DingModelPulseDurationFrequency_multi_start_{n_stim}_stimulation_{n_shooting}_node_shooting_{time_min}_min_{time_max}_max_time_bimapped{time_bimapping}_and_{pulse_time}_pulse_time.pkl",
-                     f"{save_path}/DingModelPulseDurationFrequency_multi_start_{n_stim}_stimulation_{n_shooting}_node_shooting_force_tracking_{frequency}_HZ_and_{pulse_time}_pulse_time.pkl",
-                     f"{save_path}/DingModelPulseDurationFrequency_multi_start_{n_stim}_stimulation_{n_shooting}_node_shooting_{end_node_tracking}N_end_node_tracking_{frequency}_HZ_and_{pulse_time}_pulse_time.pkl",
-                     f"{save_path}/DingModelPulseDurationFrequency_multi_start_{n_stim}_stimulation_{n_shooting}_node_shooting_{frequency}_HZ_and_{pulse_time}_pulse_time.pkl",
-                     f"{save_path}/DingModelIntensityFrequency_multi_start_{n_stim}_stimulation_{n_shooting}_node_shooting_force_tracking_{time_min}_min_{time_max}_max_time_bimapped{time_bimapping}_and_{pulse_intensity_min}_min_{pulse_intensity_max}_max_pulse_intensity_bimapped{pulse_intensity_bimapping}.pkl",
-                     f"{save_path}/DingModelIntensityFrequency_multi_start_{n_stim}_stimulation_{n_shooting}_node_shooting_{end_node_tracking}N_end_node_tracking_{time_min}_min_{time_max}_max_time_bimapped{time_bimapping}_and_{pulse_intensity_min}_min_{pulse_intensity_max}_max_pulse_intensity_bimapped{pulse_intensity_bimapping}.pkl",
-                     f"{save_path}/DingModelIntensityFrequency_multi_start_{n_stim}_stimulation_{n_shooting}_node_shooting_{time_min}_min_{time_max}_max_time_bimapped{time_bimapping}_and_{pulse_intensity_min}_min_{pulse_intensity_max}_max_pulse_intensity_bimapped{pulse_intensity_bimapping}.pkl",
-                     f"{save_path}/DingModelIntensityFrequency_multi_start_{n_stim}_stimulation_{n_shooting}_node_shooting_force_tracking_{frequency}_HZ_and_{pulse_intensity_min}_min_{pulse_intensity_max}_max_pulse_intensity_bimapped{pulse_intensity_bimapping}.pkl",
-                     f"{save_path}/DingModelIntensityFrequency_multi_start_{n_stim}_stimulation_{n_shooting}_node_shooting_{end_node_tracking}N_end_node_tracking_{frequency}_HZ_and_{pulse_intensity_min}_min_{pulse_intensity_max}_max_pulse_intensity_bimapped{pulse_intensity_bimapping}.pkl",
-                     f"{save_path}/DingModelIntensityFrequency_multi_start_{n_stim}_stimulation_{n_shooting}_node_shooting_{frequency}_HZ_and_{pulse_intensity_min}_min_{pulse_intensity_max}_max_pulse_intensity_bimapped{pulse_intensity_bimapping}.pkl",
-                     f"{save_path}/DingModelIntensityFrequency_multi_start_{n_stim}_stimulation_{n_shooting}_node_shooting_force_tracking_{time_min}_min_{time_max}_max_time_bimapped{time_bimapping}_and_{pulse_intensity}_pulse_intensity.pkl",
-                     f"{save_path}/DingModelIntensityFrequency_multi_start_{n_stim}_stimulation_{n_shooting}_node_shooting_{end_node_tracking}N_end_node_tracking_{time_min}_min_{time_max}_max_time_bimapped{time_bimapping}_and_{pulse_intensity}_pulse_intensity.pkl",
-                     f"{save_path}/DingModelIntensityFrequency_multi_start_{n_stim}_stimulation_{n_shooting}_node_shooting_{time_min}_min_{time_max}_max_time_bimapped{time_bimapping}_and_{pulse_intensity}_pulse_intensity.pkl",
-                     f"{save_path}/DingModelIntensityFrequency_multi_start_{n_stim}_stimulation_{n_shooting}_node_shooting_force_tracking_{frequency}_HZ_and_{pulse_intensity}_pulse_intensity.pkl",
-                     f"{save_path}/DingModelIntensityFrequency_multi_start_{n_stim}_stimulation_{n_shooting}_node_shooting_{end_node_tracking}N_end_node_tracking_{frequency}_HZ_and_{pulse_intensity}_pulse_intensity.pkl",
-                     f"{save_path}/DingModelIntensityFrequency_multi_start_{n_stim}_stimulation_{n_shooting}_node_shooting_{frequency}_HZ_and_{pulse_intensity}_pulse_intensity.pkl",
-                     f"{save_path}/DingModelFrequency_multi_start_{n_stim}_stimulation_{n_shooting}_node_shooting_force_tracking_{time_min}_min_{time_max}_max_time_bimapped{time_bimapping}.pkl",
-                     f"{save_path}/DingModelFrequency_multi_start_{n_stim}_stimulation_{n_shooting}_node_shooting_{end_node_tracking}N_end_node_tracking_{time_min}_min_{time_max}_max_time_bimapped{time_bimapping}.pkl",
-                     f"{save_path}/DingModelFrequency_multi_start_{n_stim}_stimulation_{n_shooting}_node_shooting_{time_min}_min_{time_max}_max_time_bimapped{time_bimapping}.pkl",
-                     f"{save_path}/DingModelFrequency_multi_start_{n_stim}_stimulation_{n_shooting}_node_shooting_force_tracking_{frequency}_HZ.pkl",
-                     f"{save_path}/DingModelFrequency_multi_start_{n_stim}_stimulation_{n_shooting}_node_shooting_{end_node_tracking}N_end_node_tracking_{frequency}_HZ.pkl",
-                     f"{save_path}/DingModelFrequency_multi_start_{n_stim}_stimulation_{n_shooting}_node_shooting_{frequency}_HZ.pkl"]
+        file_list = [
+            f"{save_path}/DingModelPulseDurationFrequency_multi_start_{n_stim}_stimulation_{n_shooting}_node_shooting_force_tracking_{time_min}_min_{time_max}_max_time_bimapped{time_bimapping}_and_{pulse_time_min}_min_{pulse_time_max}_max_pulse_time_bimapped{pulse_time_bimapping}.pkl",
+            f"{save_path}/DingModelPulseDurationFrequency_multi_start_{n_stim}_stimulation_{n_shooting}_node_shooting_{end_node_tracking}N_end_node_tracking_{time_min}_min_{time_max}_max_time_bimapped{time_bimapping}_and_{pulse_time_min}_min_{pulse_time_max}_max_pulse_time_bimapped{pulse_time_bimapping}.pkl",
+            f"{save_path}/DingModelPulseDurationFrequency_multi_start_{n_stim}_stimulation_{n_shooting}_node_shooting_{time_min}_min_{time_max}_max_time_bimapped{time_bimapping}_and_{pulse_time_min}_min_{pulse_time_max}_max_pulse_time_bimapped{pulse_time_bimapping}.pkl",
+            f"{save_path}/DingModelPulseDurationFrequency_multi_start_{n_stim}_stimulation_{n_shooting}_node_shooting_force_tracking_{frequency}_HZ_and_{pulse_time_min}_min_{pulse_time_max}_max_pulse_time_bimapped{pulse_time_bimapping}.pkl",
+            f"{save_path}/DingModelPulseDurationFrequency_multi_start_{n_stim}_stimulation_{n_shooting}_node_shooting_{end_node_tracking}N_end_node_tracking_{frequency}_HZ_and_{pulse_time_min}_min_{pulse_time_max}_max_pulse_time_bimapped{pulse_time_bimapping}.pkl",
+            f"{save_path}/DingModelPulseDurationFrequency_multi_start_{n_stim}_stimulation_{n_shooting}_node_shooting_{frequency}_HZ_and_{pulse_time_min}_min_{pulse_time_max}_max_pulse_time_bimapped{pulse_time_bimapping}.pkl",
+            f"{save_path}/DingModelPulseDurationFrequency_multi_start_{n_stim}_stimulation_{n_shooting}_node_shooting_force_tracking_{time_min}_min_{time_max}_max_time_bimapped{time_bimapping}_and_{pulse_time}_pulse_time.pkl",
+            f"{save_path}/DingModelPulseDurationFrequency_multi_start_{n_stim}_stimulation_{n_shooting}_node_shooting_{end_node_tracking}N_end_node_tracking_{time_min}_min_{time_max}_max_time_bimapped{time_bimapping}_and_{pulse_time}_pulse_time.pkl",
+            f"{save_path}/DingModelPulseDurationFrequency_multi_start_{n_stim}_stimulation_{n_shooting}_node_shooting_{time_min}_min_{time_max}_max_time_bimapped{time_bimapping}_and_{pulse_time}_pulse_time.pkl",
+            f"{save_path}/DingModelPulseDurationFrequency_multi_start_{n_stim}_stimulation_{n_shooting}_node_shooting_force_tracking_{frequency}_HZ_and_{pulse_time}_pulse_time.pkl",
+            f"{save_path}/DingModelPulseDurationFrequency_multi_start_{n_stim}_stimulation_{n_shooting}_node_shooting_{end_node_tracking}N_end_node_tracking_{frequency}_HZ_and_{pulse_time}_pulse_time.pkl",
+            f"{save_path}/DingModelPulseDurationFrequency_multi_start_{n_stim}_stimulation_{n_shooting}_node_shooting_{frequency}_HZ_and_{pulse_time}_pulse_time.pkl",
+            f"{save_path}/DingModelIntensityFrequency_multi_start_{n_stim}_stimulation_{n_shooting}_node_shooting_force_tracking_{time_min}_min_{time_max}_max_time_bimapped{time_bimapping}_and_{pulse_intensity_min}_min_{pulse_intensity_max}_max_pulse_intensity_bimapped{pulse_intensity_bimapping}.pkl",
+            f"{save_path}/DingModelIntensityFrequency_multi_start_{n_stim}_stimulation_{n_shooting}_node_shooting_{end_node_tracking}N_end_node_tracking_{time_min}_min_{time_max}_max_time_bimapped{time_bimapping}_and_{pulse_intensity_min}_min_{pulse_intensity_max}_max_pulse_intensity_bimapped{pulse_intensity_bimapping}.pkl",
+            f"{save_path}/DingModelIntensityFrequency_multi_start_{n_stim}_stimulation_{n_shooting}_node_shooting_{time_min}_min_{time_max}_max_time_bimapped{time_bimapping}_and_{pulse_intensity_min}_min_{pulse_intensity_max}_max_pulse_intensity_bimapped{pulse_intensity_bimapping}.pkl",
+            f"{save_path}/DingModelIntensityFrequency_multi_start_{n_stim}_stimulation_{n_shooting}_node_shooting_force_tracking_{frequency}_HZ_and_{pulse_intensity_min}_min_{pulse_intensity_max}_max_pulse_intensity_bimapped{pulse_intensity_bimapping}.pkl",
+            f"{save_path}/DingModelIntensityFrequency_multi_start_{n_stim}_stimulation_{n_shooting}_node_shooting_{end_node_tracking}N_end_node_tracking_{frequency}_HZ_and_{pulse_intensity_min}_min_{pulse_intensity_max}_max_pulse_intensity_bimapped{pulse_intensity_bimapping}.pkl",
+            f"{save_path}/DingModelIntensityFrequency_multi_start_{n_stim}_stimulation_{n_shooting}_node_shooting_{frequency}_HZ_and_{pulse_intensity_min}_min_{pulse_intensity_max}_max_pulse_intensity_bimapped{pulse_intensity_bimapping}.pkl",
+            f"{save_path}/DingModelIntensityFrequency_multi_start_{n_stim}_stimulation_{n_shooting}_node_shooting_force_tracking_{time_min}_min_{time_max}_max_time_bimapped{time_bimapping}_and_{pulse_intensity}_pulse_intensity.pkl",
+            f"{save_path}/DingModelIntensityFrequency_multi_start_{n_stim}_stimulation_{n_shooting}_node_shooting_{end_node_tracking}N_end_node_tracking_{time_min}_min_{time_max}_max_time_bimapped{time_bimapping}_and_{pulse_intensity}_pulse_intensity.pkl",
+            f"{save_path}/DingModelIntensityFrequency_multi_start_{n_stim}_stimulation_{n_shooting}_node_shooting_{time_min}_min_{time_max}_max_time_bimapped{time_bimapping}_and_{pulse_intensity}_pulse_intensity.pkl",
+            f"{save_path}/DingModelIntensityFrequency_multi_start_{n_stim}_stimulation_{n_shooting}_node_shooting_force_tracking_{frequency}_HZ_and_{pulse_intensity}_pulse_intensity.pkl",
+            f"{save_path}/DingModelIntensityFrequency_multi_start_{n_stim}_stimulation_{n_shooting}_node_shooting_{end_node_tracking}N_end_node_tracking_{frequency}_HZ_and_{pulse_intensity}_pulse_intensity.pkl",
+            f"{save_path}/DingModelIntensityFrequency_multi_start_{n_stim}_stimulation_{n_shooting}_node_shooting_{frequency}_HZ_and_{pulse_intensity}_pulse_intensity.pkl",
+            f"{save_path}/DingModelFrequency_multi_start_{n_stim}_stimulation_{n_shooting}_node_shooting_force_tracking_{time_min}_min_{time_max}_max_time_bimapped{time_bimapping}.pkl",
+            f"{save_path}/DingModelFrequency_multi_start_{n_stim}_stimulation_{n_shooting}_node_shooting_{end_node_tracking}N_end_node_tracking_{time_min}_min_{time_max}_max_time_bimapped{time_bimapping}.pkl",
+            f"{save_path}/DingModelFrequency_multi_start_{n_stim}_stimulation_{n_shooting}_node_shooting_{time_min}_min_{time_max}_max_time_bimapped{time_bimapping}.pkl",
+            f"{save_path}/DingModelFrequency_multi_start_{n_stim}_stimulation_{n_shooting}_node_shooting_force_tracking_{frequency}_HZ.pkl",
+            f"{save_path}/DingModelFrequency_multi_start_{n_stim}_stimulation_{n_shooting}_node_shooting_{end_node_tracking}N_end_node_tracking_{frequency}_HZ.pkl",
+            f"{save_path}/DingModelFrequency_multi_start_{n_stim}_stimulation_{n_shooting}_node_shooting_{frequency}_HZ.pkl",
+        ]
 
         if isinstance(ding_model, DingModelPulseDurationFrequency):
             if pulse_time_min or pulse_time_max is None:
@@ -326,7 +328,12 @@ class FunctionalElectricStimulationMultiStart(MultiStart):
                 " DingModelIntensityFrequency",
             )
 
-    def save_results(self, sol: Solution, *combinatorial_parameters, **extra_parameters,) -> None:
+    def save_results(
+        self,
+        sol: Solution,
+        *combinatorial_parameters,
+        **extra_parameters,
+    ) -> None:
         """
         Callback of the post_optimization_callback, this can be used to save the results
 
@@ -433,7 +440,6 @@ class FunctionalElectricStimulationMultiStart(MultiStart):
         pulse_intensity_max: int | float = None,
         pulse_intensity_bimapping: bool = None,
     ):
-
         if self.methode is None or self.methode == "standard":
             ocp = FunctionalElectricStimulationOptimalControlProgram(
                 ding_model=model,
@@ -454,7 +460,11 @@ class FunctionalElectricStimulationMultiStart(MultiStart):
                 pulse_intensity_max=pulse_intensity_max,
                 pulse_intensity_bimapping=pulse_intensity_bimapping,
                 use_sx=True,
-                objective=None if self.kwarg_fes is None else None if "objective" not in self.kwarg_fes else self.kwarg_fes["objective"]
+                objective=None
+                if self.kwarg_fes is None
+                else None
+                if "objective" not in self.kwarg_fes
+                else self.kwarg_fes["objective"],
             )
 
         elif self.methode == "from_frequency_and_final_time":
@@ -478,7 +488,11 @@ class FunctionalElectricStimulationMultiStart(MultiStart):
                 pulse_intensity_max=pulse_intensity_max,
                 pulse_intensity_bimapping=pulse_intensity_bimapping,
                 use_sx=True,
-                objective=None if self.kwarg_fes is None else None if "objective" not in self.kwarg_fes else self.kwarg_fes["objective"]
+                objective=None
+                if self.kwarg_fes is None
+                else None
+                if "objective" not in self.kwarg_fes
+                else self.kwarg_fes["objective"],
             )
 
         elif self.methode == "from_frequency_and_n_stim":
@@ -501,7 +515,11 @@ class FunctionalElectricStimulationMultiStart(MultiStart):
                 pulse_intensity_max=pulse_intensity_max,
                 pulse_intensity_bimapping=pulse_intensity_bimapping,
                 use_sx=True,
-                objective=None if self.kwarg_fes is None else None if "objective" not in self.kwarg_fes else self.kwarg_fes["objective"]
+                objective=None
+                if self.kwarg_fes is None
+                else None
+                if "objective" not in self.kwarg_fes
+                else self.kwarg_fes["objective"],
             )
 
         else:

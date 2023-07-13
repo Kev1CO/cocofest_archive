@@ -17,6 +17,7 @@ from bioptim import (
     OdeSolver,
     OptimalControlProgram,
     ParameterList,
+    ParameterObjectiveList,
 )
 
 from .custom_objectives import CustomObjective
@@ -149,7 +150,11 @@ class FunctionalElectricStimulationOptimalControlProgram(OptimalControlProgram):
         else:
             for i in range(n_stim):
                 constraints.add(
-                    ConstraintFcn.TIME_CONSTRAINT, node=Node.END, min_bound=time_min, max_bound=time_max, phase=i,
+                    ConstraintFcn.TIME_CONSTRAINT,
+                    node=Node.END,
+                    min_bound=time_min,
+                    max_bound=time_max,
+                    phase=i,
                 )
 
             if time_bimapping is True:
@@ -160,6 +165,7 @@ class FunctionalElectricStimulationOptimalControlProgram(OptimalControlProgram):
         parameters = ParameterList()
         parameters_bounds = BoundsList()
         parameters_init = InitialGuessList()
+        parameter_objectives = ParameterObjectiveList()
         if isinstance(ding_model, DingModelPulseDurationFrequency):
             if pulse_time is None and pulse_time_min is not None and pulse_time_max is None:
                 raise ValueError("Time pulse or Time pulse min max bounds need to be set for this model")
@@ -178,9 +184,11 @@ class FunctionalElectricStimulationOptimalControlProgram(OptimalControlProgram):
             if pulse_time is not None:
                 if isinstance(pulse_time, int | float):
                     if pulse_time < minimum_pulse_duration:
-                        raise ValueError(f"The pulse duration set ({pulse_time})"
-                                         f" is lower than minimum duration required."
-                                         f" Set a value above {minimum_pulse_duration} seconds ")
+                        raise ValueError(
+                            f"The pulse duration set ({pulse_time})"
+                            f" is lower than minimum duration required."
+                            f" Set a value above {minimum_pulse_duration} seconds "
+                        )
 
                     parameters_bounds.add(
                         "pulse_duration",
@@ -203,9 +211,11 @@ class FunctionalElectricStimulationOptimalControlProgram(OptimalControlProgram):
                 if pulse_time_max < pulse_time_min:
                     raise ValueError("The set minimum pulse duration is higher than maximum pulse duration.")
                 if pulse_time_min < minimum_pulse_duration:
-                    raise ValueError(f"The pulse duration set ({pulse_time_min})"
-                                     f" is lower than minimum duration required."
-                                     f" Set a value above {minimum_pulse_duration} seconds ")
+                    raise ValueError(
+                        f"The pulse duration set ({pulse_time_min})"
+                        f" is lower than minimum duration required."
+                        f" Set a value above {minimum_pulse_duration} seconds "
+                    )
 
                 parameters_bounds.add(
                     "pulse_duration",
@@ -226,11 +236,17 @@ class FunctionalElectricStimulationOptimalControlProgram(OptimalControlProgram):
                     " pulse_time_max"
                 )
 
+            parameter_objectives.add(
+                ObjectiveFcn.Parameter.MINIMIZE_PARAMETER,
+                weight=0.0001,
+                quadratic=True,
+                target=0,
+                key="pulse_duration",
+            )
+
             if pulse_time_bimapping is not None:
                 if pulse_time_bimapping is True:
-                    raise ValueError(
-                        "Parameter mapping in bioptim not yet implemented"
-                    )
+                    raise ValueError("Parameter mapping in bioptim not yet implemented")
                     # parameter_bimapping.add(name="pulse_duration", to_second=[0 for _ in range(n_stim)], to_first=[0])
                     # TODO : Fix Bimapping in Bioptim
 
@@ -252,15 +268,17 @@ class FunctionalElectricStimulationOptimalControlProgram(OptimalControlProgram):
             is_ = DingModelIntensityFrequency().Is
             bs = DingModelIntensityFrequency().bs
             cr = DingModelIntensityFrequency().cr
-            minimum_pulse_intensity = (np.arctanh(-cr)/bs) + is_
+            minimum_pulse_intensity = (np.arctanh(-cr) / bs) + is_
 
             if pulse_intensity is not None:
                 if not isinstance(pulse_intensity, int | float):
                     raise ValueError("pulse_intensity must be int or float type")
                 if pulse_intensity < minimum_pulse_intensity:
-                    raise ValueError(f"The pulse intensity set ({pulse_intensity})"
-                                     f" is lower than minimum intensity required."
-                                     f" Set a value above {minimum_pulse_intensity} mA ")
+                    raise ValueError(
+                        f"The pulse intensity set ({pulse_intensity})"
+                        f" is lower than minimum intensity required."
+                        f" Set a value above {minimum_pulse_intensity} mA "
+                    )
                 parameters_bounds.add(
                     "pulse_intensity",
                     min_bound=np.array([pulse_intensity] * n_stim),
@@ -280,9 +298,11 @@ class FunctionalElectricStimulationOptimalControlProgram(OptimalControlProgram):
                 if pulse_intensity_max < pulse_intensity_min:
                     raise ValueError("The set minimum pulse intensity is higher than maximum pulse intensity.")
                 if pulse_intensity_min < minimum_pulse_intensity:
-                    raise ValueError(f"The pulse intensity set ({pulse_intensity_min})"
-                                     f" is lower than minimum intensity required."
-                                     f" Set a value above {minimum_pulse_intensity} mA ")
+                    raise ValueError(
+                        f"The pulse intensity set ({pulse_intensity_min})"
+                        f" is lower than minimum intensity required."
+                        f" Set a value above {minimum_pulse_intensity} mA "
+                    )
 
                 parameters_bounds.add(
                     "pulse_intensity",
@@ -304,11 +324,17 @@ class FunctionalElectricStimulationOptimalControlProgram(OptimalControlProgram):
                     " and pulse_intensity_max"
                 )
 
+            parameter_objectives.add(
+                ObjectiveFcn.Parameter.MINIMIZE_PARAMETER,
+                weight=0.0001,
+                quadratic=True,
+                target=0,
+                key="pulse_intensity",
+            )
+
             if pulse_intensity_bimapping is not None:
                 if pulse_intensity_bimapping is True:
-                    raise ValueError(
-                        "Parameter mapping in bioptim not yet implemented"
-                    )
+                    raise ValueError("Parameter mapping in bioptim not yet implemented")
                 # parameter_bimapping.add(name="pulse_intensity", to_second=[0 for _ in range(n_stim)], to_first=[0])
                 # TODO : Fix Bimapping in Bioptim
 
@@ -348,6 +374,7 @@ class FunctionalElectricStimulationOptimalControlProgram(OptimalControlProgram):
             parameters=parameters,
             parameter_bounds=parameters_bounds,
             parameter_init=parameters_init,
+            parameter_objectives=parameter_objectives,
             assume_phase_dynamics=False,
             n_threads=kwargs["n_thread"] if "n_thread" in kwargs else 1,
         )
@@ -356,7 +383,9 @@ class FunctionalElectricStimulationOptimalControlProgram(OptimalControlProgram):
         self.dynamics = DynamicsList()
         for i in range(self.n_stim):
             self.dynamics.add(
-                self.ding_models[i].declare_ding_variables, dynamic_function=self.ding_models[i].dynamics, phase=i,
+                self.ding_models[i].declare_ding_variables,
+                dynamic_function=self.ding_models[i].dynamics,
+                phase=i,
             )
 
     def _set_bounds(self):

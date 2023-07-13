@@ -52,4 +52,3 @@ class ExtractData:
             plt.grid()
         plt.legend()
         plt.show()
-

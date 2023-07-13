@@ -10,18 +10,20 @@ from optistim import DingModelPulseDurationFrequency, FunctionalElectricStimulat
 # The stimulation will be optimized between 0.01 to 0.1 seconds and are equally spaced (a fixed frequency).
 # Plus the pulsation duration will be optimized between 0 and 0.0006 seconds and are not the same across the problem.
 minimum_pulse_duration = DingModelPulseDurationFrequency().pd0
-ocp = FunctionalElectricStimulationOptimalControlProgram(ding_model=DingModelPulseDurationFrequency(),
-                                                         n_stim=10,
-                                                         n_shooting=20,
-                                                         final_time=1,
-                                                         end_node_tracking=200,
-                                                         time_min=0.01,
-                                                         time_max=0.1,
-                                                         time_bimapping=True,
-                                                         pulse_time_min=minimum_pulse_duration,
-                                                         pulse_time_max=0.0006,
-                                                         pulse_time_bimapping=False,
-                                                         use_sx=True)
+ocp = FunctionalElectricStimulationOptimalControlProgram(
+    ding_model=DingModelPulseDurationFrequency(),
+    n_stim=10,
+    n_shooting=20,
+    final_time=1,
+    end_node_tracking=200,
+    time_min=0.01,
+    time_max=0.1,
+    time_bimapping=True,
+    pulse_time_min=minimum_pulse_duration,
+    pulse_time_max=0.0006,
+    pulse_time_bimapping=False,
+    use_sx=True,
+)
 
 # --- Solve the program --- #
 sol = ocp.solve()
