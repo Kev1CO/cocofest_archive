@@ -1,6 +1,8 @@
 import pytest
 import shutil
 
+import numpy as np
+
 from optistim import FunctionalElectricStimulationOptimalControlProgram, FunctionalElectricStimulationMultiStart, ExtractData, DingModelFrequency, DingModelPulseDurationFrequency, DingModelIntensityFrequency
 
 
@@ -13,6 +15,8 @@ init_n_shooting = 6
 init_force_tracking = [time, init_force]
 init_end_node_tracking = 40
 
+minimum_pulse_duration = DingModelPulseDurationFrequency().pd0
+minimum_pulse_intensity = (np.arctanh(-DingModelIntensityFrequency().cr)/DingModelIntensityFrequency().bs) + DingModelIntensityFrequency().Is
 
 @pytest.mark.parametrize(
     "model,"
@@ -27,11 +31,11 @@ init_end_node_tracking = 40
     [
         (DingModelFrequency(), None, None, None, None, None, None, None, None),
         (DingModelPulseDurationFrequency(), 0.0002, None, None, None, None, None, None, None),
-        (DingModelPulseDurationFrequency(), None, DingModelPulseDurationFrequency().pd0, 0.0006, False, None, None, None, None),
-        # (DingModelPulseDurationFrequency(), None, DingModelPulseDurationFrequency().pd0, 0.0006, True, None, None, None, None), parameter mapping not yet implemented
+        (DingModelPulseDurationFrequency(), None, minimum_pulse_duration, 0.0006, False, None, None, None, None),
+        # (DingModelPulseDurationFrequency(), None, minimum_pulse_duration, 0.0006, True, None, None, None, None), parameter mapping not yet implemented
         (DingModelIntensityFrequency(), None, None, None, None, 20, None, None, None),
-        (DingModelIntensityFrequency(), None, None, None, None, None, 0, 130, False),
-        # (DingModelIntensityFrequency(), None, None, None, None, None, 0, 130, True), parameter mapping not yet implemented
+        (DingModelIntensityFrequency(), None, None, None, None, None, minimum_pulse_intensity, 130, False),
+        # (DingModelIntensityFrequency(), None, None, None, None, None, minimum_pulse_intensity, 130, True), parameter mapping not yet implemented
     ],
 )
 @pytest.mark.parametrize(
@@ -137,7 +141,10 @@ def test_ocp_building(
 @pytest.mark.parametrize(
     "force_tracking, end_node_tracking", [(init_force_tracking, None), (None, init_end_node_tracking)]
 )
-def test_multi_start_building(force_tracking, end_node_tracking):
+@pytest.mark.parametrize(
+    "min_pulse_duration, min_pulse_intensity", [(minimum_pulse_duration, minimum_pulse_intensity)]
+)
+def test_multi_start_building(force_tracking, end_node_tracking, min_pulse_duration, min_pulse_intensity):
     multi_start = FunctionalElectricStimulationMultiStart(
         methode="standard",
         ding_model=[DingModelFrequency(), DingModelPulseDurationFrequency(), DingModelIntensityFrequency()],
@@ -151,11 +158,11 @@ def test_multi_start_building(force_tracking, end_node_tracking):
         time_max=[0.1],
         time_bimapping=[False],
         pulse_time=[None],
-        pulse_time_min=[DingModelPulseDurationFrequency().pd0],
+        pulse_time_min=[minimum_pulse_duration],
         pulse_time_max=[0.0006],
         pulse_time_bimapping=[None],
         pulse_intensity=[None],
-        pulse_intensity_min=[0],
+        pulse_intensity_min=[minimum_pulse_intensity],
         pulse_intensity_max=[130],
         pulse_intensity_bimapping=[None],
         path_folder="./temp",
