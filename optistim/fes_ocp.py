@@ -259,26 +259,41 @@ class FunctionalElectricStimulationOptimalControlProgram(OptimalControlProgram):
             ):
                 raise ValueError("Both Intensity pulse min max bounds need to be set for this model")
 
+            is_ = DingModelIntensityFrequency().Is
+            bs = DingModelIntensityFrequency().bs
+            cr = DingModelIntensityFrequency().cr
+            minimum_pulse_intensity = (np.arctanh(-cr)/bs) + is_
+
             if pulse_intensity is not None:
-                if isinstance(pulse_intensity, int | float):
-                    parameters_bounds.add(
-                        "pulse_intensity",
-                        min_bound=np.array([pulse_intensity] * n_stim),
-                        max_bound=np.array([pulse_intensity] * n_stim),
-                        interpolation=InterpolationType.CONSTANT,
-                    )
-                    parameters_init["pulse_intensity"] = np.array([pulse_intensity] * n_stim)
-                    parameters.add(
-                        parameter_name="pulse_intensity",
-                        function=DingModelIntensityFrequency.set_impulse_intensity,
-                        size=n_stim,
-                    )
-                else:
-                    raise ValueError("Wrong pulse_intensity type, only int or float accepted")
+                if not isinstance(pulse_intensity, int | float):
+                    raise ValueError("pulse_intensity must be int or float type")
+                if pulse_intensity < minimum_pulse_intensity:
+                    raise ValueError(f"The pulse intensity set ({pulse_intensity})"
+                                     f" is lower than minimum intensity required."
+                                     f" Set a value above {minimum_pulse_intensity} mA ")
+                parameters_bounds.add(
+                    "pulse_intensity",
+                    min_bound=np.array([pulse_intensity] * n_stim),
+                    max_bound=np.array([pulse_intensity] * n_stim),
+                    interpolation=InterpolationType.CONSTANT,
+                )
+                parameters_init["pulse_intensity"] = np.array([pulse_intensity] * n_stim)
+                parameters.add(
+                    parameter_name="pulse_intensity",
+                    function=DingModelIntensityFrequency.set_impulse_intensity,
+                    size=n_stim,
+                )
 
             elif pulse_intensity_min is not None and pulse_intensity_max is not None:
                 if not isinstance(pulse_intensity_min, int | float) or not isinstance(pulse_intensity_max, int | float):
                     raise ValueError("pulse_intensity_min and pulse_intensity_max must be int or float type")
+                if pulse_intensity_max < pulse_intensity_min:
+                    raise ValueError("The set minimum pulse intensity is higher than maximum pulse intensity.")
+                if pulse_intensity_min < minimum_pulse_intensity:
+                    raise ValueError(f"The pulse intensity set ({pulse_intensity_min})"
+                                     f" is lower than minimum intensity required."
+                                     f" Set a value above {minimum_pulse_intensity} mA ")
+
                 parameters_bounds.add(
                     "pulse_intensity",
                     min_bound=[pulse_intensity_min],
@@ -312,8 +327,8 @@ class FunctionalElectricStimulationOptimalControlProgram(OptimalControlProgram):
                     raise ValueError(
                         "Parameter mapping in bioptim not yet implemented"
                     )
-                    # parameter_bimapping.add(name="pulse_intensity", to_second=[0 for _ in range(n_stim)], to_first=[0])
-                    # TODO : Fix Bimapping in Bioptim
+                # parameter_bimapping.add(name="pulse_intensity", to_second=[0 for _ in range(n_stim)], to_first=[0])
+                # TODO : Fix Bimapping in Bioptim
 
         self.n_stim = n_stim
         self._declare_dynamics()

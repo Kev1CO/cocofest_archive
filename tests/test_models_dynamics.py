@@ -209,13 +209,18 @@ time, force = ExtractData.load_data("../examples/data/hand_cycling_force.bio")
 init_force = force - force[0]
 init_force_tracking = [time, init_force]
 
+minimum_pulse_duration = DingModelPulseDurationFrequency().pd0
+minimum_pulse_intensity = (np.arctanh(-DingModelIntensityFrequency().cr)/DingModelIntensityFrequency().bs) + DingModelIntensityFrequency().Is
 
 @pytest.mark.parametrize("use_sx", [True])  # Later add False
 @pytest.mark.parametrize(
     "model", [DingModelFrequency(), DingModelPulseDurationFrequency(), DingModelIntensityFrequency()]
 )
 @pytest.mark.parametrize("force_tracking", [init_force_tracking])
-def test_ocp_output(model, force_tracking, use_sx):
+@pytest.mark.parametrize(
+    "min_pulse_duration, min_pulse_intensity", [(minimum_pulse_duration, minimum_pulse_intensity)]
+)
+def test_ocp_output(model, force_tracking, use_sx, min_pulse_duration, min_pulse_intensity):
     if isinstance(model, DingModelPulseDurationFrequency):
         ocp = FunctionalElectricStimulationOptimalControlProgram(
             ding_model=model,
@@ -223,7 +228,7 @@ def test_ocp_output(model, force_tracking, use_sx):
             n_stim=10,
             final_time=1,
             force_tracking=force_tracking,
-            pulse_time_min=DingModelPulseDurationFrequency().pd0,
+            pulse_time_min=min_pulse_duration,
             pulse_time_max=0.0006,
             pulse_time_bimapping=False,
             use_sx=use_sx,
@@ -243,7 +248,7 @@ def test_ocp_output(model, force_tracking, use_sx):
             n_stim=10,
             final_time=1,
             force_tracking=force_tracking,
-            pulse_intensity_min=0,
+            pulse_intensity_min=min_pulse_intensity,
             pulse_intensity_max=130,
             pulse_intensity_bimapping=False,
             use_sx=use_sx,
