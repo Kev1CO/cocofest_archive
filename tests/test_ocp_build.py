@@ -3,7 +3,14 @@ import shutil
 
 import numpy as np
 
-from optistim import FunctionalElectricStimulationOptimalControlProgram, FunctionalElectricStimulationMultiStart, ExtractData, DingModelFrequency, DingModelPulseDurationFrequency, DingModelIntensityFrequency
+from optistim import (
+    FunctionalElectricStimulationOptimalControlProgram,
+    FunctionalElectricStimulationMultiStart,
+    ExtractData,
+    DingModelFrequency,
+    DingModelPulseDurationFrequency,
+    DingModelIntensityFrequency,
+)
 
 
 time, force = ExtractData.load_data("../examples/data/hand_cycling_force.bio")
@@ -16,7 +23,10 @@ init_force_tracking = [time, init_force]
 init_end_node_tracking = 40
 
 minimum_pulse_duration = DingModelPulseDurationFrequency().pd0
-minimum_pulse_intensity = (np.arctanh(-DingModelIntensityFrequency().cr)/DingModelIntensityFrequency().bs) + DingModelIntensityFrequency().Is
+minimum_pulse_intensity = (
+    np.arctanh(-DingModelIntensityFrequency().cr) / DingModelIntensityFrequency().bs
+) + DingModelIntensityFrequency().Is
+
 
 @pytest.mark.parametrize(
     "model,"
@@ -138,12 +148,11 @@ def test_ocp_building(
         use_sx=use_sx,
     )
 
+
 @pytest.mark.parametrize(
     "force_tracking, end_node_tracking", [(init_force_tracking, None), (None, init_end_node_tracking)]
 )
-@pytest.mark.parametrize(
-    "min_pulse_duration, min_pulse_intensity", [(minimum_pulse_duration, minimum_pulse_intensity)]
-)
+@pytest.mark.parametrize("min_pulse_duration, min_pulse_intensity", [(minimum_pulse_duration, minimum_pulse_intensity)])
 def test_multi_start_building(force_tracking, end_node_tracking, min_pulse_duration, min_pulse_intensity):
     multi_start = FunctionalElectricStimulationMultiStart(
         methode="standard",

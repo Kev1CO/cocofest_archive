@@ -3,7 +3,13 @@ import numpy as np
 import pytest
 
 from bioptim import Solver
-from optistim import DingModelFrequency, DingModelPulseDurationFrequency, DingModelIntensityFrequency, FunctionalElectricStimulationOptimalControlProgram, ExtractData
+from optistim import (
+    DingModelFrequency,
+    DingModelPulseDurationFrequency,
+    DingModelIntensityFrequency,
+    FunctionalElectricStimulationOptimalControlProgram,
+    ExtractData,
+)
 
 
 @pytest.mark.parametrize(
@@ -210,16 +216,17 @@ init_force = force - force[0]
 init_force_tracking = [time, init_force]
 
 minimum_pulse_duration = DingModelPulseDurationFrequency().pd0
-minimum_pulse_intensity = (np.arctanh(-DingModelIntensityFrequency().cr)/DingModelIntensityFrequency().bs) + DingModelIntensityFrequency().Is
+minimum_pulse_intensity = (
+    np.arctanh(-DingModelIntensityFrequency().cr) / DingModelIntensityFrequency().bs
+) + DingModelIntensityFrequency().Is
+
 
 @pytest.mark.parametrize("use_sx", [True])  # Later add False
 @pytest.mark.parametrize(
     "model", [DingModelFrequency(), DingModelPulseDurationFrequency(), DingModelIntensityFrequency()]
 )
 @pytest.mark.parametrize("force_tracking", [init_force_tracking])
-@pytest.mark.parametrize(
-    "min_pulse_duration, min_pulse_intensity", [(minimum_pulse_duration, minimum_pulse_intensity)]
-)
+@pytest.mark.parametrize("min_pulse_duration, min_pulse_intensity", [(minimum_pulse_duration, minimum_pulse_intensity)])
 def test_ocp_output(model, force_tracking, use_sx, min_pulse_duration, min_pulse_intensity):
     if isinstance(model, DingModelPulseDurationFrequency):
         ocp = FunctionalElectricStimulationOptimalControlProgram(
@@ -280,5 +287,6 @@ def test_ocp_output(model, force_tracking, use_sx, min_pulse_duration, min_pulse
         # TODO : Add a pickle file to test
         # for key in ocp.states.key():
         #     np.testing.assert_almost_equal(ocp.states[key], pickle_file.states[key])
+
 
 # TODO : add test_multi_start_ocp

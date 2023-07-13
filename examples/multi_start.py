@@ -21,7 +21,7 @@ fes_multi_start = FunctionalElectricStimulationMultiStart(
     time_max=[0.1],
     time_bimapping=[True],
     use_sx=[True],
-    path_folder=save_folder
+    path_folder=save_folder,
 )
 # --- Solve each program --- #
 sol = fes_multi_start.solve()
