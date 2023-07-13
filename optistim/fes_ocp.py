@@ -17,6 +17,7 @@ from bioptim import (
     OdeSolver,
     OptimalControlProgram,
     ParameterList,
+    ParameterObjectiveList
 )
 
 from .custom_objectives import CustomObjective
@@ -160,6 +161,7 @@ class FunctionalElectricStimulationOptimalControlProgram(OptimalControlProgram):
         parameters = ParameterList()
         parameters_bounds = BoundsList()
         parameters_init = InitialGuessList()
+        parameter_objectives = ParameterObjectiveList()
         if isinstance(ding_model, DingModelPulseDurationFrequency):
             if pulse_time is None and pulse_time_min is not None and pulse_time_max is None:
                 raise ValueError("Time pulse or Time pulse min max bounds need to be set for this model")
@@ -226,6 +228,14 @@ class FunctionalElectricStimulationOptimalControlProgram(OptimalControlProgram):
                     " pulse_time_max"
                 )
 
+            parameter_objectives.add(
+                ObjectiveFcn.Parameter.MINIMIZE_PARAMETER,
+                weight=0.0001,
+                quadratic=True,
+                target=0,
+                key="pulse_duration",
+            )
+
             if pulse_time_bimapping is not None:
                 if pulse_time_bimapping is True:
                     raise ValueError(
@@ -289,6 +299,14 @@ class FunctionalElectricStimulationOptimalControlProgram(OptimalControlProgram):
                     " and pulse_intensity_max"
                 )
 
+            parameter_objectives.add(
+                ObjectiveFcn.Parameter.MINIMIZE_PARAMETER,
+                weight=0.0001,
+                quadratic=True,
+                target=0,
+                key="pulse_intensity",
+            )
+
             if pulse_intensity_bimapping is not None:
                 if pulse_intensity_bimapping is True:
                     raise ValueError(
@@ -333,6 +351,7 @@ class FunctionalElectricStimulationOptimalControlProgram(OptimalControlProgram):
             parameters=parameters,
             parameter_bounds=parameters_bounds,
             parameter_init=parameters_init,
+            parameter_objectives=parameter_objectives,
             assume_phase_dynamics=False,
             n_threads=kwargs["n_thread"] if "n_thread" in kwargs else 1,
         )
