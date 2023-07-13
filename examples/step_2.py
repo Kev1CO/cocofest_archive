@@ -17,7 +17,7 @@ ocp = FunctionalElectricStimulationOptimalControlProgram(ding_model=DingModelPul
                                                          time_min=0.01,
                                                          time_max=0.1,
                                                          time_bimapping=True,
-                                                         pulse_time_min=0,
+                                                         pulse_time_min=DingModelPulseDurationFrequency().pd0,
                                                          pulse_time_max=0.0006,
                                                          pulse_time_bimapping=False,
                                                          use_sx=True)
