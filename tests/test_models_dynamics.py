@@ -223,7 +223,7 @@ def test_ocp_output(model, force_tracking, use_sx):
             n_stim=10,
             final_time=1,
             force_tracking=force_tracking,
-            pulse_time_min=0,
+            pulse_time_min=DingModelPulseDurationFrequency().pd0,
             pulse_time_max=0.0006,
             pulse_time_bimapping=False,
             use_sx=use_sx,

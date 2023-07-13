@@ -27,8 +27,8 @@ init_end_node_tracking = 40
     [
         (DingModelFrequency(), None, None, None, None, None, None, None, None),
         (DingModelPulseDurationFrequency(), 0.0002, None, None, None, None, None, None, None),
-        (DingModelPulseDurationFrequency(), None, 0, 0.0006, False, None, None, None, None),
-        # (DingModelPulseDurationFrequency(), None, 0, 0.0006, True, None, None, None, None), parameter mapping not yet implemented
+        (DingModelPulseDurationFrequency(), None, DingModelPulseDurationFrequency().pd0, 0.0006, False, None, None, None, None),
+        # (DingModelPulseDurationFrequency(), None, DingModelPulseDurationFrequency().pd0, 0.0006, True, None, None, None, None), parameter mapping not yet implemented
         (DingModelIntensityFrequency(), None, None, None, None, 20, None, None, None),
         (DingModelIntensityFrequency(), None, None, None, None, None, 0, 130, False),
         # (DingModelIntensityFrequency(), None, None, None, None, None, 0, 130, True), parameter mapping not yet implemented
@@ -151,7 +151,7 @@ def test_multi_start_building(force_tracking, end_node_tracking):
         time_max=[0.1],
         time_bimapping=[False],
         pulse_time=[None],
-        pulse_time_min=[0],
+        pulse_time_min=[DingModelPulseDurationFrequency().pd0],
         pulse_time_max=[0.0006],
         pulse_time_bimapping=[None],
         pulse_intensity=[None],
