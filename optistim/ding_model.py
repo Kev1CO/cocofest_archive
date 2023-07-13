@@ -5,7 +5,7 @@ different custom models.
 """
 from typing import Callable
 
-from casadi import MX, SX, exp, vertcat, Function, sum1, horzcat, tanh, if_else
+from casadi import MX, SX, exp, vertcat, Function, sum1, horzcat, tanh
 import numpy as np
 
 from bioptim import (
@@ -978,8 +978,6 @@ class DingModelIntensityFrequency(DingModelFrequency):
         The lambda factor, part of the n°1 equation
         """
         lambda_i = self.ar * (tanh(self.bs * (intensity_stim - self.Is)) + self.cr)  # equation include intensity
-        lambda_i = if_else(lambda_i < 0, 0, lambda_i)
-        lambda_i = if_else(lambda_i > 1, 1, lambda_i)
         return lambda_i
 
     def set_impulse_intensity(self, value: MX | SX):
