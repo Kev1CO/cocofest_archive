@@ -173,8 +173,15 @@ class FunctionalElectricStimulationOptimalControlProgram(OptimalControlProgram):
             ):
                 raise ValueError("Both Time pulse min max bounds need to be set for this model")
 
+            minimum_pulse_duration = DingModelPulseDurationFrequency().pd0
+
             if pulse_time is not None:
                 if isinstance(pulse_time, int | float):
+                    if pulse_time < minimum_pulse_duration:
+                        raise ValueError(f"The pulse duration set ({pulse_time})"
+                                         f" is lower than minimum duration required."
+                                         f" Set a value above {minimum_pulse_duration} seconds ")
+
                     parameters_bounds.add(
                         "pulse_duration",
                         min_bound=np.array([pulse_time] * n_stim),
@@ -193,6 +200,12 @@ class FunctionalElectricStimulationOptimalControlProgram(OptimalControlProgram):
             elif pulse_time_min is not None and pulse_time_max is not None:
                 if not isinstance(pulse_time_min, int | float) or not isinstance(pulse_time_max, int | float):
                     raise ValueError("pulse_time_min and pulse_time_max must be equal int or float type")
+                if pulse_time_max < pulse_time_min:
+                    raise ValueError("The set minimum pulse duration is higher than maximum pulse duration.")
+                if pulse_time_min < minimum_pulse_duration:
+                    raise ValueError(f"The pulse duration set ({pulse_time_min})"
+                                     f" is lower than minimum duration required."
+                                     f" Set a value above {minimum_pulse_duration} seconds ")
 
                 parameters_bounds.add(
                     "pulse_duration",

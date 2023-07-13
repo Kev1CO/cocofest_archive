@@ -667,11 +667,7 @@ class DingModelPulseDurationFrequency(DingModelFrequency):
         -------
         The value of scaling factor (unitless)
         """
-        return if_else(
-            self.a_scale * (1 - exp(-(impulse_time[0] - self.pd0) / self.pdt)) < 0,
-            0,
-            self.a_scale * (1 - exp(-(impulse_time[0] - self.pd0) / self.pdt)),
-        )
+        return self.a_scale * (1 - exp(-(impulse_time[0] - self.pd0) / self.pdt))
 
     def set_impulse_duration(self, value: list[MX] | list[SX]):
         """
