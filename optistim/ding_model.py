@@ -174,7 +174,7 @@ class DingModelFrequency:
         """
         sum_multiplier = 0
         if len(extra_arguments["t_stim_prev"]) == 1:
-            ri = 1  # Eq from Bakir et al. YEAR ?
+            ri = 1
             exp_time = self.exp_time_fun(t, extra_arguments["t_stim_prev"][0])  # Part of Eq n°1
             sum_multiplier += ri * exp_time  # Part of Eq n°1
         else:
