@@ -134,73 +134,73 @@ class FunctionalElectricStimulationOptimalControlProgramIdentification(OptimalCo
             self.final_time_phase = (pulse_apparition_time[i + 1],) if i == 0 else self.final_time_phase + (
                 pulse_apparition_time[i] - pulse_apparition_time[i - 1],)
 
-        parameters = ParameterList()
-        parameters_bounds = BoundsList()
-        parameters_init = InitialGuessList()
-        parameter_objectives = ParameterObjectiveList()
-        if isinstance(ding_model, DingModelPulseDurationFrequency):
-            # --- Adding parameters --- #
-            parameters.add(
-                parameter_name="a_rest",
-                # function=DingModelPulseDurationFrequency.set_impulse_duration, # TODO : check if function is mandatory
-                size=1,
-            )
-            parameters.add(
-                parameter_name="km_rest",
-                # function=DingModelPulseDurationFrequency.set_impulse_duration, # TODO : check if function is mandatory
-                size=1,
-            )
-            parameters.add(
-                parameter_name="tau1_rest",
-                # function=DingModelPulseDurationFrequency.set_impulse_duration, # TODO : check if function is mandatory
-                size=1,
-            )
-            parameters.add(
-                parameter_name="tau2",
-                # function=DingModelPulseDurationFrequency.set_impulse_duration, # TODO : check if function is mandatory
-                size=1,
-            )
-
-            # --- Adding bound parameters --- #
-            parameters_bounds.add(
-                "a_rest",
-                min_bound=np.array([0]),  # TODO : set bounds
-                max_bound=np.array([0]),
-                interpolation=InterpolationType.CONSTANT,
-            )
-            parameters_bounds.add(
-                "km_rest",
-                min_bound=np.array([0]),  # TODO : set bounds
-                max_bound=np.array([0]),
-                interpolation=InterpolationType.CONSTANT,
-            )
-            parameters_bounds.add(
-                "tau1_rest",
-                min_bound=np.array([0]),  # TODO : set bounds
-                max_bound=np.array([0]),
-                interpolation=InterpolationType.CONSTANT,
-            )
-            parameters_bounds.add(
-                "tau2",
-                min_bound=np.array([0]),  # TODO : set bounds
-                max_bound=np.array([0]),
-                interpolation=InterpolationType.CONSTANT,
-            )
-
-            # --- Initial guess parameters --- #
-            parameters_init["a_rest"] = np.array([0]) # TODO : set initial guess
-            parameters_init["km_rest"] = np.array([0]) # TODO : set initial guess
-            parameters_init["tau1_rest"] = np.array([0]) # TODO : set initial guess
-            parameters_init["tau2"] = np.array([0]) # TODO : set initial guess
-
-            # Objective regularisation ?
-            # parameter_objectives.add(
-            #     ObjectiveFcn.Parameter.MINIMIZE_PARAMETER,
-            #     weight=0.0001,
-            #     quadratic=True,
-            #     target=0,
-            #     key="a_rest",
-            # )
+        # parameters = ParameterList()
+        # parameters_bounds = BoundsList()
+        # parameters_init = InitialGuessList()
+        # parameter_objectives = ParameterObjectiveList()
+        # if isinstance(ding_model, DingModelPulseDurationFrequency):
+        #     # --- Adding parameters --- #
+        #     parameters.add(
+        #         parameter_name="a_rest",
+        #         # function=DingModelPulseDurationFrequency.set_impulse_duration, # TODO : check if function is mandatory
+        #         size=1,
+        #     )
+        #     parameters.add(
+        #         parameter_name="km_rest",
+        #         # function=DingModelPulseDurationFrequency.set_impulse_duration, # TODO : check if function is mandatory
+        #         size=1,
+        #     )
+        #     parameters.add(
+        #         parameter_name="tau1_rest",
+        #         # function=DingModelPulseDurationFrequency.set_impulse_duration, # TODO : check if function is mandatory
+        #         size=1,
+        #     )
+        #     parameters.add(
+        #         parameter_name="tau2",
+        #         # function=DingModelPulseDurationFrequency.set_impulse_duration, # TODO : check if function is mandatory
+        #         size=1,
+        #     )
+        #
+        #     # --- Adding bound parameters --- #
+        #     parameters_bounds.add(
+        #         "a_rest",
+        #         min_bound=np.array([0]),  # TODO : set bounds
+        #         max_bound=np.array([0]),
+        #         interpolation=InterpolationType.CONSTANT,
+        #     )
+        #     parameters_bounds.add(
+        #         "km_rest",
+        #         min_bound=np.array([0]),  # TODO : set bounds
+        #         max_bound=np.array([0]),
+        #         interpolation=InterpolationType.CONSTANT,
+        #     )
+        #     parameters_bounds.add(
+        #         "tau1_rest",
+        #         min_bound=np.array([0]),  # TODO : set bounds
+        #         max_bound=np.array([0]),
+        #         interpolation=InterpolationType.CONSTANT,
+        #     )
+        #     parameters_bounds.add(
+        #         "tau2",
+        #         min_bound=np.array([0]),  # TODO : set bounds
+        #         max_bound=np.array([0]),
+        #         interpolation=InterpolationType.CONSTANT,
+        #     )
+        #
+        #     # --- Initial guess parameters --- #
+        #     parameters_init["a_rest"] = np.array([0]) # TODO : set initial guess
+        #     parameters_init["km_rest"] = np.array([0]) # TODO : set initial guess
+        #     parameters_init["tau1_rest"] = np.array([0]) # TODO : set initial guess
+        #     parameters_init["tau2"] = np.array([0]) # TODO : set initial guess
+        #
+        #     # Objective regularisation ?
+        #     # parameter_objectives.add(
+        #     #     ObjectiveFcn.Parameter.MINIMIZE_PARAMETER,
+        #     #     weight=0.0001,
+        #     #     quadratic=True,
+        #     #     target=0,
+        #     #     key="a_rest",
+        #     # )
 
         self.n_stim = len(pulse_apparition_time)
 
@@ -446,45 +446,99 @@ class FunctionalElectricStimulationOptimalControlProgramIdentification(OptimalCo
 
     @classmethod
     def fatigue(
-        cls,
-        ding_model: DingModelFrequency | DingModelPulseDurationFrequency | DingModelIntensityFrequency,
-        n_stim: int,
-        n_shooting: int,
-        frequency: int | float = None,
-        force_tracking: list[np.ndarray, np.ndarray] = None,
-        end_node_tracking: int | float = None,
-        time_min: int | float = None,
-        time_max: int | float = None,
-        time_bimapping: bool = None,
-        pulse_time: int | float = None,
-        pulse_time_min: int | float = None,
-        pulse_time_max: int | float = None,
-        pulse_time_bimapping: bool = None,
-        pulse_intensity: int | float = None,
-        pulse_intensity_min: int | float = None,
-        pulse_intensity_max: int | float = None,
-        pulse_intensity_bimapping: bool = None,
-        **kwargs,
+            cls,
+            ding_model: FatigueDingModelFrequencyIdentification | FatigueDingModelPulseDurationFrequencyIdentification | FatigueDingModelIntensityFrequencyIdentification,
+            n_shooting: int = None,
+            force_tracking: list[np.ndarray, np.ndarray] = None,
+            pulse_apparition_time: list[int] | list[float] = None,
+            pulse_duration: list[int] | list[float] = None,
+            pulse_intensity: list[int] | list[float] = None,
+            **kwargs,
     ):
-        final_time = n_stim / frequency
+        parameters = ParameterList()
+        parameters_bounds = BoundsList()
+        parameters_init = InitialGuessList()
+        parameter_objectives = ParameterObjectiveList()
+        if isinstance(ding_model, FatigueDingModelFrequencyIdentification):
+            # --- Adding parameters --- #
+            parameters.add(
+                parameter_name="tau_fat",
+                # function=DingModelPulseDurationFrequency.set_impulse_duration, # TODO : check if function is mandatory
+                size=1,
+            )
+            parameters.add(
+                parameter_name="alpha_a",
+                # function=DingModelPulseDurationFrequency.set_impulse_duration, # TODO : check if function is mandatory
+                size=1,
+            )
+            parameters.add(
+                parameter_name="alpha_km",
+                # function=DingModelPulseDurationFrequency.set_impulse_duration, # TODO : check if function is mandatory
+                size=1,
+            )
+            parameters.add(
+                parameter_name="alpha_tau1",
+                # function=DingModelPulseDurationFrequency.set_impulse_duration, # TODO : check if function is mandatory
+                size=1,
+            )
+
+            # --- Adding bound parameters --- #
+            parameters_bounds.add(
+                "tau_fat",
+                min_bound=np.array([0]),  # TODO : set bounds
+                max_bound=np.array([0]),
+                interpolation=InterpolationType.CONSTANT,
+            )
+            parameters_bounds.add(
+                "alpha_a",
+                min_bound=np.array([0]),  # TODO : set bounds
+                max_bound=np.array([0]),
+                interpolation=InterpolationType.CONSTANT,
+            )
+            parameters_bounds.add(
+                "alpha_km",
+                min_bound=np.array([0]),  # TODO : set bounds
+                max_bound=np.array([0]),
+                interpolation=InterpolationType.CONSTANT,
+            )
+            parameters_bounds.add(
+                "alpha_tau1",
+                min_bound=np.array([0]),  # TODO : set bounds
+                max_bound=np.array([0]),
+                interpolation=InterpolationType.CONSTANT,
+            )
+
+            # --- Initial guess parameters --- #
+            parameters_init["tau_fat"] = np.array([0])  # TODO : set initial guess
+            parameters_init["alpha_a"] = np.array([0])  # TODO : set initial guess
+            parameters_init["alpha_km"] = np.array([0])  # TODO : set initial guess
+            parameters_init["alpha_tau1"] = np.array([0])  # TODO : set initial guess
+
+            # Objective regularisation ?
+            # parameter_objectives.add(
+            #     ObjectiveFcn.Parameter.MINIMIZE_PARAMETER,
+            #     weight=0.0001,
+            #     quadratic=True,
+            #     target=0,
+            #     key="a_rest",
+            # )
+
+        if isinstance(ding_model, ForceDingModelPulseDurationFrequencyIdentification):  # TODO : ADD method
+            pass
+        if isinstance(ding_model, ForceDingModelIntensityFrequencyIdentification):  # TODO : ADD method
+            pass
+
+
         return cls(
             ding_model=ding_model,
-            n_stim=n_stim,
             n_shooting=n_shooting,
-            final_time=final_time,
-            frequency=frequency,
             force_tracking=force_tracking,
-            end_node_tracking=end_node_tracking,
-            time_min=time_min,
-            time_max=time_max,
-            time_bimapping=time_bimapping,
-            pulse_time=pulse_time,
-            pulse_time_min=pulse_time_min,
-            pulse_time_max=pulse_time_max,
-            pulse_time_bimapping=pulse_time_bimapping,
+            pulse_apparition_time=pulse_apparition_time,
+            pulse_duration=pulse_duration,
             pulse_intensity=pulse_intensity,
-            pulse_intensity_min=pulse_intensity_min,
-            pulse_intensity_max=pulse_intensity_max,
-            pulse_intensity_bimapping=pulse_intensity_bimapping,
+            parameters=parameters,
+            parameters_bounds=parameters_bounds,
+            parameters_init=parameters_init,
+            # parameter_objectives=parameter_objectives,
             **kwargs,
         )
