@@ -752,7 +752,6 @@ class DingModelPulseDurationFrequency(DingModelFrequency):
         parameters: MX | SX,
         stochastic_variables: MX | SX,
         nlp: NonLinearProgram,
-        # t=None,
         nb_phases=None,
     ) -> DynamicsEvaluation:
         """
