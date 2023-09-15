@@ -283,7 +283,6 @@ class DingModelFrequency:
         parameters: MX | SX,
         stochastic_variables: MX | SX,
         nlp: NonLinearProgram,
-        # t=None,
         nb_phases=None,
     ) -> DynamicsEvaluation:
         """
@@ -291,16 +290,18 @@ class DingModelFrequency:
 
         Parameters
         ----------
+        time: MX | SX
+            The system's current node time
         states: MX | SX
             The state of the system CN, F, A, Tau1, Km
         controls: MX | SX
             The controls of the system, none
         parameters: MX | SX
             The parameters acting on the system, final time of each phase
+        stochastic_variables: MX | SX
+            The stochastic variables of the system, none
         nlp: NonLinearProgram
             A reference to the phase
-        t: MX | SX
-            Current node time, this t is used to set the dynamics and as to be a symbolic
         nb_phases: int
             The number of phases in the ocp
         Returns
@@ -343,8 +344,8 @@ class DingModelFrequency:
         nlp: NonLinearProgram
             A reference to the phase
         **extra_params:
-            t: MX | SX
-                Current node time
+            nb_phase: MX | SX
+                Each stimulation time referring to all phases times
         """
         nlp.parameters = ocp.parameters
         DynamicsFunctions.apply_parameters(nlp.parameters.cx_start, nlp)
@@ -759,16 +760,18 @@ class DingModelPulseDurationFrequency(DingModelFrequency):
 
         Parameters
         ----------
+        time: MX | SX
+            The system's current node time
         states: MX | SX
             The state of the system CN, F, A, Tau1, Km
         controls: MX | SX
             The controls of the system, none
         parameters: MX | SX
             The parameters acting on the system, final time of each phase
+        stochastic_variables: MX | SX
+            The stochastic variables of the system, none
         nlp: NonLinearProgram
             A reference to the phase
-        t: MX | SX
-            Current node time, this t is used to set the dynamics and as to be a symbolic
         nb_phases: int
             The number of phases in the ocp
         Returns
@@ -818,8 +821,8 @@ class DingModelPulseDurationFrequency(DingModelFrequency):
         nlp: NonLinearProgram
             A reference to the phase
         **extra_params:
-            t: MX | SX
-                Current node time
+            nb_phases: MX | SX
+                Each stimulation time referring to all phases times
         """
 
         nlp.parameters = ocp.parameters
@@ -1084,16 +1087,18 @@ class DingModelIntensityFrequency(DingModelFrequency):
 
         Parameters
         ----------
+        time: MX | SX
+            The system's current node time
         states: MX | SX
             The state of the system CN, F, A, Tau1, Km
         controls: MX | SX
             The controls of the system, none
         parameters: MX | SX
             The parameters acting on the system, final time of each phase
+        stochastic_variables: MX | SX
+            The stochastic variables of the system, none
         nlp: NonLinearProgram
             A reference to the phase
-        t: MX | SX
-            Current node time, this t is used to set the dynamics and as to be a symbolic
         nb_phases: int
             The number of phases in the ocp
         Returns
@@ -1149,8 +1154,8 @@ class DingModelIntensityFrequency(DingModelFrequency):
         nlp: NonLinearProgram
             A reference to the phase
         **extra_params:
-            t: MX | SX
-                Current node time
+            nb_phases: MX | SX
+                Each stimulation time referring to all phases times
         """
 
         nlp.parameters = ocp.parameters
