@@ -388,6 +388,9 @@ class FunctionalElectricStimulationOptimalControlProgram(OptimalControlProgram):
                 phase=i,
             )
 
+        # dynamics = DynamicsList()
+        # dynamics.add(self.ding_models.declare_ding_variables, dynamic_function=time_dependent_dynamic, expand=expand)
+
     def _set_bounds(self):
         # ---- STATE BOUNDS REPRESENTATION ---- #
         #
