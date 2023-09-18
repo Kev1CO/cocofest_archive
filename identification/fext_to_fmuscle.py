@@ -32,7 +32,7 @@ class ForceSensorToMuscleForce:  # TODO : Enable several muscles (biceps, tricep
         # ymodel = -xsensor
         # zmodel = ysensor
 
-        if ['Fx (N)', 'Fy (N)', 'Fz (N)', 'Mx (N.m)', 'My (N.m)', 'Mz (N.m)'] in dataframe.index:
+        if all(ele in dataframe.columns.to_list() for ele in ['Fx (N)', 'Fy (N)', 'Fz (N)', 'Mx (N.m)', 'My (N.m)', 'Mz (N.m)']):
             fx = -dataframe['Fz (N)']
             fy = -dataframe['Fx (N)']
             fz = dataframe['Fy (N)']
@@ -45,7 +45,7 @@ class ForceSensorToMuscleForce:  # TODO : Enable several muscles (biceps, tricep
                              " 'Fx (N)', 'Fy (N)', 'Fz (N)', 'Mx (N.m)', 'My (N.m)', 'Mz (N.m)'")
 
         # --- Recuperating the time --- #
-        if 'Time (s)' not in dataframe.index:
+        if 'Time (s)' not in dataframe.columns.to_list():
             raise ValueError("The dataframe does not contain the expected columns."
                              "The excel file must contain a column 'Time (s)'")
         self.time = dataframe['Time (s)'].to_numpy()

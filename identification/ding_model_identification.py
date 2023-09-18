@@ -8,7 +8,7 @@ from bioptim import (
     ParameterList,
 )
 
-from ..optistim.ding_model import DingModelFrequency
+from optistim.ding_model import DingModelFrequency
 
 
 class ForceDingModelFrequencyIdentification(DingModelFrequency):
@@ -70,11 +70,12 @@ class ForceDingModelFrequencyIdentification(DingModelFrequency):
 
     @staticmethod
     def dynamics(
+        time: MX | SX,
         states: MX | SX,
         controls: MX | SX,
         parameters: MX | SX,
+        stochastic_variables: MX | SX,
         nlp: NonLinearProgram,
-        t=None,
         nb_phases=None,
     ) -> DynamicsEvaluation:
         """
@@ -82,16 +83,18 @@ class ForceDingModelFrequencyIdentification(DingModelFrequency):
 
         Parameters
         ----------
+        time: MX | SX
+            The system's current node time
         states: MX | SX
             The state of the system CN, F
         controls: MX | SX
             The controls of the system, none
         parameters: MX | SX
             The parameters acting on the system, final time of each phase
+        stochastic_variables: MX | SX
+            The stochastic variables of the system, none
         nlp: NonLinearProgram
             A reference to the phase
-        t: MX | SX
-            Current node time, this t is used to set the dynamics and as to be a symbolic
         nb_phases: int
             The number of phases in the ocp
         Returns
@@ -100,7 +103,7 @@ class ForceDingModelFrequencyIdentification(DingModelFrequency):
         """
 
         t_stim_prev = []  # Every stimulation instant before the current phase, i.e.: the beginning of each phase
-        time_parameters = DingModelFrequency.get_time_parameters(nlp, nb_phases)
+        time_parameters = ForceDingModelFrequencyIdentification.get_time_parameters(nlp, nb_phases)
         if time_parameters.shape[0] == 1:  # check if time is mapped
             for i in range(nlp.phase_idx + 1):
                 t_stim_prev.append(time_parameters[0] * i)
@@ -109,11 +112,11 @@ class ForceDingModelFrequencyIdentification(DingModelFrequency):
                 t_stim_prev.append(sum1(time_parameters[0:i]))
 
         return DynamicsEvaluation(
-            dxdt=DingModelFrequency.system_dynamics(
-                DingModelFrequency(),
+            dxdt=ForceDingModelFrequencyIdentification.system_dynamics(
+                ForceDingModelFrequencyIdentification(),
                 cn=states[0],
                 f=states[1],
-                t=t,
+                t=time,
                 t_stim_prev=t_stim_prev,
             ),
             defects=None,
@@ -134,18 +137,26 @@ class ForceDingModelFrequencyIdentification(DingModelFrequency):
         DingModelFrequency.configure_ca_troponin_complex(ocp=ocp, nlp=nlp, as_states=True, as_controls=False)
         DingModelFrequency.configure_force(ocp=ocp, nlp=nlp, as_states=True, as_controls=False)
 
-        t = (
-            MX.sym("t") if nlp.cx.type_name() == "MX" else SX.sym("t")
-        )  # t needs a symbolic value to start computing in custom_configure_dynamics_function
-
-        DingModelFrequency.custom_configure_dynamics_function(ocp, nlp, t=t)
-
+        DingModelFrequency.custom_configure_dynamics_function(ocp, nlp)
 
 
 class FatigueDingModelFrequencyIdentification(DingModelFrequency):
+    """
+    This is a custom model that inherits from bioptim. CustomModel.
+    As CustomModel is an abstract class, some methods are mandatory and must be implemented.
+    Such as serialize, name_dof, nb_state and name.
 
+    This is the Ding 2003 identification model using the stimulation frequency in input.
+    """
 
-
-
-
-
+    def __init__(self, a_rest, km_rest, tau1_rest, tau2, name: str = None):
+        super().__init__()
+        # ---- Different values for each person ---- #
+        self.a_rest = a_rest
+        self.km_rest = km_rest
+        self.tau1_rest = tau1_rest
+        self.tau2 = tau2
+        self.alpha_a = SX.sym('alpha_a')
+        self.alpha_tau1 = SX.sym('alpha_tau1')
+        self.tau_fat = SX.sym('tau_fat')
+        self.alpha_km = SX.sym('alpha_km')
