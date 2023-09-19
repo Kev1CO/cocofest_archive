@@ -1,24 +1,8 @@
 import numpy as np
 import pandas as pd
-from bioptim import (
-    BoundsList,
-    ConstraintList,
-    ControlType,
-    DynamicsList,
-    InitialGuessList,
-    InterpolationType,
-    Objective,
-    ObjectiveFcn,
-    ObjectiveList,
-    OdeSolver,
-    OptimalControlProgram,
-    ParameterList,
-    ParameterObjectiveList,
-)
 
 from fext_to_fmuscle import ForceSensorToMuscleForce
 from fes_identification_ocp import FunctionalElectricStimulationOptimalControlProgramIdentification
-from optistim.custom_objectives import CustomObjective
 from optistim.fourier_approx import FourierSeries
 from ding_model_identification import ForceDingModelFrequencyIdentification, FatigueDingModelFrequencyIdentification
 
@@ -149,8 +133,10 @@ class DingModelFrequencyParameterIdentification:
             # --- Stimulation --- #
             stim_apparition_time_data = pd.read_excel(force_model_data_path[i], sheet_name='Stimulation')['Stimulation apparition time (ms)'].to_list()
             time_data = pd.read_excel(force_model_data_path[i]).tail(1).get('Time (s)').to_list()[0]
-            temp_time_data.append(time_data if i == 0 else time_data + temp_time_data[-1])  # TODO convert either time in seconds or milliseconds for both data and stimulation values
-            force_model_stim_apparition_time.append(stim_apparition_time_data if i == 0 else stim_apparition_time_data + temp_time_data[-1])
+            temp_time_data.append(time_data/1000 if i == 0 else (time_data + temp_time_data[-1])/1000)  # TODO convert either time in seconds or milliseconds for both data and stimulation values
+            force_model_stim_apparition_time.append(
+                [x / 1000 for x in stim_apparition_time_data] if i == 0 else [x / 1000 for x in stim_apparition_time_data] + temp_time_data[-1])
+
 
         # --- Fatigue model --- #
         fatigue_model_data = []
@@ -158,7 +144,7 @@ class DingModelFrequencyParameterIdentification:
         temp_time_data = []
         for i in range(len(fatigue_model_data_path)):
             # --- Force --- #
-            extract_data = ForceSensorToMuscleForce(fatigue_model_data_path[i])
+            extract_data = ForceSensorToMuscleForce(fatigue_model_data_path[i], n_rows=10000)
             fatigue_model_data.append([extract_data.time, extract_data.biceps_force_vector])
             # --- Stimulation --- #
             stim_apparition_time_data = pd.read_excel(fatigue_model_data_path[i], sheet_name='Stimulation')['Stimulation apparition time (ms)'].to_list()
@@ -205,6 +191,7 @@ class DingModelFrequencyParameterIdentification:
 
         force_model_time = np.array([item for sublist in time for item in sublist])
         force_model_force = np.array([item for sublist in force for item in sublist])
+        force_model_force = np.where(force_model_force < 0, 0, force_model_force)
 
         # --- Fatigue model --- #
         time = []
@@ -239,21 +226,25 @@ class DingModelFrequencyParameterIdentification:
         # --- Setting the models parameters --- #
         # --- Force model --- #
         self.ocp = FunctionalElectricStimulationOptimalControlProgramIdentification(ding_model=self.ding_force_model,
-                                                                               n_shooting=5,
-                                                                               force_tracking=[force_model_time, force_model_force],
-                                                                               pulse_apparition_time=force_model_stim_apparition_time,
-                                                                               )
-        self.ocp.solve()
+                                                                                    n_shooting=5,
+                                                                                    force_tracking=[force_model_time, force_model_force],
+                                                                                    pulse_apparition_time=force_model_stim_apparition_time,
+                                                                                    use_sx=kwargs["use_sx"] if "use_sx" in kwargs else False,
+                                                                                    )
+        result = self.ocp.solve()
+        print(result.parameters)
+        result.graphs()
 
         # --- Fatigue model --- #
 
 
-
 if __name__ == "__main__":
 
-    identification = DingModelFrequencyParameterIdentification(ding_force_model=ForceDingModelFrequencyIdentification,
-                                                             ding_fatigue_model=FatigueDingModelFrequencyIdentification,
-                                                             force_model_data_path=["D:/These/Programmation/Ergometer_pedal_force/Excel_test_force.xlsx"],
-                                                             fatigue_model_data_path=["D:/These/Programmation/Ergometer_pedal_force/Excel_test.xlsx"],)
+    identification = DingModelFrequencyParameterIdentification(ding_force_model=ForceDingModelFrequencyIdentification(),
+                                                               ding_fatigue_model=FatigueDingModelFrequencyIdentification(a_rest=0.1, km_rest=0.1, tau1_rest=0.1, tau2=0.1),
+                                                               force_model_data_path=["D:/These/Programmation/Ergometer_pedal_force/Excel_test_force.xlsx"],
+                                                               fatigue_model_data_path=["D:/These/Programmation/Ergometer_pedal_force/Excel_test.xlsx"],
+                                                               use_sx=True,)
     param = identification.ocp.parameters
+    print(param)
 
