@@ -1,15 +1,17 @@
 import numpy as np
 import biorbd
 import pandas as pd
+# from matplotlib import pyplot as plt
 
 
 class ForceSensorToMuscleForce:  # TODO : Enable several muscles (biceps, triceps, deltoid, etc.)
-    def __init__(self, path: str = None):
+    def __init__(self, path: str = None, n_rows: int = None):
         if path is None:
             raise ValueError("Please provide a path to the excel file.")
         if not isinstance(path, str):
             raise TypeError("Please provide a path in str type.")
         self.path = path
+        self.n_rows = n_rows
         self.time = None
         self.t_local = None
         self.model = None
@@ -24,7 +26,8 @@ class ForceSensorToMuscleForce:  # TODO : Enable several muscles (biceps, tricep
         self.get_muscle_force()
 
     def load_data(self):
-        dataframe = pd.read_excel(self.path)  # converting excel file into dataframe for computation
+        # converting excel file into dataframe for computation
+        dataframe = pd.read_excel(self.path) if self.n_rows is None else pd.read_excel(self.path, nrows=self.n_rows)
 
         # --- Putting sensor force into general axis --- #
         # Force sensor to model axis :
@@ -102,6 +105,11 @@ class ForceSensorToMuscleForce:  # TODO : Enable several muscles (biceps, tricep
             biceps_force = tau / self.biceps_moment_arm
             self.biceps_force_vector.append(biceps_force)
         self.biceps_force_vector = np.array(self.biceps_force_vector)
+        # --- Plotting the biceps force --- #
+        """
+        plt.plot(self.time, self.biceps_force_vector)
+        plt.show()
+        """
 
     @staticmethod
     def force_transport(f, a, b: list = None):
@@ -114,4 +122,4 @@ class ForceSensorToMuscleForce:  # TODO : Enable several muscles (biceps, tricep
 
 
 if __name__ == "__main__":
-    ForceSensorToMuscleForce()
+    ForceSensorToMuscleForce("D:/These/Programmation/Ergometer_pedal_force/Excel_test.xlsx", n_rows=10000)

@@ -18,9 +18,8 @@ from bioptim import (
 from ding_model_identification import ForceDingModelFrequencyIdentification, FatigueDingModelFrequencyIdentification
 from optistim.custom_objectives import CustomObjective
 from optistim.fourier_approx import FourierSeries
-
-# from optistim.ding_model import DingModelFrequency, DingModelPulseDurationFrequency, DingModelIntensityFrequency
 from fext_to_fmuscle import ForceSensorToMuscleForce
+
 
 class FunctionalElectricStimulationOptimalControlProgramIdentification(OptimalControlProgram):
     """
@@ -102,6 +101,7 @@ class FunctionalElectricStimulationOptimalControlProgramIdentification(OptimalCo
         self.parameter_mappings = None
         self.parameters = None
 
+        pulse_apparition_time = [item for sublist in pulse_apparition_time for item in sublist]
         if not isinstance(pulse_apparition_time, list):
             raise TypeError(f"pulse_apparition_time must be list type,"
                             f" currently pulse_apparition_time is {type(pulse_apparition_time)}) type.")
@@ -111,14 +111,14 @@ class FunctionalElectricStimulationOptimalControlProgramIdentification(OptimalCo
         self.n_shooting = [n_shooting] * len(pulse_apparition_time)
 
         constraints = ConstraintList()
-        for j in range(len(pulse_apparition_time)):
-            for i in range(len(pulse_apparition_time[j])):
-                self.final_time_phase = (pulse_apparition_time[j][i + 1],) if i == 0 else self.final_time_phase + (
-                pulse_apparition_time[j][i] - pulse_apparition_time[j][i - 1],)
+        for i in range(len(pulse_apparition_time)):
+            self.final_time_phase = (pulse_apparition_time[i + 1],) if i == 0 else self.final_time_phase + (
+            pulse_apparition_time[i] - pulse_apparition_time[i - 1],)
 
         self.n_stim = len(self.final_time_phase)
+
         if isinstance(ding_model, ForceDingModelFrequencyIdentification):
-            parameters, parameters_bounds, parameters_init, parameter_objectives = self.force()
+            self.parameters, self.parameters_bounds, self.parameters_init, self.parameter_objectives = self.force()
 
         self._declare_dynamics()
         self._set_bounds()
@@ -151,12 +151,13 @@ class FunctionalElectricStimulationOptimalControlProgramIdentification(OptimalCo
             ode_solver=kwargs["ode_solver"] if "ode_solver" in kwargs else OdeSolver.RK4(n_integration_steps=1),
             control_type=ControlType.NONE,
             use_sx=kwargs["use_sx"] if "use_sx" in kwargs else False,
-            parameters=parameters,
-            parameter_bounds=parameters_bounds,
-            parameter_init=parameters_init,
-            parameter_objectives=parameter_objectives,
+            parameters=self.parameters,
+            parameter_bounds=self.parameters_bounds,
+            parameter_init=self.parameters_init,
+            parameter_objectives=self.parameter_objectives,
             assume_phase_dynamics=False,
             n_threads=kwargs["n_thread"] if "n_thread" in kwargs else 1,
+            # skip_continuity=False
         )
 
     def _declare_dynamics(self):
@@ -267,26 +268,31 @@ class FunctionalElectricStimulationOptimalControlProgramIdentification(OptimalCo
         parameters_bounds = BoundsList()
         parameters_init = InitialGuessList()
         parameter_objectives = ParameterObjectiveList()
+
         if isinstance(self.ding_model, ForceDingModelFrequencyIdentification):
             # --- Adding parameters --- #
             parameters.add(
                 parameter_name="a_rest",
-                # function=DingModelPulseDurationFrequency.set_impulse_duration, # TODO : check if function is mandatory
+                list_index=0,
+                function=ForceDingModelFrequencyIdentification.set_a_rest,
                 size=1,
             )
             parameters.add(
                 parameter_name="km_rest",
-                # function=DingModelPulseDurationFrequency.set_impulse_duration, # TODO : check if function is mandatory
+                list_index=1,
+                function=ForceDingModelFrequencyIdentification.set_km_rest,
                 size=1,
             )
             parameters.add(
                 parameter_name="tau1_rest",
-                # function=DingModelPulseDurationFrequency.set_impulse_duration, # TODO : check if function is mandatory
+                list_index=2,
+                function=ForceDingModelFrequencyIdentification.set_tau1_rest,
                 size=1,
             )
             parameters.add(
                 parameter_name="tau2",
-                # function=DingModelPulseDurationFrequency.set_impulse_duration, # TODO : check if function is mandatory
+                list_index=3,
+                function=ForceDingModelFrequencyIdentification.set_tau2,
                 size=1,
             )
 
@@ -299,159 +305,30 @@ class FunctionalElectricStimulationOptimalControlProgramIdentification(OptimalCo
             )
             parameters_bounds.add(
                 "km_rest",
-                min_bound=np.array([0.0001]),  # TODO : set bounds
-                max_bound=np.array([100]),
+                min_bound=np.array([0.001]),  # TODO : set bounds
+                max_bound=np.array([1]),
                 interpolation=InterpolationType.CONSTANT,
             )
             parameters_bounds.add(
                 "tau1_rest",
-                min_bound=np.array([0]),  # TODO : set bounds
-                max_bound=np.array([1]),
+                min_bound=np.array([0.00001]),  # TODO : set bounds
+                max_bound=np.array([0.001]),
                 interpolation=InterpolationType.CONSTANT,
             )
             parameters_bounds.add(
                 "tau2",
-                min_bound=np.array([0]),  # TODO : set bounds
-                max_bound=np.array([1]),
+                min_bound=np.array([0.00001]),  # TODO : set bounds
+                max_bound=np.array([0.001]),
                 interpolation=InterpolationType.CONSTANT,
             )
 
             # --- Initial guess parameters --- #
-            parameters_init["a_rest"] = np.array([0])  # TODO : set initial guess
-            parameters_init["km_rest"] = np.array([0])  # TODO : set initial guess
-            parameters_init["tau1_rest"] = np.array([0])  # TODO : set initial guess
-            parameters_init["tau2"] = np.array([0])  # TODO : set initial guess
+            parameters_init["a_rest"] = np.array([2])  # TODO : set initial guess
+            parameters_init["km_rest"] = np.array([0.01])  # TODO : set initial guess
+            parameters_init["tau1_rest"] = np.array([0.01])  # TODO : set initial guess
+            parameters_init["tau2"] = np.array([0.01])  # TODO : set initial guess
 
             return parameters, parameters_bounds, parameters_init, parameter_objectives
-            #
-            # Objective regularisation ?
-            # parameter_objectives.add(
-            #     ObjectiveFcn.Parameter.MINIMIZE_PARAMETER,
-            #     weight=0.0001,
-            #     quadratic=True,
-            #     target=0,
-            #     key="a_rest",
-            # )
-        #
-        # if isinstance(ding_model, ForceDingModelPulseDurationFrequencyIdentification):  # TODO : ADD method
-        #     pass
-        # if isinstance(ding_model, ForceDingModelIntensityFrequencyIdentification):  # TODO : ADD method
-        #     pass
-        #
-        # return cls(
-        #     ding_model=ding_model,
-        #     n_shooting=n_shooting,
-        #     force_tracking=force_tracking,
-        #     pulse_apparition_time=pulse_apparition_time,
-        #     pulse_duration=pulse_duration,
-        #     pulse_intensity=pulse_intensity,
-        #     parameters=parameters,
-        #     parameters_bounds=parameters_bounds,
-        #     parameters_init=parameters_init,
-        #     # parameter_objectives=parameter_objectives,
-        #     **kwargs,
-        # )
-
-"""
-    @classmethod
-    def fatigue(
-            cls,
-            ding_model: FatigueDingModelFrequencyIdentification | FatigueDingModelPulseDurationFrequencyIdentification | FatigueDingModelIntensityFrequencyIdentification,
-            n_shooting: int = None,
-            force_tracking: list[np.ndarray, np.ndarray] = None,
-            pulse_apparition_time: list[int] | list[float] = None,
-            pulse_duration: list[int] | list[float] = None,
-            pulse_intensity: list[int] | list[float] = None,
-            **kwargs,
-    ):
-        parameters = ParameterList()
-        parameters_bounds = BoundsList()
-        parameters_init = InitialGuessList()
-        parameter_objectives = ParameterObjectiveList()
-        if isinstance(ding_model, FatigueDingModelFrequencyIdentification):
-            # --- Adding parameters --- #
-            parameters.add(
-                parameter_name="tau_fat",
-                # function=DingModelPulseDurationFrequency.set_impulse_duration, # TODO : check if function is mandatory
-                size=1,
-            )
-            parameters.add(
-                parameter_name="alpha_a",
-                # function=DingModelPulseDurationFrequency.set_impulse_duration, # TODO : check if function is mandatory
-                size=1,
-            )
-            parameters.add(
-                parameter_name="alpha_km",
-                # function=DingModelPulseDurationFrequency.set_impulse_duration, # TODO : check if function is mandatory
-                size=1,
-            )
-            parameters.add(
-                parameter_name="alpha_tau1",
-                # function=DingModelPulseDurationFrequency.set_impulse_duration, # TODO : check if function is mandatory
-                size=1,
-            )
-
-            # --- Adding bound parameters --- #
-            parameters_bounds.add(
-                "tau_fat",
-                min_bound=np.array([0]),  # TODO : set bounds
-                max_bound=np.array([0]),
-                interpolation=InterpolationType.CONSTANT,
-            )
-            parameters_bounds.add(
-                "alpha_a",
-                min_bound=np.array([0]),  # TODO : set bounds
-                max_bound=np.array([0]),
-                interpolation=InterpolationType.CONSTANT,
-            )
-            parameters_bounds.add(
-                "alpha_km",
-                min_bound=np.array([0]),  # TODO : set bounds
-                max_bound=np.array([0]),
-                interpolation=InterpolationType.CONSTANT,
-            )
-            parameters_bounds.add(
-                "alpha_tau1",
-                min_bound=np.array([0]),  # TODO : set bounds
-                max_bound=np.array([0]),
-                interpolation=InterpolationType.CONSTANT,
-            )
-
-            # --- Initial guess parameters --- #
-            parameters_init["tau_fat"] = np.array([0])  # TODO : set initial guess
-            parameters_init["alpha_a"] = np.array([0])  # TODO : set initial guess
-            parameters_init["alpha_km"] = np.array([0])  # TODO : set initial guess
-            parameters_init["alpha_tau1"] = np.array([0])  # TODO : set initial guess
-
-            # Objective regularisation ?
-            # parameter_objectives.add(
-            #     ObjectiveFcn.Parameter.MINIMIZE_PARAMETER,
-            #     weight=0.0001,
-            #     quadratic=True,
-            #     target=0,
-            #     key="a_rest",
-            # )
-
-        if isinstance(ding_model, ForceDingModelPulseDurationFrequencyIdentification):  # TODO : ADD method
-            pass
-        if isinstance(ding_model, ForceDingModelIntensityFrequencyIdentification):  # TODO : ADD method
-            pass
-
-
-        return cls(
-            ding_model=ding_model,
-            n_shooting=n_shooting,
-            force_tracking=force_tracking,
-            pulse_apparition_time=pulse_apparition_time,
-            pulse_duration=pulse_duration,
-            pulse_intensity=pulse_intensity,
-            parameters=parameters,
-            parameters_bounds=parameters_bounds,
-            parameters_init=parameters_init,
-            # parameter_objectives=parameter_objectives,
-            **kwargs,
-        )
-"""
 
 
 if __name__ == "__main__":
