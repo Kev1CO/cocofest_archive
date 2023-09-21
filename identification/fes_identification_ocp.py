@@ -300,31 +300,31 @@ class FunctionalElectricStimulationOptimalControlProgramIdentification(OptimalCo
             parameters_bounds.add(
                 "a_rest",
                 min_bound=np.array([0]),  # TODO : set bounds
-                max_bound=np.array([100]),
+                max_bound=np.array([10000]),
                 interpolation=InterpolationType.CONSTANT,
             )
             parameters_bounds.add(
                 "km_rest",
-                min_bound=np.array([0.001]),  # TODO : set bounds
+                min_bound=np.array([0]),  # TODO : set bounds
                 max_bound=np.array([1]),
                 interpolation=InterpolationType.CONSTANT,
             )
             parameters_bounds.add(
                 "tau1_rest",
-                min_bound=np.array([0.00001]),  # TODO : set bounds
-                max_bound=np.array([0.001]),
+                min_bound=np.array([0]),  # TODO : set bounds
+                max_bound=np.array([1]),
                 interpolation=InterpolationType.CONSTANT,
             )
             parameters_bounds.add(
                 "tau2",
-                min_bound=np.array([0.00001]),  # TODO : set bounds
-                max_bound=np.array([0.001]),
+                min_bound=np.array([0]),  # TODO : set bounds
+                max_bound=np.array([1]),
                 interpolation=InterpolationType.CONSTANT,
             )
 
             # --- Initial guess parameters --- #
-            parameters_init["a_rest"] = np.array([2])  # TODO : set initial guess
-            parameters_init["km_rest"] = np.array([0.01])  # TODO : set initial guess
+            parameters_init["a_rest"] = np.array([1000])  # TODO : set initial guess
+            parameters_init["km_rest"] = np.array([0.1])  # TODO : set initial guess
             parameters_init["tau1_rest"] = np.array([0.01])  # TODO : set initial guess
             parameters_init["tau2"] = np.array([0.01])  # TODO : set initial guess
 

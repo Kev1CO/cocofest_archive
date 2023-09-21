@@ -1,3 +1,4 @@
+import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 
@@ -5,6 +6,7 @@ from fext_to_fmuscle import ForceSensorToMuscleForce
 from fes_identification_ocp import FunctionalElectricStimulationOptimalControlProgramIdentification
 from optistim.fourier_approx import FourierSeries
 from ding_model_identification import ForceDingModelFrequencyIdentification, FatigueDingModelFrequencyIdentification
+from optistim import FunctionalElectricStimulationOptimalControlProgram, DingModelFrequency, FourierSeries
 
 
 class DingModelFrequencyParameterIdentification:
@@ -224,6 +226,41 @@ class DingModelFrequencyParameterIdentification:
         )
 
         # --- Setting the models parameters --- #
+        # # --- Simulated model --- #
+        # ocp = FunctionalElectricStimulationOptimalControlProgram(
+        #     ding_model=DingModelFrequency(),
+        #     n_stim=10,
+        #     n_shooting=20,
+        #     final_time=1,
+        #     end_node_tracking=270,
+        #     time_min=0.01,
+        #     time_max=0.1,
+        #     time_bimapping=True,
+        #     use_sx=True,
+        # )
+        #
+        # sol1 = ocp.solve()
+        # merged_sol = sol1.merge_phases()
+        # force = merged_sol.states["F"][0]
+        # force = force + np.random.normal(0, 10, len(force))
+        # # time = merged_sol.time
+        # time = []
+        # for i in range(len(merged_sol.time)):
+        #     time.append(merged_sol.time[i])
+        # time = np.array(time)
+        # stim_data = sol1.phase_time
+        # stim_apparition_time_data = []
+        # for i in range(len(stim_data)-1):
+        #     stim_apparition_time_data.append(sol1.phase_time[i] if i == 0 else sum(sol1.phase_time[:i+1]))
+        #
+        # ab = FourierSeries().compute_real_fourier_coeffs(time, force, 100)
+        # y_approx = FourierSeries().fit_func_by_fourier_series_with_real_coeffs(time, ab)
+        #
+        # plt.scatter(time, force, color="blue", s=5, marker=".", label="data")
+        # plt.plot(time, y_approx, color="red", linewidth=1, label="approximation")
+        # plt.legend()
+        # plt.show()
+
         # --- Force model --- #
         self.ocp = FunctionalElectricStimulationOptimalControlProgramIdentification(ding_model=self.ding_force_model,
                                                                                     n_shooting=5,
@@ -232,8 +269,36 @@ class DingModelFrequencyParameterIdentification:
                                                                                     use_sx=kwargs["use_sx"] if "use_sx" in kwargs else False,
                                                                                     )
         result = self.ocp.solve()
+        result_merged = result.merge_phases()
+        plt.plot(result_merged.time, result_merged.states["F"][0], label="identification")
+        plt.plot(force_model_time, force_model_force, label="tracking")
+        plt.annotate("A_rest = " + str(result.parameters['a_rest'][0][0]), xy=(1.30, 20), fontsize=12)
+        plt.annotate("Km_rest = " + str(result.parameters['km_rest'][0][0]), xy=(1.30, 15), fontsize=12)
+        plt.annotate("tau1_rest = " + str(result.parameters['tau1_rest'][0][0]), xy=(1.30, 10), fontsize=12)
+        plt.annotate("tau2 = " + str(result.parameters['tau2'][0][0]), xy=(1.30, 5), fontsize=12)
+        plt.legend()
+        plt.show()
         print(result.parameters)
-        result.graphs()
+
+
+        # self.ocp = FunctionalElectricStimulationOptimalControlProgramIdentification(ding_model=self.ding_force_model,
+        #                                                                             n_shooting=5,
+        #                                                                             force_tracking=[time, force],
+        #                                                                             pulse_apparition_time=stim_apparition_time_data,
+        #                                                                             use_sx=kwargs["use_sx"] if "use_sx" in kwargs else False,
+        #                                                                             )
+        # result = self.ocp.solve()
+        # result_merged = result.merge_phases()
+        # plt.plot(result_merged.time, result_merged.states["F"][0], label="identification")
+        # plt.plot(time, force, label="tracking")
+        # plt.plot(time, y_approx, color="red", linewidth=1, label="approximation")
+        # plt.annotate("A_rest = " + str(result.parameters['a_rest'][0][0]), xy=(0.15, 100), fontsize=12)
+        # plt.annotate("Km_rest = " + str(result.parameters['km_rest'][0][0]), xy=(0.15, 75), fontsize=12)
+        # plt.annotate("tau1_rest = " + str(result.parameters['tau1_rest'][0][0]), xy=(0.15, 50), fontsize=12)
+        # plt.annotate("tau2 = " + str(result.parameters['tau2'][0][0]), xy=(0.15, 25), fontsize=12)
+        # plt.legend()
+        # plt.show()
+
 
         # --- Fatigue model --- #
 
@@ -245,6 +310,7 @@ if __name__ == "__main__":
                                                                force_model_data_path=["D:/These/Programmation/Ergometer_pedal_force/Excel_test_force.xlsx"],
                                                                fatigue_model_data_path=["D:/These/Programmation/Ergometer_pedal_force/Excel_test.xlsx"],
                                                                use_sx=True,)
+
     param = identification.ocp.parameters
     print(param)
 
