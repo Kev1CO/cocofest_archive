@@ -72,10 +72,16 @@ class FunctionalElectricStimulationOptimalControlProgramIdentification(OptimalCo
         tau2: float = None,
         **kwargs,
     ):
-        if isinstance(ding_model, FatigueDingModelFrequencyIdentification) and any(elem is None for elem in [a_rest, km_rest, tau1_rest, tau2]):
-            raise ValueError("a_rest, km_rest, tau1_rest and tau2 must be set for fatigue model identification")
+        if isinstance(ding_model, FatigueDingModelFrequencyIdentification):
+            if any(elem is None for elem in [a_rest, km_rest, tau1_rest, tau2]):
+                raise ValueError("a_rest, km_rest, tau1_rest and tau2 must be set for fatigue model identification")
+            ding_model.set_a_rest(a_rest)
+            ding_model.set_km_rest(km_rest)
+            ding_model.set_tau1_rest(tau1_rest)
+            ding_model.set_tau2(tau2)
 
         self.ding_model = ding_model
+        self.force_tracking = force_tracking
 
         if force_tracking is not None:
             force_fourier_coef = FourierSeries()
@@ -108,17 +114,20 @@ class FunctionalElectricStimulationOptimalControlProgramIdentification(OptimalCo
 
         self.ding_models = [ding_model] * len(pulse_apparition_time)
         # TODO : when other model are implemented, add veriification on len pulse_apparition_time and pulse_duration and pulse_intensity
-        self.n_shooting = [n_shooting] * len(pulse_apparition_time)
-
+        self.n_shooting = [n_shooting] * (len(pulse_apparition_time)-1)
+        self.n_shooting.append(n_shooting*len(pulse_apparition_time))
         constraints = ConstraintList()
         for i in range(len(pulse_apparition_time)):
             self.final_time_phase = (pulse_apparition_time[i + 1],) if i == 0 else self.final_time_phase + (
-            pulse_apparition_time[i] - pulse_apparition_time[i - 1],)
+            pulse_apparition_time[i] - pulse_apparition_time[i - 1],) if i != len(pulse_apparition_time) - 1 else self.final_time_phase + (
+            1,)
 
         self.n_stim = len(self.final_time_phase)
 
         if isinstance(ding_model, ForceDingModelFrequencyIdentification):
             self.parameters, self.parameters_bounds, self.parameters_init, self.parameter_objectives = self.force()
+        # if isinstance(ding_model, ForceDingModelFrequencyIdentification):
+        #     self.parameters, self.parameters_bounds, self.parameters_init, self.parameter_objectives = self.fatigue()
 
         self._declare_dynamics()
         self._set_bounds()
@@ -224,8 +233,9 @@ class FunctionalElectricStimulationOptimalControlProgramIdentification(OptimalCo
 
         self.x_init = InitialGuessList()
         for i in range(self.n_stim):
-            for j in range(len(variable_bound_list)):
-                self.x_init.add(variable_bound_list[j], self.ding_model.standard_rest_values()[j])
+            force_in_phase = self.input_force(self.force_tracking[0], self.force_tracking[1], i)
+            self.x_init.add("F", np.array([force_in_phase]), phase=i, interpolation=InterpolationType.EACH_FRAME)
+            self.x_init.add("Cn", [0], phase=i, interpolation=InterpolationType.CONSTANT)
 
         # Creates the controls of our problem (in our case, equals to an empty list)
         self.u_bounds = BoundsList()
@@ -235,6 +245,20 @@ class FunctionalElectricStimulationOptimalControlProgramIdentification(OptimalCo
         self.u_init = InitialGuessList()
         for i in range(self.n_stim):
             self.u_init.add("", min_bound=[], max_bound=[])
+
+    def input_force(self, time, force, phase_idx):
+        current_time = sum(self.final_time_phase[:phase_idx])
+        # current_time_end = current_time + self.final_time_phase[phase_idx]
+        dt = self.final_time_phase[phase_idx] / (self.n_shooting[phase_idx]+1)
+        force_idx = []
+        for i in range(self.n_shooting[phase_idx]+1):
+            force_idx.append(np.where(time == round(current_time, 3))[0][0])
+            current_time += dt
+        force_in_phase = [force[i] for i in force_idx]
+        return force_in_phase
+
+        # TODO : add input force
+        pass
 
     def _set_objective(self):
         # Creates the objective for our problem (in this case, match a force curve)
@@ -293,6 +317,73 @@ class FunctionalElectricStimulationOptimalControlProgramIdentification(OptimalCo
                 parameter_name="tau2",
                 list_index=3,
                 function=ForceDingModelFrequencyIdentification.set_tau2,
+                size=1,
+            )
+
+            # --- Adding bound parameters --- #
+            parameters_bounds.add(
+                "a_rest",
+                min_bound=np.array([0]),  # TODO : set bounds
+                max_bound=np.array([10000]),
+                interpolation=InterpolationType.CONSTANT,
+            )
+            parameters_bounds.add(
+                "km_rest",
+                min_bound=np.array([0.01]),  # TODO : set bounds
+                max_bound=np.array([1]),
+                interpolation=InterpolationType.CONSTANT,
+            )
+            parameters_bounds.add(
+                "tau1_rest",
+                min_bound=np.array([0.01]),  # TODO : set bounds
+                max_bound=np.array([1]),
+                interpolation=InterpolationType.CONSTANT,
+            )
+            parameters_bounds.add(
+                "tau2",
+                min_bound=np.array([0.01]),  # TODO : set bounds
+                max_bound=np.array([1]),
+                interpolation=InterpolationType.CONSTANT,
+            )
+
+            # --- Initial guess parameters --- #
+            parameters_init["a_rest"] = np.array([1000])  # TODO : set initial guess
+            parameters_init["km_rest"] = np.array([0.5])  # TODO : set initial guess
+            parameters_init["tau1_rest"] = np.array([0.5])  # TODO : set initial guess
+            parameters_init["tau2"] = np.array([0.5])  # TODO : set initial guess
+
+            return parameters, parameters_bounds, parameters_init, parameter_objectives
+
+    def fatigue(self):
+        parameters = ParameterList()
+        parameters_bounds = BoundsList()
+        parameters_init = InitialGuessList()
+        parameter_objectives = ParameterObjectiveList()
+
+        if isinstance(self.ding_model, FatigueDingModelFrequencyIdentification):
+            # --- Adding parameters --- #
+            parameters.add(
+                parameter_name="alpha_a",
+                list_index=0,
+                function=FatigueDingModelFrequencyIdentification.set_alpha_a,
+                size=1,
+            )
+            parameters.add(
+                parameter_name="alpha_km",
+                list_index=1,
+                function=FatigueDingModelFrequencyIdentification.set_alpha_km,
+                size=1,
+            )
+            parameters.add(
+                parameter_name="alpha_tau1",
+                list_index=2,
+                function=FatigueDingModelFrequencyIdentification.set_alpha_tau1,
+                size=1,
+            )
+            parameters.add(
+                parameter_name="tau_fat",
+                list_index=3,
+                function=FatigueDingModelFrequencyIdentification.set_tau_fat,
                 size=1,
             )
 

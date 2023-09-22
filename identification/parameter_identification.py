@@ -139,7 +139,6 @@ class DingModelFrequencyParameterIdentification:
             force_model_stim_apparition_time.append(
                 [x / 1000 for x in stim_apparition_time_data] if i == 0 else [x / 1000 for x in stim_apparition_time_data] + temp_time_data[-1])
 
-
         # --- Fatigue model --- #
         fatigue_model_data = []
         fatigue_model_stim_apparition_time = []
@@ -262,6 +261,12 @@ class DingModelFrequencyParameterIdentification:
         # plt.show()
 
         # --- Force model --- #
+        import pickle
+        with open(kwargs['pickle_path'][0], 'rb') as f:
+            data = pickle.load(f)
+        force_model_time = np.array(data[0][:2000])
+        force_model_force = np.array(data[1][:2000])
+        force_model_stim_apparition_time = [data[2][:34]]
         self.ocp = FunctionalElectricStimulationOptimalControlProgramIdentification(ding_model=self.ding_force_model,
                                                                                     n_shooting=5,
                                                                                     force_tracking=[force_model_time, force_model_force],
@@ -279,6 +284,15 @@ class DingModelFrequencyParameterIdentification:
         plt.legend()
         plt.show()
         print(result.parameters)
+
+        self.ocp = FunctionalElectricStimulationOptimalControlProgramIdentification(ding_model=self.ding_fatigue_model,
+                                                                                    n_shooting=5,
+                                                                                    force_tracking=[fatigue_model_time, fatigue_model_force],
+                                                                                    pulse_apparition_time=fatigue_model_stim_apparition_time,
+                                                                                    use_sx=kwargs["use_sx"] if "use_sx" in kwargs else False,
+                                                                                    )
+
+
 
 
         # self.ocp = FunctionalElectricStimulationOptimalControlProgramIdentification(ding_model=self.ding_force_model,
@@ -305,10 +319,17 @@ class DingModelFrequencyParameterIdentification:
 
 if __name__ == "__main__":
 
+    # identification = DingModelFrequencyParameterIdentification(ding_force_model=ForceDingModelFrequencyIdentification(),
+    #                                                            ding_fatigue_model=FatigueDingModelFrequencyIdentification(a_rest=0.1, km_rest=0.1, tau1_rest=0.1, tau2=0.1),
+    #                                                            force_model_data_path=["D:/These/Programmation/Ergometer_pedal_force/Excel_test_force.xlsx"],
+    #                                                            fatigue_model_data_path=["D:/These/Programmation/Ergometer_pedal_force/Excel_test.xlsx"],
+    #                                                            use_sx=True,)
+
     identification = DingModelFrequencyParameterIdentification(ding_force_model=ForceDingModelFrequencyIdentification(),
                                                                ding_fatigue_model=FatigueDingModelFrequencyIdentification(a_rest=0.1, km_rest=0.1, tau1_rest=0.1, tau2=0.1),
                                                                force_model_data_path=["D:/These/Programmation/Ergometer_pedal_force/Excel_test_force.xlsx"],
-                                                               fatigue_model_data_path=["D:/These/Programmation/Ergometer_pedal_force/Excel_test.xlsx"],
+                                                               fatigue_model_data_path=["D:/These/Programmation/Ergometer_pedal_force/Excel_test_force.xlsx"],
+                                                               pickle_path=["D:\These\Programmation\Ding_model\parrot.pkl"],
                                                                use_sx=True,)
 
     param = identification.ocp.parameters
