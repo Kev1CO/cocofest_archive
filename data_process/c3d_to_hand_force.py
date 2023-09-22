@@ -2,7 +2,6 @@ from pyomeca import Analogs
 import glob
 import numpy as np
 import matplotlib.pyplot as plt
-from scipy.misc import electrocardiogram
 from scipy.signal import find_peaks
 
 file_dir = f"D:\These\Experiences\Ergometre_isocinetique\Experience_19_09_2022"
@@ -10,7 +9,7 @@ file_dir = f"D:\These\Experiences\Ergometre_isocinetique\Experience_19_09_2022"
 all_c3d = glob.glob(file_dir + "/*.c3d")
 
 
-class c3d_to_hand_force:
+class c3d_to_force:
     """
     Perfect data for identification is no force at the beginning and a force release between each stimulation train.
     This will enable data slicing of the force response to stimulation.
@@ -27,6 +26,8 @@ class c3d_to_hand_force:
         cutoff = kwargs["cutoff"] if "cutoff" in kwargs else 2
         if not isinstance(order, int | None) or not isinstance(cutoff, int | None):
             raise TypeError("window_length and order must be either None or int type")
+        if type(order) != type(cutoff):
+            raise TypeError("window_length and order must be both None or int type")
 
         time = raw_data.time.values.tolist()
         filtered_data = np.array(raw_data.meca.low_pass(order=order, cutoff=cutoff, freq=raw_data.rate)) if order and cutoff else raw_data
@@ -48,14 +49,29 @@ class c3d_to_hand_force:
                 raise ValueError("Please specify if the data is already calibrated or not with already_calibrated input."
                                  "If not, please provide a calibration matrix path")
 
-        filtered_6d_force = self.set_zero_level(filtered_6d_force[:, 1000:])
+        filtered_6d_force = self.set_zero_level(filtered_6d_force, average_on=[1000, 3000])
         if for_identification:
-            sliced_time, sliced_data = self.slice_data(time[1000:], filtered_6d_force)
+            sliced_time, sliced_data = self.slice_data(time, filtered_6d_force)  # slice the data into different stimulation
+            stimulation_time = self.stimulation_detection(time, raw_data[6])# detect the stimulation time
+            stimulation_time = [13.5, 13.6, 13.8, 20, 20.1, 20.2, 20.3, 20.4, 20.5, 20.6, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39]
+            identification_list = []
             for i in range(len(sliced_time)):
-                plt.plot(sliced_time[i], sliced_data[i][0]-20)
-            plt.plot(time[1000:], filtered_6d_force[0])
+                stimulation_time_temp = stimulation_time.copy()
+                stimulation_time_temp = [x for x in stimulation_time_temp if x > sliced_time[i][0] and x < sliced_time[i][-1]]
+                if len(stimulation_time_temp) != 0:
+                    identification_list.append([sliced_time[i], sliced_data[i], stimulation_time_temp])
+            for i in range(len(identification_list)):
+                if i == 0:
+                    identification_list[i][2] = (np.array(identification_list[i][2]) - identification_list[i][0][0]).tolist()
+                    identification_list[i][0] = (np.array(identification_list[i][0]) - identification_list[i][0][0]).tolist()
+                else:
+                    identification_list[i][2] = (np.array(identification_list[i][2]) - identification_list[i][0][0] + identification_list[i-1][0][-1]).tolist()
+                    identification_list[i][0] = (np.array(identification_list[i][0]) - identification_list[i][0][0] + identification_list[i-1][0][-1]).tolist()
+            for i in range(len(identification_list)):
+                y = np.zeros_like(identification_list[i][2])
+                plt.plot(identification_list[i][0], identification_list[i][1][0])
+                plt.plot(identification_list[i][2], y, "x")
             plt.show()
-            stimulation_time = self.stimulation_detection(time, raw_data[6])
 
     @staticmethod
     def reindex_2d_list(data, new_indices):
@@ -106,9 +122,11 @@ class c3d_to_hand_force:
         sliced_data = []
         global_last = 0
         data_sum = np.sum(abs(data[:3]), axis=0)
-        while np.argmax(data_sum > 2) != 0:
-            first = int(np.argmax(data_sum > 2))
-            last = int(np.argmax(data_sum[first:] < 2)) + first
+        remove_index = next(x for x, val in enumerate(data_sum) if val < 1)  # avoid the common first peak
+        data_sum[:remove_index] = 0
+        while next((x for x, val in enumerate(data_sum) if val > 2), None):
+            first = next(x for x, val in enumerate(data_sum) if val > 2)
+            last = next(x for x, val in enumerate(data_sum[first:]) if val < 1) + first
             global_first = first + global_last
             global_last += last
 
@@ -118,18 +136,17 @@ class c3d_to_hand_force:
             sliced_data.append(sliced_data_temp)
             sliced_time.append(time[global_first:global_last])
             data_sum = data_sum[last:]
-
         return sliced_time, sliced_data
 
     def stimulation_detection(self, time, stimulation_signal):
         peaks, _ = find_peaks(stimulation_signal, distance=10, height=0.005)
-        plt.plot(time, stimulation_signal)
-        plt.plot(peaks/10000, stimulation_signal[peaks], "x")
-        # plt.plot(np.zeros_like(stimulation_signal)/10000, "--", color="gray")
-        plt.show()
+        time_peaks = []
+        for i in range(len(peaks)):
+            time_peaks.append(time[peaks[i]])
+        return time_peaks
 
 
-c3d_to_hand_force(
+c3d_to_force(
                   # c3d_path=f"D:\These\Experiences\Ergometre_isocinetique\Mickael\Experience_17_11_2022\Mickael_Fatigue_17_11_2022.c3d",
                   # c3d_path= f"D:/These/Experiences/Ergometre_isocinetique/Experience_22_11_2022/EXP_ASSIS_22_11_2022.c3d",
                   c3d_path=f"D:/These/Experiences/Ergometre_isocinetique/Experience_20_09_2023/1.c3d",
