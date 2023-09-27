@@ -3,6 +3,7 @@ import glob
 import numpy as np
 import matplotlib.pyplot as plt
 from scipy.signal import find_peaks
+import heapq
 
 file_dir = f"D:\These\Experiences\Ergometre_isocinetique\Experience_19_09_2022"
 
@@ -52,8 +53,8 @@ class c3d_to_force:
         filtered_6d_force = self.set_zero_level(filtered_6d_force, average_on=[1000, 3000])
         if for_identification:
             sliced_time, sliced_data = self.slice_data(time, filtered_6d_force)  # slice the data into different stimulation
-            stimulation_time = self.stimulation_detection(time, raw_data[6])# detect the stimulation time
-            stimulation_time = [13.5, 13.6, 13.8, 20, 20.1, 20.2, 20.3, 20.4, 20.5, 20.6, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39]
+            stimulation_time, peaks = self.stimulation_detection(time, raw_data[6])# detect the stimulation time
+            # stimulation_time = [13.5, 13.6, 13.8, 20, 20.1, 20.2, 20.3, 20.4, 20.5, 20.6, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39]
             identification_list = []
             for i in range(len(sliced_time)):
                 stimulation_time_temp = stimulation_time.copy()
@@ -122,8 +123,15 @@ class c3d_to_force:
         sliced_data = []
         global_last = 0
         data_sum = np.sum(abs(data[:3]), axis=0)
+        data_sum = abs(data[0])
         remove_index = next(x for x, val in enumerate(data_sum) if val < 1)  # avoid the common first peak
         data_sum[:remove_index] = 0
+        # plt.plot(time, data_sum)
+        # plt.plot(time, data[0], label="x")
+        # plt.plot(time, data[1], label="y")
+        # plt.plot(time, data[2], label="z")
+        # plt.legend()
+        # plt.show()
         while next((x for x, val in enumerate(data_sum) if val > 2), None):
             first = next(x for x, val in enumerate(data_sum) if val > 2)
             last = next(x for x, val in enumerate(data_sum[first:]) if val < 1) + first
@@ -139,17 +147,27 @@ class c3d_to_force:
         return sliced_time, sliced_data
 
     def stimulation_detection(self, time, stimulation_signal):
-        peaks, _ = find_peaks(stimulation_signal, distance=10, height=0.005)
+        threshold_positive = np.mean(heapq.nlargest(20, stimulation_signal)) / 10
+        threshold_negative = np.mean(heapq.nsmallest(20, stimulation_signal)) / 10
+        positive = np.where(stimulation_signal > threshold_positive)
+        negative = np.where(stimulation_signal < threshold_negative)
+        if negative[0][0] < positive[0][0]:
+            stimulation_signal = -stimulation_signal  # invert the signal if the first peak is negative
+            threshold = -threshold_negative
+        else:
+            threshold = threshold_positive
+        peaks, _ = find_peaks(stimulation_signal, distance=10, height=threshold)
         time_peaks = []
         for i in range(len(peaks)):
             time_peaks.append(time[peaks[i]])
-        return time_peaks
+        return time_peaks, peaks
 
 
 c3d_to_force(
+                  c3d_path=f"D:\These\Experiences\Ergometre_isocinetique\With_FES\Data_with_fes_26_09_2023\Biceps_90deg_30mA_300us_33Hz_essai1.c3d",
                   # c3d_path=f"D:\These\Experiences\Ergometre_isocinetique\Mickael\Experience_17_11_2022\Mickael_Fatigue_17_11_2022.c3d",
                   # c3d_path= f"D:/These/Experiences/Ergometre_isocinetique/Experience_22_11_2022/EXP_ASSIS_22_11_2022.c3d",
-                  c3d_path=f"D:/These/Experiences/Ergometre_isocinetique/Experience_20_09_2023/1.c3d",
+                  # c3d_path=f"D:/These/Experiences/Ergometre_isocinetique/Experience_20_09_2023/1.c3d",
                   # c3d_path=f"D:/These/Experiences/Ergometre_isocinetique/Experience_20_09_2023/2.c3d",
                   # c3d_path=f"D:\These\Experiences\Ergometre_isocinetique\Experience_19_09_2022\without_fes01.c3d",
                   calibration_matrix_path="D:\These\Experiences\Ergometre_isocinetique\Capteur 6D\G_201602A1-P (matrice etalonnage).txt",
