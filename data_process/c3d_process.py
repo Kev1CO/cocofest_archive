@@ -92,12 +92,12 @@ class C3dToForce:
                     else:
                         save_pickle_path = saving_pickle_path_list[i]
                     dictionary = {"time": sliced_time,
-                                  "x": [x[0] for x in sliced_data],
-                                  "y": [y[1] for y in sliced_data],
-                                  "z": [z[2] for z in sliced_data],
-                                  "mx": [mx[3] for mx in sliced_data],
-                                  "my": [my[4] for my in sliced_data],
-                                  "mz": [mz[5] for mz in sliced_data],
+                                  "x": [x[0].tolist() for x in sliced_data],
+                                  "y": [y[1].tolist() for y in sliced_data],
+                                  "z": [z[2].tolist() for z in sliced_data],
+                                  "mx": [mx[3].tolist() for mx in sliced_data],
+                                  "my": [my[4].tolist() for my in sliced_data],
+                                  "mz": [mz[5].tolist() for mz in sliced_data],
                                   "stim_time": stimulation_time}
                     with open(save_pickle_path, 'wb') as file:
                         pickle.dump(dictionary, file)
@@ -396,7 +396,7 @@ class ForceSensorToMuscleForce:  # TODO : Enable several muscles (biceps, tricep
 
 
 if __name__ == "__main__":
-    """
+
     C3dToForce(
         # c3d_path=f"D:\These\Experiences\Ergometre_isocinetique\With_FES\Data_with_fes_26_09_2023\Biceps_90deg_30mA_300us_33Hz_essai_fatigue.c3d",
         c3d_path=[
@@ -429,7 +429,7 @@ if __name__ == "__main__":
         # check_stimulation=True,
         )
     # input_channel=[6, 0, 1, 2, 3, 4, 5])
-    """
+
 
 
     ForceSensorToMuscleForce(pickle_path="D:\These\Programmation\Modele_Musculaire\optistim\data_process\identification_data_Biceps_90deg_30mA_300us_33Hz_essai1.pkl",
