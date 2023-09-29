@@ -7,20 +7,13 @@ import heapq
 import pickle
 
 import biorbd
-import pandas as pd
-
-
-
-
-
-
 
 file_dir = f"D:\These\Experiences\Ergometre_isocinetique\Experience_19_09_2022"
 
 all_c3d = glob.glob(file_dir + "/*.c3d")
 
 
-class c3d_to_force:
+class C3dToForce:
     """
     Perfect data for identification is no force at the beginning and a force release between each stimulation train.
     This will enable data slicing of the force response to stimulation.
@@ -272,6 +265,7 @@ class ForceSensorToMuscleForce:  # TODO : Enable several muscles (biceps, tricep
 
         self.path = pickle_path
         self.time = None
+        self.stim_time = None
         self.t_local = None
         self.model = None
         self.Q = None
@@ -284,28 +278,42 @@ class ForceSensorToMuscleForce:  # TODO : Enable several muscles (biceps, tricep
 
         for pickle_path in pickle_path_list:
             self.load_data(pickle_path, forearm_angle)
-            self.load_model()
-            self.get_muscle_force()
+            self.load_model(forearm_angle)
+            for i in range(len(self.t_local[0])):
+                self.get_muscle_force(local_torque_force_vector=self.t_local[:, i])
 
     def load_data(self, pickle_path, forearm_angle):
-        # # converting excel file into dataframe for computation
-        # dataframe = pd.read_excel(self.path) if self.n_rows is None else pd.read_excel(self.path, nrows=self.n_rows)
-
         # --- Retrieving pickle data --- #
         with open(pickle_path, 'rb') as f:
             data = pickle.load(f)
             sensor_data = []
-            dict_name_list = ['x', 'y', 'z', 'mx', 'my', 'mz']
+            dict_name_list = ['mx', 'my', 'mz', 'x', 'y', 'z']
             for name in dict_name_list:
                 sensor_data.append(data[name])
             sensor_data = np.array(sensor_data)
 
-        # --- Putting sensor force into general axis --- #
-        # When the forearm position is at 90° :
-        # xmodel = -zsensor
-        # ymodel = -xsensor
-        # zmodel = ysensor
+        self.t_local = self.local_to_global(sensor_data, forearm_angle)
+        self.time = data['time']
+        self.stim_time = data['stim_time']
 
+    @staticmethod
+    def local_to_global(sensor_data: np.array, forearm_angle: int | float) -> np.array:
+        """
+        This function is used to convert the sensor data from the local axis to the global axis.
+        When the forearm position is at 90° :
+        fx_global = -fz_local
+        fy_global = -fx_local
+        fz_global = fy_local
+
+        Parameters
+        ----------
+        sensor_data
+        forearm_angle
+
+        Returns
+        -------
+
+        """
         rotation_1_rad = np.radians(-90) + np.radians(forearm_angle - 90)
         rotation_2_rad = np.radians(90)
 
@@ -322,31 +330,9 @@ class ForceSensorToMuscleForce:  # TODO : Enable several muscles (biceps, tricep
             sensor_data[:3, i] = rotation_matrix @ sensor_data[:3, i]
             sensor_data[3:6, i] = rotation_matrix @ sensor_data[3:6, i]
 
-        # if all(ele in dataframe.columns.to_list() for ele in ['Fx (N)', 'Fy (N)', 'Fz (N)', 'Mx (N.m)', 'My (N.m)', 'Mz (N.m)']):
-        #     fx = -dataframe['Fz (N)']
-        #     fy = -dataframe['Fx (N)']
-        #     fz = dataframe['Fy (N)']
-        #     mx = -dataframe['Mz (N.m)']
-        #     my = -dataframe['Mx (N.m)']
-        #     mz = dataframe['My (N.m)']
-        # else:
-        #     raise ValueError("The dataframe does not contain the expected columns."
-        #                      "The excel file must contain columns :"
-        #                      " 'Fx (N)', 'Fy (N)', 'Fz (N)', 'Mx (N.m)', 'My (N.m)', 'Mz (N.m)'")
-        #
-        # # --- Recuperating the time --- #
-        # if 'Time (s)' not in dataframe.columns.to_list():
-        #     raise ValueError("The dataframe does not contain the expected columns."
-        #                      "The excel file must contain a column 'Time (s)'")
-        # self.time = dataframe['Time (s)'].to_numpy()
-        #
-        # # --- Building external force vector applied at the hand --- #
-        # t_local = []
-        # for i in range(len(fx)):
-        #     t_local.append([mx[i], my[i], mz[i], fx[i], fy[i], fz[i]])
-        # self.t_local = t_local
+        return sensor_data
 
-    def load_model(self):
+    def load_model(self, forearm_angle: int | float):
         # Load a predefined model
         self.model = biorbd.Model("model/arm26_unmesh.bioMod")
         # Get number of q, qdot, qddot
@@ -356,8 +342,8 @@ class ForceSensorToMuscleForce:  # TODO : Enable several muscles (biceps, tricep
 
         # Choose a position/velocity/acceleration to compute dynamics from
         if nq != 2:
-            raise ValueError("The number of degrees of freedom has changed.")                  # 0
-        self.Q = np.array([0., 1.57])  # "0" arm along body and "1.57" 90° forearm position      |__.
+            raise ValueError("The number of degrees of freedom has changed.")                                   # 0
+        self.Q = np.array([0., np.radians(forearm_angle)])  # "0" arm along body and "1.57" 90° forearm position  |__.
         self.Qdot = np.zeros((nqdot,))  # speed null
         self.Qddot = np.zeros((nqddot,))  # acceleration null
 
@@ -378,13 +364,14 @@ class ForceSensorToMuscleForce:  # TODO : Enable several muscles (biceps, tricep
         if self.model.markerNames()[4].to_string() != 'hand':
             raise ValueError("hand marker index as changed.")
 
-    def get_muscle_force(self):
+    def get_muscle_force(self, local_torque_force_vector):
         self.biceps_force_vector = []
         for i in range(len(self.t_local)):
             a = self.model.markers(self.Q)[4].to_array()
             # b = self.model.markers(Q)[3].to_array()  # [0, 0, 0]
             # the 'b' point is not used for calculation as 'a' is expressed in 'b' local coordinates
-            t_global = self.force_transport(self.t_local[i], a)
+            t_global = self.force_transport(local_torque_force_vector[i], a)  # TODO make it a list : local_torque_force_vector
+            # t_global = self.force_transport(self.t_local[i], a)
 
             external_forces = np.array(t_global)[:, np.newaxis]
             external_forces_v = biorbd.to_spatial_vector(external_forces)
@@ -410,7 +397,7 @@ class ForceSensorToMuscleForce:  # TODO : Enable several muscles (biceps, tricep
 
 if __name__ == "__main__":
     """
-    c3d_to_force(
+    C3dToForce(
         # c3d_path=f"D:\These\Experiences\Ergometre_isocinetique\With_FES\Data_with_fes_26_09_2023\Biceps_90deg_30mA_300us_33Hz_essai_fatigue.c3d",
         c3d_path=[
             f"D:\These\Experiences\Ergometre_isocinetique\With_FES\Data_with_fes_26_09_2023\Biceps_90deg_30mA_300us_33Hz_essai1.c3d",
