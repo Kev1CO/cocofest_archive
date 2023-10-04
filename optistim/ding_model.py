@@ -5,7 +5,7 @@ different custom models.
 """
 from typing import Callable
 
-from casadi import MX, SX, exp, vertcat, Function, sum1, horzcat, tanh
+from casadi import MX, SX, exp, vertcat, Function, sum1, tanh
 import numpy as np
 
 from bioptim import (
@@ -27,8 +27,9 @@ class DingModelFrequency:
     This is the Ding 2003 model using the stimulation frequency in input.
     """
 
-    def __init__(self, name: str = None):
+    def __init__(self, name: str = None, with_fatigue: bool = True):
         self._name = name
+        self._with_fatigue = with_fatigue
         # ---- Custom values for the example ---- #
         self.tauc = 0.020  # Value from Ding's experimentation [1] (s)
         self.r0_km_relationship = 1.04  # (unitless)
@@ -48,35 +49,52 @@ class DingModelFrequency:
         -------
         The rested values of Cn, F, A, Tau1, Km
         """
-        return np.array([[0], [0], [self.a_rest], [self.tau1_rest], [self.km_rest]])
+        return (
+            np.array([[0], [0], [self.a_rest], [self.tau1_rest], [self.km_rest]])
+            if self._with_fatigue
+            else np.array([[0], [0]])
+        )
 
     # ---- Absolutely needed methods ---- #
     def serialize(self) -> tuple[Callable, dict]:
         # This is where you can serialize your model
         # This is useful if you want to save your model and load it later
         return (
-            DingModelFrequency,
-            {
-                "tauc": self.tauc,
-                "a_rest": self.a_rest,
-                "tau1_rest": self.tau1_rest,
-                "km_rest": self.km_rest,
-                "tau2": self.tau2,
-                "alpha_a": self.alpha_a,
-                "alpha_tau1": self.alpha_tau1,
-                "alpha_km": self.alpha_km,
-                "tau_fat": self.tau_fat,
-            },
+            (
+                DingModelFrequency,
+                {
+                    "tauc": self.tauc,
+                    "a_rest": self.a_rest,
+                    "tau1_rest": self.tau1_rest,
+                    "km_rest": self.km_rest,
+                    "tau2": self.tau2,
+                    "alpha_a": self.alpha_a,
+                    "alpha_tau1": self.alpha_tau1,
+                    "alpha_km": self.alpha_km,
+                    "tau_fat": self.tau_fat,
+                },
+            )
+            if self._with_fatigue
+            else (
+                DingModelFrequency,
+                {
+                    "tauc": self.tauc,
+                    "a_rest": self.a_rest,
+                    "tau1_rest": self.tau1_rest,
+                    "km_rest": self.km_rest,
+                    "tau2": self.tau2,
+                },
+            )
         )
 
     # ---- Needed for the example ---- #
     @property
     def name_dof(self) -> list[str]:
-        return ["Cn", "F", "A", "Tau1", "Km"]
+        return ["Cn", "F", "A", "Tau1", "Km"] if self._with_fatigue else ["Cn", "F"]
 
     @property
     def nb_state(self) -> int:
-        return 5
+        return 5 if self._with_fatigue else 2
 
     @property
     def name(self) -> None | str:
@@ -87,10 +105,10 @@ class DingModelFrequency:
         self,
         cn: MX | SX,
         f: MX | SX,
-        a: MX | SX,
-        tau1: MX | SX,
-        km: MX | SX,
-        t: MX | SX,
+        a: MX | SX = None,
+        tau1: MX | SX = None,
+        km: MX | SX = None,
+        t: MX | SX = None,
         **extra_arguments: list[MX] | list[SX]
     ) -> MX | SX:
         """
@@ -118,13 +136,21 @@ class DingModelFrequency:
         -------
         The value of the derivative of each state dx/dt at the current time t
         """
-        r0 = km + self.r0_km_relationship  # Simplification
+        r0 = (
+            km + self.r0_km_relationship if self._with_fatigue else self.km_rest + self.r0_km_relationship
+        )  # Simplification
         cn_dot = self.cn_dot_fun(cn, r0, t, t_stim_prev=extra_arguments["t_stim_prev"])  # Equation n°1
-        f_dot = self.f_dot_fun(cn, f, a, tau1, km)  # Equation n°2
-        a_dot = self.a_dot_fun(a, f)  # Equation n°5
-        tau1_dot = self.tau1_dot_fun(tau1, f)  # Equation n°9
-        km_dot = self.km_dot_fun(km, f)  # Equation n°11
-        return vertcat(cn_dot, f_dot, a_dot, tau1_dot, km_dot)
+        f_dot = (
+            self.f_dot_fun(cn, f, a, tau1, km)
+            if self._with_fatigue
+            else self.f_dot_fun(cn, f, self.a_rest, self.tau1_rest, self.km_rest)
+        )  # Equation n°2
+        if self._with_fatigue:
+            a_dot = self.a_dot_fun(a, f)  # Equation n°5
+            tau1_dot = self.tau1_dot_fun(tau1, f)  # Equation n°9
+            km_dot = self.km_dot_fun(km, f)  # Equation n°11
+            return vertcat(cn_dot, f_dot, a_dot, tau1_dot, km_dot)
+        return vertcat(cn_dot, f_dot)
 
     def exp_time_fun(self, t: MX | SX, t_stim_i: MX | SX) -> MX | SX:
         """
@@ -209,7 +235,9 @@ class DingModelFrequency:
 
         return (1 / self.tauc) * sum_multiplier - (cn / self.tauc)  # Equation n°1
 
-    def f_dot_fun(self, cn: MX | SX, f: MX | SX, a: MX | SX, tau1: MX | SX, km: MX | SX) -> float | MX | SX:
+    def f_dot_fun(
+        self, cn: MX | SX, f: MX | SX, a: MX | SX | float, tau1: MX | SX | float, km: MX | SX | float
+    ) -> float | MX | SX:
         """
         Parameters
         ----------
@@ -284,6 +312,7 @@ class DingModelFrequency:
         stochastic_variables: MX | SX,
         nlp: NonLinearProgram,
         nb_phases=None,
+        with_fatigue: bool = True,
     ) -> DynamicsEvaluation:
         """
         Functional electrical stimulation dynamic
@@ -304,6 +333,8 @@ class DingModelFrequency:
             A reference to the phase
         nb_phases: int
             The number of phases in the ocp
+        with_fatigue: bool
+            If the fatigue model should be included
         Returns
         -------
         The derivative of the states in the tuple[MX | SX]] format
@@ -318,22 +349,35 @@ class DingModelFrequency:
             for i in range(nlp.phase_idx + 1):
                 t_stim_prev.append(sum1(time_parameters[0:i]))
 
-        return DynamicsEvaluation(
-            dxdt=DingModelFrequency.system_dynamics(
-                DingModelFrequency(),
-                cn=states[0],
-                f=states[1],
-                a=states[2],
-                tau1=states[3],
-                km=states[4],
-                t=time,
-                t_stim_prev=t_stim_prev,
-            ),
-            defects=None,
+        return (
+            DynamicsEvaluation(
+                dxdt=DingModelFrequency.system_dynamics(
+                    DingModelFrequency(with_fatigue=True),
+                    cn=states[0],
+                    f=states[1],
+                    a=states[2],
+                    tau1=states[3],
+                    km=states[4],
+                    t=time,
+                    t_stim_prev=t_stim_prev,
+                ),
+                defects=None,
+            )
+            if with_fatigue
+            else DynamicsEvaluation(
+                dxdt=DingModelFrequency.system_dynamics(
+                    DingModelFrequency(with_fatigue=False),
+                    cn=states[0],
+                    f=states[1],
+                    t=time,
+                    t_stim_prev=t_stim_prev,
+                ),
+                defects=None,
+            )
         )
 
-    @staticmethod
-    def custom_configure_dynamics_function(ocp: OptimalControlProgram, nlp: NonLinearProgram, **extra_params):
+    # @staticmethod
+    def custom_configure_dynamics_function(self, ocp: OptimalControlProgram, nlp: NonLinearProgram, **extra_params):
         """
         Configure the dynamics of the system
 
@@ -350,7 +394,7 @@ class DingModelFrequency:
         nlp.parameters = ocp.parameters
         DynamicsFunctions.apply_parameters(nlp.parameters.cx_start, nlp)
         extra_params["nb_phases"] = ocp.n_phases
-
+        extra_params["with_fatigue"] = self._with_fatigue
         if not isinstance(DingModelFrequency.dynamics, (tuple, list)):
             DingModelFrequency.dynamics = (DingModelFrequency.dynamics,)
 
@@ -384,8 +428,7 @@ class DingModelFrequency:
                 ),
             )
 
-    @staticmethod
-    def declare_ding_variables(ocp: OptimalControlProgram, nlp: NonLinearProgram):
+    def declare_ding_variables(self, ocp: OptimalControlProgram, nlp: NonLinearProgram):
         """
         Tell the program which variables are states and controls.
         The user is expected to use the ConfigureProblem.configure_xxx functions.
@@ -396,14 +439,13 @@ class DingModelFrequency:
         nlp: NonLinearProgram
             A reference to the phase
         """
-        DingModelFrequency.configure_ca_troponin_complex(ocp=ocp, nlp=nlp, as_states=True, as_controls=False)
-        DingModelFrequency.configure_force(ocp=ocp, nlp=nlp, as_states=True, as_controls=False)
-        DingModelFrequency.configure_scaling_factor(ocp=ocp, nlp=nlp, as_states=True, as_controls=False)
-        DingModelFrequency.configure_time_state_force_no_cross_bridge(
-            ocp=ocp, nlp=nlp, as_states=True, as_controls=False
-        )
-        DingModelFrequency.configure_cross_bridges(ocp=ocp, nlp=nlp, as_states=True, as_controls=False)
-        DingModelFrequency.custom_configure_dynamics_function(ocp, nlp)
+        self.configure_ca_troponin_complex(ocp=ocp, nlp=nlp, as_states=True, as_controls=False)
+        self.configure_force(ocp=ocp, nlp=nlp, as_states=True, as_controls=False)
+        if self._with_fatigue:
+            self.configure_scaling_factor(ocp=ocp, nlp=nlp, as_states=True, as_controls=False)
+            self.configure_time_state_force_no_cross_bridge(ocp=ocp, nlp=nlp, as_states=True, as_controls=False)
+            self.configure_cross_bridges(ocp=ocp, nlp=nlp, as_states=True, as_controls=False)
+        self.custom_configure_dynamics_function(ocp, nlp)
 
     @staticmethod
     def configure_ca_troponin_complex(
@@ -613,8 +655,10 @@ class DingModelFrequency:
 
 
 class DingModelPulseDurationFrequency(DingModelFrequency):
-    def __init__(self):
+    def __init__(self, name: str = None, with_fatigue: bool = True):
         super().__init__()
+        self._name = name
+        self._with_fatigue = with_fatigue
         self.impulse_time = None
         self.a_scale = 4920  # Value from Ding's 2007 article (N/s)
         self.pd0 = 0.000131405  # Value from Ding's 2007 article (s)
@@ -627,11 +671,11 @@ class DingModelPulseDurationFrequency(DingModelFrequency):
     # ---- Absolutely needed methods ---- #
     @property
     def name_dof(self) -> list[str]:
-        return ["Cn", "F", "Tau1", "Km"]
+        return ["Cn", "F", "Tau1", "Km"] if self._with_fatigue else ["Cn", "F"]
 
     @property
     def nb_state(self) -> int:
-        return 4
+        return 4 if self._with_fatigue else 2
 
     def standard_rest_values(self) -> np.array:
         """
@@ -639,31 +683,53 @@ class DingModelPulseDurationFrequency(DingModelFrequency):
         -------
         The rested values of Cn, F, Tau1, Km
         """
-        return np.array([[0], [0], [self.tau1_rest], [self.km_rest]])
+        return np.array([[0], [0], [self.tau1_rest], [self.km_rest]]) if self._with_fatigue else np.array([[0], [0]])
 
     def serialize(self) -> tuple[Callable, dict]:
         # This is where you can serialize your model
         # This is useful if you want to save your model and load it later
         return (
-            DingModelPulseDurationFrequency,
-            {
-                "tauc": self.tauc,
-                "a_rest": self.a_rest,
-                "tau1_rest": self.tau1_rest,
-                "km_rest": self.km_rest,
-                "tau2": self.tau2,
-                "alpha_a": self.alpha_a,
-                "alpha_tau1": self.alpha_tau1,
-                "alpha_km": self.alpha_km,
-                "tau_fat": self.tau_fat,
-                "a_scale": self.a_scale,
-                "pd0": self.pd0,
-                "pdt": self.pdt,
-            },
+            (
+                DingModelPulseDurationFrequency,
+                {
+                    "tauc": self.tauc,
+                    "a_rest": self.a_rest,
+                    "tau1_rest": self.tau1_rest,
+                    "km_rest": self.km_rest,
+                    "tau2": self.tau2,
+                    "alpha_a": self.alpha_a,
+                    "alpha_tau1": self.alpha_tau1,
+                    "alpha_km": self.alpha_km,
+                    "tau_fat": self.tau_fat,
+                    "a_scale": self.a_scale,
+                    "pd0": self.pd0,
+                    "pdt": self.pdt,
+                },
+            )
+            if self._with_fatigue
+            else (
+                DingModelPulseDurationFrequency,
+                {
+                    "tauc": self.tauc,
+                    "a_rest": self.a_rest,
+                    "tau1_rest": self.tau1_rest,
+                    "km_rest": self.km_rest,
+                    "tau2": self.tau2,
+                    "a_scale": self.a_scale,
+                    "pd0": self.pd0,
+                    "pdt": self.pdt,
+                },
+            )
         )
 
     def system_dynamics(
-        self, cn: MX | SX, f: MX | SX, tau1: MX | SX, km: MX | SX, t: MX | SX, **extra_arguments: list[MX] | list[SX]
+        self,
+        cn: MX | SX,
+        f: MX | SX,
+        tau1: MX | SX = None,
+        km: MX | SX = None,
+        t: MX | SX = None,
+        **extra_arguments: list[MX] | list[SX]
     ) -> MX | SX:
         """
         The system dynamics is the function that describes the model.
@@ -690,15 +756,23 @@ class DingModelPulseDurationFrequency(DingModelFrequency):
         -------
         The value of the derivative of each state dx/dt at the current time t
         """
-        r0 = km + self.r0_km_relationship  # Simplification
+        r0 = (
+            km + self.r0_km_relationship if self._with_fatigue else self.km_rest + self.r0_km_relationship
+        )  # Simplification
         cn_dot = self.cn_dot_fun(
             cn, r0, t, t_stim_prev=extra_arguments["t_stim_prev"]
         )  # Equation n°1 from Ding's 2003 article
         a = self.a_calculation(impulse_time=extra_arguments["impulse_time"])  # Equation n°3 from Ding's 2007 article
-        f_dot = self.f_dot_fun(cn, f, a, tau1, km)  # Equation n°2 from Ding's 2003 article
-        tau1_dot = self.tau1_dot_fun(tau1, f)  # Equation n°9 from Ding's 2003 article
-        km_dot = self.km_dot_fun(km, f)  # Equation n°11 from Ding's 2003 article
-        return vertcat(cn_dot, f_dot, tau1_dot, km_dot)
+        f_dot = (
+            self.f_dot_fun(cn, f, a, tau1, km)
+            if self._with_fatigue
+            else self.f_dot_fun(cn, f, self.a_rest, self.tau1_rest, self.km_rest)
+        )  # Equation n°2 from Ding's 2003 article
+        if self._with_fatigue:
+            tau1_dot = self.tau1_dot_fun(tau1, f)  # Equation n°9 from Ding's 2003 article
+            km_dot = self.km_dot_fun(km, f)  # Equation n°11 from Ding's 2003 article
+            return vertcat(cn_dot, f_dot, tau1_dot, km_dot)
+        return vertcat(cn_dot, f_dot)
 
     def a_calculation(self, impulse_time: list[MX] | list[SX]) -> MX | SX:
         """
@@ -753,6 +827,7 @@ class DingModelPulseDurationFrequency(DingModelFrequency):
         stochastic_variables: MX | SX,
         nlp: NonLinearProgram,
         nb_phases=None,
+        with_fatigue: bool = True,
     ) -> DynamicsEvaluation:
         """
         Functional electrical stimulation dynamic
@@ -773,6 +848,8 @@ class DingModelPulseDurationFrequency(DingModelFrequency):
             A reference to the phase
         nb_phases: int
             The number of phases in the ocp
+        with_fatigue: bool
+            If the fatigue model should be included
         Returns
         -------
         The derivative of the states in the tuple[MX | SX]] format
@@ -794,22 +871,35 @@ class DingModelPulseDurationFrequency(DingModelFrequency):
         else:
             impulse_time = pulse_duration_parameters[nlp.phase_idx]
 
-        return DynamicsEvaluation(
-            dxdt=DingModelPulseDurationFrequency.system_dynamics(
-                DingModelPulseDurationFrequency(),
-                cn=states[0],
-                f=states[1],
-                tau1=states[2],
-                km=states[3],
-                t=time,
-                t_stim_prev=t_stim_prev,
-                impulse_time=impulse_time,
-            ),
-            defects=None,
+        return (
+            DynamicsEvaluation(
+                dxdt=DingModelPulseDurationFrequency.system_dynamics(
+                    DingModelPulseDurationFrequency(with_fatigue=True),
+                    cn=states[0],
+                    f=states[1],
+                    tau1=states[2],
+                    km=states[3],
+                    t=time,
+                    t_stim_prev=t_stim_prev,
+                    impulse_time=impulse_time,
+                ),
+                defects=None,
+            )
+            if with_fatigue
+            else DynamicsEvaluation(
+                dxdt=DingModelPulseDurationFrequency.system_dynamics(
+                    DingModelPulseDurationFrequency(with_fatigue=False),
+                    cn=states[0],
+                    f=states[1],
+                    t=time,
+                    t_stim_prev=t_stim_prev,
+                    impulse_time=impulse_time,
+                ),
+                defects=None,
+            )
         )
 
-    @staticmethod
-    def custom_configure_dynamics_function(ocp, nlp, **extra_params):
+    def custom_configure_dynamics_function(self, ocp, nlp, **extra_params):
         """
         Configure the dynamics of the system
 
@@ -827,6 +917,7 @@ class DingModelPulseDurationFrequency(DingModelFrequency):
         nlp.parameters = ocp.parameters
         DynamicsFunctions.apply_parameters(nlp.parameters.cx_start, nlp)
         extra_params["nb_phases"] = ocp.n_phases
+        extra_params["with_fatigue"] = self._with_fatigue
 
         if not isinstance(DingModelPulseDurationFrequency.dynamics, (tuple, list)):
             DingModelPulseDurationFrequency.dynamics = (DingModelPulseDurationFrequency.dynamics,)
@@ -861,8 +952,7 @@ class DingModelPulseDurationFrequency(DingModelFrequency):
                 ),
             )
 
-    @staticmethod
-    def declare_ding_variables(ocp: OptimalControlProgram, nlp: NonLinearProgram):
+    def declare_ding_variables(self, ocp: OptimalControlProgram, nlp: NonLinearProgram):
         """
         Tell the program which variables are states and controls.
         The user is expected to use the ConfigureProblem.configure_xxx functions.
@@ -873,20 +963,19 @@ class DingModelPulseDurationFrequency(DingModelFrequency):
         nlp: NonLinearProgram
             A reference to the phase
         """
-        DingModelPulseDurationFrequency.configure_ca_troponin_complex(
-            ocp=ocp, nlp=nlp, as_states=True, as_controls=False
-        )
-        DingModelPulseDurationFrequency.configure_force(ocp=ocp, nlp=nlp, as_states=True, as_controls=False)
-        DingModelPulseDurationFrequency.configure_time_state_force_no_cross_bridge(
-            ocp=ocp, nlp=nlp, as_states=True, as_controls=False
-        )
-        DingModelPulseDurationFrequency.configure_cross_bridges(ocp=ocp, nlp=nlp, as_states=True, as_controls=False)
-        DingModelPulseDurationFrequency.custom_configure_dynamics_function(ocp, nlp)
+        self.configure_ca_troponin_complex(ocp=ocp, nlp=nlp, as_states=True, as_controls=False)
+        self.configure_force(ocp=ocp, nlp=nlp, as_states=True, as_controls=False)
+        if self._with_fatigue:
+            self.configure_time_state_force_no_cross_bridge(ocp=ocp, nlp=nlp, as_states=True, as_controls=False)
+            self.configure_cross_bridges(ocp=ocp, nlp=nlp, as_states=True, as_controls=False)
+        self.custom_configure_dynamics_function(ocp, nlp)
 
 
 class DingModelIntensityFrequency(DingModelFrequency):
-    def __init__(self):
+    def __init__(self, name: str = None, with_fatigue: bool = True):
         super().__init__()
+        self._name = name
+        self._with_fatigue = with_fatigue
         self.ar = 0.586  # (-) Translation of axis coordinates.
         self.bs = 0.026  # (-) Fiber muscle recruitment constant identification.
         self.Is = 63.1  # (mA) Muscle saturation intensity.
@@ -898,32 +987,49 @@ class DingModelIntensityFrequency(DingModelFrequency):
         # This is where you can serialize your model
         # This is useful if you want to save your model and load it later
         return (
-            DingModelIntensityFrequency,
-            {
-                "tauc": self.tauc,
-                "a_rest": self.a_rest,
-                "tau1_rest": self.tau1_rest,
-                "km_rest": self.km_rest,
-                "tau2": self.tau2,
-                "alpha_a": self.alpha_a,
-                "alpha_tau1": self.alpha_tau1,
-                "alpha_km": self.alpha_km,
-                "tau_fat": self.tau_fat,
-                "ar": self.ar,
-                "bs": self.bs,
-                "Is": self.Is,
-                "cr": self.cr,
-            },
+            (
+                DingModelIntensityFrequency,
+                {
+                    "tauc": self.tauc,
+                    "a_rest": self.a_rest,
+                    "tau1_rest": self.tau1_rest,
+                    "km_rest": self.km_rest,
+                    "tau2": self.tau2,
+                    "alpha_a": self.alpha_a,
+                    "alpha_tau1": self.alpha_tau1,
+                    "alpha_km": self.alpha_km,
+                    "tau_fat": self.tau_fat,
+                    "ar": self.ar,
+                    "bs": self.bs,
+                    "Is": self.Is,
+                    "cr": self.cr,
+                },
+            )
+            if self._with_fatigue
+            else (
+                DingModelIntensityFrequency,
+                {
+                    "tauc": self.tauc,
+                    "a_rest": self.a_rest,
+                    "tau1_rest": self.tau1_rest,
+                    "km_rest": self.km_rest,
+                    "tau2": self.tau2,
+                    "ar": self.ar,
+                    "bs": self.bs,
+                    "Is": self.Is,
+                    "cr": self.cr,
+                },
+            )
         )
 
     def system_dynamics(
         self,
         cn: MX | SX,
         f: MX | SX,
-        a: MX | SX,
-        tau1: MX | SX,
-        km: MX | SX,
-        t: MX | SX,
+        a: MX | SX = None,
+        tau1: MX | SX = None,
+        km: MX | SX = None,
+        t: MX | SX = None,
         **extra_arguments: list[MX] | list[SX]
     ) -> MX | SX:
         """
@@ -953,16 +1059,23 @@ class DingModelIntensityFrequency(DingModelFrequency):
         -------
         The value of the derivative of each state dx/dt at the current time t
         """
-        r0 = km + self.r0_km_relationship  # Simplification
+        r0 = (
+            km + self.r0_km_relationship if self._with_fatigue else self.km_rest + self.r0_km_relationship
+        )  # Simplification
         cn_dot = self.cn_dot_fun(
             cn, r0, t, t_stim_prev=extra_arguments["t_stim_prev"], intensity_stim=extra_arguments["intensity_stim"]
         )  # Equation n°1
-        f_dot = self.f_dot_fun(cn, f, a, tau1, km)  # Equation n°2
-        a_dot = self.a_dot_fun(a, f)  # Equation n°5
-        tau1_dot = self.tau1_dot_fun(tau1, f)  # Equation n°9
-        km_dot = self.km_dot_fun(km, f)  # Equation n°11
-
-        return vertcat(cn_dot, f_dot, a_dot, tau1_dot, km_dot)
+        f_dot = (
+            self.f_dot_fun(cn, f, a, tau1, km)
+            if self._with_fatigue
+            else self.f_dot_fun(cn, f, self.a_rest, self.tau1_rest, self.km_rest)
+        )  # Equation n°2
+        if self._with_fatigue:
+            a_dot = self.a_dot_fun(a, f)  # Equation n°5
+            tau1_dot = self.tau1_dot_fun(tau1, f)  # Equation n°9
+            km_dot = self.km_dot_fun(km, f)  # Equation n°11
+            return vertcat(cn_dot, f_dot, a_dot, tau1_dot, km_dot)
+        return vertcat(cn_dot, f_dot)
 
     def cn_dot_fun(
         self, cn: MX | SX, r0: float | MX | SX, t: MX | SX, **extra_arguments: list[MX] | list[SX]
@@ -1080,6 +1193,7 @@ class DingModelIntensityFrequency(DingModelFrequency):
         stochastic_variables: MX | SX,
         nlp: NonLinearProgram,
         nb_phases=None,
+        with_fatigue: bool = True,
     ) -> DynamicsEvaluation:
         """
         Functional electrical stimulation dynamic
@@ -1100,6 +1214,8 @@ class DingModelIntensityFrequency(DingModelFrequency):
             A reference to the phase
         nb_phases: int
             The number of phases in the ocp
+        with_fatigue: bool
+            If the fatigue model should be included
         Returns
         -------
         The derivative of the states in the tuple[MX | SX]] format
@@ -1126,23 +1242,36 @@ class DingModelIntensityFrequency(DingModelFrequency):
             for i in range(nlp.phase_idx + 1):
                 intensity_stim_prev.append(intensity_parameters[i])
 
-        return DynamicsEvaluation(
-            dxdt=DingModelIntensityFrequency.system_dynamics(
-                DingModelIntensityFrequency(),
-                cn=states[0],
-                f=states[1],
-                a=states[2],
-                tau1=states[3],
-                km=states[4],
-                t=time,
-                t_stim_prev=t_stim_prev,
-                intensity_stim=intensity_stim_prev,
-            ),
-            defects=None,
+        return (
+            DynamicsEvaluation(
+                dxdt=DingModelIntensityFrequency.system_dynamics(
+                    DingModelIntensityFrequency(with_fatigue=True),
+                    cn=states[0],
+                    f=states[1],
+                    a=states[2],
+                    tau1=states[3],
+                    km=states[4],
+                    t=time,
+                    t_stim_prev=t_stim_prev,
+                    intensity_stim=intensity_stim_prev,
+                ),
+                defects=None,
+            )
+            if with_fatigue
+            else DynamicsEvaluation(
+                dxdt=DingModelIntensityFrequency.system_dynamics(
+                    DingModelIntensityFrequency(with_fatigue=False),
+                    cn=states[0],
+                    f=states[1],
+                    t=time,
+                    t_stim_prev=t_stim_prev,
+                    intensity_stim=intensity_stim_prev,
+                ),
+                defects=None,
+            )
         )
 
-    @staticmethod
-    def custom_configure_dynamics_function(ocp, nlp, **extra_params):
+    def custom_configure_dynamics_function(self, ocp, nlp, **extra_params):
         """
         Configure the dynamics of the system
 
@@ -1160,6 +1289,7 @@ class DingModelIntensityFrequency(DingModelFrequency):
         nlp.parameters = ocp.parameters
         DynamicsFunctions.apply_parameters(nlp.parameters.cx_start, nlp)
         extra_params["nb_phases"] = ocp.n_phases
+        extra_params["with_fatigue"] = self._with_fatigue
 
         if not isinstance(DingModelIntensityFrequency.dynamics, (tuple, list)):
             DingModelIntensityFrequency.dynamics = (DingModelIntensityFrequency.dynamics,)
@@ -1194,8 +1324,7 @@ class DingModelIntensityFrequency(DingModelFrequency):
                 ),
             )
 
-    @staticmethod
-    def declare_ding_variables(ocp: OptimalControlProgram, nlp: NonLinearProgram):
+    def declare_ding_variables(self, ocp: OptimalControlProgram, nlp: NonLinearProgram):
         """
         Tell the program which variables are states and controls.
         The user is expected to use the ConfigureProblem.configure_xxx functions.
@@ -1206,11 +1335,10 @@ class DingModelIntensityFrequency(DingModelFrequency):
         nlp: NonLinearProgram
             A reference to the phase
         """
-        DingModelIntensityFrequency.configure_ca_troponin_complex(ocp=ocp, nlp=nlp, as_states=True, as_controls=False)
-        DingModelIntensityFrequency.configure_force(ocp=ocp, nlp=nlp, as_states=True, as_controls=False)
-        DingModelIntensityFrequency.configure_scaling_factor(ocp=ocp, nlp=nlp, as_states=True, as_controls=False)
-        DingModelIntensityFrequency.configure_time_state_force_no_cross_bridge(
-            ocp=ocp, nlp=nlp, as_states=True, as_controls=False
-        )
-        DingModelIntensityFrequency.configure_cross_bridges(ocp=ocp, nlp=nlp, as_states=True, as_controls=False)
-        DingModelIntensityFrequency.custom_configure_dynamics_function(ocp, nlp)
+        self.configure_ca_troponin_complex(ocp=ocp, nlp=nlp, as_states=True, as_controls=False)
+        self.configure_force(ocp=ocp, nlp=nlp, as_states=True, as_controls=False)
+        if self._with_fatigue:
+            self.configure_scaling_factor(ocp=ocp, nlp=nlp, as_states=True, as_controls=False)
+            self.configure_time_state_force_no_cross_bridge(ocp=ocp, nlp=nlp, as_states=True, as_controls=False)
+            self.configure_cross_bridges(ocp=ocp, nlp=nlp, as_states=True, as_controls=False)
+        self.custom_configure_dynamics_function(ocp, nlp)
