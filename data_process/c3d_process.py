@@ -1,5 +1,3 @@
-from pyomeca import Analogs
-import glob
 import numpy as np
 import matplotlib.pyplot as plt
 from scipy.signal import find_peaks
@@ -7,10 +5,7 @@ import heapq
 import pickle
 
 import biorbd
-
-file_dir = f"D:\These\Experiences\Ergometre_isocinetique\Experience_19_09_2022"
-
-all_c3d = glob.glob(file_dir + "/*.c3d")
+from pyomeca import Analogs
 
 
 class C3dToForce:
@@ -278,7 +273,15 @@ class ForceSensorToMuscleForce:  # TODO : Enable several muscles (biceps, tricep
         if pickle_path is None:
             raise ValueError("Please provide a path to the pickle file(s).")
         if not isinstance(pickle_path, str) and not isinstance(pickle_path, list):
-            raise TypeError("Please provide a list of str path or a str type path.")
+            raise TypeError("Please provide a pickle_path list of str type or a str type path.")
+        if not isinstance(out_pickle_path, str) and not isinstance(out_pickle_path, list):
+            raise TypeError("Please provide a out_pickle_path list of str type or a str type path.")
+        if out_pickle_path is not None:
+            if isinstance(out_pickle_path, str):
+                out_pickle_path = [out_pickle_path]
+            if len(out_pickle_path) != 1:
+                if len(out_pickle_path) != len(pickle_path):
+                    raise ValueError("If not str type, out_pickle_path must be the same length as pickle_path.")
 
         self.path = pickle_path
         self.plot = plot
@@ -294,10 +297,26 @@ class ForceSensorToMuscleForce:  # TODO : Enable several muscles (biceps, tricep
 
         pickle_path_list = [pickle_path] if isinstance(pickle_path, str) else pickle_path
 
-        for pickle_path in pickle_path_list:
-            self.t_local = self.load_data(pickle_path, forearm_angle)
+        for i in range(len(pickle_path_list)):
+            self.t_local = self.load_data(pickle_path_list[i], forearm_angle)
             self.load_model(forearm_angle)
             self.get_muscle_force(local_torque_force_vector=self.t_local)
+            if out_pickle_path:
+                if len(out_pickle_path) == 1:
+                    if out_pickle_path[:-4] == ".pkl":
+                        save_pickle_path = out_pickle_path[:-4] + "_" + str(i) + ".pkl"
+                    else:
+                        save_pickle_path = out_pickle_path[0] + "_" + str(i) + ".pkl"
+                else:
+                    save_pickle_path = out_pickle_path[i]
+
+                muscle_name = muscle_name if isinstance(muscle_name, str) else muscle_name[i] if isinstance(muscle_name, list) else "biceps"
+                dictionary = {"time": self.time,
+                              muscle_name: self.all_biceps_force_vector,
+                              "stim_time": self.stim_time}
+                with open(save_pickle_path, 'wb') as file:
+                    pickle.dump(dictionary, file)
+
 
     def load_data(self, pickle_path, forearm_angle):
         # --- Retrieving pickle data --- #
@@ -429,7 +448,7 @@ class ForceSensorToMuscleForce:  # TODO : Enable several muscles (biceps, tricep
 
 
 if __name__ == "__main__":
-
+    pass
     # C3dToForce(
     #     # c3d_path=f"D:\These\Experiences\Ergometre_isocinetique\With_FES\Data_with_fes_26_09_2023\Biceps_90deg_30mA_300us_33Hz_essai_fatigue.c3d",
     #     c3d_path=[
@@ -463,8 +482,11 @@ if __name__ == "__main__":
     #     )
     # input_channel=[6, 0, 1, 2, 3, 4, 5])
 
-    ForceSensorToMuscleForce(pickle_path="D:\These\Programmation\Modele_Musculaire\optistim\data_process\identification_data_Biceps_90deg_30mA_300us_33Hz_essai1.pkl",
-                             muscle_name="biceps",
-                             forearm_angle=90,
-                             out_pickle_path="biceps_force")
+    # ForceSensorToMuscleForce(pickle_path="D:\These\Programmation\Modele_Musculaire\optistim\data_process\identification_data_Biceps_90deg_30mA_300us_33Hz_essai1.pkl",
+    #                          muscle_name="biceps",
+    #                          forearm_angle=90,
+    #                          out_pickle_path="biceps_force",)
+
+    # with open("D:/These/Programmation/Modele_Musculaire/optistim/data_process/biceps_force_0.pkl", 'rb') as f:
+    #     data = pickle.load(f)
 
