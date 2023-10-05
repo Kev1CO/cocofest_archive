@@ -15,10 +15,9 @@ from bioptim import (
     ParameterList,
     ParameterObjectiveList,
 )
-from ding_model_identification import ForceDingModelFrequencyIdentification, FatigueDingModelFrequencyIdentification
+
 from optistim.custom_objectives import CustomObjective
-from optistim.fourier_approx import FourierSeries
-from fext_to_fmuscle import ForceSensorToMuscleForce
+from optistim.ding_model import DingModelFrequency, DingModelPulseDurationFrequency, DingModelIntensityFrequency
 
 
 class FunctionalElectricStimulationOptimalControlProgramIdentification(OptimalControlProgram):
@@ -60,8 +59,10 @@ class FunctionalElectricStimulationOptimalControlProgramIdentification(OptimalCo
 
     def __init__(
         self,
-        ding_model: ForceDingModelFrequencyIdentification | FatigueDingModelFrequencyIdentification,
-        n_shooting: int = None,
+        ding_model: DingModelFrequency | DingModelPulseDurationFrequency | DingModelIntensityFrequency = None,
+        with_fatigue: bool = None,
+        stimulated_n_shooting: int = None,
+        rest_n_shooting: int = None,
         force_tracking: list[np.ndarray, np.ndarray] = None,
         pulse_apparition_time: list[int] | list[float] = None,
         pulse_duration: list[int] | list[float] = None,
@@ -70,53 +71,52 @@ class FunctionalElectricStimulationOptimalControlProgramIdentification(OptimalCo
         km_rest: float = None,
         tau1_rest: float = None,
         tau2: float = None,
+
         **kwargs,
     ):
-        if isinstance(ding_model, FatigueDingModelFrequencyIdentification):
-            if any(elem is None for elem in [a_rest, km_rest, tau1_rest, tau2]):
+        self.with_fatigue = with_fatigue
+        if not isinstance(self.with_fatigue, bool):
+            raise ValueError("with_fatigue argument must be bool type"
+                             "Set with_fatigue to True if you want to use fatigue model"
+                             "and False if you want to only use the force model")
+        if self.with_fatigue:
+            if a_rest is None or km_rest is None or tau1_rest is None or tau2 is None:
                 raise ValueError("a_rest, km_rest, tau1_rest and tau2 must be set for fatigue model identification")
-            ding_model.set_a_rest(a_rest)
-            ding_model.set_km_rest(km_rest)
-            ding_model.set_tau1_rest(tau1_rest)
-            ding_model.set_tau2(tau2)
 
-        self.ding_model = ding_model
+
+        # if isinstance(ding_model, FatigueDingModelFrequencyIdentification):
+        #     if any(elem is None for elem in [a_rest, km_rest, tau1_rest, tau2]):
+        #         raise ValueError("a_rest, km_rest, tau1_rest and tau2 must be set for fatigue model identification")
+        #     ding_model.set_a_rest(a_rest)
+        #     ding_model.set_km_rest(km_rest)
+        #     ding_model.set_tau1_rest(tau1_rest)
+        #     ding_model.set_tau2(tau2)
+
+        self.ding_model = ding_model(with_fatigue=self.with_fatigue)
+        if not isinstance(force_tracking, list):
+            raise TypeError(f"force_tracking must be list type,"
+                            f" currently force_tracking is {type(force_tracking)}) type.")
         self.force_tracking = force_tracking
-
-        if force_tracking is not None:
-            force_fourier_coef = FourierSeries()
-            if isinstance(force_tracking, list):
-                if isinstance(force_tracking[0], np.ndarray) and isinstance(force_tracking[1], np.ndarray):
-                    if len(force_tracking[0]) == len(force_tracking[1]) and len(force_tracking) == 2:
-                        force_fourier_coef = force_fourier_coef.compute_real_fourier_coeffs(
-                            force_tracking[0], force_tracking[1], 50
-                        )
-                    else:
-                        raise ValueError(
-                            "force_tracking time and force argument must be same length and force_tracking "
-                            "list size 2"
-                        )
-                else:
-                    raise ValueError("force_tracking argument must be np.ndarray type")
-            else:
-                raise ValueError("force_tracking must be list type")
-            self.force_fourier_coef = force_fourier_coef
-        else:
-            self.force_fourier_coef = None
 
         self.parameter_mappings = None
         self.parameters = None
 
-        pulse_apparition_time = [item for sublist in pulse_apparition_time for item in sublist]
         if not isinstance(pulse_apparition_time, list):
             raise TypeError(f"pulse_apparition_time must be list type,"
                             f" currently pulse_apparition_time is {type(pulse_apparition_time)}) type.")
 
-        self.ding_models = [ding_model] * len(pulse_apparition_time)
-        # TODO : when other model are implemented, add veriification on len pulse_apparition_time and pulse_duration and pulse_intensity
-        self.n_shooting = [n_shooting] * (len(pulse_apparition_time)-1)
-        self.n_shooting.append(n_shooting*len(pulse_apparition_time))
-        constraints = ConstraintList()
+        if isinstance(ding_model, DingModelPulseDurationFrequency):
+            if not isinstance(pulse_duration, list):
+                raise TypeError(f"pulse_duration must be list type,"
+                                f" currently pulse_duration is {type(pulse_duration)}) type.")
+
+        if isinstance(ding_model, DingModelIntensityFrequency):
+            if not isinstance(pulse_intensity, list):
+                raise TypeError(f"pulse_intensity must be list type,"
+                                f" currently pulse_intensity is {type(pulse_intensity)}) type.")
+
+        self.ding_models = [self.ding_model for i in range(len(pulse_apparition_time))]
+
         for i in range(len(pulse_apparition_time)):
             self.final_time_phase = (pulse_apparition_time[i + 1],) if i == 0 else self.final_time_phase + (
             pulse_apparition_time[i] - pulse_apparition_time[i - 1],) if i != len(pulse_apparition_time) - 1 else self.final_time_phase + (
@@ -124,11 +124,13 @@ class FunctionalElectricStimulationOptimalControlProgramIdentification(OptimalCo
 
         self.n_stim = len(self.final_time_phase)
 
-        if isinstance(ding_model, ForceDingModelFrequencyIdentification):
-            self.parameters, self.parameters_bounds, self.parameters_init, self.parameter_objectives = self.force()
-        # if isinstance(ding_model, ForceDingModelFrequencyIdentification):
-        #     self.parameters, self.parameters_bounds, self.parameters_init, self.parameter_objectives = self.fatigue()
+        stimulation_interval_average = np.mean(pulse_apparition_time)
+        self.n_shooting = []
+        for i in range(len(pulse_apparition_time)):
+            self.n_shooting.append(stimulated_n_shooting if self.final_time_phase[i] < stimulation_interval_average else rest_n_shooting)
 
+        self.constraints = ConstraintList()
+        self._set_parameters()
         self._declare_dynamics()
         self._set_bounds()
         self.kwargs = kwargs
@@ -156,7 +158,7 @@ class FunctionalElectricStimulationOptimalControlProgramIdentification(OptimalCo
             x_bounds=self.x_bounds,
             u_bounds=self.u_bounds,
             objective_functions=self.objective_functions,
-            constraints=constraints,
+            constraints=self.constraints,
             ode_solver=kwargs["ode_solver"] if "ode_solver" in kwargs else OdeSolver.RK4(n_integration_steps=1),
             control_type=ControlType.NONE,
             use_sx=kwargs["use_sx"] if "use_sx" in kwargs else False,
@@ -200,7 +202,9 @@ class FunctionalElectricStimulationOptimalControlProgramIdentification(OptimalCo
         )
 
         for i in range(len(variable_bound_list)):
-            if variable_bound_list[i] == "Cn" or variable_bound_list[i] == "F":
+            if variable_bound_list[i] == "Cn" :
+                max_bounds[i] = 100
+            elif variable_bound_list[i] == "F":
                 max_bounds[i] = 1000
             elif variable_bound_list[i] == "Tau1" or variable_bound_list[i] == "Km":
                 max_bounds[i] = 1
@@ -248,17 +252,12 @@ class FunctionalElectricStimulationOptimalControlProgramIdentification(OptimalCo
 
     def input_force(self, time, force, phase_idx):
         current_time = sum(self.final_time_phase[:phase_idx])
-        # current_time_end = current_time + self.final_time_phase[phase_idx]
         dt = self.final_time_phase[phase_idx] / (self.n_shooting[phase_idx]+1)
-        force_idx = []
+        force_in_phase = []
         for i in range(self.n_shooting[phase_idx]+1):
-            force_idx.append(np.where(time == round(current_time, 3))[0][0])
+            force_in_phase.append(np.interp(current_time, time, force))
             current_time += dt
-        force_in_phase = [force[i] for i in force_idx]
         return force_in_phase
-
-        # TODO : add input force
-        pass
 
     def _set_objective(self):
         # Creates the objective for our problem (in this case, match a force curve)
@@ -273,153 +272,86 @@ class FunctionalElectricStimulationOptimalControlProgramIdentification(OptimalCo
                 else:
                     raise ValueError("All elements in objective kwarg must be an Objective type")
 
-        if self.force_fourier_coef is not None:
+        if self.force_tracking:
             for phase in range(self.n_stim):
                 for i in range(self.n_shooting[phase]):
                     self.objective_functions.add(
-                        CustomObjective.track_state_from_time,
+                        CustomObjective.track_state_from_time_interpolate,
                         custom_type=ObjectiveFcn.Mayer,
                         node=i,
-                        fourier_coeff=self.force_fourier_coef,
+                        time=self.force_tracking[0],
+                        force=self.force_tracking[1],
                         key="F",
                         quadratic=True,
                         weight=1,
                         phase=phase,
                     )
 
-    def force(self):
-        parameters = ParameterList()
-        parameters_bounds = BoundsList()
-        parameters_init = InitialGuessList()
-        parameter_objectives = ParameterObjectiveList()
+    def _set_parameters(self):
+        self.parameters = ParameterList()
+        self.parameters_bounds = BoundsList()
+        self.parameters_init = InitialGuessList()
+        self.parameter_objectives = ParameterObjectiveList()
 
-        if isinstance(self.ding_model, ForceDingModelFrequencyIdentification):
-            # --- Adding parameters --- #
-            parameters.add(
+        if self.with_fatigue:
+            pass
+        else:
+            self.parameters.add(
                 parameter_name="a_rest",
                 list_index=0,
-                function=ForceDingModelFrequencyIdentification.set_a_rest,
+                function=self.ding_model.set_a_rest,
                 size=1,
             )
-            parameters.add(
+            self.parameters.add(
                 parameter_name="km_rest",
                 list_index=1,
-                function=ForceDingModelFrequencyIdentification.set_km_rest,
+                function=self.ding_model.set_km_rest,
                 size=1,
             )
-            parameters.add(
+            self.parameters.add(
                 parameter_name="tau1_rest",
                 list_index=2,
-                function=ForceDingModelFrequencyIdentification.set_tau1_rest,
+                function=self.ding_model.set_tau1_rest,
                 size=1,
             )
-            parameters.add(
+            self.parameters.add(
                 parameter_name="tau2",
                 list_index=3,
-                function=ForceDingModelFrequencyIdentification.set_tau2,
+                function=self.ding_model.set_tau2,
                 size=1,
             )
 
             # --- Adding bound parameters --- #
-            parameters_bounds.add(
+            self.parameters_bounds.add(
                 "a_rest",
-                min_bound=np.array([0]),  # TODO : set bounds
+                min_bound=np.array([1]),  # TODO : set bounds
                 max_bound=np.array([10000]),
                 interpolation=InterpolationType.CONSTANT,
             )
-            parameters_bounds.add(
+            self.parameters_bounds.add(
                 "km_rest",
-                min_bound=np.array([0.01]),  # TODO : set bounds
+                min_bound=np.array([0.001]),  # TODO : set bounds
                 max_bound=np.array([1]),
                 interpolation=InterpolationType.CONSTANT,
             )
-            parameters_bounds.add(
+            self.parameters_bounds.add(
                 "tau1_rest",
-                min_bound=np.array([0.01]),  # TODO : set bounds
+                min_bound=np.array([0.001]),  # TODO : set bounds
                 max_bound=np.array([1]),
                 interpolation=InterpolationType.CONSTANT,
             )
-            parameters_bounds.add(
+            self.parameters_bounds.add(
                 "tau2",
-                min_bound=np.array([0.01]),  # TODO : set bounds
+                min_bound=np.array([0.001]),  # TODO : set bounds
                 max_bound=np.array([1]),
                 interpolation=InterpolationType.CONSTANT,
             )
 
             # --- Initial guess parameters --- #
-            parameters_init["a_rest"] = np.array([1000])  # TODO : set initial guess
-            parameters_init["km_rest"] = np.array([0.5])  # TODO : set initial guess
-            parameters_init["tau1_rest"] = np.array([0.5])  # TODO : set initial guess
-            parameters_init["tau2"] = np.array([0.5])  # TODO : set initial guess
-
-            return parameters, parameters_bounds, parameters_init, parameter_objectives
-
-    def fatigue(self):
-        parameters = ParameterList()
-        parameters_bounds = BoundsList()
-        parameters_init = InitialGuessList()
-        parameter_objectives = ParameterObjectiveList()
-
-        if isinstance(self.ding_model, FatigueDingModelFrequencyIdentification):
-            # --- Adding parameters --- #
-            parameters.add(
-                parameter_name="alpha_a",
-                list_index=0,
-                function=FatigueDingModelFrequencyIdentification.set_alpha_a,
-                size=1,
-            )
-            parameters.add(
-                parameter_name="alpha_km",
-                list_index=1,
-                function=FatigueDingModelFrequencyIdentification.set_alpha_km,
-                size=1,
-            )
-            parameters.add(
-                parameter_name="alpha_tau1",
-                list_index=2,
-                function=FatigueDingModelFrequencyIdentification.set_alpha_tau1,
-                size=1,
-            )
-            parameters.add(
-                parameter_name="tau_fat",
-                list_index=3,
-                function=FatigueDingModelFrequencyIdentification.set_tau_fat,
-                size=1,
-            )
-
-            # --- Adding bound parameters --- #
-            parameters_bounds.add(
-                "a_rest",
-                min_bound=np.array([0]),  # TODO : set bounds
-                max_bound=np.array([10000]),
-                interpolation=InterpolationType.CONSTANT,
-            )
-            parameters_bounds.add(
-                "km_rest",
-                min_bound=np.array([0]),  # TODO : set bounds
-                max_bound=np.array([1]),
-                interpolation=InterpolationType.CONSTANT,
-            )
-            parameters_bounds.add(
-                "tau1_rest",
-                min_bound=np.array([0]),  # TODO : set bounds
-                max_bound=np.array([1]),
-                interpolation=InterpolationType.CONSTANT,
-            )
-            parameters_bounds.add(
-                "tau2",
-                min_bound=np.array([0]),  # TODO : set bounds
-                max_bound=np.array([1]),
-                interpolation=InterpolationType.CONSTANT,
-            )
-
-            # --- Initial guess parameters --- #
-            parameters_init["a_rest"] = np.array([1000])  # TODO : set initial guess
-            parameters_init["km_rest"] = np.array([0.1])  # TODO : set initial guess
-            parameters_init["tau1_rest"] = np.array([0.01])  # TODO : set initial guess
-            parameters_init["tau2"] = np.array([0.01])  # TODO : set initial guess
-
-            return parameters, parameters_bounds, parameters_init, parameter_objectives
+            self.parameters_init["a_rest"] = np.array([1])  # TODO : set initial guess
+            self.parameters_init["km_rest"] = np.array([0.01])  # TODO : set initial guess
+            self.parameters_init["tau1_rest"] = np.array([0.01])  # TODO : set initial guess
+            self.parameters_init["tau2"] = np.array([0.01])  # TODO : set initial guess
 
 
 if __name__ == "__main__":
