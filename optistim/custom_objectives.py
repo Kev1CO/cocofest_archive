@@ -37,3 +37,30 @@ class CustomObjective:
             mode="casadi",
         )
         return value_from_fourier - controller.states[key].cx
+
+    @staticmethod
+    def track_state_from_time_interpolate(controller: PenaltyController, time: np.ndarray, force: np.ndarray, key: str) -> MX | SX:
+        """
+        Minimize the states variables.
+        By default, this function is quadratic, meaning that it minimizes towards the target.
+        Targets (default=np.zeros()) and indices (default=all_idx) can be specified.
+
+        Parameters
+        ----------
+        controller: PenaltyController
+            The penalty node elements
+        time: np.ndarray
+            The force data time vector
+        force: np.ndarray
+            The force vector
+        key: str
+            The name of the state to minimize
+
+        Returns
+        -------
+        The difference between the two keys
+        """
+        interpolated_force = np.interp(controller.ocp.node_time(phase_idx=controller.phase_idx, node_idx=controller.t[0]), time, force)
+
+        return interpolated_force - controller.states[key].cx
+

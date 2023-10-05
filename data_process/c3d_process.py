@@ -428,7 +428,7 @@ class ForceSensorToMuscleForce:  # TODO : Enable several muscles (biceps, tricep
                 biceps_force = tau / self.biceps_moment_arm
                 self.biceps_force_vector.append(biceps_force)
             hack = self.biceps_force_vector + self.biceps_force_vector[0] if self.biceps_force_vector[0] > 0 else self.biceps_force_vector - self.biceps_force_vector[0]
-            self.all_biceps_force_vector.append(hack)  # TODO: This is an hack, find why muscle force is sometimes negative when it shouldn't
+            self.all_biceps_force_vector.append(hack.tolist())  # TODO: This is an hack, find why muscle force is sometimes negative when it shouldn't
 
         # --- Plotting the biceps force --- #
         if self.plot:
@@ -482,10 +482,10 @@ if __name__ == "__main__":
     #     )
     # input_channel=[6, 0, 1, 2, 3, 4, 5])
 
-    # ForceSensorToMuscleForce(pickle_path="D:\These\Programmation\Modele_Musculaire\optistim\data_process\identification_data_Biceps_90deg_30mA_300us_33Hz_essai1.pkl",
-    #                          muscle_name="biceps",
-    #                          forearm_angle=90,
-    #                          out_pickle_path="biceps_force",)
+    ForceSensorToMuscleForce(pickle_path="D:\These\Programmation\Modele_Musculaire\optistim\data_process\identification_data_Biceps_90deg_30mA_300us_33Hz_essai1.pkl",
+                             muscle_name="biceps",
+                             forearm_angle=90,
+                             out_pickle_path="biceps_force",)
 
     # with open("D:/These/Programmation/Modele_Musculaire/optistim/data_process/biceps_force_0.pkl", 'rb') as f:
     #     data = pickle.load(f)

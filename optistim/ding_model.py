@@ -43,6 +43,18 @@ class DingModelFrequency:
         self.tau1_rest = 0.050957  # Value from Ding's experimentation [1] (s)
         self.km_rest = 0.103  # Value from Ding's experimentation [1] (unitless)
 
+    def set_a_rest(self, a_rest: MX):
+        self.a_rest = a_rest
+
+    def set_km_rest(self, km_rest: MX):
+        self.km_rest = km_rest
+
+    def set_tau1_rest(self, tau1_rest: MX):
+        self.tau1_rest = tau1_rest
+
+    def set_tau2(self, tau2: MX):
+        self.tau2 = tau2
+
     def standard_rest_values(self) -> np.array:
         """
         Returns
