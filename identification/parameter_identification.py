@@ -2,6 +2,8 @@ import matplotlib.pyplot as plt
 import numpy as np
 from optistim import DingModelFrequency, DingModelPulseDurationFrequency, DingModelIntensityFrequency
 from fes_identification_ocp import FunctionalElectricStimulationOptimalControlProgramIdentification
+from bioptim import Solver
+import platform
 
 
 class DingModelFrequencyParameterIdentification:
@@ -130,8 +132,9 @@ class DingModelFrequencyParameterIdentification:
                                                                                           pulse_apparition_time=global_force_model_stim_apparition_time,
                                                                                           pulse_duration=None,
                                                                                           pulse_intensity=None)
-        result = self.force_ocp.solve()
+        result = self.force_ocp.solve(Solver.IPOPT(show_online_optim=platform.system() == "Linux"))
         print(result.parameters)
+
         # result.graphs(show_bounds=True)
 
 
