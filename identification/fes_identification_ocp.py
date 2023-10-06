@@ -118,13 +118,13 @@ class FunctionalElectricStimulationOptimalControlProgramIdentification(OptimalCo
         self.ding_models = [self.ding_model for i in range(len(pulse_apparition_time))]
 
         for i in range(len(pulse_apparition_time)):
-            self.final_time_phase = (pulse_apparition_time[i + 1],) if i == 0 else self.final_time_phase + (
-            pulse_apparition_time[i] - pulse_apparition_time[i - 1],) if i != len(pulse_apparition_time) - 1 else self.final_time_phase + (
+            self.final_time_phase = (round(pulse_apparition_time[i + 1], 4),) if i == 0 else self.final_time_phase + (
+            round(pulse_apparition_time[i] - pulse_apparition_time[i - 1], 4),) if i != len(pulse_apparition_time) - 1 else self.final_time_phase + (
             1,)
 
         self.n_stim = len(self.final_time_phase)
 
-        stimulation_interval_average = np.mean(pulse_apparition_time)
+        stimulation_interval_average = np.mean(self.final_time_phase)
         self.n_shooting = []
         for i in range(len(pulse_apparition_time)):
             self.n_shooting.append(stimulated_n_shooting if self.final_time_phase[i] < stimulation_interval_average else rest_n_shooting)
@@ -202,7 +202,7 @@ class FunctionalElectricStimulationOptimalControlProgramIdentification(OptimalCo
         )
 
         for i in range(len(variable_bound_list)):
-            if variable_bound_list[i] == "Cn" :
+            if variable_bound_list[i] == "Cn":
                 max_bounds[i] = 100
             elif variable_bound_list[i] == "F":
                 max_bounds[i] = 1000
@@ -255,7 +255,8 @@ class FunctionalElectricStimulationOptimalControlProgramIdentification(OptimalCo
         dt = self.final_time_phase[phase_idx] / (self.n_shooting[phase_idx]+1)
         force_in_phase = []
         for i in range(self.n_shooting[phase_idx]+1):
-            force_in_phase.append(np.interp(current_time, time, force))
+            interpolated_force = np.interp(current_time, time, force)
+            force_in_phase.append(interpolated_force if interpolated_force > 0 else 0)
             current_time += dt
         return force_in_phase
 
@@ -307,18 +308,21 @@ class FunctionalElectricStimulationOptimalControlProgramIdentification(OptimalCo
                 list_index=1,
                 function=self.ding_model.set_km_rest,
                 size=1,
+                scaling=np.array([1000]),
             )
             self.parameters.add(
                 parameter_name="tau1_rest",
                 list_index=2,
                 function=self.ding_model.set_tau1_rest,
                 size=1,
+                scaling=np.array([1000]),
             )
             self.parameters.add(
                 parameter_name="tau2",
                 list_index=3,
                 function=self.ding_model.set_tau2,
                 size=1,
+                scaling=np.array([1000]),
             )
 
             # --- Adding bound parameters --- #
@@ -331,27 +335,27 @@ class FunctionalElectricStimulationOptimalControlProgramIdentification(OptimalCo
             self.parameters_bounds.add(
                 "km_rest",
                 min_bound=np.array([0.001]),  # TODO : set bounds
-                max_bound=np.array([1]),
+                max_bound=np.array([1000]),
                 interpolation=InterpolationType.CONSTANT,
             )
             self.parameters_bounds.add(
                 "tau1_rest",
                 min_bound=np.array([0.001]),  # TODO : set bounds
-                max_bound=np.array([1]),
+                max_bound=np.array([1000]),
                 interpolation=InterpolationType.CONSTANT,
             )
             self.parameters_bounds.add(
                 "tau2",
                 min_bound=np.array([0.001]),  # TODO : set bounds
-                max_bound=np.array([1]),
+                max_bound=np.array([1000]),
                 interpolation=InterpolationType.CONSTANT,
             )
 
             # --- Initial guess parameters --- #
-            self.parameters_init["a_rest"] = np.array([1])  # TODO : set initial guess
-            self.parameters_init["km_rest"] = np.array([0.01])  # TODO : set initial guess
-            self.parameters_init["tau1_rest"] = np.array([0.01])  # TODO : set initial guess
-            self.parameters_init["tau2"] = np.array([0.01])  # TODO : set initial guess
+            self.parameters_init["a_rest"] = np.array([1000])  # TODO : set initial guess
+            self.parameters_init["km_rest"] = np.array([100])  # TODO : set initial guess
+            self.parameters_init["tau1_rest"] = np.array([100])  # TODO : set initial guess
+            self.parameters_init["tau2"] = np.array([100])  # TODO : set initial guess
 
 
 if __name__ == "__main__":

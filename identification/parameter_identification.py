@@ -119,9 +119,9 @@ class DingModelFrequencyParameterIdentification:
         global_force_model_time_data = [item for sublist in global_force_model_time_data for item in sublist]
 
         # test sclicing
-        global_force_model_muscle_data = global_force_model_muscle_data[:11181]
-        global_force_model_stim_apparition_time = global_force_model_stim_apparition_time[:5]
-        global_force_model_time_data = global_force_model_time_data[:11181]
+        global_force_model_muscle_data = global_force_model_muscle_data#[:11181]
+        global_force_model_stim_apparition_time = global_force_model_stim_apparition_time#[:5]
+        global_force_model_time_data = global_force_model_time_data#[:11181]
 
         # --- Building force ocp --- #
         self.force_ocp = FunctionalElectricStimulationOptimalControlProgramIdentification(ding_model=model,
@@ -131,7 +131,8 @@ class DingModelFrequencyParameterIdentification:
                                                                                           force_tracking=[np.array(global_force_model_time_data),np.array(global_force_model_muscle_data)],
                                                                                           pulse_apparition_time=global_force_model_stim_apparition_time,
                                                                                           pulse_duration=None,
-                                                                                          pulse_intensity=None)
+                                                                                          pulse_intensity=None,
+                                                                                          use_sx=kwargs["use_sx"] if "use_sx" in kwargs else False)
         result = self.force_ocp.solve(Solver.IPOPT(show_online_optim=platform.system() == "Linux"))
         print(result.parameters)
 
