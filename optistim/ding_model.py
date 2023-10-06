@@ -34,14 +34,16 @@ class DingModelFrequency:
         self.tauc = 0.020  # Value from Ding's experimentation [1] (s)
         self.r0_km_relationship = 1.04  # (unitless)
         # ---- Different values for each person ---- #
-        self.alpha_a = -4.0 * 10e-7  # Value from Ding's experimentation [1] (s^-2)
-        self.alpha_tau1 = 2.1 * 10e-5  # Value from Ding's experimentation [1] (N^-1)
-        self.tau2 = 0.060  # Close value from Ding's experimentation [2] (s)
-        self.tau_fat = 127  # Value from Ding's experimentation [1] (s)
-        self.alpha_km = 1.9 * 10e-8  # Value from Ding's experimentation [1] (s^-1.N^-1)
+        # ---- Force model ---- #
         self.a_rest = 3009  # Value from Ding's experimentation [1] (N.s-1)
         self.tau1_rest = 0.050957  # Value from Ding's experimentation [1] (s)
+        self.tau2 = 0.060  # Close value from Ding's experimentation [2] (s)
         self.km_rest = 0.103  # Value from Ding's experimentation [1] (unitless)
+        # ---- Fatigue model ---- #
+        self.alpha_a = -4.0 * 10e-7  # Value from Ding's experimentation [1] (s^-2)
+        self.alpha_tau1 = 2.1 * 10e-5  # Value from Ding's experimentation [1] (N^-1)
+        self.tau_fat = 127  # Value from Ding's experimentation [1] (s)
+        self.alpha_km = 1.9 * 10e-8  # Value from Ding's experimentation [1] (s^-1.N^-1)
 
     def set_a_rest(self, model, a_rest: MX):
         # model is required for bioptim compatibility
@@ -74,7 +76,7 @@ class DingModelFrequency:
         # This is useful if you want to save your model and load it later
         return (
             (
-                DingModelFrequency,
+                self,
                 {
                     "tauc": self.tauc,
                     "a_rest": self.a_rest,
@@ -89,7 +91,7 @@ class DingModelFrequency:
             )
             if self._with_fatigue
             else (
-                DingModelFrequency,
+                self,
                 {
                     "tauc": self.tauc,
                     "a_rest": self.a_rest,
@@ -269,7 +271,8 @@ class DingModelFrequency:
         -------
         The value of the derivative force (N)
         """
-        return a * (cn / (km + cn)) - (f / (tau1 + self.tau2 * (cn / (km + cn))))  # Equation n°2
+        return a * (cn / (km + cn)) - (f / (tau1 + self.tau2 * (cn / (km + cn)))) # Equation n°2
+        # return 0.2
 
     def a_dot_fun(self, a: MX | SX, f: MX | SX) -> float | MX | SX:
         """
@@ -316,15 +319,15 @@ class DingModelFrequency:
         """
         return -(km - self.km_rest) / self.tau_fat + self.alpha_km * f  # Equation n°11
 
-    @staticmethod
     def dynamics(
+        self,
         time: MX | SX,
         states: MX | SX,
         controls: MX | SX,
         parameters: MX | SX,
         stochastic_variables: MX | SX,
         nlp: NonLinearProgram,
-        nb_phases=None,
+        stim_apparition=None,
         with_fatigue: bool = True,
     ) -> DynamicsEvaluation:
         """
@@ -353,19 +356,24 @@ class DingModelFrequency:
         The derivative of the states in the tuple[MX | SX]] format
         """
 
-        t_stim_prev = []  # Every stimulation instant before the current phase, i.e.: the beginning of each phase
-        time_parameters = DingModelFrequency.get_time_parameters(nlp, nb_phases)
-        if time_parameters.shape[0] == 1:  # check if time is mapped
-            for i in range(nlp.phase_idx + 1):
-                t_stim_prev.append(time_parameters[0] * i)
-        else:
-            for i in range(nlp.phase_idx + 1):
-                t_stim_prev.append(sum1(time_parameters[0:i]))
+        # t_stim_prev = []  # Every stimulation instant before the current phase, i.e.: the beginning of each phase
+        # time_parameters = self.get_time_parameters(nlp, nb_phases)
+        # if time_parameters.shape[0] == 1:  # check if time is mapped
+        #     for i in range(nlp.phase_idx + 1):
+        #         t_stim_prev.append(time_parameters[0] * i)
+        # else:
+        #     for i in range(nlp.phase_idx + 1):
+        #         t_stim_prev.append(sum1(time_parameters[0:i]))
+
+        # TODO : ERROR when using known stim times (t_stim_prev)
+
+        t_stim_prev = []
+        for i in range(stim_apparition.shape[0]):
+            t_stim_prev.append(stim_apparition[i])
 
         return (
             DynamicsEvaluation(
-                dxdt=DingModelFrequency.system_dynamics(
-                    DingModelFrequency(with_fatigue=True),
+                dxdt=self.system_dynamics(
                     cn=states[0],
                     f=states[1],
                     a=states[2],
@@ -378,8 +386,7 @@ class DingModelFrequency:
             )
             if with_fatigue
             else DynamicsEvaluation(
-                dxdt=DingModelFrequency.system_dynamics(
-                    DingModelFrequency(with_fatigue=False),
+                dxdt=self.system_dynamics(
                     cn=states[0],
                     f=states[1],
                     t=time,
@@ -389,7 +396,6 @@ class DingModelFrequency:
             )
         )
 
-    # @staticmethod
     def custom_configure_dynamics_function(self, ocp: OptimalControlProgram, nlp: NonLinearProgram, **extra_params):
         """
         Configure the dynamics of the system
@@ -406,12 +412,13 @@ class DingModelFrequency:
         """
         nlp.parameters = ocp.parameters
         DynamicsFunctions.apply_parameters(nlp.parameters.cx_start, nlp)
-        extra_params["nb_phases"] = ocp.n_phases
-        extra_params["with_fatigue"] = self._with_fatigue
-        if not isinstance(DingModelFrequency.dynamics, (tuple, list)):
-            DingModelFrequency.dynamics = (DingModelFrequency.dynamics,)
 
-        for func in DingModelFrequency.dynamics:
+        extra_params["stim_apparition"] = self.get_time_parameters(ocp, nlp)
+        extra_params["with_fatigue"] = self._with_fatigue
+        if not isinstance(self.dynamics, (tuple, list)):
+            self.dynamics = (self.dynamics,)
+
+        for func in self.dynamics:
             dynamics_eval = func(
                 nlp.time_cx,
                 nlp.states.scaled.cx_start,
@@ -641,29 +648,37 @@ class DingModelFrequency:
         )
 
     @staticmethod
-    def get_time_parameters(nlp: NonLinearProgram, nb_phases: int) -> MX | SX:
+    def get_time_parameters(ocp: OptimalControlProgram, nlp: NonLinearProgram) -> MX | SX:
         """
         Get the nlp list of time parameters
 
         Parameters
         ----------
+        ocp: OptimalControlProgram
+            The OptimalControlProgram of the problem
         nlp: NonLinearProgram
             The NonLinearProgram of the ocp of the current phase
-        nb_phases: int
-            The number of phases in the ocp
 
         Returns
         -------
         The list of time parameters
         """
         time_parameters = vertcat()
-        if "time" in nlp.parameters:
-            for j in range(nlp.parameters.cx_start.shape[0]):
-                if "time" in str(nlp.parameters.cx_start[j]):
-                    time_parameters = vertcat(time_parameters, nlp.parameters.cx_start[j])
+        if "time" in ocp.nlp[nlp.phase_idx].parameters:
+            for j in range(ocp.nlp[nlp.phase_idx].parameters.cx_start.shape[0]):
+                if "time" in str(ocp.nlp[nlp.phase_idx].parameters.cx_start[j]):
+                    time_parameters = vertcat(time_parameters, ocp.nlp[nlp.phase_idx].parameters.cx_start[j])
         else:
-            for j in range(nb_phases):
-                time_parameters = vertcat(time_parameters, nlp.tf)
+            if nlp.phase_idx == 0:
+                time_parameters = vertcat(time_parameters, 0)
+            else:
+                for j in range(nlp.phase_idx):
+                    if j == 0:
+                        time_parameters = vertcat(time_parameters, 0)
+                    else:
+                        time_parameters = vertcat(time_parameters, time_parameters[-1] + ocp.nlp[nlp.phase_idx].t0)
+        if time_parameters.shape[0] > 10:
+            time_parameters = time_parameters[-10:]
         return time_parameters
 
 
