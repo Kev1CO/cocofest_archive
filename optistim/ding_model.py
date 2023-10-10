@@ -124,7 +124,7 @@ class DingModelFrequency:
         tau1: MX | SX = None,
         km: MX | SX = None,
         t: MX | SX = None,
-        **extra_arguments: list[MX] | list[SX]
+        **extra_arguments: list[MX] | list[SX] | list[float],
     ) -> MX | SX:
         """
         The system dynamics is the function that describes the model.
@@ -271,8 +271,7 @@ class DingModelFrequency:
         -------
         The value of the derivative force (N)
         """
-        return a * (cn / (km + cn)) - (f / (tau1 + self.tau2 * (cn / (km + cn)))) # Equation n°2
-        # return 0.2
+        return a * (cn / (km + cn)) - (f / (tau1 + self.tau2 * (cn / (km + cn))))  # Equation n°2
 
     def a_dot_fun(self, a: MX | SX, f: MX | SX) -> float | MX | SX:
         """
@@ -347,29 +346,14 @@ class DingModelFrequency:
             The stochastic variables of the system, none
         nlp: NonLinearProgram
             A reference to the phase
-        nb_phases: int
-            The number of phases in the ocp
+        stim_apparition: list[float]
+            The time list of the previous stimulations (s)
         with_fatigue: bool
             If the fatigue model should be included
         Returns
         -------
         The derivative of the states in the tuple[MX | SX]] format
         """
-
-        # t_stim_prev = []  # Every stimulation instant before the current phase, i.e.: the beginning of each phase
-        # time_parameters = self.get_time_parameters(nlp, nb_phases)
-        # if time_parameters.shape[0] == 1:  # check if time is mapped
-        #     for i in range(nlp.phase_idx + 1):
-        #         t_stim_prev.append(time_parameters[0] * i)
-        # else:
-        #     for i in range(nlp.phase_idx + 1):
-        #         t_stim_prev.append(sum1(time_parameters[0:i]))
-
-        # TODO : ERROR when using known stim times (t_stim_prev)
-
-        t_stim_prev = []
-        for i in range(stim_apparition.shape[0]):
-            t_stim_prev.append(stim_apparition[i])
 
         return (
             DynamicsEvaluation(
@@ -380,7 +364,7 @@ class DingModelFrequency:
                     tau1=states[3],
                     km=states[4],
                     t=time,
-                    t_stim_prev=t_stim_prev,
+                    t_stim_prev=stim_apparition,
                 ),
                 defects=None,
             )
@@ -390,7 +374,7 @@ class DingModelFrequency:
                     cn=states[0],
                     f=states[1],
                     t=time,
-                    t_stim_prev=t_stim_prev,
+                    t_stim_prev=stim_apparition,
                 ),
                 defects=None,
             )
@@ -407,14 +391,16 @@ class DingModelFrequency:
         nlp: NonLinearProgram
             A reference to the phase
         **extra_params:
-            nb_phase: MX | SX
-                Each stimulation time referring to all phases times
+            stim_apparition: list[float]
+                The time list of the previous stimulations (s)
+            with_fatigue: bool
+                If the fatigue model should be included
         """
         nlp.parameters = ocp.parameters
         DynamicsFunctions.apply_parameters(nlp.parameters.cx_start, nlp)
-
-        extra_params["stim_apparition"] = self.get_time_parameters(ocp, nlp)
+        extra_params["stim_apparition"] = self.get_stim_prev(ocp, nlp)
         extra_params["with_fatigue"] = self._with_fatigue
+
         if not isinstance(self.dynamics, (tuple, list)):
             self.dynamics = (self.dynamics,)
 
@@ -447,6 +433,19 @@ class DingModelFrequency:
                     ["xdot"],
                 ),
             )
+
+            if nlp.dynamics_type.expand_dynamics:
+                try:
+                    nlp.dynamics_func[-1] = nlp.dynamics_func[-1].expand()
+                except Exception as me:
+                    RuntimeError(
+                        f"An error occurred while executing the 'expand()' function for the dynamic function. "
+                        f"Please review the following casadi error message for more details.\n"
+                        "Several factors could be causing this issue. One of the most likely is the inability to "
+                        "use expand=True at all. In that case, try adding expand=False to the dynamics.\n"
+                        "Original casadi error message:\n"
+                        f"{me}"
+                    )
 
     def declare_ding_variables(self, ocp: OptimalControlProgram, nlp: NonLinearProgram):
         """
@@ -648,9 +647,9 @@ class DingModelFrequency:
         )
 
     @staticmethod
-    def get_time_parameters(ocp: OptimalControlProgram, nlp: NonLinearProgram) -> MX | SX:
+    def get_stim_prev(ocp: OptimalControlProgram, nlp: NonLinearProgram) -> list[float]:
         """
-        Get the nlp list of time parameters
+        Get the nlp list of previous stimulation apparition time
 
         Parameters
         ----------
@@ -661,25 +660,28 @@ class DingModelFrequency:
 
         Returns
         -------
-        The list of time parameters
+        The list of previous stimulation time
         """
-        time_parameters = vertcat()
         if "time" in ocp.nlp[nlp.phase_idx].parameters:
+            t_stim_prev = []
+            time_parameters = []
             for j in range(ocp.nlp[nlp.phase_idx].parameters.cx_start.shape[0]):
                 if "time" in str(ocp.nlp[nlp.phase_idx].parameters.cx_start[j]):
-                    time_parameters = vertcat(time_parameters, ocp.nlp[nlp.phase_idx].parameters.cx_start[j])
-        else:
-            if nlp.phase_idx == 0:
-                time_parameters = vertcat(time_parameters, 0)
+                    time_parameters.append(ocp.nlp[nlp.phase_idx].parameters.cx_start[j])
+            if len(time_parameters) == 1:  # check if time is mapped
+                for i in range(nlp.phase_idx+1):
+                    t_stim_prev.append(time_parameters[0] * i)
             else:
-                for j in range(nlp.phase_idx):
-                    if j == 0:
-                        time_parameters = vertcat(time_parameters, 0)
-                    else:
-                        time_parameters = vertcat(time_parameters, time_parameters[-1] + ocp.nlp[nlp.phase_idx].t0)
-        if time_parameters.shape[0] > 10:
-            time_parameters = time_parameters[-10:]
-        return time_parameters
+                time_parameters = vertcat(*time_parameters[0:len(time_parameters) + 1])
+                for i in range(nlp.phase_idx + 1):
+                    t_stim_prev.append(sum1(time_parameters[0:i]))
+        else:
+            t_stim_prev = [0]
+            for j in range(1, nlp.phase_idx + 1):
+                t_stim_prev.append(round(t_stim_prev[-1] + ocp.nlp[j].t0, 4))
+        if len(t_stim_prev) >= 10:
+            t_stim_prev = t_stim_prev[-10:]
+        return t_stim_prev
 
 
 class DingModelPulseDurationFrequency(DingModelFrequency):
@@ -757,7 +759,7 @@ class DingModelPulseDurationFrequency(DingModelFrequency):
         tau1: MX | SX = None,
         km: MX | SX = None,
         t: MX | SX = None,
-        **extra_arguments: list[MX] | list[SX]
+        **extra_arguments: list[MX] | list[SX] | list[float],
     ) -> MX | SX:
         """
         The system dynamics is the function that describes the model.
@@ -846,16 +848,16 @@ class DingModelPulseDurationFrequency(DingModelFrequency):
                 pulse_duration_parameters = vertcat(pulse_duration_parameters, nlp_parameters.cx_start[j])
         return pulse_duration_parameters
 
-    @staticmethod
     def dynamics(
+        self,
         time: MX | SX,
         states: MX | SX,
         controls: MX | SX,
         parameters: MX | SX,
         stochastic_variables: MX | SX,
         nlp: NonLinearProgram,
-        nb_phases=None,
         with_fatigue: bool = True,
+        stim_apparition: list[float] = None,
     ) -> DynamicsEvaluation:
         """
         Functional electrical stimulation dynamic
@@ -874,25 +876,15 @@ class DingModelPulseDurationFrequency(DingModelFrequency):
             The stochastic variables of the system, none
         nlp: NonLinearProgram
             A reference to the phase
-        nb_phases: int
-            The number of phases in the ocp
         with_fatigue: bool
             If the fatigue model should be included
+        stim_apparition: list[float]
+            The time list of the previous stimulations (s)
         Returns
         -------
         The derivative of the states in the tuple[MX | SX]] format
         """
-
-        t_stim_prev = []  # Every stimulation instant before the current phase, i.e.: the beginning of each phase
-        time_parameters = DingModelFrequency.get_time_parameters(nlp, nb_phases)
         pulse_duration_parameters = DingModelPulseDurationFrequency.get_pulse_duration_parameters(nlp.parameters)
-
-        if time_parameters.shape[0] == 1:  # check if time is mapped
-            for i in range(nlp.phase_idx + 1):
-                t_stim_prev.append(time_parameters[0] * i)
-        else:
-            for i in range(nlp.phase_idx + 1):
-                t_stim_prev.append(sum1(time_parameters[0:i]))
 
         if pulse_duration_parameters.shape[0] == 1:  # check if pulse duration is mapped
             impulse_time = pulse_duration_parameters[0]
@@ -901,26 +893,24 @@ class DingModelPulseDurationFrequency(DingModelFrequency):
 
         return (
             DynamicsEvaluation(
-                dxdt=DingModelPulseDurationFrequency.system_dynamics(
-                    DingModelPulseDurationFrequency(with_fatigue=True),
+                dxdt=self.system_dynamics(
                     cn=states[0],
                     f=states[1],
                     tau1=states[2],
                     km=states[3],
                     t=time,
-                    t_stim_prev=t_stim_prev,
+                    t_stim_prev=stim_apparition,
                     impulse_time=impulse_time,
                 ),
                 defects=None,
             )
             if with_fatigue
             else DynamicsEvaluation(
-                dxdt=DingModelPulseDurationFrequency.system_dynamics(
-                    DingModelPulseDurationFrequency(with_fatigue=False),
+                dxdt=self.system_dynamics(
                     cn=states[0],
                     f=states[1],
                     t=time,
-                    t_stim_prev=t_stim_prev,
+                    t_stim_prev=stim_apparition,
                     impulse_time=impulse_time,
                 ),
                 defects=None,
@@ -938,19 +928,21 @@ class DingModelPulseDurationFrequency(DingModelFrequency):
         nlp: NonLinearProgram
             A reference to the phase
         **extra_params:
-            nb_phases: MX | SX
-                Each stimulation time referring to all phases times
+            stim_apparition: list[float]
+                The time list of the previous stimulations (s)
+            with_fatigue: bool
+                If the fatigue model should be included
         """
 
         nlp.parameters = ocp.parameters
         DynamicsFunctions.apply_parameters(nlp.parameters.cx_start, nlp)
-        extra_params["nb_phases"] = ocp.n_phases
+        extra_params["stim_apparition"] = self.get_stim_prev(ocp, nlp)
         extra_params["with_fatigue"] = self._with_fatigue
 
-        if not isinstance(DingModelPulseDurationFrequency.dynamics, (tuple, list)):
-            DingModelPulseDurationFrequency.dynamics = (DingModelPulseDurationFrequency.dynamics,)
+        if not isinstance(self.dynamics, (tuple, list)):
+            self.dynamics = (self.dynamics,)
 
-        for func in DingModelPulseDurationFrequency.dynamics:
+        for func in self.dynamics:
             dynamics_eval = func(
                 nlp.time_cx,
                 nlp.states.scaled.cx_start,
@@ -979,6 +971,20 @@ class DingModelPulseDurationFrequency(DingModelFrequency):
                     ["xdot"],
                 ),
             )
+
+            if nlp.dynamics_type.expand_dynamics:
+                try:
+                    nlp.dynamics_func[-1] = nlp.dynamics_func[-1].expand()
+                except Exception as me:
+                    RuntimeError(
+                        f"An error occurred while executing the 'expand()' function for the dynamic function. "
+                        f"Please review the following casadi error message for more details.\n"
+                        "Several factors could be causing this issue. One of the most likely is the inability to "
+                        "use expand=True at all. In that case, try adding expand=False to the dynamics.\n"
+                        "Original casadi error message:\n"
+                        f"{me}"
+                    )
+
 
     def declare_ding_variables(self, ocp: OptimalControlProgram, nlp: NonLinearProgram):
         """
@@ -1058,7 +1064,7 @@ class DingModelIntensityFrequency(DingModelFrequency):
         tau1: MX | SX = None,
         km: MX | SX = None,
         t: MX | SX = None,
-        **extra_arguments: list[MX] | list[SX]
+        **extra_arguments: list[MX] | list[SX] | list[float],
     ) -> MX | SX:
         """
         The system dynamics is the function that describes the model.
@@ -1212,15 +1218,15 @@ class DingModelIntensityFrequency(DingModelFrequency):
                 intensity_parameters = vertcat(intensity_parameters, nlp_parameters.cx_start[j])
         return intensity_parameters
 
-    @staticmethod
     def dynamics(
+        self,
         time: MX | SX,
         states: MX | SX,
         controls: MX | SX,
         parameters: MX | SX,
         stochastic_variables: MX | SX,
         nlp: NonLinearProgram,
-        nb_phases=None,
+        t_stim_prev: list[float] = None,
         with_fatigue: bool = True,
     ) -> DynamicsEvaluation:
         """
@@ -1240,28 +1246,18 @@ class DingModelIntensityFrequency(DingModelFrequency):
             The stochastic variables of the system, none
         nlp: NonLinearProgram
             A reference to the phase
-        nb_phases: int
-            The number of phases in the ocp
+        t_stim_prev: list[float]
+            The time list of the previous stimulations (s)
         with_fatigue: bool
             If the fatigue model should be included
         Returns
         -------
         The derivative of the states in the tuple[MX | SX]] format
         """
-        t_stim_prev = []  # Every stimulation instant before the current phase, i.e.: the beginning of each phase
         intensity_stim_prev = (
             []
         )  # Every stimulation intensity before the current phase, i.e.: the intensity of each phase
-
-        time_parameters = DingModelFrequency.get_time_parameters(nlp, nb_phases)
         intensity_parameters = DingModelIntensityFrequency.get_intensity_parameters(nlp.parameters)
-
-        if time_parameters.shape[0] == 1:  # check if time is mapped
-            for i in range(nlp.phase_idx + 1):
-                t_stim_prev.append(time_parameters[0] * i)
-        else:
-            for i in range(nlp.phase_idx + 1):
-                t_stim_prev.append(sum1(time_parameters[0:i]))
 
         if intensity_parameters.shape[0] == 1:  # check if pulse duration is mapped
             for i in range(nlp.phase_idx + 1):
@@ -1272,8 +1268,7 @@ class DingModelIntensityFrequency(DingModelFrequency):
 
         return (
             DynamicsEvaluation(
-                dxdt=DingModelIntensityFrequency.system_dynamics(
-                    DingModelIntensityFrequency(with_fatigue=True),
+                dxdt=self.system_dynamics(
                     cn=states[0],
                     f=states[1],
                     a=states[2],
@@ -1316,13 +1311,13 @@ class DingModelIntensityFrequency(DingModelFrequency):
 
         nlp.parameters = ocp.parameters
         DynamicsFunctions.apply_parameters(nlp.parameters.cx_start, nlp)
-        extra_params["nb_phases"] = ocp.n_phases
+        extra_params["t_stim_prev"] = self.get_stim_prev(ocp, nlp)
         extra_params["with_fatigue"] = self._with_fatigue
 
-        if not isinstance(DingModelIntensityFrequency.dynamics, (tuple, list)):
-            DingModelIntensityFrequency.dynamics = (DingModelIntensityFrequency.dynamics,)
+        if not isinstance(self.dynamics, (tuple, list)):
+            self.dynamics = (self.dynamics,)
 
-        for func in DingModelIntensityFrequency.dynamics:
+        for func in self.dynamics:
             dynamics_eval = func(
                 nlp.time_cx,
                 nlp.states.scaled.cx_start,
@@ -1351,6 +1346,19 @@ class DingModelIntensityFrequency(DingModelFrequency):
                     ["xdot"],
                 ),
             )
+
+            if nlp.dynamics_type.expand_dynamics:
+                try:
+                    nlp.dynamics_func[-1] = nlp.dynamics_func[-1].expand()
+                except Exception as me:
+                    RuntimeError(
+                        f"An error occurred while executing the 'expand()' function for the dynamic function. "
+                        f"Please review the following casadi error message for more details.\n"
+                        "Several factors could be causing this issue. One of the most likely is the inability to "
+                        "use expand=True at all. In that case, try adding expand=False to the dynamics.\n"
+                        "Original casadi error message:\n"
+                        f"{me}"
+                    )
 
     def declare_ding_variables(self, ocp: OptimalControlProgram, nlp: NonLinearProgram):
         """

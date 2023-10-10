@@ -14,6 +14,9 @@ from bioptim import (
     OptimalControlProgram,
     ParameterList,
     ParameterObjectiveList,
+    PhaseDynamics,
+    PhaseTransitionFcn,
+    PhaseTransitionList,
 )
 
 from optistim.custom_objectives import CustomObjective
@@ -27,18 +30,32 @@ class FunctionalElectricStimulationOptimalControlProgramIdentification(OptimalCo
 
     Attributes
     ----------
-    ding_model: ForceDingModelFrequencyIdentification | FatigueDingModelFrequencyIdentification
-        The model type used for the ocp
-    n_shooting: int
-        Number of shooting point for each individual phases
-    force_tracking: list[np.ndarray, np.ndarray]
-        List of time and associated force to track during ocp optimisation
-    pulse_apparition_time: list[int] | list[float]
-        Setting a chosen pulse apparition time among ocp
-    pulse_duration: list[int] | list[float]
-        Setting a chosen pulse time among phases
-    pulse_intensity: list[int] | list[float]
-        Setting a chosen pulse intensity among phases
+    ding_model: DingModelFrequency | DingModelPulseDurationFrequency | DingModelIntensityFrequency,
+        The model used to solve the ocp
+    with_fatigue: bool,
+        If True, the fatigue model is used
+    stimulated_n_shooting: int,
+        The number of shooting points for the stimulated phases
+    rest_n_shooting: int,
+        The number of shooting points for the rest phases
+    force_tracking: list[np.ndarray, np.ndarray],
+        The force tracking to follow
+    pulse_apparition_time: list[int] | list[float],
+        The time when the stimulation is applied
+    pulse_duration: list[int] | list[float],
+        The duration of the stimulation
+    pulse_intensity: list[int] | list[float],
+        The intensity of the stimulation
+    discontinuity_in_ocp: list[int],
+        The phases where the continuity is not respected
+    a_rest: float,
+        a_rest parameter of the model
+    km_rest: float,
+        km_rest parameter of the model
+    tau1_rest: float,
+        tau1_rest parameter of the model
+    tau2: float,
+        tau2 parameter of the model
     **kwargs:
         objective: list[Objective]
             Additional objective for the system
@@ -49,12 +66,6 @@ class FunctionalElectricStimulationOptimalControlProgramIdentification(OptimalCo
         n_threads: int
             The number of thread to use while solving (multi-threading if > 1)
 
-    # Methods
-    # -------
-    # from_frequency_and_final_time(self, frequency: int | float, final_time: float, round_down: bool)
-    #     Calculates the number of stim (phases) for the ocp from frequency and final time
-    # from_frequency_and_n_stim(self, frequency: int | float, n_stim: int)
-    #     Calculates the final ocp time from frequency and stimulation number
     """
 
     def __init__(
@@ -67,6 +78,7 @@ class FunctionalElectricStimulationOptimalControlProgramIdentification(OptimalCo
         pulse_apparition_time: list[int] | list[float] = None,
         pulse_duration: list[int] | list[float] = None,
         pulse_intensity: list[int] | list[float] = None,
+        discontinuity_in_ocp: list[int] = None,
         a_rest: float = None,
         km_rest: float = None,
         tau1_rest: float = None,
@@ -83,20 +95,12 @@ class FunctionalElectricStimulationOptimalControlProgramIdentification(OptimalCo
             if a_rest is None or km_rest is None or tau1_rest is None or tau2 is None:
                 raise ValueError("a_rest, km_rest, tau1_rest and tau2 must be set for fatigue model identification")
 
-
-        # if isinstance(ding_model, FatigueDingModelFrequencyIdentification):
-        #     if any(elem is None for elem in [a_rest, km_rest, tau1_rest, tau2]):
-        #         raise ValueError("a_rest, km_rest, tau1_rest and tau2 must be set for fatigue model identification")
-        #     ding_model.set_a_rest(a_rest)
-        #     ding_model.set_km_rest(km_rest)
-        #     ding_model.set_tau1_rest(tau1_rest)
-        #     ding_model.set_tau2(tau2)
-
         self.ding_model = ding_model(with_fatigue=self.with_fatigue)
         if not isinstance(force_tracking, list):
             raise TypeError(f"force_tracking must be list type,"
                             f" currently force_tracking is {type(force_tracking)}) type.")
         self.force_tracking = force_tracking
+        self.discontinuity_in_ocp = discontinuity_in_ocp
 
         self.parameter_mappings = None
         self.parameters = None
@@ -135,6 +139,11 @@ class FunctionalElectricStimulationOptimalControlProgramIdentification(OptimalCo
         self._set_bounds()
         self.kwargs = kwargs
         self._set_objective()
+        self.phase_transitions = PhaseTransitionList()
+        if discontinuity_in_ocp:
+            for i in range(len(discontinuity_in_ocp)):
+                self.phase_transitions.add(
+                    PhaseTransitionFcn.DISCONTINUOUS, phase_pre_idx=discontinuity_in_ocp[i])
 
         if "ode_solver" in kwargs:
             if not isinstance(kwargs["ode_solver"], OdeSolver):
@@ -166,9 +175,8 @@ class FunctionalElectricStimulationOptimalControlProgramIdentification(OptimalCo
             parameter_bounds=self.parameters_bounds,
             parameter_init=self.parameters_init,
             parameter_objectives=self.parameter_objectives,
-            assume_phase_dynamics=False,
+            phase_transitions=self.phase_transitions,
             n_threads=kwargs["n_thread"] if "n_thread" in kwargs else 1,
-            # skip_continuity=False
         )
 
     def _declare_dynamics(self):
@@ -177,7 +185,10 @@ class FunctionalElectricStimulationOptimalControlProgramIdentification(OptimalCo
             self.dynamics.add(
                 self.ding_models[i].declare_ding_variables,
                 dynamic_function=self.ding_models[i].dynamics,
+                expand_dynamics=True,
+                expand_continuity=False,
                 phase=i,
+                phase_dynamics=PhaseDynamics.ONE_PER_NODE,
             )
 
     def _set_bounds(self):
@@ -203,9 +214,9 @@ class FunctionalElectricStimulationOptimalControlProgramIdentification(OptimalCo
 
         for i in range(len(variable_bound_list)):
             if variable_bound_list[i] == "Cn":
-                max_bounds[i] = 100
+                max_bounds[i] = 10
             elif variable_bound_list[i] == "F":
-                max_bounds[i] = 1000
+                max_bounds[i] = 500
             elif variable_bound_list[i] == "Tau1" or variable_bound_list[i] == "Km":
                 max_bounds[i] = 1
             elif variable_bound_list[i] == "A":
@@ -218,7 +229,7 @@ class FunctionalElectricStimulationOptimalControlProgramIdentification(OptimalCo
 
         for i in range(self.n_stim):
             for j in range(len(variable_bound_list)):
-                if i == 0:
+                if i == 0:  # TODO : ask if "or i in self.discontinuity_in_ocp:" is relevant here
                     self.x_bounds.add(
                         variable_bound_list[j],
                         min_bound=np.array([starting_bounds_min[j]]),
@@ -322,45 +333,37 @@ class FunctionalElectricStimulationOptimalControlProgramIdentification(OptimalCo
                 list_index=3,
                 function=self.ding_model.set_tau2,
                 size=1,
-                scaling=np.array([1000]),
+                scaling=np.array([1000]),  # TODO : ask if scaling is relevant here and applied correctly
             )
 
             # --- Adding bound parameters --- #
             self.parameters_bounds.add(
                 "a_rest",
-                min_bound=np.array([1]),  # TODO : set bounds
+                min_bound=np.array([1]),  # TODO : fine tune bounds
                 max_bound=np.array([10000]),
                 interpolation=InterpolationType.CONSTANT,
             )
             self.parameters_bounds.add(
                 "km_rest",
-                min_bound=np.array([0.001]),  # TODO : set bounds
-                max_bound=np.array([1000]),
+                min_bound=np.array([0.01]),  # TODO : fine tune bounds
+                max_bound=np.array([1]),
                 interpolation=InterpolationType.CONSTANT,
             )
             self.parameters_bounds.add(
                 "tau1_rest",
-                min_bound=np.array([0.001]),  # TODO : set bounds
-                max_bound=np.array([1000]),
+                min_bound=np.array([0.001]),  # TODO : fine tune bounds
+                max_bound=np.array([1]),
                 interpolation=InterpolationType.CONSTANT,
             )
             self.parameters_bounds.add(
                 "tau2",
-                min_bound=np.array([0.001]),  # TODO : set bounds
-                max_bound=np.array([1000]),
+                min_bound=np.array([0.001]),  # TODO : fine tune bounds
+                max_bound=np.array([1]),
                 interpolation=InterpolationType.CONSTANT,
             )
 
             # --- Initial guess parameters --- #
-            self.parameters_init["a_rest"] = np.array([1000])  # TODO : set initial guess
-            self.parameters_init["km_rest"] = np.array([100])  # TODO : set initial guess
-            self.parameters_init["tau1_rest"] = np.array([100])  # TODO : set initial guess
-            self.parameters_init["tau2"] = np.array([100])  # TODO : set initial guess
-
-
-if __name__ == "__main__":
-
-    biceps_force = ForceSensorToMuscleForce(path="D:/These/Programmation/Ergometer_pedal_force/Excel_test.xlsx")
-    biceps_force = biceps_force.biceps_force_vector
-
-
+            self.parameters_init["a_rest"] = np.array([1000])  # TODO : fine tune initial guess
+            self.parameters_init["km_rest"] = np.array([0.1])  # TODO : fine tune initial guess
+            self.parameters_init["tau1_rest"] = np.array([0.1])  # TODO : fine tune initial guess
+            self.parameters_init["tau2"] = np.array([0.1])  # TODO : fine tune initial guess

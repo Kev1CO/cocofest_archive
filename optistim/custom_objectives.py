@@ -61,6 +61,6 @@ class CustomObjective:
         The difference between the two keys
         """
         interpolated_force = np.interp(controller.ocp.node_time(phase_idx=controller.phase_idx, node_idx=controller.t[0]), time, force)
-
+        interpolated_force = 0 if interpolated_force < 0 else interpolated_force
         return interpolated_force - controller.states[key].cx
 

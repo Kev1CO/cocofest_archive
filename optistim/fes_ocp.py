@@ -18,6 +18,7 @@ from bioptim import (
     OptimalControlProgram,
     ParameterList,
     ParameterObjectiveList,
+    PhaseDynamics,
 )
 
 from .custom_objectives import CustomObjective
@@ -375,7 +376,6 @@ class FunctionalElectricStimulationOptimalControlProgram(OptimalControlProgram):
             parameter_bounds=parameters_bounds,
             parameter_init=parameters_init,
             parameter_objectives=parameter_objectives,
-            assume_phase_dynamics=False,
             n_threads=kwargs["n_thread"] if "n_thread" in kwargs else 1,
         )
 
@@ -385,7 +385,10 @@ class FunctionalElectricStimulationOptimalControlProgram(OptimalControlProgram):
             self.dynamics.add(
                 self.ding_models[i].declare_ding_variables,
                 dynamic_function=self.ding_models[i].dynamics,
+                expand_dynamics=True,
+                expand_continuity=False,
                 phase=i,
+                phase_dynamics=PhaseDynamics.ONE_PER_NODE,
             )
 
     def _set_bounds(self):
