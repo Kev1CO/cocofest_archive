@@ -58,7 +58,7 @@ class CustomObjective:
         key: str
             The name of the state to minimize
         minimization_type: str
-            The type of minimization to perform. Either "LS" for least square or "LMS" for least mean square
+            The type of minimization to perform. Either "LS" for least square or "BF" for best fit
 
         Returns
         -------
@@ -70,7 +70,7 @@ class CustomObjective:
             )
             interpolated_force = 0 if interpolated_force < 0 else interpolated_force
             return interpolated_force - controller.states[key].cx
-        elif minimization_type == "LMS":
+        elif minimization_type == "BF":
             interpolated_force = np.interp(
                 controller.ocp.node_time(phase_idx=controller.phase_idx, node_idx=controller.t[0]), time, force
             )

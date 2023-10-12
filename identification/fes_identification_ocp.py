@@ -319,7 +319,7 @@ class FunctionalElectricStimulationOptimalControlProgramIdentification(OptimalCo
                             time=self.force_tracking[0],
                             force=self.force_tracking[1],
                             key="F",
-                            minimization_type="LMS",
+                            minimization_type="BF",
                             quadratic=True,
                             weight=1,
                             phase=phase,
