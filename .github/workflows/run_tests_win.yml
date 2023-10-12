@@ -3,7 +3,7 @@ name: Run the tests
 on: [pull_request]
 
 env:
-  PREFIX_WINDOWS: C:\Miniconda3\envs\bioptim
+  PREFIX_WINDOWS: C:\Miniconda3\envs\optistim
 
 jobs:
   build:
@@ -44,13 +44,6 @@ jobs:
 
       - name: Install extra dependencies
         run: mamba install pytest-cov black pytest pytest-cov codecov packaging -cconda-forge
-
-      - name: Test installed version of bioptim
-        run: |
-          python setup.py install
-          cd
-          python -c "import bioptim"
-        if: matrix.shard == 1
 
       - name: Run tests without code coverage
         run: pytest -v --color=yes tests/shard${{ matrix.shard }}
