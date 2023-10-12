@@ -1,0 +1,10 @@
+# create a dev conda environment with: `make create_env` or `conda env create -f environment.yml`
+name: optistim
+channels:
+- conda-forge
+dependencies:
+- biorbd >= 1.9.9
+- bioviz
+- python-graphviz
+- pyqtgraph
+- bioptim = 3.1.0

@@ -1,0 +1,56 @@
+name: Run the tests
+
+on: [pull_request]
+
+env:
+  PREFIX_WINDOWS: C:\Miniconda3\envs\bioptim
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest]
+        shard: [1]
+    name: Tests on ${{ matrix.os }}-shard ${{ matrix.shard }}
+    runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        shell: bash -l {0}
+
+    steps:
+      - name: Set prefix windows
+        run: |
+          echo "PREFIX=${{ env.PREFIX_WINDOWS }}" >> $GITHUB_ENV
+        if: matrix.os == 'windows-latest'
+
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Setup environment
+        uses: conda-incubator/setup-miniconda@v2
+        with:
+          miniforge-variant: Mambaforge
+          miniforge-version: latest
+          use-mamba: true
+          activate-environment: optistim
+          environment-file: environment.yml
+
+      - name: Print mamba info
+        run: |
+          mamba config --show
+          mamba info
+          mamba list
+
+      - name: Install extra dependencies
+        run: mamba install pytest-cov black pytest pytest-cov codecov packaging -cconda-forge
+
+      - name: Test installed version of bioptim
+        run: |
+          python setup.py install
+          cd
+          python -c "import bioptim"
+        if: matrix.shard == 1
+
+      - name: Run tests without code coverage
+        run: pytest -v --color=yes tests/shard${{ matrix.shard }}

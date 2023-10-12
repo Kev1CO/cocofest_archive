@@ -211,7 +211,7 @@ def test_ocp_dynamics(model):
         np.testing.assert_almost_equal(model.km_dot_fun(km=0.103, f=100), 1.8999999999999998e-05)
 
 
-time, force = ExtractData.load_data("../examples/data/hand_cycling_force.bio")
+time, force = ExtractData.load_data("../../examples/data/hand_cycling_force.bio")
 init_force = force - force[0]
 init_force_tracking = [time, init_force]
 
