@@ -22,7 +22,9 @@ def stimulation_detection(time, stimulation_signal):
     return time_peaks, peaks
 
 
-raw_data = Analogs.from_c3d("D:\These\Experiences\Ergometre_isocinetique\With_FES\Data_with_fes_26_09_2023\Stim_interval.c3d")
+raw_data = Analogs.from_c3d(
+    "D:\These\Experiences\Ergometre_isocinetique\With_FES\Data_with_fes_26_09_2023\Stim_interval.c3d"
+)
 
 time = raw_data.time.values.tolist()
 
@@ -46,5 +48,5 @@ plt.show()
 time_difference_avg = 0
 for i in range(len(channel_1)):
     time_difference_avg += channel_2[i] - channel_1[i]
-time_difference_avg = time_difference_avg/len(channel_1)
+time_difference_avg = time_difference_avg / len(channel_1)
 print(time_difference_avg)  # 0.0015073170731707403 seconds

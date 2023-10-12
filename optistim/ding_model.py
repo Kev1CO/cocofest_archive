@@ -45,18 +45,30 @@ class DingModelFrequency:
         self.tau_fat = 127  # Value from Ding's experimentation [1] (s)
         self.alpha_km = 1.9 * 10e-8  # Value from Ding's experimentation [1] (s^-1.N^-1)
 
-    def set_a_rest(self, model, a_rest: MX):
+    def set_a_rest(self, model, a_rest: MX | SX | float):
         # model is required for bioptim compatibility
         self.a_rest = a_rest
 
-    def set_km_rest(self, model, km_rest: MX):
+    def set_km_rest(self, model, km_rest: MX | SX | float):
         self.km_rest = km_rest
 
-    def set_tau1_rest(self, model, tau1_rest: MX):
+    def set_tau1_rest(self, model, tau1_rest: MX | SX | float):
         self.tau1_rest = tau1_rest
 
-    def set_tau2(self, model, tau2: MX):
+    def set_tau2(self, model, tau2: MX | SX | float):
         self.tau2 = tau2
+
+    def set_alpha_a(self, model, alpha_a: MX | SX | float):
+        self.alpha_a = alpha_a
+
+    def set_alpha_km(self, model, alpha_km: MX | SX | float):
+        self.alpha_km = alpha_km
+
+    def set_alpha_tau1(self, model, alpha_tau1: MX | SX | float):
+        self.alpha_tau1 = alpha_tau1
+
+    def set_tau_fat(self, model, tau_fat: MX | SX | float):
+        self.tau_fat = tau_fat
 
     def standard_rest_values(self) -> np.array:
         """
@@ -669,10 +681,10 @@ class DingModelFrequency:
                 if "time" in str(ocp.nlp[nlp.phase_idx].parameters.cx_start[j]):
                     time_parameters.append(ocp.nlp[nlp.phase_idx].parameters.cx_start[j])
             if len(time_parameters) == 1:  # check if time is mapped
-                for i in range(nlp.phase_idx+1):
+                for i in range(nlp.phase_idx + 1):
                     t_stim_prev.append(time_parameters[0] * i)
             else:
-                time_parameters = vertcat(*time_parameters[0:len(time_parameters) + 1])
+                time_parameters = vertcat(*time_parameters[0 : len(time_parameters) + 1])
                 for i in range(nlp.phase_idx + 1):
                     t_stim_prev.append(sum1(time_parameters[0:i]))
         else:
@@ -984,7 +996,6 @@ class DingModelPulseDurationFrequency(DingModelFrequency):
                         "Original casadi error message:\n"
                         f"{me}"
                     )
-
 
     def declare_ding_variables(self, ocp: OptimalControlProgram, nlp: NonLinearProgram):
         """

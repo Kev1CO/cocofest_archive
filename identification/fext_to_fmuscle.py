@@ -1,6 +1,7 @@
 import numpy as np
 import biorbd
 import pandas as pd
+
 # from matplotlib import pyplot as plt
 
 
@@ -35,23 +36,29 @@ class ForceSensorToMuscleForce:  # TODO : Enable several muscles (biceps, tricep
         # ymodel = -xsensor
         # zmodel = ysensor
 
-        if all(ele in dataframe.columns.to_list() for ele in ['Fx (N)', 'Fy (N)', 'Fz (N)', 'Mx (N.m)', 'My (N.m)', 'Mz (N.m)']):
-            fx = -dataframe['Fz (N)']
-            fy = -dataframe['Fx (N)']
-            fz = dataframe['Fy (N)']
-            mx = -dataframe['Mz (N.m)']
-            my = -dataframe['Mx (N.m)']
-            mz = dataframe['My (N.m)']
+        if all(
+            ele in dataframe.columns.to_list()
+            for ele in ["Fx (N)", "Fy (N)", "Fz (N)", "Mx (N.m)", "My (N.m)", "Mz (N.m)"]
+        ):
+            fx = -dataframe["Fz (N)"]
+            fy = -dataframe["Fx (N)"]
+            fz = dataframe["Fy (N)"]
+            mx = -dataframe["Mz (N.m)"]
+            my = -dataframe["Mx (N.m)"]
+            mz = dataframe["My (N.m)"]
         else:
-            raise ValueError("The dataframe does not contain the expected columns."
-                             "The excel file must contain columns :"
-                             " 'Fx (N)', 'Fy (N)', 'Fz (N)', 'Mx (N.m)', 'My (N.m)', 'Mz (N.m)'")
+            raise ValueError(
+                "The dataframe does not contain the expected columns."
+                "The excel file must contain columns :"
+                " 'Fx (N)', 'Fy (N)', 'Fz (N)', 'Mx (N.m)', 'My (N.m)', 'Mz (N.m)'"
+            )
 
         # --- Recuperating the time --- #
-        if 'Time (s)' not in dataframe.columns.to_list():
-            raise ValueError("The dataframe does not contain the expected columns."
-                             "The excel file must contain a column 'Time (s)'")
-        self.time = dataframe['Time (s)'].to_numpy()
+        if "Time (s)" not in dataframe.columns.to_list():
+            raise ValueError(
+                "The dataframe does not contain the expected columns." "The excel file must contain a column 'Time (s)'"
+            )
+        self.time = dataframe["Time (s)"].to_numpy()
 
         # --- Building external force vector applied at the hand --- #
         t_local = []
@@ -69,26 +76,26 @@ class ForceSensorToMuscleForce:  # TODO : Enable several muscles (biceps, tricep
 
         # Choose a position/velocity/acceleration to compute dynamics from
         if nq != 2:
-            raise ValueError("The number of degrees of freedom has changed.")                  # 0
-        self.Q = np.array([0., 1.57])  # "0" arm along body and "1.57" 90° forearm position      |__.
+            raise ValueError("The number of degrees of freedom has changed.")  # 0
+        self.Q = np.array([0.0, 1.57])  # "0" arm along body and "1.57" 90° forearm position      |__.
         self.Qdot = np.zeros((nqdot,))  # speed null
         self.Qddot = np.zeros((nqddot,))  # acceleration null
 
         # Biceps moment arm
         self.model.musclesLengthJacobian(self.Q).to_array()
-        if self.model.muscleNames()[1].to_string() != 'BIClong':
+        if self.model.muscleNames()[1].to_string() != "BIClong":
             raise ValueError("Biceps muscle index as changed.")  # biceps is index 1 in the model
         self.biceps_moment_arm = self.model.musclesLengthJacobian(self.Q).to_array()[1][1]
 
         # Expressing the external force array [Mx, My, Mz, Fx, Fy, Fz]
         # experimentally applied at the hand into the last joint
-        if self.model.segments()[15].name().to_string() != 'r_ulna_radius_hand_r_elbow_flex':
+        if self.model.segments()[15].name().to_string() != "r_ulna_radius_hand_r_elbow_flex":
             raise ValueError("r_ulna_radius_hand_r_elbow_flex index as changed.")
 
-        if self.model.markerNames()[3].to_string() != 'r_ulna_radius_hand':
+        if self.model.markerNames()[3].to_string() != "r_ulna_radius_hand":
             raise ValueError("r_ulna_radius_hand marker index as changed.")
 
-        if self.model.markerNames()[4].to_string() != 'hand':
+        if self.model.markerNames()[4].to_string() != "hand":
             raise ValueError("hand marker index as changed.")
 
     def get_muscle_force(self):

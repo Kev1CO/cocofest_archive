@@ -83,22 +83,30 @@ class FunctionalElectricStimulationOptimalControlProgramIdentification(OptimalCo
         km_rest: float = None,
         tau1_rest: float = None,
         tau2: float = None,
-
         **kwargs,
     ):
         self.with_fatigue = with_fatigue
         if not isinstance(self.with_fatigue, bool):
-            raise ValueError("with_fatigue argument must be bool type"
-                             "Set with_fatigue to True if you want to use fatigue model"
-                             "and False if you want to only use the force model")
+            raise ValueError(
+                "with_fatigue argument must be bool type"
+                "Set with_fatigue to True if you want to use fatigue model"
+                "and False if you want to only use the force model"
+            )
         if self.with_fatigue:
             if a_rest is None or km_rest is None or tau1_rest is None or tau2 is None:
                 raise ValueError("a_rest, km_rest, tau1_rest and tau2 must be set for fatigue model identification")
 
         self.ding_model = ding_model(with_fatigue=self.with_fatigue)
+        if self.with_fatigue:
+            self.ding_model.set_a_rest(model=None, a_rest=a_rest)
+            self.ding_model.set_km_rest(model=None, km_rest=km_rest)
+            self.ding_model.set_tau1_rest(model=None, tau1_rest=tau1_rest)
+            self.ding_model.set_tau2(model=None, tau2=tau2)
+
         if not isinstance(force_tracking, list):
-            raise TypeError(f"force_tracking must be list type,"
-                            f" currently force_tracking is {type(force_tracking)}) type.")
+            raise TypeError(
+                f"force_tracking must be list type," f" currently force_tracking is {type(force_tracking)}) type."
+            )
         self.force_tracking = force_tracking
         self.discontinuity_in_ocp = discontinuity_in_ocp
 
@@ -106,32 +114,43 @@ class FunctionalElectricStimulationOptimalControlProgramIdentification(OptimalCo
         self.parameters = None
 
         if not isinstance(pulse_apparition_time, list):
-            raise TypeError(f"pulse_apparition_time must be list type,"
-                            f" currently pulse_apparition_time is {type(pulse_apparition_time)}) type.")
+            raise TypeError(
+                f"pulse_apparition_time must be list type,"
+                f" currently pulse_apparition_time is {type(pulse_apparition_time)}) type."
+            )
 
         if isinstance(ding_model, DingModelPulseDurationFrequency):
             if not isinstance(pulse_duration, list):
-                raise TypeError(f"pulse_duration must be list type,"
-                                f" currently pulse_duration is {type(pulse_duration)}) type.")
+                raise TypeError(
+                    f"pulse_duration must be list type," f" currently pulse_duration is {type(pulse_duration)}) type."
+                )
 
         if isinstance(ding_model, DingModelIntensityFrequency):
             if not isinstance(pulse_intensity, list):
-                raise TypeError(f"pulse_intensity must be list type,"
-                                f" currently pulse_intensity is {type(pulse_intensity)}) type.")
+                raise TypeError(
+                    f"pulse_intensity must be list type,"
+                    f" currently pulse_intensity is {type(pulse_intensity)}) type."
+                )
 
         self.ding_models = [self.ding_model for i in range(len(pulse_apparition_time))]
 
         for i in range(len(pulse_apparition_time)):
-            self.final_time_phase = (round(pulse_apparition_time[i + 1], 4),) if i == 0 else self.final_time_phase + (
-            round(pulse_apparition_time[i] - pulse_apparition_time[i - 1], 4),) if i != len(pulse_apparition_time) - 1 else self.final_time_phase + (
-            1,)
+            self.final_time_phase = (
+                (round(pulse_apparition_time[i + 1], 4),)
+                if i == 0
+                else self.final_time_phase + (round(pulse_apparition_time[i] - pulse_apparition_time[i - 1], 4),)
+                if i != len(pulse_apparition_time) - 1
+                else self.final_time_phase + (1,)
+            )
 
         self.n_stim = len(self.final_time_phase)
 
         stimulation_interval_average = np.mean(self.final_time_phase)
         self.n_shooting = []
         for i in range(len(pulse_apparition_time)):
-            self.n_shooting.append(stimulated_n_shooting if self.final_time_phase[i] < stimulation_interval_average else rest_n_shooting)
+            self.n_shooting.append(
+                stimulated_n_shooting if self.final_time_phase[i] < stimulation_interval_average else rest_n_shooting
+            )
 
         self.constraints = ConstraintList()
         self._set_parameters()
@@ -142,8 +161,7 @@ class FunctionalElectricStimulationOptimalControlProgramIdentification(OptimalCo
         self.phase_transitions = PhaseTransitionList()
         if discontinuity_in_ocp:
             for i in range(len(discontinuity_in_ocp)):
-                self.phase_transitions.add(
-                    PhaseTransitionFcn.DISCONTINUOUS, phase_pre_idx=discontinuity_in_ocp[i])
+                self.phase_transitions.add(PhaseTransitionFcn.DISCONTINUOUS, phase_pre_idx=discontinuity_in_ocp[i])
 
         if "ode_solver" in kwargs:
             if not isinstance(kwargs["ode_solver"], OdeSolver):
@@ -251,6 +269,12 @@ class FunctionalElectricStimulationOptimalControlProgramIdentification(OptimalCo
             force_in_phase = self.input_force(self.force_tracking[0], self.force_tracking[1], i)
             self.x_init.add("F", np.array([force_in_phase]), phase=i, interpolation=InterpolationType.EACH_FRAME)
             self.x_init.add("Cn", [0], phase=i, interpolation=InterpolationType.CONSTANT)
+            if self.with_fatigue:
+                for j in range(len(variable_bound_list)):
+                    if variable_bound_list[j] == "F" or variable_bound_list[j] == "Cn":
+                        pass
+                    else:
+                        self.x_init.add(variable_bound_list[j], self.ding_model.standard_rest_values()[j])
 
         # Creates the controls of our problem (in our case, equals to an empty list)
         self.u_bounds = BoundsList()
@@ -263,9 +287,9 @@ class FunctionalElectricStimulationOptimalControlProgramIdentification(OptimalCo
 
     def input_force(self, time, force, phase_idx):
         current_time = sum(self.final_time_phase[:phase_idx])
-        dt = self.final_time_phase[phase_idx] / (self.n_shooting[phase_idx]+1)
+        dt = self.final_time_phase[phase_idx] / (self.n_shooting[phase_idx] + 1)
         force_in_phase = []
-        for i in range(self.n_shooting[phase_idx]+1):
+        for i in range(self.n_shooting[phase_idx] + 1):
             interpolated_force = np.interp(current_time, time, force)
             force_in_phase.append(interpolated_force if interpolated_force > 0 else 0)
             current_time += dt
@@ -285,19 +309,36 @@ class FunctionalElectricStimulationOptimalControlProgramIdentification(OptimalCo
                     raise ValueError("All elements in objective kwarg must be an Objective type")
 
         if self.force_tracking:
-            for phase in range(self.n_stim):
-                for i in range(self.n_shooting[phase]):
-                    self.objective_functions.add(
-                        CustomObjective.track_state_from_time_interpolate,
-                        custom_type=ObjectiveFcn.Mayer,
-                        node=i,
-                        time=self.force_tracking[0],
-                        force=self.force_tracking[1],
-                        key="F",
-                        quadratic=True,
-                        weight=1,
-                        phase=phase,
-                    )
+            if self.with_fatigue:
+                for phase in range(self.n_stim):
+                    for i in range(self.n_shooting[phase]):
+                        self.objective_functions.add(
+                            CustomObjective.track_state_from_time_interpolate,
+                            custom_type=ObjectiveFcn.Mayer,
+                            node=i,
+                            time=self.force_tracking[0],
+                            force=self.force_tracking[1],
+                            key="F",
+                            minimization_type="LMS",
+                            quadratic=True,
+                            weight=1,
+                            phase=phase,
+                        )
+            else:
+                for phase in range(self.n_stim):
+                    for i in range(self.n_shooting[phase]):
+                        self.objective_functions.add(
+                            CustomObjective.track_state_from_time_interpolate,
+                            custom_type=ObjectiveFcn.Mayer,
+                            node=i,
+                            time=self.force_tracking[0],
+                            force=self.force_tracking[1],
+                            key="F",
+                            minimization_type="LS",
+                            quadratic=True,
+                            weight=1,
+                            phase=phase,
+                        )
 
     def _set_parameters(self):
         self.parameters = ParameterList()
@@ -306,7 +347,65 @@ class FunctionalElectricStimulationOptimalControlProgramIdentification(OptimalCo
         self.parameter_objectives = ParameterObjectiveList()
 
         if self.with_fatigue:
-            pass
+            self.parameters.add(
+                parameter_name="alpha_a",
+                list_index=0,
+                function=self.ding_model.set_alpha_a,
+                size=1,
+                scaling=np.array([10e8]),  # TODO : ask if scaling is relevant here and applied correctly
+            )
+            self.parameters.add(
+                parameter_name="alpha_km",
+                list_index=1,
+                function=self.ding_model.set_alpha_km,
+                size=1,
+                scaling=np.array([10e9]),
+            )
+            self.parameters.add(
+                parameter_name="alpha_tau1",
+                list_index=2,
+                function=self.ding_model.set_alpha_tau1,
+                size=1,
+                scaling=np.array([10e6]),
+            )
+            self.parameters.add(
+                parameter_name="tau_fat",
+                list_index=3,
+                function=self.ding_model.set_tau_fat,
+                size=1,
+            )
+
+            # --- Adding bound parameters --- #
+            self.parameters_bounds.add(
+                "alpha_a",
+                min_bound=np.array([10e-6]),  # TODO : fine tune bounds
+                max_bound=np.array([10e-8]),
+                interpolation=InterpolationType.CONSTANT,
+            )
+            self.parameters_bounds.add(
+                "alpha_km",
+                min_bound=np.array([10e-9]),  # TODO : fine tune bounds
+                max_bound=np.array([10e-7]),
+                interpolation=InterpolationType.CONSTANT,
+            )
+            self.parameters_bounds.add(
+                "alpha_tau1",
+                min_bound=np.array([10e-6]),  # TODO : fine tune bounds
+                max_bound=np.array([10e-4]),
+                interpolation=InterpolationType.CONSTANT,
+            )
+            self.parameters_bounds.add(
+                "tau_fat",
+                min_bound=np.array([10]),  # TODO : fine tune bounds
+                max_bound=np.array([1000]),
+                interpolation=InterpolationType.CONSTANT,
+            )
+
+            # --- Initial guess parameters --- #
+            self.parameters_init["alpha_a"] = np.array([10e-7])  # TODO : fine tune initial guess
+            self.parameters_init["alpha_km"] = np.array([10e-8])  # TODO : fine tune initial guess
+            self.parameters_init["alpha_tau1"] = np.array([10 - 5])  # TODO : fine tune initial guess
+            self.parameters_init["tau_fat"] = np.array([100])  # TODO : fine tune initial guess
         else:
             self.parameters.add(
                 parameter_name="a_rest",
