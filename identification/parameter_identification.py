@@ -93,6 +93,18 @@ class DingModelFrequencyParameterIdentification:
                 if data["stim_time"][0] == 0
                 else [[(time - data["stim_time"][0]) for time in row] for row in data["time"]]
             )
+
+            # # Average on each force curve
+            # force_average = [x + y for x, y in zip(a, b)]
+            #
+            # # Estimated time
+            # force_model_time_data = np.linspace(0, len(force_average)/1000, len(force_average)/1000).tolist()
+            #
+            #
+            #
+            # # Estimated stimulation time
+            # force_model_stim_apparition_time = np.linspace(0, 1, 33).tolist()
+
             # Indexing the current data time on the previous one to ensure time continuity
             if i != 0:
                 discontinuity_phase_list.append(
@@ -198,15 +210,15 @@ class DingModelFrequencyParameterIdentification:
 
         result = self.force_ocp.solve(Solver.IPOPT())
         # --- Print force model results --- #
-        print(result.parameters)
-        result_merged = result.merge_phases()
-        plt.plot(result_merged.time, result_merged.states["F"][0], label="identification")
-        global_force_model_muscle_data = np.array(
-            np.where(np.array(global_force_model_muscle_data) < 0, 0, global_force_model_muscle_data)
-        ).tolist()
-        plt.plot(global_force_model_time_data, global_force_model_muscle_data, label="tracking")
-        plt.legend()
-        plt.show()
+        # print(result.parameters)
+        # result_merged = result.merge_phases()
+        # plt.plot(result_merged.time, result_merged.states["F"][0], label="identification")
+        # global_force_model_muscle_data = np.array(
+        #     np.where(np.array(global_force_model_muscle_data) < 0, 0, global_force_model_muscle_data)
+        # ).tolist()
+        # plt.plot(global_force_model_time_data, global_force_model_muscle_data, label="tracking")
+        # plt.legend()
+        # plt.show()
 
         # --- Building fatigue ocp --- #
         self.fatigue_ocp = FunctionalElectricStimulationOptimalControlProgramIdentification(
@@ -249,10 +261,10 @@ if __name__ == "__main__":
     DingModelFrequencyParameterIdentification(
         model=DingModelFrequency,
         force_model_data_path=["D:/These/Programmation/Modele_Musculaire/optistim/data_process/biceps_force_0.pkl"],
-        # "D:/These/Programmation/Modele_Musculaire/optistim/data_process/biceps_force_0.pkl",
-        # "D:/These/Programmation/Modele_Musculaire/optistim/data_process/biceps_force_0.pkl"],
+                               # "D:/These/Programmation/Modele_Musculaire/optistim/data_process/biceps_force_0.pkl",
+                               # "D:/These/Programmation/Modele_Musculaire/optistim/data_process/biceps_force_0.pkl"],
         fatigue_model_data_path=[
             "D:/These/Programmation/Modele_Musculaire/optistim/data_process/biceps_force_fatigue_0.pkl"
         ],
-        use_sx=True,
+        use_sx=False,
     )
