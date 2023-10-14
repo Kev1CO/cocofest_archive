@@ -432,7 +432,7 @@ class DingModelFrequency:
             self.configure_time_state_force_no_cross_bridge(ocp=ocp, nlp=nlp, as_states=True, as_controls=False)
             self.configure_cross_bridges(ocp=ocp, nlp=nlp, as_states=True, as_controls=False)
         stim_apparition = self.get_stim_prev(ocp, nlp)
-        ConfigureProblem.configure_dynamics_function(ocp, nlp, dyn_func=self.dynamics, allow_free_variables=True, stim_apparition=stim_apparition)
+        ConfigureProblem.configure_dynamics_function(ocp, nlp, dyn_func=self.dynamics, stim_apparition=stim_apparition)
 
     @staticmethod
     def configure_ca_troponin_complex(
@@ -630,11 +630,7 @@ class DingModelFrequency:
         -------
         The list of previous stimulation time
         """
-
-        t_stim_prev = []
-        for i in range(nlp.phase_idx+1):
-            t_stim_prev.append(ocp.node_time(phase_idx=i, node_idx=0))
-
+        t_stim_prev = [ocp.node_time(phase_idx=i, node_idx=0, type="mx") for i in range(nlp.phase_idx+1)]
         return t_stim_prev
 
 
@@ -862,7 +858,7 @@ class DingModelPulseDurationFrequency(DingModelFrequency):
         -------
         The derivative of the states in the tuple[MX | SX]] format
         """
-        pulse_duration_parameters = DingModelPulseDurationFrequency.get_pulse_duration_parameters(nlp.parameters)
+        pulse_duration_parameters = nlp.model.get_pulse_duration_parameters(nlp.parameters)
 
         if pulse_duration_parameters.shape[0] == 1:  # check if pulse duration is mapped
             impulse_time = pulse_duration_parameters[0]
@@ -912,7 +908,7 @@ class DingModelPulseDurationFrequency(DingModelFrequency):
             self.configure_time_state_force_no_cross_bridge(ocp=ocp, nlp=nlp, as_states=True, as_controls=False)
             self.configure_cross_bridges(ocp=ocp, nlp=nlp, as_states=True, as_controls=False)
         stim_apparition = self.get_stim_prev(ocp, nlp)
-        ConfigureProblem.configure_dynamics_function(ocp, nlp, dyn_func=self.dynamics, allow_free_variables=True, stim_apparition=stim_apparition)
+        ConfigureProblem.configure_dynamics_function(ocp, nlp, dyn_func=self.dynamics, stim_apparition=stim_apparition)
 
 
 class DingModelIntensityFrequency(DingModelFrequency):
@@ -1196,7 +1192,7 @@ class DingModelIntensityFrequency(DingModelFrequency):
         intensity_stim_prev = (
             []
         )  # Every stimulation intensity before the current phase, i.e.: the intensity of each phase
-        intensity_parameters = DingModelIntensityFrequency.get_intensity_parameters(nlp.parameters)
+        intensity_parameters = nlp.model.get_intensity_parameters(nlp.parameters)
 
         if intensity_parameters.shape[0] == 1:  # check if pulse duration is mapped
             for i in range(nlp.phase_idx + 1):
@@ -1250,5 +1246,4 @@ class DingModelIntensityFrequency(DingModelFrequency):
             self.configure_time_state_force_no_cross_bridge(ocp=ocp, nlp=nlp, as_states=True, as_controls=False)
             self.configure_cross_bridges(ocp=ocp, nlp=nlp, as_states=True, as_controls=False)
         stim_apparition = self.get_stim_prev(ocp, nlp)
-        ConfigureProblem.configure_dynamics_function(ocp, nlp, dyn_func=self.dynamics, allow_free_variables=True,
-                                                     stim_apparition=stim_apparition)
+        ConfigureProblem.configure_dynamics_function(ocp, nlp, dyn_func=self.dynamics, stim_apparition=stim_apparition)
