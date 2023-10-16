@@ -40,8 +40,8 @@ class CustomObjective:
 
     @staticmethod
     def track_state_from_time_interpolate(
-        controller: PenaltyController, time: np.ndarray, force: np.ndarray, key: str, minimization_type: str = "LS"
-    ) -> MX | SX:
+        controller: PenaltyController, force: np.ndarray, key: str, minimization_type: str = "LS"
+    ) -> MX:
         """
         Minimize the states variables.
         This function least square.
@@ -51,8 +51,6 @@ class CustomObjective:
         ----------
         controller: PenaltyController
             The penalty node elements
-        time: np.ndarray
-            The force data time vector
         force: np.ndarray
             The force vector
         key: str
@@ -65,18 +63,8 @@ class CustomObjective:
         The difference between the two keys
         """
         if minimization_type == "LS":
-            interpolated_force = np.interp(
-                controller.ocp.node_time(phase_idx=controller.phase_idx, node_idx=controller.t[0]), time, force
-            )
-            interpolated_force = 0 if interpolated_force < 0 else interpolated_force
-            return interpolated_force - controller.states[key].cx
-        elif minimization_type == "BF":  # TODO : remove numpy
-            interpolated_force = np.interp(
-                controller.ocp.node_time(phase_idx=controller.phase_idx, node_idx=controller.t[0]), time, force
-            )
-            if interpolated_force < 0:
-                return SX(0) if controller.cx.type_name() == "SX" else MX(0)
-            else:
-                return 1 - (interpolated_force / controller.states[key].cx)
+            return force - controller.states[key].cx
+        elif minimization_type == "BF":
+            return 1 - (force / controller.states[key].cx)
         else:
             raise RuntimeError(f"Minimization type {minimization_type} not implemented")

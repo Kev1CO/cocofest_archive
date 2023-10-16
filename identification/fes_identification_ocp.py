@@ -73,7 +73,6 @@ class FunctionalElectricStimulationOptimalControlProgramIdentification(OptimalCo
         ding_model: DingModelFrequency | DingModelPulseDurationFrequency | DingModelIntensityFrequency = None,
         with_fatigue: bool = None,
         stimulated_n_shooting: int = None,
-        rest_n_shooting: int = None,
         force_tracking: list[np.ndarray, np.ndarray] = None,
         pulse_apparition_time: list[int] | list[float] = None,
         pulse_duration: list[int] | list[float] = None,
@@ -107,11 +106,6 @@ class FunctionalElectricStimulationOptimalControlProgramIdentification(OptimalCo
             raise TypeError(
                 f"force_tracking must be list type," f" currently force_tracking is {type(force_tracking)}) type."
             )
-        self.force_tracking = force_tracking
-        self.discontinuity_in_ocp = discontinuity_in_ocp
-
-        self.parameter_mappings = None
-        self.parameters = None
 
         if not isinstance(pulse_apparition_time, list):
             raise TypeError(
@@ -132,15 +126,19 @@ class FunctionalElectricStimulationOptimalControlProgramIdentification(OptimalCo
                     f" currently pulse_intensity is {type(pulse_intensity)}) type."
                 )
 
+        self.force_tracking = force_tracking
+        self.discontinuity_in_ocp = discontinuity_in_ocp
+
+        self.parameter_mappings = None
+        self.parameters = None
+
         self.ding_models = [self.ding_model for i in range(len(pulse_apparition_time))]
 
         for i in range(len(pulse_apparition_time)):
             self.final_time_phase = (
-                (round(pulse_apparition_time[i + 1], 4),)
+                (pulse_apparition_time[i + 1],)
                 if i == 0
-                else self.final_time_phase + (round(pulse_apparition_time[i] - pulse_apparition_time[i - 1], 4),)
-                if i != len(pulse_apparition_time) - 1
-                else self.final_time_phase + (1,)
+                else self.final_time_phase + (pulse_apparition_time[i] - pulse_apparition_time[i - 1],)
             )
 
         self.n_stim = len(self.final_time_phase)
@@ -148,9 +146,19 @@ class FunctionalElectricStimulationOptimalControlProgramIdentification(OptimalCo
         stimulation_interval_average = np.mean(self.final_time_phase)
         self.n_shooting = []
         for i in range(len(pulse_apparition_time)):
-            self.n_shooting.append(
-                stimulated_n_shooting if self.final_time_phase[i] < stimulation_interval_average else rest_n_shooting
-            )
+            if self.final_time_phase[i] > stimulation_interval_average:
+                temp_final_time = self.final_time_phase[i]
+                rest_n_shooting = int(stimulated_n_shooting * temp_final_time / stimulation_interval_average)
+                self.n_shooting.append(rest_n_shooting)
+            else:
+                self.n_shooting.append(stimulated_n_shooting)
+
+        self.force_at_node = []
+        for i in range(self.n_stim):
+            for j in range(self.n_shooting[i]):
+                temp_time = sum(self.final_time_phase[:i]) + j * self.final_time_phase[i] / self.n_shooting[i]
+                temp_interpolated_force = np.interp(temp_time, force_tracking[0], force_tracking[1])
+                self.force_at_node.append(temp_interpolated_force)
 
         self.constraints = ConstraintList()
         self._set_parameters()
@@ -309,36 +317,37 @@ class FunctionalElectricStimulationOptimalControlProgramIdentification(OptimalCo
                     raise ValueError("All elements in objective kwarg must be an Objective type")
 
         if self.force_tracking:
+            node_idx = 0
             if self.with_fatigue:
-                for phase in range(self.n_stim):
-                    for i in range(self.n_shooting[phase]):
+                for i in range(self.n_stim):
+                    for j in range(self.n_shooting[i]):
                         self.objective_functions.add(
                             CustomObjective.track_state_from_time_interpolate,
                             custom_type=ObjectiveFcn.Mayer,
-                            node=i,
-                            time=self.force_tracking[0],
-                            force=self.force_tracking[1],
+                            node=j,
+                            force=self.force_at_node[node_idx],
                             key="F",
                             minimization_type="BF",
                             quadratic=True,
                             weight=1,
-                            phase=phase,
+                            phase=i,
                         )
+                        node_idx += 1
             else:
-                for phase in range(self.n_stim):
-                    for i in range(self.n_shooting[phase]):
+                for i in range(self.n_stim):
+                    for j in range(self.n_shooting[i]):
                         self.objective_functions.add(
                             CustomObjective.track_state_from_time_interpolate,
                             custom_type=ObjectiveFcn.Mayer,
-                            node=i,
-                            time=self.force_tracking[0],
-                            force=self.force_tracking[1],
+                            node=j,
+                            force=self.force_at_node[node_idx],
                             key="F",
                             minimization_type="LS",
                             quadratic=True,
                             weight=1,
-                            phase=phase,
+                            phase=i,
                         )
+                        node_idx += 1
 
     def _set_parameters(self):
         self.parameters = ParameterList()
