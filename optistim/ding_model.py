@@ -5,7 +5,7 @@ different custom models.
 """
 from typing import Callable
 
-from casadi import MX, SX, exp, vertcat, tanh
+from casadi import MX, exp, vertcat, tanh
 import numpy as np
 
 from bioptim import (
@@ -45,29 +45,29 @@ class DingModelFrequency:
         self.tau_fat = 127  # Value from Ding's experimentation [1] (s)
         self.alpha_km = 1.9 * 10e-8  # Value from Ding's experimentation [1] (s^-1.N^-1)
 
-    def set_a_rest(self, model, a_rest: MX | SX | float):
+    def set_a_rest(self, model, a_rest: MX | float):
         # model is required for bioptim compatibility
         self.a_rest = a_rest
 
-    def set_km_rest(self, model, km_rest: MX | SX | float):
+    def set_km_rest(self, model, km_rest: MX | float):
         self.km_rest = km_rest
 
-    def set_tau1_rest(self, model, tau1_rest: MX | SX | float):
+    def set_tau1_rest(self, model, tau1_rest: MX | float):
         self.tau1_rest = tau1_rest
 
-    def set_tau2(self, model, tau2: MX | SX | float):
+    def set_tau2(self, model, tau2: MX | float):
         self.tau2 = tau2
 
-    def set_alpha_a(self, model, alpha_a: MX | SX | float):
+    def set_alpha_a(self, model, alpha_a: MX | float):
         self.alpha_a = alpha_a
 
-    def set_alpha_km(self, model, alpha_km: MX | SX | float):
+    def set_alpha_km(self, model, alpha_km: MX | float):
         self.alpha_km = alpha_km
 
-    def set_alpha_tau1(self, model, alpha_tau1: MX | SX | float):
+    def set_alpha_tau1(self, model, alpha_tau1: MX | float):
         self.alpha_tau1 = alpha_tau1
 
-    def set_tau_fat(self, model, tau_fat: MX | SX | float):
+    def set_tau_fat(self, model, tau_fat: MX | float):
         self.tau_fat = tau_fat
 
     def standard_rest_values(self) -> np.array:
@@ -130,24 +130,24 @@ class DingModelFrequency:
     # ---- Model's dynamics ---- #
     def system_dynamics_without_fatigue(
         self,
-        cn: MX | SX,
-        f: MX | SX,
-        t: MX | SX = None,
-        **extra_arguments: list[MX] | list[SX] | list[float],
-    ) -> MX | SX:
+        cn: MX,
+        f: MX,
+        t: MX = None,
+        **extra_arguments: list[MX] | list[float],
+    ) -> MX:
         """
         The system dynamics is the function that describes the model.
 
         Parameters
         ----------
-        cn: MX | SX
+        cn: MX
             The value of the ca_troponin_complex (unitless)
-        f: MX | SX
+        f: MX
             The value of the force (N)
-        t: MX | SX
+        t: MX
             The current time at which the dynamics is evaluated (ms)
-        **extra_arguments: list[MX] | list[SX]
-            t_stim_prev: list[MX] | list[SX]
+        **extra_arguments: list[MX]
+            t_stim_prev: list[MX]
                 The time list of the previous stimulations (ms)
 
         Returns
@@ -161,33 +161,33 @@ class DingModelFrequency:
 
     def system_dynamics_with_fatigue(
         self,
-        cn: MX | SX,
-        f: MX | SX,
-        a: MX | SX = None,
-        tau1: MX | SX = None,
-        km: MX | SX = None,
-        t: MX | SX = None,
-        **extra_arguments: list[MX] | list[SX] | list[float],
-    ) -> MX | SX:
+        cn: MX,
+        f: MX,
+        a: MX = None,
+        tau1: MX = None,
+        km: MX = None,
+        t: MX = None,
+        **extra_arguments: list[MX] | list[float],
+    ) -> MX:
         """
         The system dynamics is the function that describes the model.
 
         Parameters
         ----------
-        cn: MX | SX
+        cn: MX
             The value of the ca_troponin_complex (unitless)
-        f: MX | SX
+        f: MX
             The value of the force (N)
-        a: MX | SX
+        a: MX
             The value of the scaling factor (unitless)
-        tau1: MX | SX
+        tau1: MX
             The value of the time_state_force_no_cross_bridge (ms)
-        km: MX | SX
+        km: MX
             The value of the cross_bridges (unitless)
-        t: MX | SX
+        t: MX
             The current time at which the dynamics is evaluated (ms)
-        **extra_arguments: list[MX] | list[SX]
-            t_stim_prev: list[MX] | list[SX]
+        **extra_arguments: list[MX]
+            t_stim_prev: list[MX]
                 The time list of the previous stimulations (ms)
 
         Returns
@@ -202,13 +202,13 @@ class DingModelFrequency:
         km_dot = self.km_dot_fun(km, f)  # Equation n°11
         return vertcat(cn_dot, f_dot, a_dot, tau1_dot, km_dot)
 
-    def exp_time_fun(self, t: MX | SX, t_stim_i: MX | SX) -> MX | SX:
+    def exp_time_fun(self, t: MX, t_stim_i: MX) -> MX | float:
         """
         Parameters
         ----------
-        t: MX | SX
+        t: MX
             The current time at which the dynamics is evaluated (ms)
-        t_stim_i: MX | SX
+        t_stim_i: MX
             Time when the stimulation i occurred (ms)
 
         Returns
@@ -217,13 +217,13 @@ class DingModelFrequency:
         """
         return exp(-(t - t_stim_i) / self.tauc)  # Part of Eq n°1
 
-    def ri_fun(self, r0: float | MX | SX, time_between_stim: MX | SX) -> MX | SX:
+    def ri_fun(self, r0: MX | float, time_between_stim: MX) -> MX | float:
         """
         Parameters
         ----------
-        r0: float | MX | SX
+        r0: MX | float
             Mathematical term characterizing the magnitude of enhancement in CN from the following stimuli (unitless)
-        time_between_stim: MX | SX
+        time_between_stim: MX
             Time between the last stimulation i and the current stimulation i (ms)
 
         Returns
@@ -232,16 +232,16 @@ class DingModelFrequency:
         """
         return 1 + (r0 - 1) * exp(-time_between_stim / self.tauc)  # Part of Eq n°1
 
-    def cn_sum_fun(self, r0: float | MX | SX, t: MX | SX, **extra_arguments: list[MX] | list[SX]) -> float | MX | SX:
+    def cn_sum_fun(self, r0: MX | float, t: MX, **extra_arguments: list[MX]) -> MX | float:
         """
         Parameters
         ----------
-        r0: float | MX | SX
+        r0: MX | float
             Mathematical term characterizing the magnitude of enhancement in CN from the following stimuli (unitless)
-        t: MX | SX
+        t: MX
             The current time at which the dynamics is evaluated (ms)
-        **extra_arguments: list[MX] | list[SX]
-            t_stim_prev: list[MX] | list[SX]
+        **extra_arguments: list[MX]
+            t_stim_prev: list[MX]
                 The time list of the previous stimulations (ms)
 
         Returns
@@ -264,19 +264,19 @@ class DingModelFrequency:
         return sum_multiplier
 
     def cn_dot_fun(
-        self, cn: MX | SX, r0: float | MX | SX, t: MX | SX, **extra_arguments: MX | SX | list[MX] | list[SX]
-    ) -> float | MX | SX:
+        self, cn: MX, r0: MX | float, t: MX, **extra_arguments: MX | list[MX] | list[float]
+    ) -> MX | float:
         """
         Parameters
         ----------
-        cn: MX | SX
+        cn: MX
             The previous step value of ca_troponin_complex (unitless)
-        r0: MX | SX
+        r0: MX | float
             Mathematical term characterizing the magnitude of enhancement in CN from the following stimuli (unitless)
-        t: MX | SX
+        t: MX
             The current time at which the dynamics is evaluated (ms)
-        **extra_arguments: list[MX] | list[SX]
-            t_stim_prev: list[MX] | list[SX]
+        **extra_arguments: list[MX] | list[float]
+            t_stim_prev: list[MX] | list[float]
                 The time list of the previous stimulations (ms)
 
         Returns
@@ -288,20 +288,20 @@ class DingModelFrequency:
         return (1 / self.tauc) * sum_multiplier - (cn / self.tauc)  # Equation n°1
 
     def f_dot_fun(
-        self, cn: MX | SX, f: MX | SX, a: MX | SX | float, tau1: MX | SX | float, km: MX | SX | float
-    ) -> float | MX | SX:
+        self, cn: MX, f: MX, a: MX | float, tau1: MX | float, km: MX | float
+    ) -> MX | float:
         """
         Parameters
         ----------
-        cn: MX | SX
+        cn: MX
             The previous step value of ca_troponin_complex (unitless)
-        f: MX | SX
+        f: MX
             The previous step value of force (N)
-        a: MX | SX
+        a: MX | float
             The previous step value of scaling factor (unitless)
-        tau1: MX | SX
+        tau1: MX | float
             The previous step value of time_state_force_no_cross_bridge (ms)
-        km: MX | SX
+        km: MX | float
             The previous step value of cross_bridges (unitless)
 
         Returns
@@ -310,13 +310,13 @@ class DingModelFrequency:
         """
         return a * (cn / (km + cn)) - (f / (tau1 + self.tau2 * (cn / (km + cn))))  # Equation n°2
 
-    def a_dot_fun(self, a: MX | SX, f: MX | SX) -> float | MX | SX:
+    def a_dot_fun(self, a: MX, f: MX) -> MX | float:
         """
         Parameters
         ----------
-        a: MX | SX
+        a: MX
             The previous step value of scaling factor (unitless)
-        f: MX | SX
+        f: MX
             The previous step value of force (N)
 
         Returns
@@ -325,13 +325,13 @@ class DingModelFrequency:
         """
         return -(a - self.a_rest) / self.tau_fat + self.alpha_a * f  # Equation n°5
 
-    def tau1_dot_fun(self, tau1: MX | SX, f: MX | SX) -> float | MX | SX:
+    def tau1_dot_fun(self, tau1: MX, f: MX) -> MX | float:
         """
         Parameters
         ----------
-        tau1: MX | SX
+        tau1: MX
             The previous step value of time_state_force_no_cross_bridge (ms)
-        f: MX | SX
+        f: MX
             The previous step value of force (N)
 
         Returns
@@ -340,13 +340,13 @@ class DingModelFrequency:
         """
         return -(tau1 - self.tau1_rest) / self.tau_fat + self.alpha_tau1 * f  # Equation n°9
 
-    def km_dot_fun(self, km: MX | SX, f: MX | SX) -> float | MX | SX:
+    def km_dot_fun(self, km: MX, f: MX) -> MX | float:
         """
         Parameters
         ----------
-        km: MX | SX
+        km: MX
             The previous step value of cross_bridges (unitless)
-        f: MX | SX
+        f: MX
             The previous step value of force (N)
 
         Returns
@@ -357,11 +357,11 @@ class DingModelFrequency:
 
     @staticmethod
     def dynamics(
-        time: MX | SX,
-        states: MX | SX,
-        controls: MX | SX,
-        parameters: MX | SX,
-        stochastic_variables: MX | SX,
+        time: MX,
+        states: MX,
+        controls: MX,
+        parameters: MX,
+        stochastic_variables: MX,
         nlp: NonLinearProgram,
         stim_apparition=None,
     ) -> DynamicsEvaluation:
@@ -370,15 +370,15 @@ class DingModelFrequency:
 
         Parameters
         ----------
-        time: MX | SX
+        time: MX
             The system's current node time
-        states: MX | SX
+        states: MX
             The state of the system CN, F, A, Tau1, Km
-        controls: MX | SX
+        controls: MX
             The controls of the system, none
-        parameters: MX | SX
+        parameters: MX
             The parameters acting on the system, final time of each phase
-        stochastic_variables: MX | SX
+        stochastic_variables: MX
             The stochastic variables of the system, none
         nlp: NonLinearProgram
             A reference to the phase
@@ -386,7 +386,7 @@ class DingModelFrequency:
             The time list of the previous stimulations (s)
         Returns
         -------
-        The derivative of the states in the tuple[MX | SX]] format
+        The derivative of the states in the tuple[MX] format
         """
 
         return (
@@ -710,26 +710,26 @@ class DingModelPulseDurationFrequency(DingModelFrequency):
 
     def system_dynamics_without_fatigue(
         self,
-        cn: MX | SX,
-        f: MX | SX,
-        t: MX | SX = None,
-        **extra_arguments: list[MX] | list[SX] | list[float],
-    ) -> MX | SX:
+        cn: MX,
+        f: MX,
+        t: MX = None,
+        **extra_arguments: list[MX] | list[float],
+    ) -> MX:
         """
         The system dynamics is the function that describes the model.
 
         Parameters
         ----------
-        cn: MX | SX
+        cn: MX
             The value of the ca_troponin_complex (unitless)
-        f: MX | SX
+        f: MX
             The value of the force (N)
-        t: MX | SX
+        t: MX
             The current time at which the dynamics is evaluated (ms)
-        **extra_arguments: list[MX] | list[SX]
-            t_stim_prev: list[MX] | list[SX]
+        **extra_arguments: list[MX]
+            t_stim_prev: list[MX]
                 The time list of the previous stimulations (ms)
-            impulse_time: MX | SX
+            impulse_time: MX
                 The pulsation duration of the current stimulation (ms)
 
         Returns
@@ -744,32 +744,32 @@ class DingModelPulseDurationFrequency(DingModelFrequency):
 
     def system_dynamics_with_fatigue(
         self,
-        cn: MX | SX,
-        f: MX | SX,
-        tau1: MX | SX = None,
-        km: MX | SX = None,
-        t: MX | SX = None,
-        **extra_arguments: list[MX] | list[SX] | list[float],
-    ) -> MX | SX:
+        cn: MX,
+        f: MX,
+        tau1: MX = None,
+        km: MX = None,
+        t: MX = None,
+        **extra_arguments: list[MX] | list[float],
+    ) -> MX:
         """
         The system dynamics is the function that describes the model.
 
         Parameters
         ----------
-        cn: MX | SX
+        cn: MX
             The value of the ca_troponin_complex (unitless)
-        f: MX | SX
+        f: MX
             The value of the force (N)
-        tau1: MX | SX
+        tau1: MX
             The value of the time_state_force_no_cross_bridge (ms)
-        km: MX | SX
+        km: MX
             The value of the cross_bridges (unitless)
-        t: MX | SX
+        t: MX
             The current time at which the dynamics is evaluated (ms)
-        **extra_arguments: list[MX] | list[SX]
-            t_stim_prev: list[MX] | list[SX]
+        **extra_arguments: list[MX]
+            t_stim_prev: list[MX]
                 The time list of the previous stimulations (ms)
-            impulse_time: MX | SX
+            impulse_time: MX
                 The pulsation duration of the current stimulation (ms)
 
         Returns
@@ -784,11 +784,11 @@ class DingModelPulseDurationFrequency(DingModelFrequency):
         km_dot = self.km_dot_fun(km, f)  # Equation n°11 from Ding's 2003 article
         return vertcat(cn_dot, f_dot, tau1_dot, km_dot)
 
-    def a_calculation(self, impulse_time: list[MX] | list[SX]) -> MX | SX:
+    def a_calculation(self, impulse_time: list[MX]) -> MX:
         """
         Parameters
         ----------
-        impulse_time: list[MX] | list[SX]
+        impulse_time: list[MX]
             The pulsation duration of the current stimulation (s)
 
         Returns
@@ -797,19 +797,19 @@ class DingModelPulseDurationFrequency(DingModelFrequency):
         """
         return self.a_scale * (1 - exp(-(impulse_time[0] - self.pd0) / self.pdt))
 
-    def set_impulse_duration(self, value: list[MX] | list[SX]):
+    def set_impulse_duration(self, value: list[MX]):
         """
         Sets the impulse time for each pulse (phases) according to the ocp parameter "impulse_time"
 
         Parameters
         ----------
-        value: list[MX] | list[SX]
+        value: list[MX]
             The pulsation duration list (s)
         """
         self.impulse_time = value
 
     @staticmethod
-    def get_pulse_duration_parameters(nlp_parameters: ParameterList) -> MX | SX:
+    def get_pulse_duration_parameters(nlp_parameters: ParameterList) -> MX:
         """
         Get the nlp list of pulse_duration parameters
 
@@ -830,11 +830,11 @@ class DingModelPulseDurationFrequency(DingModelFrequency):
 
     @staticmethod
     def dynamics(
-        time: MX | SX,
-        states: MX | SX,
-        controls: MX | SX,
-        parameters: MX | SX,
-        stochastic_variables: MX | SX,
+        time: MX,
+        states: MX,
+        controls: MX,
+        parameters: MX,
+        stochastic_variables: MX,
         nlp: NonLinearProgram,
         stim_apparition: list[float] = None,
     ) -> DynamicsEvaluation:
@@ -843,15 +843,15 @@ class DingModelPulseDurationFrequency(DingModelFrequency):
 
         Parameters
         ----------
-        time: MX | SX
+        time: MX
             The system's current node time
-        states: MX | SX
+        states: MX
             The state of the system CN, F, A, Tau1, Km
-        controls: MX | SX
+        controls: MX
             The controls of the system, none
-        parameters: MX | SX
+        parameters: MX
             The parameters acting on the system, final time of each phase
-        stochastic_variables: MX | SX
+        stochastic_variables: MX
             The stochastic variables of the system, none
         nlp: NonLinearProgram
             A reference to the phase
@@ -859,7 +859,7 @@ class DingModelPulseDurationFrequency(DingModelFrequency):
             The time list of the previous stimulations (s)
         Returns
         -------
-        The derivative of the states in the tuple[MX | SX]] format
+        The derivative of the states in the tuple[MX] format
         """
         pulse_duration_parameters = nlp.model.get_pulse_duration_parameters(nlp.parameters)
 
@@ -970,26 +970,26 @@ class DingModelIntensityFrequency(DingModelFrequency):
 
     def system_dynamics_without_fatigue(
         self,
-        cn: MX | SX,
-        f: MX | SX,
-        t: MX | SX = None,
-        **extra_arguments: list[MX] | list[SX] | list[float],
-    ) -> MX | SX:
+        cn: MX,
+        f: MX,
+        t: MX = None,
+        **extra_arguments: list[MX] | list[float],
+    ) -> MX:
         """
         The system dynamics is the function that describes the model.
 
         Parameters
         ----------
-        cn: MX | SX
+        cn: MX
             The value of the ca_troponin_complex (unitless)
-        f: MX | SX
+        f: MX
             The value of the force (N)
-        t: MX | SX
+        t: MX
             The current time at which the dynamics is evaluated (ms)
-        **extra_arguments: list[MX] | list[SX]
-            t_stim_prev: list[MX] | list[SX]
+        **extra_arguments: list[MX]
+            t_stim_prev: list[MX]
                 The time list of the previous stimulations (ms)
-            intensity_stim: list[MX] | list[SX]
+            intensity_stim: list[MX]
                 The pulsation intensity of the current stimulation (mA)
 
         Returns
@@ -1005,35 +1005,35 @@ class DingModelIntensityFrequency(DingModelFrequency):
 
     def system_dynamics_with_fatigue(
         self,
-        cn: MX | SX,
-        f: MX | SX,
-        a: MX | SX = None,
-        tau1: MX | SX = None,
-        km: MX | SX = None,
-        t: MX | SX = None,
-        **extra_arguments: list[MX] | list[SX] | list[float],
-    ) -> MX | SX:
+        cn: MX,
+        f: MX,
+        a: MX = None,
+        tau1: MX = None,
+        km: MX = None,
+        t: MX = None,
+        **extra_arguments: list[MX] | list[float],
+    ) -> MX:
         """
         The system dynamics is the function that describes the model.
 
         Parameters
         ----------
-        cn: MX | SX
+        cn: MX
             The value of the ca_troponin_complex (unitless)
-        f: MX | SX
+        f: MX
             The value of the force (N)
-        a: MX | SX
+        a: MX
             The value of the scaling factor (unitless)
-        tau1: MX | SX
+        tau1: MX
             The value of the time_state_force_no_cross_bridge (ms)
-        km: MX | SX
+        km: MX
             The value of the cross_bridges (unitless)
-        t: MX | SX
+        t: MX
             The current time at which the dynamics is evaluated (ms)
-        **extra_arguments: list[MX] | list[SX]
-            t_stim_prev: list[MX] | list[SX]
+        **extra_arguments: list[MX]
+            t_stim_prev: list[MX]
                 The time list of the previous stimulations (ms)
-            intensity_stim: list[MX] | list[SX]
+            intensity_stim: list[MX]
                 The pulsation intensity of the current stimulation (mA)
 
         Returns
@@ -1051,21 +1051,21 @@ class DingModelIntensityFrequency(DingModelFrequency):
         return vertcat(cn_dot, f_dot, a_dot, tau1_dot, km_dot)
 
     def cn_dot_fun(
-        self, cn: MX | SX, r0: float | MX | SX, t: MX | SX, **extra_arguments: list[MX] | list[SX]
-    ) -> float | MX | SX:
+        self, cn: MX, r0: MX | float, t: MX, **extra_arguments: list[MX]
+    ) -> MX | float:
         """
         Parameters
         ----------
-        cn: MX | SX
+        cn: MX
             The previous step value of ca_troponin_complex (unitless)
-        r0: MX | SX
+        r0: MX
             Mathematical term characterizing the magnitude of enhancement in CN from the following stimuli (unitless)
-        t: MX | SX
+        t: MX
             The current time at which the dynamics is evaluated (ms)
-        **extra_arguments: list[MX] | list[SX]
-            t_stim_prev: list[MX] | list[SX]
+        **extra_arguments: list[MX]
+            t_stim_prev: list[MX]
                 The time list of the previous stimulations (ms)
-            intensity_stim: list[MX] | list[SX]
+            intensity_stim: list[MX]
                 The pulsation intensity of the current stimulation (mA)
         Returns
         -------
@@ -1077,18 +1077,18 @@ class DingModelIntensityFrequency(DingModelFrequency):
 
         return (1 / self.tauc) * sum_multiplier - (cn / self.tauc)  # Eq(1)
 
-    def cn_sum_fun(self, r0: float | MX | SX, t: MX | SX, **extra_arguments: list[MX] | list[SX]) -> float | MX | SX:
+    def cn_sum_fun(self, r0: MX | float, t: MX, **extra_arguments: list[MX]) -> MX | float:
         """
         Parameters
         ----------
-        r0: float | MX | SX
+        r0: MX | float
             Mathematical term characterizing the magnitude of enhancement in CN from the following stimuli (unitless)
-        t: MX | SX
+        t: MX
             The current time at which the dynamics is evaluated (ms)
-        **extra_arguments: list[MX] | list[SX]
-            t_stim_prev: list[MX] | list[SX]
+        **extra_arguments: list[MX]
+            t_stim_prev: list[MX]
                 The time list of the previous stimulations (ms)
-            intensity_stim: list[MX] | list[SX]
+            intensity_stim: list[MX]
                 The pulsation intensity of the current stimulation (mA)
 
         Returns
@@ -1112,11 +1112,11 @@ class DingModelIntensityFrequency(DingModelFrequency):
             sum_multiplier += lambda_i * ri * exp_time
         return sum_multiplier
 
-    def lambda_i_calculation(self, intensity_stim: MX | SX):
+    def lambda_i_calculation(self, intensity_stim: MX):
         """
         Parameters
         ----------
-        intensity_stim: MX | SX
+        intensity_stim: MX
             The pulsation intensity of the current stimulation (mA)
 
         Returns
@@ -1126,13 +1126,13 @@ class DingModelIntensityFrequency(DingModelFrequency):
         lambda_i = self.ar * (tanh(self.bs * (intensity_stim - self.Is)) + self.cr)  # equation include intensity
         return lambda_i
 
-    def set_impulse_intensity(self, value: MX | SX):
+    def set_impulse_intensity(self, value: MX):
         """
         Sets the impulse intensity for each pulse (phases) according to the ocp parameter "impulse_intensity"
 
         Parameters
         ----------
-        value: list[MX] | list[SX]
+        value: MX
             The pulsation intensity list (s)
         """
         self.impulse_intensity = []
@@ -1140,7 +1140,7 @@ class DingModelIntensityFrequency(DingModelFrequency):
             self.impulse_intensity.append(value[i])
 
     @staticmethod
-    def get_intensity_parameters(nlp_parameters: ParameterList) -> MX | SX:
+    def get_intensity_parameters(nlp_parameters: ParameterList) -> MX:
         """
         Get the nlp list of intensity parameters
 
@@ -1161,11 +1161,11 @@ class DingModelIntensityFrequency(DingModelFrequency):
 
     @staticmethod
     def dynamics(
-        time: MX | SX,
-        states: MX | SX,
-        controls: MX | SX,
-        parameters: MX | SX,
-        stochastic_variables: MX | SX,
+        time: MX,
+        states: MX,
+        controls: MX,
+        parameters: MX,
+        stochastic_variables: MX,
         nlp: NonLinearProgram,
         stim_apparition: list[float] = None,
     ) -> DynamicsEvaluation:
@@ -1174,15 +1174,15 @@ class DingModelIntensityFrequency(DingModelFrequency):
 
         Parameters
         ----------
-        time: MX | SX
+        time: MX
             The system's current node time
-        states: MX | SX
+        states: MX
             The state of the system CN, F, A, Tau1, Km
-        controls: MX | SX
+        controls: MX
             The controls of the system, none
-        parameters: MX | SX
+        parameters: MX
             The parameters acting on the system, final time of each phase
-        stochastic_variables: MX | SX
+        stochastic_variables: MX
             The stochastic variables of the system, none
         nlp: NonLinearProgram
             A reference to the phase
@@ -1190,7 +1190,7 @@ class DingModelIntensityFrequency(DingModelFrequency):
             The time list of the previous stimulations (s)
         Returns
         -------
-        The derivative of the states in the tuple[MX | SX]] format
+        The derivative of the states in the tuple[MX] format
         """
         intensity_stim_prev = (
             []
