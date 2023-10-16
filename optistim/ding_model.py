@@ -630,7 +630,10 @@ class DingModelFrequency:
         -------
         The list of previous stimulation time
         """
-        t_stim_prev = [ocp.node_time(phase_idx=i, node_idx=0, type="mx") for i in range(nlp.phase_idx+1)]
+        type = "mx" if "time" in ocp.nlp[nlp.phase_idx].parameters else None
+        t_stim_prev = [ocp.node_time(phase_idx=i, node_idx=0, type=type) for i in range(nlp.phase_idx+1)]
+        if not isinstance(t_stim_prev[0], (MX, float)):
+            t_stim_prev = [ocp.node_time(phase_idx=i, node_idx=0, type="mx") for i in range(nlp.phase_idx+1)]
         return t_stim_prev
 
 
@@ -820,9 +823,9 @@ class DingModelPulseDurationFrequency(DingModelFrequency):
         The list of list of pulse_duration parameters
         """
         pulse_duration_parameters = vertcat()
-        for j in range(nlp_parameters.cx_start.shape[0]):
-            if "pulse_duration" in str(nlp_parameters.cx_start[j]):
-                pulse_duration_parameters = vertcat(pulse_duration_parameters, nlp_parameters.cx_start[j])
+        for j in range(nlp_parameters.mx.shape[0]):
+            if "pulse_duration" in str(nlp_parameters.mx[j]):
+                pulse_duration_parameters = vertcat(pulse_duration_parameters, nlp_parameters.mx[j])
         return pulse_duration_parameters
 
     @staticmethod
@@ -1151,9 +1154,9 @@ class DingModelIntensityFrequency(DingModelFrequency):
         The list of intensity parameters
         """
         intensity_parameters = vertcat()
-        for j in range(nlp_parameters.cx_start.shape[0]):
-            if "pulse_intensity" in str(nlp_parameters.cx_start[j]):
-                intensity_parameters = vertcat(intensity_parameters, nlp_parameters.cx_start[j])
+        for j in range(nlp_parameters.mx.shape[0]):
+            if "pulse_intensity" in str(nlp_parameters.mx[j]):
+                intensity_parameters = vertcat(intensity_parameters, nlp_parameters.mx[j])
         return intensity_parameters
 
     @staticmethod
