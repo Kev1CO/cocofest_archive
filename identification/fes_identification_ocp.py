@@ -132,20 +132,16 @@ class FunctionalElectricStimulationOptimalControlProgramIdentification(OptimalCo
         self.parameter_mappings = None
         self.parameters = None
 
-        self.ding_models = [self.ding_model for i in range(len(pulse_apparition_time))]
-
         for i in range(len(pulse_apparition_time)):
-            self.final_time_phase = (
-                (pulse_apparition_time[i + 1],)
-                if i == 0
-                else self.final_time_phase + (pulse_apparition_time[i] - pulse_apparition_time[i - 1],)
-            )
+            self.final_time_phase = () if i == 0 else self.final_time_phase + (pulse_apparition_time[i] - pulse_apparition_time[i - 1],)
 
         self.n_stim = len(self.final_time_phase)
 
+        self.ding_models = [self.ding_model for i in range(self.n_stim)]
+
         stimulation_interval_average = np.mean(self.final_time_phase)
         self.n_shooting = []
-        for i in range(len(pulse_apparition_time)):
+        for i in range(self.n_stim):
             if self.final_time_phase[i] > stimulation_interval_average:
                 temp_final_time = self.final_time_phase[i]
                 rest_n_shooting = int(stimulated_n_shooting * temp_final_time / stimulation_interval_average)
@@ -154,11 +150,12 @@ class FunctionalElectricStimulationOptimalControlProgramIdentification(OptimalCo
                 self.n_shooting.append(stimulated_n_shooting)
 
         self.force_at_node = []
+        temp_time = []
         for i in range(self.n_stim):
             for j in range(self.n_shooting[i]):
-                temp_time = sum(self.final_time_phase[:i]) + j * self.final_time_phase[i] / self.n_shooting[i]
-                temp_interpolated_force = np.interp(temp_time, force_tracking[0], force_tracking[1])
-                self.force_at_node.append(temp_interpolated_force)
+                temp_time.append(sum(self.final_time_phase[:i]) + j * self.final_time_phase[i] / (self.n_shooting[i]))
+
+        self.force_at_node = np.interp(temp_time, force_tracking[0], force_tracking[1]).tolist()
 
         self.constraints = ConstraintList()
         self._set_parameters()
@@ -167,9 +164,10 @@ class FunctionalElectricStimulationOptimalControlProgramIdentification(OptimalCo
         self.kwargs = kwargs
         self._set_objective()
         self.phase_transitions = PhaseTransitionList()
-        if discontinuity_in_ocp:
-            for i in range(len(discontinuity_in_ocp)):
-                self.phase_transitions.add(PhaseTransitionFcn.DISCONTINUOUS, phase_pre_idx=discontinuity_in_ocp[i])
+        if self.discontinuity_in_ocp:
+            for i in range(len(self.discontinuity_in_ocp)):
+                self.phase_transitions.add(PhaseTransitionFcn.DISCONTINUOUS,
+                                           phase_pre_idx=self.discontinuity_in_ocp[i]-1)
 
         if "ode_solver" in kwargs:
             if not isinstance(kwargs["ode_solver"], OdeSolver):
@@ -255,7 +253,7 @@ class FunctionalElectricStimulationOptimalControlProgramIdentification(OptimalCo
 
         for i in range(self.n_stim):
             for j in range(len(variable_bound_list)):
-                if i == 0:  # TODO : ask if "or i in self.discontinuity_in_ocp:" is relevant here
+                if i == 0 or i in self.discontinuity_in_ocp:  # TODO : ask if "or i in self.discontinuity_in_ocp:" is relevant here
                     self.x_bounds.add(
                         variable_bound_list[j],
                         min_bound=np.array([starting_bounds_min[j]]),
@@ -274,7 +272,12 @@ class FunctionalElectricStimulationOptimalControlProgramIdentification(OptimalCo
 
         self.x_init = InitialGuessList()
         for i in range(self.n_stim):
-            force_in_phase = self.input_force(self.force_tracking[0], self.force_tracking[1], i)
+            # force_in_phase = self.input_force(self.force_tracking[0], self.force_tracking[1], i)
+            min_node = sum(self.n_shooting[:i])
+            max_node = sum(self.n_shooting[:i + 1])
+            force_in_phase = self.force_at_node[min_node:max_node+1]
+            if i == self.n_stim - 1:
+                force_in_phase.append(0)
             self.x_init.add("F", np.array([force_in_phase]), phase=i, interpolation=InterpolationType.EACH_FRAME)
             self.x_init.add("Cn", [0], phase=i, interpolation=InterpolationType.CONSTANT)
             if self.with_fatigue:
@@ -293,15 +296,15 @@ class FunctionalElectricStimulationOptimalControlProgramIdentification(OptimalCo
         for i in range(self.n_stim):
             self.u_init.add("", min_bound=[], max_bound=[])
 
-    def input_force(self, time, force, phase_idx):
-        current_time = sum(self.final_time_phase[:phase_idx])
-        dt = self.final_time_phase[phase_idx] / (self.n_shooting[phase_idx] + 1)
-        force_in_phase = []
-        for i in range(self.n_shooting[phase_idx] + 1):
-            interpolated_force = np.interp(current_time, time, force)
-            force_in_phase.append(interpolated_force if interpolated_force > 0 else 0)
-            current_time += dt
-        return force_in_phase
+    # def input_force(self, time, force, phase_idx):
+    #     current_time = sum(self.final_time_phase[:phase_idx])
+    #     dt = self.final_time_phase[phase_idx] / (self.n_shooting[phase_idx] + 1)
+    #     force_in_phase = []
+    #     for i in range(self.n_shooting[phase_idx] + 1):
+    #         interpolated_force = np.interp(current_time, time, force)
+    #         force_in_phase.append(interpolated_force if interpolated_force > 0 else 0)
+    #         current_time += dt
+    #     return force_in_phase
 
     def _set_objective(self):
         # Creates the objective for our problem (in this case, match a force curve)
@@ -318,36 +321,20 @@ class FunctionalElectricStimulationOptimalControlProgramIdentification(OptimalCo
 
         if self.force_tracking:
             node_idx = 0
-            if self.with_fatigue:
-                for i in range(self.n_stim):
-                    for j in range(self.n_shooting[i]):
-                        self.objective_functions.add(
-                            CustomObjective.track_state_from_time_interpolate,
-                            custom_type=ObjectiveFcn.Mayer,
-                            node=j,
-                            force=self.force_at_node[node_idx],
-                            key="F",
-                            minimization_type="BF",
-                            quadratic=True,
-                            weight=1,
-                            phase=i,
-                        )
-                        node_idx += 1
-            else:
-                for i in range(self.n_stim):
-                    for j in range(self.n_shooting[i]):
-                        self.objective_functions.add(
-                            CustomObjective.track_state_from_time_interpolate,
-                            custom_type=ObjectiveFcn.Mayer,
-                            node=j,
-                            force=self.force_at_node[node_idx],
-                            key="F",
-                            minimization_type="LS",
-                            quadratic=True,
-                            weight=1,
-                            phase=i,
-                        )
-                        node_idx += 1
+            for i in range(self.n_stim):
+                for j in range(self.n_shooting[i]):
+                    self.objective_functions.add(
+                        CustomObjective.track_state_from_time_interpolate,
+                        custom_type=ObjectiveFcn.Mayer,
+                        node=j,
+                        force=self.force_at_node[node_idx],
+                        key="F",
+                        minimization_type="BF" if self.with_fatigue else "LS",
+                        quadratic=True,
+                        weight=1,
+                        phase=i,
+                    )
+                    node_idx += 1
 
     def _set_parameters(self):
         self.parameters = ParameterList()
@@ -361,7 +348,7 @@ class FunctionalElectricStimulationOptimalControlProgramIdentification(OptimalCo
                 list_index=0,
                 function=self.ding_model.set_alpha_a,
                 size=1,
-                scaling=np.array([10e8]),  # TODO : ask if scaling is relevant here and applied correctly
+                scaling=np.array([10e8]),
             )
             self.parameters.add(
                 parameter_name="alpha_km",
@@ -441,7 +428,7 @@ class FunctionalElectricStimulationOptimalControlProgramIdentification(OptimalCo
                 list_index=3,
                 function=self.ding_model.set_tau2,
                 size=1,
-                scaling=np.array([1000]),  # TODO : ask if scaling is relevant here and applied correctly
+                scaling=np.array([1000]),
             )
 
             # --- Adding bound parameters --- #
@@ -453,20 +440,20 @@ class FunctionalElectricStimulationOptimalControlProgramIdentification(OptimalCo
             )
             self.parameters_bounds.add(
                 "km_rest",
-                min_bound=np.array([0.01]),  # TODO : fine tune bounds
+                min_bound=np.array([0.001]),  # TODO : fine tune bounds
                 max_bound=np.array([1]),
                 interpolation=InterpolationType.CONSTANT,
             )
             self.parameters_bounds.add(
                 "tau1_rest",
-                min_bound=np.array([0.001]),  # TODO : fine tune bounds
-                max_bound=np.array([1]),
+                min_bound=np.array([0.0001]),  # TODO : fine tune bounds
+                max_bound=np.array([10]),
                 interpolation=InterpolationType.CONSTANT,
             )
             self.parameters_bounds.add(
                 "tau2",
-                min_bound=np.array([0.001]),  # TODO : fine tune bounds
-                max_bound=np.array([1]),
+                min_bound=np.array([0.0001]),  # TODO : fine tune bounds
+                max_bound=np.array([10]),
                 interpolation=InterpolationType.CONSTANT,
             )
 

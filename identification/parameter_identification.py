@@ -97,7 +97,7 @@ class DingModelFrequencyParameterIdentification:
         global_force_model_stim_apparition_time = []
         global_force_model_time_data = []
 
-        discontinuity_phase_list = []
+        force_discontinuity_phase_list = []
         for i in range(len(force_model_data_path)):
             with open(force_model_data_path[i], "rb") as f:
                 data = pickle.load(f)
@@ -120,15 +120,16 @@ class DingModelFrequencyParameterIdentification:
             force_model_time_data = force_model_time_data[:smallest_list]
             frequency = 33
             train_duration = 1
-            average_stim_apparition = np.linspace(0, train_duration, (frequency*train_duration)+1)
+            average_stim_apparition = np.linspace(0, train_duration, (frequency*train_duration) + 1)[:-1]
             average_stim_apparition = np.append(average_stim_apparition, force_model_time_data[-1]).tolist()
 
             # Indexing the current data time on the previous one to ensure time continuity
             if i != 0:
-                discontinuity_phase_list.append(
+                # average_stim_apparition = average_stim_apparition[1:]
+                force_discontinuity_phase_list.append(
                     len(global_force_model_stim_apparition_time[-1]) - 1
-                    if discontinuity_phase_list == []
-                    else discontinuity_phase_list[-1] + len(global_force_model_stim_apparition_time[-1]) - 1
+                    if force_discontinuity_phase_list == []
+                    else force_discontinuity_phase_list[-1] + len(global_force_model_stim_apparition_time[-1]) # + (1 * i - 2)  # TODO : find a better way to fix this than + (1 * i - 2)
                 )
 
                 force_model_time_data = [(time + global_force_model_time_data[i - 1][-1]) for time in force_model_time_data]
@@ -151,7 +152,7 @@ class DingModelFrequencyParameterIdentification:
         global_fatigue_model_stim_apparition_time = []
         global_fatigue_model_time_data = []
 
-        discontinuity_phase_list = []
+        fatigue_discontinuity_phase_list = []
         for i in range(len(fatigue_model_data_path)):
             with open(fatigue_model_data_path[i], "rb") as f:
                 data = pickle.load(f)
@@ -169,10 +170,10 @@ class DingModelFrequencyParameterIdentification:
             )
             # Indexing the current data time on the previous one to ensure time continuity
             if i != 0:
-                discontinuity_phase_list.append(
+                fatigue_discontinuity_phase_list.append(
                     len(global_fatigue_model_stim_apparition_time[-1]) - 1
-                    if discontinuity_phase_list == []
-                    else discontinuity_phase_list[-1] + len(global_fatigue_model_stim_apparition_time[-1]) - 1
+                    if fatigue_discontinuity_phase_list == []
+                    else fatigue_discontinuity_phase_list[-1] + len(global_fatigue_model_stim_apparition_time[-1]) - 1
                 )
                 fatigue_model_stim_apparition_time = [
                     stim_time + global_fatigue_model_time_data[i - 1][-1]
@@ -206,68 +207,100 @@ class DingModelFrequencyParameterIdentification:
             pulse_apparition_time=global_force_model_stim_apparition_time,
             pulse_duration=None,
             pulse_intensity=None,
-            discontinuity_in_ocp=discontinuity_phase_list,
+            discontinuity_in_ocp=force_discontinuity_phase_list,
             use_sx=kwargs["use_sx"] if "use_sx" in kwargs else False,
         )
         # del global_force_model_muscle_data, global_force_model_stim_apparition_time, global_force_model_time_data
 
         result = self.force_ocp.solve(Solver.IPOPT())
+        # result.graphs(show_bounds=True)
+
+        for i in range(len(global_force_model_stim_apparition_time)):
+            self.final_time_phase = () if i == 0 else self.final_time_phase + (global_force_model_stim_apparition_time[i] - global_force_model_stim_apparition_time[i - 1],)
+
+        self.n_stim = len(self.final_time_phase)
+
+        stimulation_interval_average = np.mean(self.final_time_phase)
+        self.n_shooting = []
+        for i in range(self.n_stim):
+            if self.final_time_phase[i] > stimulation_interval_average:
+                temp_final_time = self.final_time_phase[i]
+                rest_n_shooting = int(5 * temp_final_time / stimulation_interval_average)
+                self.n_shooting.append(rest_n_shooting)
+            else:
+                self.n_shooting.append(5)
+
+        self.force_at_node = []
+        temp_time = []
+        for i in range(self.n_stim):
+            for j in range(self.n_shooting[i]):
+                temp_time.append(sum(self.final_time_phase[:i]) + j * self.final_time_phase[i] / (self.n_shooting[i]))
+        self.force_at_node = np.interp(temp_time, np.array(global_force_model_time_data), np.array(global_force_model_muscle_data)).tolist()
+
         # --- Print force model results --- #
         print(result.parameters)
         result_merged = result.merge_phases()
-        plt.plot(result_merged.time, result_merged.states["F"][0], label="identification")
+        plt.scatter(result_merged.time, result_merged.states["F"][0], label="identification")
         global_force_model_muscle_data = np.array(
             np.where(np.array(global_force_model_muscle_data) < 0, 0, global_force_model_muscle_data)
         ).tolist()
-        plt.plot(global_force_model_time_data, global_force_model_muscle_data, label="tracking")
+        plt.scatter(temp_time, self.force_at_node, label="tracking")
+        for discontinuity in force_discontinuity_phase_list:
+            plt.axvline(x=temp_time[sum(self.n_shooting[:discontinuity])], color='black', label='discontinuity')
         plt.legend()
         plt.show()
 
         # --- Building fatigue ocp --- #
-        # self.fatigue_ocp = FunctionalElectricStimulationOptimalControlProgramIdentification(
-        #     ding_model=model,
-        #     with_fatigue=True,
-        #     stimulated_n_shooting=5,  # 5
-        #     rest_n_shooting=165,  # 165
-        #     force_tracking=[np.array(global_fatigue_model_time_data), np.array(global_fatigue_model_muscle_data)],
-        #     pulse_apparition_time=global_fatigue_model_stim_apparition_time,
-        #     pulse_duration=None,
-        #     pulse_intensity=None,
-            # a_rest=result.parameters["a_rest"],
-            # km_rest=result.parameters["km_rest"],
-            # tau1_rest=result.parameters["tau1_rest"],
-            # tau2=result.parameters["tau2"],
-    #         a_rest=1582.43,
-    #         km_rest=1,
-    #         tau1_rest=0.0034,
-    #         tau2=0.2032,
-    #         discontinuity_in_ocp=discontinuity_phase_list,
-    #         use_sx=kwargs["use_sx"] if "use_sx" in kwargs else False,
-    #     )
+        self.fatigue_ocp = FunctionalElectricStimulationOptimalControlProgramIdentification(
+            ding_model=model,
+            with_fatigue=True,
+            stimulated_n_shooting=5,  # 5
+            # rest_n_shooting=165,  # 165
+            force_tracking=[np.array(global_fatigue_model_time_data), np.array(global_fatigue_model_muscle_data)],
+            pulse_apparition_time=global_fatigue_model_stim_apparition_time,
+            pulse_duration=None,
+            pulse_intensity=None,
+            a_rest=result.parameters["a_rest"][0][0],
+            km_rest=result.parameters["km_rest"][0][0],
+            tau1_rest=result.parameters["tau1_rest"][0][0],
+            tau2=result.parameters["tau2"][0][0],
+            # a_rest=1582.43,
+            # km_rest=1,
+            # tau1_rest=0.0034,
+            # tau2=0.2032,
+            discontinuity_in_ocp=fatigue_discontinuity_phase_list,
+            use_sx=kwargs["use_sx"] if "use_sx" in kwargs else False,
+        )
     #
     # # del global_fatigue_model_muscle_data, global_fatigue_model_stim_apparition_time, global_fatigue_model_time_data
     #
-    #     result_fatigue = self.fatigue_ocp.solve(Solver.IPOPT())
-    #     # --- Print fatigue model results --- #
-    #     print(result_fatigue.parameters)
-    #     result_merged = result.merge_phases()
-    #     plt.plot(result_merged.time, result_merged.states["F"][0], label="identification")
-    #     global_fatigue_model_muscle_data = np.array(
-    #         np.where(np.array(global_fatigue_model_muscle_data) < 0, 0, global_fatigue_model_muscle_data)
-    #     ).tolist()
-    #     plt.plot(global_fatigue_model_time_data, global_fatigue_model_muscle_data, label="tracking")
-    #     plt.legend()
-    #     plt.show()
+        result_fatigue = self.fatigue_ocp.solve(Solver.IPOPT())
+        # --- Print fatigue model results --- #
+        print(result_fatigue.parameters)
+        result_merged = result.merge_phases()
+        plt.plot(result_merged.time, result_merged.states["F"][0], label="identification")
+        global_fatigue_model_muscle_data = np.array(
+            np.where(np.array(global_fatigue_model_muscle_data) < 0, 0, global_fatigue_model_muscle_data)
+        ).tolist()
+        plt.plot(global_fatigue_model_time_data, global_fatigue_model_muscle_data, label="tracking")
+        plt.legend()
+        plt.show()
 
 
 if __name__ == "__main__":
     DingModelFrequencyParameterIdentification(
         model=DingModelFrequency,
-        force_model_data_path=["D:/These/Programmation/Modele_Musculaire/optistim/data_process/biceps_force_0.pkl",
-                               "D:/These/Programmation/Modele_Musculaire/optistim/data_process/biceps_force_0.pkl",
-                               "D:/These/Programmation/Modele_Musculaire/optistim/data_process/biceps_force_0.pkl"],
+        force_model_data_path=["D:/These/Programmation/Modele_Musculaire/optistim/data_process/biceps_force_70_1.pkl",
+                               "D:/These/Programmation/Modele_Musculaire/optistim/data_process/biceps_force_70_2.pkl",
+                               "D:/These/Programmation/Modele_Musculaire/optistim/data_process/biceps_force_70_3.pkl",
+                               "D:/These/Programmation/Modele_Musculaire/optistim/data_process/biceps_force_90_1.pkl",
+                               "D:/These/Programmation/Modele_Musculaire/optistim/data_process/biceps_force_90_2.pkl",
+                               "D:/These/Programmation/Modele_Musculaire/optistim/data_process/biceps_force_90_3.pkl",
+                               "D:/These/Programmation/Modele_Musculaire/optistim/data_process/biceps_force_110_1.pkl",
+                               "D:/These/Programmation/Modele_Musculaire/optistim/data_process/biceps_force_110_2.pkl",
+                               "D:/These/Programmation/Modele_Musculaire/optistim/data_process/biceps_force_110_3.pkl"],
         fatigue_model_data_path=[
             "D:/These/Programmation/Modele_Musculaire/optistim/data_process/biceps_force_fatigue_0.pkl"
         ],
-        use_sx=False,
+        use_sx=True,
     )
