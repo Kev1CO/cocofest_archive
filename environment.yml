@@ -8,4 +8,3 @@ dependencies:
 - bioviz
 - python-graphviz
 - pyqtgraph
-- bioptim = 3.1.0
