@@ -13,7 +13,7 @@ from optistim import (
 )
 
 
-time, force = ExtractData.load_data("../../examples/data/hand_cycling_force.bio")
+time, force = ExtractData.load_data("../../optistim/examples/data/hand_cycling_force.bio")
 init_force = force - force[0]
 init_n_stim = 3
 init_final_time = 0.3

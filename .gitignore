@@ -6,4 +6,4 @@ __pycache__/
 .pytest_cache
 
 
-examples/data/debug.py
+optistim/examples/data/debug.py
