@@ -43,7 +43,10 @@ jobs:
           mamba list
 
       - name: Install bioptim on Windows
-        run: python external/bioptim/setup.py install
+        run: |
+          cd ..
+          cd external/bioptim
+          python setup.py install
 
       - name: Install extra dependencies
         run: mamba install pytest-cov black pytest pytest-cov codecov packaging -cconda-forge
