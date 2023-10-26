@@ -44,6 +44,7 @@ jobs:
 
       - name: Install bioptim on Windows
         run: |
+          cd ..
           cd external/bioptim
           python setup.py install
 
