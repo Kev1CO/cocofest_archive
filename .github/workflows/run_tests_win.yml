@@ -43,7 +43,7 @@ jobs:
           mamba list
 
       - name: Install bioptim on Windows
-        working-directory : ./external/bioptim
+        working-directory: ../external/bioptim
         run: python setup.py install
 
       - name: Install extra dependencies
