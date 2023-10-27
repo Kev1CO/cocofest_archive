@@ -232,7 +232,7 @@ class DingModelFrequency:
         """
         return 1 + (r0 - 1) * exp(-time_between_stim / self.tauc)  # Part of Eq n°1
 
-    def cn_sum_fun(self, r0: MX | float, t: MX, **extra_arguments: list[MX]) -> MX | float:
+    def cn_sum_fun(self, r0: MX | float, t: MX, t_stim_prev: list[MX]) -> MX | float:
         """
         Parameters
         ----------
@@ -240,26 +240,25 @@ class DingModelFrequency:
             Mathematical term characterizing the magnitude of enhancement in CN from the following stimuli (unitless)
         t: MX
             The current time at which the dynamics is evaluated (ms)
-        **extra_arguments: list[MX]
-            t_stim_prev: list[MX]
-                The time list of the previous stimulations (ms)
+        t_stim_prev: list[MX]
+            The time list of the previous stimulations (ms)
 
         Returns
         -------
         A part of the n°1 equation
         """
         sum_multiplier = 0
-        if len(extra_arguments["t_stim_prev"]) == 1:
+        if len(t_stim_prev) == 1:
             ri = 1
-            exp_time = self.exp_time_fun(t, extra_arguments["t_stim_prev"][0])  # Part of Eq n°1
+            exp_time = self.exp_time_fun(t, t_stim_prev[0])  # Part of Eq n°1
             sum_multiplier += ri * exp_time  # Part of Eq n°1
         else:
-            if self._sum_stim_truncation and len(extra_arguments["t_stim_prev"]) > self._sum_stim_truncation:
-                extra_arguments["t_stim_prev"] = extra_arguments["t_stim_prev"][-self._sum_stim_truncation:]
-            for i in range(1, len(extra_arguments["t_stim_prev"])):
-                previous_phase_time = extra_arguments["t_stim_prev"][i] - extra_arguments["t_stim_prev"][i - 1]
+            if self._sum_stim_truncation and len(t_stim_prev) > self._sum_stim_truncation:
+                t_stim_prev = t_stim_prev[-self._sum_stim_truncation:]
+            for i in range(1, len(t_stim_prev)):
+                previous_phase_time = t_stim_prev[i] - t_stim_prev[i - 1]
                 ri = self.ri_fun(r0, previous_phase_time)  # Part of Eq n°1
-                exp_time = self.exp_time_fun(t, extra_arguments["t_stim_prev"][i])  # Part of Eq n°1
+                exp_time = self.exp_time_fun(t, t_stim_prev[i])  # Part of Eq n°1
                 sum_multiplier += ri * exp_time  # Part of Eq n°1
         return sum_multiplier
 
