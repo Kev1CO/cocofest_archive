@@ -44,6 +44,16 @@ jobs:
 
       - name: Install bioptim on Windows
         run: |
+          ls
+          ${GITHUB_WORKSPACE}
+          cd..
+          ls
+          ${GITHUB_WORKSPACE}
+          cd external
+          ls
+          ${GITHUB_WORKSPACE}
+          cd bioptim
+          ls
           ${GITHUB_WORKSPACE}
           pwd
           cd ./external/bioptim
