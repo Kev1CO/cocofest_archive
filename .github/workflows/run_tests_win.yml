@@ -43,8 +43,11 @@ jobs:
           mamba list
 
       - name: Install bioptim on Windows
-        working-directory: C:\Miniconda3\envs\optistim\external\bioptim
-        run: python setup.py install
+        run: |
+          ${GITHUB_WORKSPACE}
+          pwd
+          cd ./external/bioptim
+          python setup.py install
 
       - name: Install extra dependencies
         run: mamba install pytest-cov black pytest pytest-cov codecov packaging -cconda-forge
