@@ -45,13 +45,11 @@ jobs:
       - name: Install bioptim on Windows
         run: |
           ls
-          ${GITHUB_WORKSPACE}
+          pwd
           cd external
           ls
-          ${GITHUB_WORKSPACE}
           cd bioptim
           ls
-          ${GITHUB_WORKSPACE}
           pwd
           cd ./external/bioptim
           python setup.py install
