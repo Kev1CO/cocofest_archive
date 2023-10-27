@@ -46,9 +46,6 @@ jobs:
         run: |
           ls
           ${GITHUB_WORKSPACE}
-          cd..
-          ls
-          ${GITHUB_WORKSPACE}
           cd external
           ls
           ${GITHUB_WORKSPACE}
