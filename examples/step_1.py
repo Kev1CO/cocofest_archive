@@ -10,7 +10,7 @@ from optistim import DingModelFrequency, FunctionalElectricStimulationOptimalCon
 # The stimulation will be optimized between 0.01 to 0.1 seconds and are equally spaced (a fixed frequency).
 # The flag with_fatigue is set to True by default, this will include the fatigue model
 ocp = FunctionalElectricStimulationOptimalControlProgram(
-    ding_model=DingModelFrequency(with_fatigue=True),
+    model=DingModelFrequency(with_fatigue=True),
     n_stim=10,
     n_shooting=20,
     final_time=1,

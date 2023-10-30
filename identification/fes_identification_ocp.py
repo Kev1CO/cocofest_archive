@@ -20,7 +20,7 @@ from bioptim import (
 )
 
 from optistim.custom_objectives import CustomObjective
-from optistim.ding_model import DingModelFrequency, DingModelPulseDurationFrequency, DingModelIntensityFrequency
+from optistim.model import DingModelFrequency, DingModelPulseDurationFrequency, DingModelIntensityFrequency
 
 
 class FunctionalElectricStimulationOptimalControlProgramIdentification(OptimalControlProgram):
@@ -30,7 +30,7 @@ class FunctionalElectricStimulationOptimalControlProgramIdentification(OptimalCo
 
     Attributes
     ----------
-    ding_model: DingModelFrequency | DingModelPulseDurationFrequency | DingModelIntensityFrequency,
+    model: DingModelFrequency | DingModelPulseDurationFrequency | DingModelIntensityFrequency,
         The model used to solve the ocp
     with_fatigue: bool,
         If True, the fatigue model is used
@@ -70,7 +70,7 @@ class FunctionalElectricStimulationOptimalControlProgramIdentification(OptimalCo
 
     def __init__(
         self,
-        ding_model: DingModelFrequency | DingModelPulseDurationFrequency | DingModelIntensityFrequency = None,
+        model: DingModelFrequency | DingModelPulseDurationFrequency | DingModelIntensityFrequency = None,
         with_fatigue: bool = None,
         stimulated_n_shooting: int = None,
         force_tracking: list[np.ndarray, np.ndarray] = None,
@@ -95,12 +95,12 @@ class FunctionalElectricStimulationOptimalControlProgramIdentification(OptimalCo
             if a_rest is None or km_rest is None or tau1_rest is None or tau2 is None:
                 raise ValueError("a_rest, km_rest, tau1_rest and tau2 must be set for fatigue model identification")
 
-        self.ding_model = ding_model(with_fatigue=self.with_fatigue)
+        self.model = model(with_fatigue=self.with_fatigue)
         if self.with_fatigue:
-            self.ding_model.set_a_rest(model=None, a_rest=a_rest)
-            self.ding_model.set_km_rest(model=None, km_rest=km_rest)
-            self.ding_model.set_tau1_rest(model=None, tau1_rest=tau1_rest)
-            self.ding_model.set_tau2(model=None, tau2=tau2)
+            self.model.set_a_rest(model=None, a_rest=a_rest)
+            self.model.set_km_rest(model=None, km_rest=km_rest)
+            self.model.set_tau1_rest(model=None, tau1_rest=tau1_rest)
+            self.model.set_tau2(model=None, tau2=tau2)
 
         if not isinstance(force_tracking, list):
             raise TypeError(
@@ -113,13 +113,13 @@ class FunctionalElectricStimulationOptimalControlProgramIdentification(OptimalCo
                 f" currently pulse_apparition_time is {type(pulse_apparition_time)}) type."
             )
 
-        if isinstance(ding_model, DingModelPulseDurationFrequency):
+        if isinstance(model, DingModelPulseDurationFrequency):
             if not isinstance(pulse_duration, list):
                 raise TypeError(
                     f"pulse_duration must be list type," f" currently pulse_duration is {type(pulse_duration)}) type."
                 )
 
-        if isinstance(ding_model, DingModelIntensityFrequency):
+        if isinstance(model, DingModelIntensityFrequency):
             if not isinstance(pulse_intensity, list):
                 raise TypeError(
                     f"pulse_intensity must be list type,"
@@ -137,7 +137,7 @@ class FunctionalElectricStimulationOptimalControlProgramIdentification(OptimalCo
 
         self.n_stim = len(self.final_time_phase)
 
-        self.ding_models = [self.ding_model for i in range(self.n_stim)]
+        self.models = [self.model for i in range(self.n_stim)]
 
         stimulation_interval_average = np.mean(self.final_time_phase)
         self.n_shooting = []
@@ -182,7 +182,7 @@ class FunctionalElectricStimulationOptimalControlProgramIdentification(OptimalCo
                 raise ValueError("n_thread kwarg must be a int type")
 
         super().__init__(
-            bio_model=self.ding_models,
+            bio_model=self.models,
             dynamics=self.dynamics,
             n_shooting=self.n_shooting,
             phase_time=self.final_time_phase,
@@ -207,8 +207,8 @@ class FunctionalElectricStimulationOptimalControlProgramIdentification(OptimalCo
         self.dynamics = DynamicsList()
         for i in range(self.n_stim):
             self.dynamics.add(
-                self.ding_models[i].declare_ding_variables,
-                dynamic_function=self.ding_models[i].dynamics,
+                self.models[i].declare_ding_variables,
+                dynamic_function=self.models[i].dynamics,
                 expand_dynamics=True,
                 expand_continuity=False,
                 phase=i,
@@ -229,11 +229,11 @@ class FunctionalElectricStimulationOptimalControlProgramIdentification(OptimalCo
 
         # Sets the bound for all the phases
         self.x_bounds = BoundsList()
-        variable_bound_list = self.ding_model.name_dof
+        variable_bound_list = self.model.name_dof
         starting_bounds, min_bounds, max_bounds = (
-            self.ding_model.standard_rest_values(),
-            self.ding_model.standard_rest_values(),
-            self.ding_model.standard_rest_values(),
+            self.model.standard_rest_values(),
+            self.model.standard_rest_values(),
+            self.model.standard_rest_values(),
         )
 
         for i in range(len(variable_bound_list)):
@@ -285,7 +285,7 @@ class FunctionalElectricStimulationOptimalControlProgramIdentification(OptimalCo
                     if variable_bound_list[j] == "F" or variable_bound_list[j] == "Cn":
                         pass
                     else:
-                        self.x_init.add(variable_bound_list[j], self.ding_model.standard_rest_values()[j])
+                        self.x_init.add(variable_bound_list[j], self.model.standard_rest_values()[j])
 
         # Creates the controls of our problem (in our case, equals to an empty list)
         self.u_bounds = BoundsList()
@@ -346,28 +346,28 @@ class FunctionalElectricStimulationOptimalControlProgramIdentification(OptimalCo
             self.parameters.add(
                 parameter_name="alpha_a",
                 list_index=0,
-                function=self.ding_model.set_alpha_a,
+                function=self.model.set_alpha_a,
                 size=1,
                 scaling=np.array([10e8]),
             )
             self.parameters.add(
                 parameter_name="alpha_km",
                 list_index=1,
-                function=self.ding_model.set_alpha_km,
+                function=self.model.set_alpha_km,
                 size=1,
                 scaling=np.array([10e9]),
             )
             self.parameters.add(
                 parameter_name="alpha_tau1",
                 list_index=2,
-                function=self.ding_model.set_alpha_tau1,
+                function=self.model.set_alpha_tau1,
                 size=1,
                 scaling=np.array([10e6]),
             )
             self.parameters.add(
                 parameter_name="tau_fat",
                 list_index=3,
-                function=self.ding_model.set_tau_fat,
+                function=self.model.set_tau_fat,
                 size=1,
             )
 
@@ -406,27 +406,27 @@ class FunctionalElectricStimulationOptimalControlProgramIdentification(OptimalCo
             self.parameters.add(
                 parameter_name="a_rest",
                 list_index=0,
-                function=self.ding_model.set_a_rest,
+                function=self.model.set_a_rest,
                 size=1,
             )
             self.parameters.add(
                 parameter_name="km_rest",
                 list_index=1,
-                function=self.ding_model.set_km_rest,
+                function=self.model.set_km_rest,
                 size=1,
                 scaling=np.array([1000]),
             )
             self.parameters.add(
                 parameter_name="tau1_rest",
                 list_index=2,
-                function=self.ding_model.set_tau1_rest,
+                function=self.model.set_tau1_rest,
                 size=1,
                 scaling=np.array([1000]),
             )
             self.parameters.add(
                 parameter_name="tau2",
                 list_index=3,
-                function=self.ding_model.set_tau2,
+                function=self.model.set_tau2,
                 size=1,
                 scaling=np.array([1000]),
             )

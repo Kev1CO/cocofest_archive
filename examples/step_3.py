@@ -14,7 +14,7 @@ minimum_pulse_intensity = (
     np.arctanh(-DingModelIntensityFrequency().cr) / DingModelIntensityFrequency().bs
 ) + DingModelIntensityFrequency().Is
 ocp = FunctionalElectricStimulationOptimalControlProgram(
-    ding_model=DingModelIntensityFrequency(with_fatigue=False),
+    model=DingModelIntensityFrequency(with_fatigue=False),
     n_stim=10,
     n_shooting=20,
     final_time=1,

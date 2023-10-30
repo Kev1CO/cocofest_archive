@@ -23,7 +23,7 @@ from bioptim import (
 
 from .custom_objectives import CustomObjective
 from .fourier_approx import FourierSeries
-from .ding_model import DingModelFrequency, DingModelPulseDurationFrequency, DingModelIntensityFrequency
+from .model import DingModelFrequency, DingModelPulseDurationFrequency, DingModelIntensityFrequency
 
 
 class FunctionalElectricStimulationOptimalControlProgram(OptimalControlProgram):
@@ -33,7 +33,7 @@ class FunctionalElectricStimulationOptimalControlProgram(OptimalControlProgram):
 
     Attributes
     ----------
-    ding_model: DingModelFrequency | DingModelPulseDurationFrequency| DingModelIntensityFrequency
+    model: DingModelFrequency | DingModelPulseDurationFrequency| DingModelIntensityFrequency
         The model type used for the ocp
     n_stim: int
         Number of stimulation that will occur during the ocp, it is as well refer as phases
@@ -87,7 +87,7 @@ class FunctionalElectricStimulationOptimalControlProgram(OptimalControlProgram):
 
     def __init__(
         self,
-        ding_model: DingModelFrequency | DingModelPulseDurationFrequency | DingModelIntensityFrequency,
+        model: DingModelFrequency | DingModelPulseDurationFrequency | DingModelIntensityFrequency,
         n_stim: int = None,
         n_shooting: int = None,
         final_time: float = None,
@@ -106,7 +106,7 @@ class FunctionalElectricStimulationOptimalControlProgram(OptimalControlProgram):
         pulse_intensity_bimapping: bool = None,
         **kwargs,
     ):
-        self.ding_model = ding_model
+        self.model = model
 
         if force_tracking is not None:
             force_fourier_coef = FourierSeries()
@@ -133,7 +133,7 @@ class FunctionalElectricStimulationOptimalControlProgram(OptimalControlProgram):
         self.parameter_mappings = None
         self.parameters = None
 
-        self.ding_models = [ding_model] * n_stim
+        self.models = [model] * n_stim
         self.n_shooting = [n_shooting] * n_stim
 
         constraints = ConstraintList()
@@ -167,7 +167,7 @@ class FunctionalElectricStimulationOptimalControlProgram(OptimalControlProgram):
         parameters_bounds = BoundsList()
         parameters_init = InitialGuessList()
         parameter_objectives = ParameterObjectiveList()
-        if isinstance(ding_model, DingModelPulseDurationFrequency):
+        if isinstance(model, DingModelPulseDurationFrequency):
             if pulse_time is None and pulse_time_min is not None and pulse_time_max is None:
                 raise ValueError("Time pulse or Time pulse min max bounds need to be set for this model")
             if pulse_time is not None and pulse_time_min is not None and pulse_time_max is not None:
@@ -251,7 +251,7 @@ class FunctionalElectricStimulationOptimalControlProgram(OptimalControlProgram):
                     # parameter_bimapping.add(name="pulse_duration", to_second=[0 for _ in range(n_stim)], to_first=[0])
                     # TODO : Fix Bimapping in Bioptim
 
-        if isinstance(ding_model, DingModelIntensityFrequency):
+        if isinstance(model, DingModelIntensityFrequency):
             if pulse_intensity is None and pulse_intensity_min is None and pulse_intensity_max is None:
                 raise ValueError("Intensity pulse or Intensity pulse min max bounds need to be set for this model")
             if pulse_intensity is not None and pulse_intensity_min is not None and pulse_intensity_max is not None:
@@ -358,7 +358,7 @@ class FunctionalElectricStimulationOptimalControlProgram(OptimalControlProgram):
                 raise ValueError("n_thread kwarg must be a int type")
 
         super().__init__(
-            bio_model=self.ding_models,
+            bio_model=self.models,
             dynamics=self.dynamics,
             n_shooting=self.n_shooting,
             phase_time=self.final_time_phase,
@@ -383,8 +383,8 @@ class FunctionalElectricStimulationOptimalControlProgram(OptimalControlProgram):
         self.dynamics = DynamicsList()
         for i in range(self.n_stim):
             self.dynamics.add(
-                self.ding_models[i].declare_ding_variables,
-                dynamic_function=self.ding_models[i].dynamics,
+                self.models[i].declare_ding_variables,
+                dynamic_function=self.models[i].dynamics,
                 expand_dynamics=True,
                 expand_continuity=False,
                 phase=i,
@@ -405,11 +405,11 @@ class FunctionalElectricStimulationOptimalControlProgram(OptimalControlProgram):
 
         # Sets the bound for all the phases
         self.x_bounds = BoundsList()
-        variable_bound_list = self.ding_model.name_dof
+        variable_bound_list = self.model.name_dof
         starting_bounds, min_bounds, max_bounds = (
-            self.ding_model.standard_rest_values(),
-            self.ding_model.standard_rest_values(),
-            self.ding_model.standard_rest_values(),
+            self.model.standard_rest_values(),
+            self.model.standard_rest_values(),
+            self.model.standard_rest_values(),
         )
 
         for i in range(len(variable_bound_list)):
@@ -447,7 +447,7 @@ class FunctionalElectricStimulationOptimalControlProgram(OptimalControlProgram):
         self.x_init = InitialGuessList()
         for i in range(self.n_stim):
             for j in range(len(variable_bound_list)):
-                self.x_init.add(variable_bound_list[j], self.ding_model.standard_rest_values()[j])
+                self.x_init.add(variable_bound_list[j], self.model.standard_rest_values()[j])
 
         # Creates the controls of our problem (in our case, equals to an empty list)
         self.u_bounds = BoundsList()
@@ -502,7 +502,7 @@ class FunctionalElectricStimulationOptimalControlProgram(OptimalControlProgram):
     @classmethod
     def from_frequency_and_final_time(
         cls,
-        ding_model: DingModelFrequency | DingModelPulseDurationFrequency | DingModelIntensityFrequency,
+        model: DingModelFrequency | DingModelPulseDurationFrequency | DingModelIntensityFrequency,
         n_shooting: int,
         final_time: float,
         force_tracking: list[np.ndarray, np.ndarray] = None,
@@ -531,7 +531,7 @@ class FunctionalElectricStimulationOptimalControlProgram(OptimalControlProgram):
                 "to True or set final_time * frequency to make the result a integer."
             )
         return cls(
-            ding_model=ding_model,
+            model=model,
             n_stim=n_stim,
             n_shooting=n_shooting,
             final_time=final_time,
@@ -555,7 +555,7 @@ class FunctionalElectricStimulationOptimalControlProgram(OptimalControlProgram):
     @classmethod
     def from_frequency_and_n_stim(
         cls,
-        ding_model: DingModelFrequency | DingModelPulseDurationFrequency | DingModelIntensityFrequency,
+        model: DingModelFrequency | DingModelPulseDurationFrequency | DingModelIntensityFrequency,
         n_stim: int,
         n_shooting: int,
         frequency: int | float = None,
@@ -576,7 +576,7 @@ class FunctionalElectricStimulationOptimalControlProgram(OptimalControlProgram):
     ):
         final_time = n_stim / frequency
         return cls(
-            ding_model=ding_model,
+            model=model,
             n_stim=n_stim,
             n_shooting=n_shooting,
             final_time=final_time,

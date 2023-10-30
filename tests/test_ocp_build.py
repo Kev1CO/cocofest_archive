@@ -85,7 +85,7 @@ def test_ocp_building(
     use_sx,
 ):
     ocp_1 = FunctionalElectricStimulationOptimalControlProgram.from_frequency_and_final_time(
-        ding_model=model,
+        model=model,
         n_shooting=n_shooting,
         final_time=final_time,
         force_tracking=force_tracking,
@@ -107,7 +107,7 @@ def test_ocp_building(
     )
 
     ocp_2 = FunctionalElectricStimulationOptimalControlProgram.from_frequency_and_n_stim(
-        ding_model=model,
+        model=model,
         n_shooting=n_shooting,
         n_stim=n_stim,
         force_tracking=force_tracking,
@@ -128,7 +128,7 @@ def test_ocp_building(
     )
 
     ocp_3 = FunctionalElectricStimulationOptimalControlProgram(
-        ding_model=model,
+        model=model,
         n_shooting=n_shooting,
         n_stim=n_stim,
         final_time=0.3,
@@ -156,7 +156,7 @@ def test_ocp_building(
 def test_multi_start_building(force_tracking, end_node_tracking, min_pulse_duration, min_pulse_intensity):
     multi_start = FunctionalElectricStimulationMultiStart(
         methode="standard",
-        ding_model=[DingModelFrequency(), DingModelPulseDurationFrequency(), DingModelIntensityFrequency()],
+        model=[DingModelFrequency(), DingModelPulseDurationFrequency(), DingModelIntensityFrequency()],
         n_stim=[10],
         n_shooting=[20],
         final_time=[1],

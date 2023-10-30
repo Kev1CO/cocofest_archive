@@ -26,7 +26,7 @@ class DingModelFrequency:
     This is the Ding 2003 model using the stimulation frequency in input.
     """
 
-    def __init__(self, name: str = None, with_fatigue: bool = True, sum_stim_truncation: int = None):
+    def __init__(self, name: str = None, with_fatigue: bool = True, sum_stim_truncation: int = None, ):
         self._name = name
         self._with_fatigue = with_fatigue
         self._sum_stim_truncation = sum_stim_truncation

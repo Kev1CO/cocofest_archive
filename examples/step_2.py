@@ -12,7 +12,7 @@ from optistim import DingModelPulseDurationFrequency, FunctionalElectricStimulat
 # The flag with_fatigue is set to True by default, this will include the fatigue model
 minimum_pulse_duration = DingModelPulseDurationFrequency().pd0
 ocp = FunctionalElectricStimulationOptimalControlProgram(
-    ding_model=DingModelPulseDurationFrequency(with_fatigue=True),
+    model=DingModelPulseDurationFrequency(with_fatigue=True),
     n_stim=10,
     n_shooting=20,
     final_time=1,

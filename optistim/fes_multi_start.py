@@ -4,7 +4,7 @@ import numpy as np
 import pickle
 
 from bioptim import Solver, MultiStart, Solution
-from .ding_model import DingModelFrequency, DingModelPulseDurationFrequency, DingModelIntensityFrequency
+from .model import DingModelFrequency, DingModelPulseDurationFrequency, DingModelIntensityFrequency
 from .fes_ocp import FunctionalElectricStimulationOptimalControlProgram
 from .read_data import ExtractData
 
@@ -16,7 +16,7 @@ class FunctionalElectricStimulationMultiStart(MultiStart):
 
     Attributes
     ----------
-    ding_model: list[DingModelFrequency | DingModelPulseDurationFrequency| DingModelIntensityFrequency]
+    model: list[DingModelFrequency | DingModelPulseDurationFrequency| DingModelIntensityFrequency]
         The model type used for the ocp
     n_stim: list[int]
         Number of stimulation that will occur during the ocp, it is as well refer as phases
@@ -64,11 +64,11 @@ class FunctionalElectricStimulationMultiStart(MultiStart):
 
     Example
     ----------
-    combinatorial_parameters = {"ding_model": list[model1, model2, model3],
+    combinatorial_parameters = {"model": list[model1, model2, model3],
                                 "n_stim": list[n_stim1, n_stim2],
                                 "force_tracking": list[force_tracking1, force_tracking2]}
 
-    3 ding_model, 2 n_stim, 2 force_tracking different so 3 x 2 x 2 = 12 different ocp run in the multi start
+    3 model, 2 n_stim, 2 force_tracking different so 3 x 2 x 2 = 12 different ocp run in the multi start
     All cases :
         case 1 : model1 + n_stim1 + force_tracking1
         case 2 : model1 + n_stim1 + force_tracking2
@@ -87,7 +87,7 @@ class FunctionalElectricStimulationMultiStart(MultiStart):
     def __init__(
         self,
         methode: str = None,
-        ding_model: list[DingModelFrequency | DingModelPulseDurationFrequency | DingModelIntensityFrequency] = None,
+        model: list[DingModelFrequency | DingModelPulseDurationFrequency | DingModelIntensityFrequency] = None,
         n_stim: list[int] | list[None] = None,
         n_shooting: list[int] = None,
         final_time: list[float] | list[None] = None,
@@ -111,7 +111,7 @@ class FunctionalElectricStimulationMultiStart(MultiStart):
         self.methode = methode
         # --- Prepare the multi-start and run it --- #
         combinatorial_parameters = {
-            "ding_model": [None] if ding_model is None else ding_model,
+            "model": [None] if model is None else model,
             "n_stim": [None] if n_stim is None else n_stim,
             "n_shooting": [None] if n_shooting is None else n_shooting,
             "final_time": [None] if final_time is None else final_time,
@@ -166,7 +166,7 @@ class FunctionalElectricStimulationMultiStart(MultiStart):
     @staticmethod
     def construct_filepath(save_path, combinatorial_parameters):
         (
-            ding_model,
+            model,
             n_stim,
             n_shooting,
             final_time,
@@ -235,7 +235,7 @@ class FunctionalElectricStimulationMultiStart(MultiStart):
             f"{save_path}/DingModelFrequency_multi_start_{n_stim}_stimulation_{n_shooting}_node_shooting_{frequency}_HZ.pkl",
         ]
 
-        if isinstance(ding_model, DingModelPulseDurationFrequency):
+        if isinstance(model, DingModelPulseDurationFrequency):
             if pulse_time_min or pulse_time_max is None:
                 pulse_duration_parameter = False
             else:
@@ -271,7 +271,7 @@ class FunctionalElectricStimulationMultiStart(MultiStart):
                         return file_list[10]
                     else:
                         return file_list[11]
-        elif isinstance(ding_model, DingModelIntensityFrequency):
+        elif isinstance(model, DingModelIntensityFrequency):
             if pulse_time_min or pulse_time_max is None:
                 pulse_intensity_parameter = False
             else:
@@ -307,7 +307,7 @@ class FunctionalElectricStimulationMultiStart(MultiStart):
                         return file_list[22]
                     else:
                         return file_list[23]
-        elif isinstance(ding_model, DingModelFrequency):
+        elif isinstance(model, DingModelFrequency):
             if time_parameter is True:
                 if force_tracking_state is True:
                     return file_list[24]
@@ -347,7 +347,7 @@ class FunctionalElectricStimulationMultiStart(MultiStart):
             All the non-combinatorial parameters sent by the user
         """
         (
-            ding_model,
+            model,
             n_stim,
             n_shooting,
             final_time,
@@ -382,7 +382,7 @@ class FunctionalElectricStimulationMultiStart(MultiStart):
         states["parameters"] = sol.parameters
         states["phase_time"] = np.array(phase_time)
         states["status"] = sol.status
-        states["model"] = np.array([str(ding_model)])
+        states["model"] = np.array([str(model)])
         states["n_stim"] = np.array([n_stim])
         states["n_shooting"] = np.array([n_shooting])
         states["force_tracking"] = force_tracking
@@ -442,7 +442,7 @@ class FunctionalElectricStimulationMultiStart(MultiStart):
     ):
         if self.methode is None or self.methode == "standard":
             ocp = FunctionalElectricStimulationOptimalControlProgram(
-                ding_model=model,
+                model=model,
                 n_stim=n_stim,
                 n_shooting=n_shooting,
                 final_time=final_time,
@@ -469,7 +469,7 @@ class FunctionalElectricStimulationMultiStart(MultiStart):
 
         elif self.methode == "from_frequency_and_final_time":
             ocp = FunctionalElectricStimulationOptimalControlProgram.from_frequency_and_final_time(
-                ding_model=model,
+                model=model,
                 n_shooting=n_shooting,
                 final_time=final_time,
                 force_tracking=force_tracking,
@@ -497,7 +497,7 @@ class FunctionalElectricStimulationMultiStart(MultiStart):
 
         elif self.methode == "from_frequency_and_n_stim":
             ocp = FunctionalElectricStimulationOptimalControlProgram.from_frequency_and_n_stim(
-                ding_model=model,
+                model=model,
                 n_shooting=n_shooting,
                 n_stim=n_stim,
                 force_tracking=force_tracking,
@@ -539,7 +539,7 @@ if __name__ == "__main__":
 
     a = FunctionalElectricStimulationMultiStart(
         methode="standard",
-        ding_model=[DingModelFrequency()],
+        model=[DingModelFrequency()],
         n_stim=[10],
         n_shooting=[20],
         final_time=[1],

@@ -230,7 +230,7 @@ minimum_pulse_intensity = (
 def test_ocp_output(model, force_tracking, use_sx, min_pulse_duration, min_pulse_intensity):
     if isinstance(model, DingModelPulseDurationFrequency):
         ocp = FunctionalElectricStimulationOptimalControlProgram(
-            ding_model=model,
+            model=model,
             n_shooting=20,
             n_stim=10,
             final_time=1,
@@ -250,7 +250,7 @@ def test_ocp_output(model, force_tracking, use_sx, min_pulse_duration, min_pulse
 
     elif isinstance(model, DingModelIntensityFrequency):
         ocp = FunctionalElectricStimulationOptimalControlProgram(
-            ding_model=model,
+            model=model,
             n_shooting=20,
             n_stim=10,
             final_time=1,
@@ -270,7 +270,7 @@ def test_ocp_output(model, force_tracking, use_sx, min_pulse_duration, min_pulse
 
     elif isinstance(model, DingModelFrequency):
         ocp = FunctionalElectricStimulationOptimalControlProgram(
-            ding_model=model,
+            model=model,
             n_shooting=20,
             n_stim=10,
             final_time=1,
