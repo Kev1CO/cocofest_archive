@@ -1,6 +1,6 @@
 from casadi import vertcat
 import numpy as np
-from bioptim import Shooting, SolutionIntegrator, Solution, OptimalControlProgram
+from bioptim import Shooting, SolutionIntegrator, Solution, OptimalControlProgram, InitialGuessList
 from bioptim.interfaces.solve_ivp_interface import solve_ivp_interface, solve_ivp_bioptim_interface
 from bioptim.dynamics.integrator import RK1, RK2, RK4, RK8
 
@@ -434,9 +434,46 @@ def _perform_integration(ocp: OptimalControlProgram, final_time: int | float, st
         elif solver == 'RK2':
             RK2.next_x(dt, time_vector[i], x_input, [], [], [], [])
         elif solver == 'RK4':
-            a = RK4()
-            a.fun = fun
-            x = a.next_x(dt, time_vector[i], x_input, [], [], [], [])
+
+            x = InitialGuessList()
+            u = InitialGuessList()
+            p = InitialGuessList()
+            s = InitialGuessList()
+
+            for j in range(len(ocp.nlp)):
+                for k in range(len(ocp.model.name_dof)):
+                    x.add(ocp.model.name_dof[k], ocp.model.standard_rest_values()[k][0], phase=j)
+                u.add("", min_bound=[], max_bound=[], phase=j)
+                if len(ocp.parameters) != 0:
+                    for k in range(len(ocp.parameters)):
+                    #     p.add(ocp.parameters.keys()[0], ocp.parameters.mx, size=1, phase=j)
+                        p.add(ocp.parameters.keys()[k], phase=j)
+                        np.append(p[j][ocp.parameters.keys()[k]], ocp.parameters[k].mx * len(ocp.nlp))
+                    # p[ocp.parameters.keys()[k]] = np.array([ocp.parameters[k].mx] * len(ocp.nlp))
+
+                else:
+                    p.add("", min_bound=[], max_bound=[], phase=j)
+                s.add("", min_bound=[], max_bound=[], phase=j)
+
+            a = Solution(ocp, [x, u, p, s])
+            a.ocp = ocp
+            ocp_all_ns = 0
+            a._states = {"unscaled": []}
+            for ocp_ns in ocp.nlp:
+                ocp_all_ns += ocp_ns.ns
+            for k in range(len(ocp.nlp)):
+                temp_state_dict = {}
+                for j in range(len(ocp.model.name_dof)):
+                    # a._states["unscaled"][ocp.model.name_dof[j]] = [ocp.model.standard_rest_values()[j][0]] * ocp_all_ns
+                    temp_state_dict[ocp.model.name_dof[j]] = np.array([[ocp.model.standard_rest_values()[j][0]] * (ocp.nlp[k].ns+1)])
+                    # a._states["unscaled"].append({ocp.model.name_dof[j]: [ocp.model.standard_rest_values()[j][0]] * ocp.nlp[k].ns})
+                a._states["unscaled"].append(temp_state_dict)
+            a.phase_time = [0]
+            for j in range(len(ocp.final_time_phase)):
+                a.phase_time.append(a.phase_time[-1] + ocp.final_time_phase[j])
+            a.integrate(shooting_type=Shooting.MULTIPLE, keep_intermediate_points=True, integrator=SolutionIntegrator.OCP)
+            print("oui")
+
         elif solver == 'RK8':
             RK8.next_x(dt, time_vector[i], x_input, [], [], [], [])
         elif solver == 'Euler':
