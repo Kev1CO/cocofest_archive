@@ -638,10 +638,7 @@ class DingModelFrequency:
 
 class DingModelPulseDurationFrequency(DingModelFrequency):
     def __init__(self, name: str = None, with_fatigue: bool = True, sum_stim_truncation: int = None):
-        super().__init__()
-        self._name = name
-        self._with_fatigue = with_fatigue
-        self._sum_stim_truncation = sum_stim_truncation
+        super(DingModelPulseDurationFrequency, self).__init__(name=name, with_fatigue=with_fatigue,sum_stim_truncation=sum_stim_truncation)
         self.impulse_time = None
         # ---- Custom values for the example ---- #
         # ---- Force model ---- #
@@ -915,10 +912,7 @@ class DingModelPulseDurationFrequency(DingModelFrequency):
 
 class DingModelIntensityFrequency(DingModelFrequency):
     def __init__(self, name: str = None, with_fatigue: bool = True, sum_stim_truncation: int = None):
-        super().__init__()
-        self._name = name
-        self._with_fatigue = with_fatigue
-        self._sum_stim_truncation = sum_stim_truncation
+        super(DingModelIntensityFrequency, self).__init__(name=name, with_fatigue=with_fatigue, sum_stim_truncation=sum_stim_truncation)
         # ---- Custom values for the example ---- #
         # ---- Force model ---- #
         self.ar = 0.586  # (-) Translation of axis coordinates.
