@@ -30,7 +30,6 @@ ocp = FunctionalElectricStimulationOptimalControlProgram(
     n_shooting=20,
     final_time=1,
     force_tracking=force_tracking,
-    end_node_tracking=None,
     pulse_intensity_min=minimum_pulse_intensity,
     pulse_intensity_max=130,
     pulse_intensity_bimapping=False,
