@@ -39,7 +39,7 @@ ocp = FunctionalElectricStimulationOptimalControlProgram(
 # --- Solve the program --- #
 sol = ocp.solve()
 
-# --- Show results --- #
+# --- Show the optimization results --- #
 sol.graphs()
 
 # --- Show results from solution --- #
@@ -47,9 +47,11 @@ sol_merged = sol.merge_phases()
 fourier_fun = FourierSeries()
 fourier_coef = fourier_fun.compute_real_fourier_coeffs(time, force, 50)
 y_approx = FourierSeries().fit_func_by_fourier_series_with_real_coeffs(time, fourier_coef)
-plt.title("Comparison between real and optimization")
+plt.title("Comparison between given and simulated force after parameter optimization")
 plt.plot(time, force, color="red", label="force from file")
 plt.plot(time, y_approx, color="orange", label="force after fourier transform")
-plt.plot(sol_merged.time, sol_merged.states["F"].squeeze(), color="blue", label="optimized force from stimulation")
+plt.plot(sol_merged.time, sol_merged.states["F"].squeeze(), color="blue", label="force from optimized stimulation")
+plt.xlabel("Time (s)")
+plt.ylabel("Force (N)")
 plt.legend()
 plt.show()
