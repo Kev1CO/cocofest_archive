@@ -104,6 +104,7 @@ class FunctionalElectricStimulationOptimalControlProgram(OptimalControlProgram):
         pulse_intensity_min: int | float = None,
         pulse_intensity_max: int | float = None,
         pulse_intensity_bimapping: bool = None,
+        for_optimal_control: bool = True,
         **kwargs,
     ):
         self.model = model
@@ -339,6 +340,11 @@ class FunctionalElectricStimulationOptimalControlProgram(OptimalControlProgram):
                 # parameter_bimapping.add(name="pulse_intensity", to_second=[0 for _ in range(n_stim)], to_first=[0])
                 # TODO : Fix Bimapping in Bioptim
 
+        self.for_optimal_control = for_optimal_control
+        if len(constraints) == 0 and len(parameters) == 0 and self.for_optimal_control:
+            raise ValueError("This is not an optimal control problem,"
+                             " add parameter to optimize or set for_optimal_control flag to false")
+
         self.n_stim = n_stim
         self._declare_dynamics()
         self._set_bounds()
@@ -447,16 +453,16 @@ class FunctionalElectricStimulationOptimalControlProgram(OptimalControlProgram):
         self.x_init = InitialGuessList()
         for i in range(self.n_stim):
             for j in range(len(variable_bound_list)):
-                self.x_init.add(variable_bound_list[j], self.model.standard_rest_values()[j])
+                self.x_init.add(variable_bound_list[j], self.model.standard_rest_values()[j], phase=i)
 
         # Creates the controls of our problem (in our case, equals to an empty list)
         self.u_bounds = BoundsList()
         for i in range(self.n_stim):
-            self.u_bounds.add("", min_bound=[], max_bound=[])
+            self.u_bounds.add(key="", phase=i)
 
         self.u_init = InitialGuessList()
         for i in range(self.n_stim):
-            self.u_init.add("", min_bound=[], max_bound=[])
+            self.u_init.add(key="", phase=i)
 
     def _set_objective(self):
         # Creates the objective for our problem (in this case, match a force curve)
