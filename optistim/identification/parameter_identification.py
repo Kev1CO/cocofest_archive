@@ -1,7 +1,7 @@
 import matplotlib.pyplot as plt
 import numpy as np
 from optistim import DingModelFrequency, DingModelPulseDurationFrequency, DingModelIntensityFrequency
-from fes_identification_ocp import FunctionalElectricStimulationOptimalControlProgramIdentification
+from optistim import FunctionalElectricStimulationOptimalControlProgramIdentification
 from bioptim import Solver
 
 

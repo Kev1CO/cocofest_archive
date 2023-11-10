@@ -21,9 +21,9 @@ from bioptim import (
     PhaseDynamics,
 )
 
-from .custom_objectives import CustomObjective
-from .fourier_approx import FourierSeries
-from .model import DingModelFrequency, DingModelPulseDurationFrequency, DingModelIntensityFrequency
+from ..custom_objectives import CustomObjective
+from ..fourier_approx import FourierSeries
+from optistim import DingModelFrequency, DingModelPulseDurationFrequency, DingModelIntensityFrequency
 
 
 class FunctionalElectricStimulationOptimalControlProgram(OptimalControlProgram):

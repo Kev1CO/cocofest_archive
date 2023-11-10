@@ -20,7 +20,7 @@ from bioptim import (
 )
 
 from optistim.custom_objectives import CustomObjective
-from optistim.model import DingModelFrequency, DingModelPulseDurationFrequency, DingModelIntensityFrequency
+from optistim import DingModelFrequency, DingModelPulseDurationFrequency, DingModelIntensityFrequency
 
 
 class FunctionalElectricStimulationOptimalControlProgramIdentification(OptimalControlProgram):

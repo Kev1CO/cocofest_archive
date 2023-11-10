@@ -1,6 +1,9 @@
 from optistim.custom_objectives import CustomObjective
-from optistim.model import DingModelFrequency, DingModelPulseDurationFrequency, DingModelIntensityFrequency
-from optistim.fes_multi_start import FunctionalElectricStimulationMultiStart
-from optistim.fes_ocp import FunctionalElectricStimulationOptimalControlProgram
+from optistim.model.ding2003 import DingModelFrequency
+from optistim.model.ding2007 import DingModelPulseDurationFrequency
+from optistim.model.hmed2017 import DingModelIntensityFrequency
+from optistim.optimization.fes_multi_start import FunctionalElectricStimulationMultiStart
+from optistim.optimization.fes_ocp import FunctionalElectricStimulationOptimalControlProgram
+from optistim.optimization.fes_identification_ocp import FunctionalElectricStimulationOptimalControlProgramIdentification
 from optistim.fourier_approx import FourierSeries
 from optistim.read_data import ExtractData

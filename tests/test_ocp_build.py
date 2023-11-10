@@ -84,6 +84,11 @@ def test_ocp_building(
     pulse_intensity_bimapping,
     use_sx,
 ):
+    if time_min is None and time_max is None and time_bimapping is None:
+        for_optimal_control = False
+    else:
+        for_optimal_control = True
+
     ocp_1 = FunctionalElectricStimulationOptimalControlProgram.from_frequency_and_final_time(
         model=model,
         n_shooting=n_shooting,
@@ -104,6 +109,7 @@ def test_ocp_building(
         pulse_intensity_max=pulse_intensity_max,
         pulse_intensity_bimapping=pulse_intensity_bimapping,
         use_sx=use_sx,
+        for_optimal_control=for_optimal_control,
     )
 
     ocp_2 = FunctionalElectricStimulationOptimalControlProgram.from_frequency_and_n_stim(
@@ -125,6 +131,7 @@ def test_ocp_building(
         pulse_intensity_max=pulse_intensity_max,
         pulse_intensity_bimapping=pulse_intensity_bimapping,
         use_sx=use_sx,
+        for_optimal_control=for_optimal_control,
     )
 
     ocp_3 = FunctionalElectricStimulationOptimalControlProgram(
@@ -146,6 +153,7 @@ def test_ocp_building(
         pulse_intensity_max=pulse_intensity_max,
         pulse_intensity_bimapping=pulse_intensity_bimapping,
         use_sx=use_sx,
+        for_optimal_control=for_optimal_control,
     )
 
 
