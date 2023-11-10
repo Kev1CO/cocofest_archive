@@ -369,9 +369,7 @@ class FunctionalElectricStimulationOptimalControlProgram(OptimalControlProgram):
             n_shooting=self.n_shooting,
             phase_time=self.final_time_phase,
             x_init=self.x_init,
-            u_init=self.u_init,
             x_bounds=self.x_bounds,
-            u_bounds=self.u_bounds,
             objective_functions=self.objective_functions,
             time_phase_mapping=phase_time_bimapping,
             constraints=constraints,
@@ -454,15 +452,6 @@ class FunctionalElectricStimulationOptimalControlProgram(OptimalControlProgram):
         for i in range(self.n_stim):
             for j in range(len(variable_bound_list)):
                 self.x_init.add(variable_bound_list[j], self.model.standard_rest_values()[j], phase=i)
-
-        # Creates the controls of our problem (in our case, equals to an empty list)
-        self.u_bounds = BoundsList()
-        for i in range(self.n_stim):
-            self.u_bounds.add(key="", phase=i)
-
-        self.u_init = InitialGuessList()
-        for i in range(self.n_stim):
-            self.u_init.add(key="", phase=i)
 
     def _set_objective(self):
         # Creates the objective for our problem (in this case, match a force curve)
