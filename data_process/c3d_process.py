@@ -1,10 +1,11 @@
 import numpy as np
 import matplotlib.pyplot as plt
 from scipy.signal import find_peaks
+from copy import deepcopy
 import heapq
 import pickle
 
-import biorbd
+from biorbd import Model
 from pyomeca import Analogs
 
 
@@ -16,7 +17,6 @@ class C3dToForce:
     It is assumed that V1, V2, V3, V4, V5, V6 are the 6D sensor data and last input is stimulation signal
     if not give an input list of the keys position "V1", "V2", "V3", "V4", "V5", "V6", "stim"
     in the c3d file (default is [0, 1, 2, 3, 4, 5, 6]).
-
     """
 
     def __init__(
@@ -95,6 +95,8 @@ class C3dToForce:
                 sliced_time, sliced_data = self.slice_data(
                     time, filtered_6d_force, peaks
                 )  # slice the data into different stimulation
+                temp_time = deepcopy(sliced_time)
+                temp_data = deepcopy(sliced_data)
                 if down_sample:
                     for j in range(len(sliced_data[0])):
                         for k in range(len(sliced_data)):
@@ -128,6 +130,9 @@ class C3dToForce:
                             plt.plot(sliced_time[k], sliced_data[0][k])
                         for k in range(len(peaks)):
                             plt.plot(time[peaks[k]], filtered_6d_force[0][peaks[k]], "x")
+                        if down_sample:
+                            for k in range(len(sliced_time)):
+                                plt.plot(temp_time[k], temp_data[0][k])
                         plt.show()
 
                 if saving_pickle_path_list:
@@ -441,7 +446,35 @@ class ForceSensorToMuscleForce:  # TODO : Enable several muscles (biceps, tricep
         self.time = data["time"]
         self.stim_time = data["stim_time"]
 
-        return self.local_to_global(sensor_data, forearm_angle)
+        # return self.local_to_global(sensor_data, forearm_angle)
+        return self.local_sensor_to_local_hand(sensor_data)
+
+    @staticmethod
+    def local_sensor_to_local_hand(sensor_data: np.array) -> np.array:
+        """
+        This function is used to convert the sensor data from the local axis to the local hand axis.
+        fx_global = -fx_local
+        fy_global = fz_local
+        fz_global = fy_local
+
+        Parameters
+        ----------
+        sensor_data
+
+        Returns
+        -------
+
+        """
+        # TODO Might be an error when not at 90°
+        hand_local_force_data = [[[-x for x in data] for data
+                                 in sensor_data[0]],
+                                 sensor_data[2],
+                                 sensor_data[1],
+                                 [[-x for x in data] for data
+                                 in sensor_data[3]],
+                                 sensor_data[5],
+                                 sensor_data[4]]
+        return hand_local_force_data
 
     @staticmethod
     def local_to_global(sensor_data: np.array, forearm_angle: int | float) -> np.array:
@@ -504,7 +537,7 @@ class ForceSensorToMuscleForce:  # TODO : Enable several muscles (biceps, tricep
 
     def load_model(self, forearm_angle: int | float):
         # Load a predefined model
-        self.model = biorbd.Model("model/arm26_unmesh.bioMod")
+        self.model = Model("model/arm26_unmesh.bioMod")
         # Get number of q, qdot, qddot
         nq = self.model.nbQ()
         nqdot = self.model.nbQdot()
@@ -539,24 +572,41 @@ class ForceSensorToMuscleForce:  # TODO : Enable several muscles (biceps, tricep
         for i in range(len(local_torque_force_vector)):
             self.biceps_force_vector = []
             for j in range(len(local_torque_force_vector[i][0])):
-                a = self.model.markers(self.Q)[4].to_array()
+                # a = self.model.markers(self.Q)[4].to_array()
                 # b = self.model.markers(Q)[3].to_array()  # [0, 0, 0]
                 # the 'b' point is not used for calculation as 'a' is expressed in 'b' local coordinates
-                t_global = self.force_transport(
-                    [
-                        local_torque_force_vector[i][0][j],
-                        local_torque_force_vector[i][1][j],
-                        local_torque_force_vector[i][2][j],
-                        local_torque_force_vector[i][3][j],
-                        local_torque_force_vector[i][4][j],
-                        local_torque_force_vector[i][5][j],
-                    ],
-                    a,
-                )  # TODO make it a list : local_torque_force_vector
+                # t_global = self.force_transport(
+                #     [
+                #         local_torque_force_vector[i][0][j],
+                #         local_torque_force_vector[i][1][j],
+                #         local_torque_force_vector[i][2][j],
+                #         local_torque_force_vector[i][3][j],
+                #         local_torque_force_vector[i][4][j],
+                #         local_torque_force_vector[i][5][j],
+                #     ],
+                #     a,
+                # )  # TODO make it a list : local_torque_force_vector
 
-                external_forces = np.array(t_global)[:, np.newaxis]
-                external_forces_v = biorbd.to_spatial_vector(external_forces)
-                tau = self.model.InverseDynamics(self.Q, self.Qdot, self.Qddot, f_ext=external_forces_v).to_array()[1]
+                hand_local_vector = [local_torque_force_vector[i][0][j],
+                                     local_torque_force_vector[i][1][j],
+                                     local_torque_force_vector[i][2][j],
+                                     local_torque_force_vector[i][3][j],
+                                     local_torque_force_vector[i][4][j],
+                                     local_torque_force_vector[i][5][j]]
+
+                #
+                # external_forces = np.array(t_global)[:, np.newaxis]
+                # external_forces_v = biorbd.to_spatial_vector(external_forces)
+
+                external_forces_vector = np.array(hand_local_vector)
+                external_forces_set = self.model.externalForceSet()
+                external_forces_set.addInSegmentReferenceFrame(segmentName="r_ulna_radius_hand",
+                                                               vector=external_forces_vector,
+                                                               pointOfApplication=np.array([0, 0, 0]))
+
+                # tau = self.model.InverseDynamics(self.Q, self.Qdot, self.Qddot, f_ext=external_forces_v).to_array()[1]
+                tau = self.model.InverseDynamics(self.Q, self.Qdot, self.Qddot, external_forces_set).to_array()
+                tau = tau[1]
                 biceps_force = tau / self.biceps_moment_arm
                 self.biceps_force_vector.append(biceps_force)
             hack = (
@@ -565,13 +615,15 @@ class ForceSensorToMuscleForce:  # TODO : Enable several muscles (biceps, tricep
                 else self.biceps_force_vector - self.biceps_force_vector[0]
             )
             self.all_biceps_force_vector.append(
-                hack.tolist()
+                self.biceps_force_vector
+                # hack.tolist()
             )  # TODO: This is an hack, find why muscle force is sometimes negative when it shouldn't
 
         # --- Plotting the biceps force --- #
         if self.plot:
             for i in range(len(self.all_biceps_force_vector)):
                 plt.plot(self.time[i], self.all_biceps_force_vector[i])
+            # plt.plot(self.time[0], self.all_biceps_force_vector[0])
             plt.show()
 
     @staticmethod
@@ -586,38 +638,38 @@ class ForceSensorToMuscleForce:  # TODO : Enable several muscles (biceps, tricep
 
 if __name__ == "__main__":
     # C3dToForce(
-    #     c3d_path=f"D:\These\Experiences\Ergometre_isocinetique\With_FES\Data_with_fes_26_09_2023\Biceps_90deg_30mA_300us_33Hz_essai_fatigue.c3d",
-    # c3d_path=[
-    #     f"D:\These\Experiences\Ergometre_isocinetique\With_FES\Data_with_fes_26_09_2023\Biceps_90deg_30mA_300us_33Hz_essai1.c3d",
-    #     f"D:\These\Experiences\Ergometre_isocinetique\With_FES\Data_with_fes_26_09_2023\Biceps_90deg_30mA_300us_33Hz_essai2.c3d",
-    #     f"D:\These\Experiences\Ergometre_isocinetique\With_FES\Data_with_fes_26_09_2023\Biceps_90deg_30mA_300us_33Hz_essai3.c3d",
-    #     f"D:\These\Experiences\Ergometre_isocinetique\With_FES\Data_with_fes_26_09_2023\Biceps_70deg_30mA_300us_33Hz_essai1.c3d",
-    #     f"D:\These\Experiences\Ergometre_isocinetique\With_FES\Data_with_fes_26_09_2023\Biceps_70deg_30mA_300us_33Hz_essai2.c3d",
-    #     f"D:\These\Experiences\Ergometre_isocinetique\With_FES\Data_with_fes_26_09_2023\Biceps_70deg_30mA_300us_33Hz_essai3.c3d",
-    #     f"D:\These\Experiences\Ergometre_isocinetique\With_FES\Data_with_fes_26_09_2023\Biceps_110deg_30mA_300us_33Hz_essai1.c3d",
-    #     f"D:\These\Experiences\Ergometre_isocinetique\With_FES\Data_with_fes_26_09_2023\Biceps_110deg_30mA_300us_33Hz_essai2.c3d",
-    #     f"D:\These\Experiences\Ergometre_isocinetique\With_FES\Data_with_fes_26_09_2023\Biceps_110deg_30mA_300us_33Hz_essai3.c3d",
-    #     ],
-    # calibration_matrix_path="D:\These\Experiences\Ergometre_isocinetique\Capteur 6D\G_201602A1-P (matrice etalonnage).txt",
-    # for_identification=True,
-    # average_time_difference=-0.0015,
-    # frequency_acquisition=10000,
-    # saving_pickle_path=["identification_data_Biceps_90deg_30mA_300us_33Hz_essai1.pkl",
-    #                     "identification_data_Biceps_90deg_30mA_300us_33Hz_essai2.pkl",
-    #                     "identification_data_Biceps_90deg_30mA_300us_33Hz_essai3.pkl",
-    #                     "identification_data_Biceps_70deg_30mA_300us_33Hz_essai1.pkl",
-    #                     "identification_data_Biceps_70deg_30mA_300us_33Hz_essai2.pkl",
-    #                     "identification_data_Biceps_70deg_30mA_300us_33Hz_essai3.pkl",
-    #                     "identification_data_Biceps_110deg_30mA_300us_33Hz_essai1.pkl",
-    #                     "identification_data_Biceps_110deg_30mA_300us_33Hz_essai2.pkl",
-    #                     "identification_data_Biceps_110deg_30mA_300us_33Hz_essai3.pkl",
-    #                     ],
-    # saving_pickle_path="identification_data_Biceps_90deg_30mA_300us_33Hz_essai_fatigue.pkl",
-    # plot=True,
-    # check_stimulation=True,
-    # down_sample=True,
-    # )
-    # input_channel=[6, 0, 1, 2, 3, 4, 5])
+    #     # c3d_path=f"D:\These\Experiences\Ergometre_isocinetique\With_FES\Data_with_fes_26_09_2023\Biceps_90deg_30mA_300us_33Hz_essai_fatigue.c3d",
+    #            c3d_path=[
+    #                f"D:\These\Experiences\Ergometre_isocinetique\With_FES\Data_with_fes_26_09_2023\Biceps_90deg_30mA_300us_33Hz_essai1.c3d",
+    #                f"D:\These\Experiences\Ergometre_isocinetique\With_FES\Data_with_fes_26_09_2023\Biceps_90deg_30mA_300us_33Hz_essai2.c3d",
+    #                f"D:\These\Experiences\Ergometre_isocinetique\With_FES\Data_with_fes_26_09_2023\Biceps_90deg_30mA_300us_33Hz_essai3.c3d",
+    #                f"D:\These\Experiences\Ergometre_isocinetique\With_FES\Data_with_fes_26_09_2023\Biceps_70deg_30mA_300us_33Hz_essai1.c3d",
+    #                f"D:\These\Experiences\Ergometre_isocinetique\With_FES\Data_with_fes_26_09_2023\Biceps_70deg_30mA_300us_33Hz_essai2.c3d",
+    #                f"D:\These\Experiences\Ergometre_isocinetique\With_FES\Data_with_fes_26_09_2023\Biceps_70deg_30mA_300us_33Hz_essai3.c3d",
+    #                f"D:\These\Experiences\Ergometre_isocinetique\With_FES\Data_with_fes_26_09_2023\Biceps_110deg_30mA_300us_33Hz_essai1.c3d",
+    #                f"D:\These\Experiences\Ergometre_isocinetique\With_FES\Data_with_fes_26_09_2023\Biceps_110deg_30mA_300us_33Hz_essai2.c3d",
+    #                f"D:\These\Experiences\Ergometre_isocinetique\With_FES\Data_with_fes_26_09_2023\Biceps_110deg_30mA_300us_33Hz_essai3.c3d",
+    #                ],
+    #            calibration_matrix_path="D:\These\Experiences\Ergometre_isocinetique\Capteur 6D\G_201602A1-P (matrice etalonnage).txt",
+    #            for_identification=True,
+    #            average_time_difference=-0.0015,
+    #            frequency_acquisition=10000,
+    #            saving_pickle_path=["identification_data_Biceps_90deg_30mA_300us_33Hz_essai1.pkl",
+    #                                "identification_data_Biceps_90deg_30mA_300us_33Hz_essai2.pkl",
+    #                                "identification_data_Biceps_90deg_30mA_300us_33Hz_essai3.pkl",
+    #                                "identification_data_Biceps_70deg_30mA_300us_33Hz_essai1.pkl",
+    #                                "identification_data_Biceps_70deg_30mA_300us_33Hz_essai2.pkl",
+    #                                "identification_data_Biceps_70deg_30mA_300us_33Hz_essai3.pkl",
+    #                                "identification_data_Biceps_110deg_30mA_300us_33Hz_essai1.pkl",
+    #                                "identification_data_Biceps_110deg_30mA_300us_33Hz_essai2.pkl",
+    #                                "identification_data_Biceps_110deg_30mA_300us_33Hz_essai3.pkl",
+    #                                ],
+    #            # saving_pickle_path="identification_data_Biceps_90deg_30mA_300us_33Hz_essai_fatigue.pkl",
+    #            plot=True,
+    #            check_stimulation=True,
+    #            down_sample=True,
+    #            )
+    # # input_channel=[6, 0, 1, 2, 3, 4, 5])
 
     ForceSensorToMuscleForce(
         pickle_path="D:\These\Programmation\Modele_Musculaire\optistim\data_process\identification_data_Biceps_90deg_30mA_300us_33Hz_essai1.pkl",
