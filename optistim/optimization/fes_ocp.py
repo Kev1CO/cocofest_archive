@@ -342,8 +342,10 @@ class FunctionalElectricStimulationOptimalControlProgram(OptimalControlProgram):
 
         self.for_optimal_control = for_optimal_control
         if len(constraints) == 0 and len(parameters) == 0 and self.for_optimal_control:
-            raise ValueError("This is not an optimal control problem,"
-                             " add parameter to optimize or set for_optimal_control flag to false")
+            raise ValueError(
+                "This is not an optimal control problem,"
+                " add parameter to optimize or set for_optimal_control flag to false"
+            )
 
         self.n_stim = n_stim
         self._declare_dynamics()

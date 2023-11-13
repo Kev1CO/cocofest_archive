@@ -13,7 +13,9 @@ from optistim import DingModelFrequency
 
 class DingModelIntensityFrequency(DingModelFrequency):
     def __init__(self, name: str = None, with_fatigue: bool = True, sum_stim_truncation: int = None):
-        super(DingModelIntensityFrequency, self).__init__(name=name, with_fatigue=with_fatigue, sum_stim_truncation=sum_stim_truncation)
+        super(DingModelIntensityFrequency, self).__init__(
+            name=name, with_fatigue=with_fatigue, sum_stim_truncation=sum_stim_truncation
+        )
         # ---- Custom values for the example ---- #
         # ---- Force model ---- #
         self.ar = 0.586  # (-) Translation of axis coordinates.
@@ -144,9 +146,7 @@ class DingModelIntensityFrequency(DingModelFrequency):
         km_dot = self.km_dot_fun(km, f)  # Equation n°11
         return vertcat(cn_dot, f_dot, a_dot, tau1_dot, km_dot)
 
-    def cn_dot_fun(
-        self, cn: MX, r0: MX | float, t: MX, **extra_arguments: list[MX]
-    ) -> MX | float:
+    def cn_dot_fun(self, cn: MX, r0: MX | float, t: MX, **extra_arguments: list[MX]) -> MX | float:
         """
         Parameters
         ----------
@@ -191,7 +191,7 @@ class DingModelIntensityFrequency(DingModelFrequency):
         """
         sum_multiplier = 0
         if self._sum_stim_truncation and len(extra_arguments["t_stim_prev"]) > self._sum_stim_truncation:
-            extra_arguments["t_stim_prev"] = extra_arguments["t_stim_prev"][-self._sum_stim_truncation:]
+            extra_arguments["t_stim_prev"] = extra_arguments["t_stim_prev"][-self._sum_stim_truncation :]
         for i in range(len(extra_arguments["t_stim_prev"])):  # Eq from [1]
             if i == 0 and len(extra_arguments["t_stim_prev"]) == 1:  # Eq from Bakir et al.
                 ri = 1

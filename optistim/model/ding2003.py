@@ -25,7 +25,12 @@ class DingModelFrequency:
     This is the Ding 2003 model using the stimulation frequency in input.
     """
 
-    def __init__(self, name: str = None, with_fatigue: bool = True, sum_stim_truncation: int = None, ):
+    def __init__(
+        self,
+        name: str = None,
+        with_fatigue: bool = True,
+        sum_stim_truncation: int = None,
+    ):
         self._name = name
         self._with_fatigue = with_fatigue
         self._sum_stim_truncation = sum_stim_truncation
@@ -193,7 +198,7 @@ class DingModelFrequency:
         -------
         The value of the derivative of each state dx/dt at the current time t
         """
-        r0 = km + self.r0_km_relationship   # Simplification
+        r0 = km + self.r0_km_relationship  # Simplification
         cn_dot = self.cn_dot_fun(cn, r0, t, t_stim_prev=extra_arguments["t_stim_prev"])  # Equation n°1
         f_dot = self.f_dot_fun(cn, f, a, tau1, km)  # Equation n°2
         a_dot = self.a_dot_fun(a, f)  # Equation n°5
@@ -253,7 +258,7 @@ class DingModelFrequency:
             sum_multiplier += ri * exp_time  # Part of Eq n°1
         else:
             if self._sum_stim_truncation and len(t_stim_prev) > self._sum_stim_truncation:
-                t_stim_prev = t_stim_prev[-self._sum_stim_truncation:]
+                t_stim_prev = t_stim_prev[-self._sum_stim_truncation :]
             for i in range(1, len(t_stim_prev)):
                 previous_phase_time = t_stim_prev[i] - t_stim_prev[i - 1]
                 ri = self.ri_fun(r0, previous_phase_time)  # Part of Eq n°1
@@ -261,9 +266,7 @@ class DingModelFrequency:
                 sum_multiplier += ri * exp_time  # Part of Eq n°1
         return sum_multiplier
 
-    def cn_dot_fun(
-        self, cn: MX, r0: MX | float, t: MX, **extra_arguments: MX | list[MX] | list[float]
-    ) -> MX | float:
+    def cn_dot_fun(self, cn: MX, r0: MX | float, t: MX, **extra_arguments: MX | list[MX] | list[float]) -> MX | float:
         """
         Parameters
         ----------
@@ -285,9 +288,7 @@ class DingModelFrequency:
 
         return (1 / self.tauc) * sum_multiplier - (cn / self.tauc)  # Equation n°1
 
-    def f_dot_fun(
-        self, cn: MX, f: MX, a: MX | float, tau1: MX | float, km: MX | float
-    ) -> MX | float:
+    def f_dot_fun(self, cn: MX, f: MX, a: MX | float, tau1: MX | float, km: MX | float) -> MX | float:
         """
         Parameters
         ----------
@@ -629,7 +630,7 @@ class DingModelFrequency:
         The list of previous stimulation time
         """
         type = "mx" if "time" in ocp.nlp[nlp.phase_idx].parameters else None
-        t_stim_prev = [ocp.node_time(phase_idx=i, node_idx=0, type=type) for i in range(nlp.phase_idx+1)]
+        t_stim_prev = [ocp.node_time(phase_idx=i, node_idx=0, type=type) for i in range(nlp.phase_idx + 1)]
         if not isinstance(t_stim_prev[0], (MX, float)):
-            t_stim_prev = [ocp.node_time(phase_idx=i, node_idx=0, type="mx") for i in range(nlp.phase_idx+1)]
+            t_stim_prev = [ocp.node_time(phase_idx=i, node_idx=0, type="mx") for i in range(nlp.phase_idx + 1)]
         return t_stim_prev

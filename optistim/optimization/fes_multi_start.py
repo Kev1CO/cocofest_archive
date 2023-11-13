@@ -4,9 +4,7 @@ import numpy as np
 import pickle
 
 from bioptim import Solver, MultiStart, Solution
-from optistim import (DingModelFrequency,
-                      DingModelPulseDurationFrequency,
-                      DingModelIntensityFrequency)
+from optistim import DingModelFrequency, DingModelPulseDurationFrequency, DingModelIntensityFrequency
 from .fes_ocp import FunctionalElectricStimulationOptimalControlProgram
 from ..read_data import ExtractData
 
