@@ -1,7 +1,6 @@
-import matplotlib.pyplot as plt
 import numpy as np
 
-from bioptim import OdeSolver, Solver
+from bioptim import Solver
 from optistim import (
     DingModelFrequency,
     DingModelPulseDurationFrequency,
@@ -239,6 +238,12 @@ class DingModelFrequencyParameterIdentification:
                 else [stim_time - data["stim_time"][0] for stim_time in data["stim_time"]]
             )
 
+            # TODO : To implement later
+            # temp_stimulation_instant = []
+            # for j in range(1, data["stim_time"]):
+            #     temp_stimulation_instant.append(data["stim_time"][j] - data["stim_time"][j-1])
+            # stimulation_temp_frequency = 1/np.mean(temp_stimulation_instant)
+
             model_time_data = (
                 data["time"]
                 if data["stim_time"][0] == 0
@@ -260,6 +265,11 @@ class DingModelFrequencyParameterIdentification:
             model_time_data = model_time_data[:smallest_list]
             frequency = 33
             train_duration = 1
+
+            # TODO : To implement later
+            # average_stim_apparition = np.linspace(0, train_duration, (stimulation_temp_frequency * train_duration) + 1)[:-1]
+            # average_stim_apparition = np.append(average_stim_apparition, model_time_data[-1]).tolist()
+
             average_stim_apparition = np.linspace(0, train_duration, (frequency * train_duration) + 1)[:-1]
             average_stim_apparition = np.append(average_stim_apparition, model_time_data[-1]).tolist()
 
@@ -270,7 +280,7 @@ class DingModelFrequencyParameterIdentification:
                     len(global_model_stim_apparition_time[-1]) - 1
                     if discontinuity_phase_list == []
                     else discontinuity_phase_list[-1] + len(global_model_stim_apparition_time[-1])
-                    # + (1 * i - 2)  # TODO : find a better way to fix this than + (1 * i - 2)
+                         # + (1 * i - 2)  # TODO : find a better way to fix this than + (1 * i - 2)
                 )
 
                 model_time_data = [(time + global_model_time_data[i - 1][-1]) for time in model_time_data]
@@ -368,9 +378,9 @@ class DingModelFrequencyParameterIdentification:
         )
 
     @staticmethod
-    def force_at_node_in_ocp(time, force, n_shooting, n_stim, final_time_phase, sparse=None):
+    def force_at_node_in_ocp(time, force, n_shooting, final_time_phase, sparse=None):
         temp_time = []
-        for i in range(n_stim):
+        for i in range(len(final_time_phase)):
             for j in range(n_shooting[i]):
                 temp_time.append(sum(final_time_phase[:i]) + j * final_time_phase[i] / (n_shooting[i]))
         force_at_node = np.interp(temp_time, time, force).tolist()
@@ -381,14 +391,13 @@ class DingModelFrequencyParameterIdentification:
     @staticmethod
     def node_shooting_list_creation(stim, stimulated_n_shooting, rest_n_shooting=None):
         final_time_phase = ()
-
         for i in range(len(stim)):
-            final_time_phase = (stim[1],) if i == 0 else final_time_phase + (stim[i] - stim[i - 1],)
+            final_time_phase = () if i == 0 else final_time_phase + (stim[i] - stim[i - 1],)
 
         stimulation_interval_average = np.mean(final_time_phase)
         n_shooting = []
 
-        for i in range(len(stim)):
+        for i in range(len(final_time_phase)):
             if final_time_phase[i] > stimulation_interval_average:
                 temp_final_time = final_time_phase[i]
                 if rest_n_shooting is None:
@@ -427,23 +436,20 @@ class DingModelFrequencyParameterIdentification:
 
         n_stim = len(stim)
         n_shooting, final_time_phase = self.node_shooting_list_creation(stim, stimulated_n_shooting, rest_n_shooting)
-        force_at_node = self.force_at_node_in_ocp(time, force, n_shooting, n_stim, final_time_phase, force_curve_number)
+        force_at_node = self.force_at_node_in_ocp(time, force, n_shooting, final_time_phase, force_curve_number)
 
         # --- Building force ocp --- #
         self.force_ocp = FunctionalElectricStimulationOptimalControlProgramIdentification(
             model=self.model,
             with_fatigue=False,
-            # stimulated_n_shooting=stimulated_n_shooting,
-            # rest_n_shooting=rest_n_shooting,
+            final_time_phase=final_time_phase,
+            n_shooting=n_shooting,
             force_tracking=force_at_node,
             pulse_apparition_time=stim,
             pulse_duration=None,
             pulse_intensity=None,
             discontinuity_in_ocp=discontinuity,
             use_sx=self.kwargs["use_sx"] if "use_sx" in self.kwargs else False,
-            ode_solver=self.kwargs["ode_solver"]
-            if "ode_solver" in self.kwargs
-            else OdeSolver.RK4(n_integration_steps=1),
         )
 
         self.force_identification_result = self.force_ocp.solve(Solver.IPOPT())
@@ -481,15 +487,15 @@ class DingModelFrequencyParameterIdentification:
 
         n_stim = len(stim)
         n_shooting, final_time_phase = self.node_shooting_list_creation(stim, stimulated_n_shooting, rest_n_shooting)
-        force_at_node = self.force_at_node_in_ocp(time, force, n_shooting, n_stim, final_time_phase, force_curve_number)
+        force_at_node = self.force_at_node_in_ocp(time, force, n_shooting, final_time_phase, force_curve_number)
 
         # --- Building fatigue ocp --- #
         if self.a_rest and self.km_rest and self.tau1_rest and self.tau2:
             self.fatigue_ocp = FunctionalElectricStimulationOptimalControlProgramIdentification(
                 model=self.model,
                 with_fatigue=True,
-                # stimulated_n_shooting=5,  # 5
-                # # rest_n_shooting=165,  # 165
+                final_time_phase=final_time_phase,
+                n_shooting=n_shooting,
                 force_tracking=force_at_node,
                 pulse_apparition_time=stim,
                 pulse_duration=None,
