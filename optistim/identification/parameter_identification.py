@@ -1,8 +1,13 @@
 import matplotlib.pyplot as plt
 import numpy as np
-from optistim import DingModelFrequency, DingModelPulseDurationFrequency, DingModelIntensityFrequency
-from optistim import FunctionalElectricStimulationOptimalControlProgramIdentification
-from bioptim import Solver
+
+from bioptim import OdeSolver, Solver
+from optistim import (
+    DingModelFrequency,
+    DingModelPulseDurationFrequency,
+    DingModelIntensityFrequency,
+    FunctionalElectricStimulationOptimalControlProgramIdentification,
+)
 
 
 class DingModelFrequencyParameterIdentification:
@@ -16,8 +21,21 @@ class DingModelFrequencyParameterIdentification:
         The model to use for the ocp
     force_model_data_path: str | list[str],
         The path to the force model data
+    force_model_identification_method: str,
+        The method to use for the force model identification,
+         "full" for objective function on all data,
+         "average" for objective function on average data,
+         "sparse" for objective function at the beginning and end of the data
     fatigue_model_data_path: str | list[str],
         The path to the fatigue model data
+    a_rest: float,
+        The a_rest parameter for the fatigue model, mandatory if not identified from force model
+    km_rest: float,
+        The km_rest parameter for the fatigue model, mandatory if not identified from force model
+    tau1_rest: float,
+        The tau1_rest parameter for the fatigue model, mandatory if not identified from force model
+    tau2: float,
+        The tau2 parameter for the fatigue model, mandatory if not identified from force model
     **kwargs:
         objective: list[Objective]
             Additional objective for the system
@@ -33,297 +51,493 @@ class DingModelFrequencyParameterIdentification:
         self,
         model: DingModelFrequency | DingModelPulseDurationFrequency | DingModelIntensityFrequency,
         force_model_data_path: str | list[str] = None,
+        force_model_identification_method: str = "full",
         fatigue_model_data_path: str | list[str] = None,
+        fatigue_model_identification_method: str = "full",
+        a_rest: float = None,
+        km_rest: float = None,
+        tau1_rest: float = None,
+        tau2: float = None,
         **kwargs,
     ):
-        # --- Check inputs --- #
+        self.model = model
+        self.force_model_data_path = force_model_data_path
+        self.force_model_identification_method = force_model_identification_method
+        self.fatigue_model_data_path = fatigue_model_data_path
+        self.fatigue_model_identification_method = fatigue_model_identification_method
+        self.a_rest = a_rest
+        self.km_rest = km_rest
+        self.tau1_rest = tau1_rest
+        self.tau2 = tau2
+        self.force_ocp = None
+        self.force_identification_result = None
+        self.alpha_a = None
+        self.alpha_km = None
+        self.alpha_tau1 = None
+        self.tau_fat = None
+        self.fatigue_identification_result = None
+        self.fatigue_ocp = None
+        self.kwargs = kwargs
+
         # --- Force model --- #
-        if isinstance(force_model_data_path, list):
-            for i in range(len(force_model_data_path)):
-                if not isinstance(force_model_data_path[i], str):
-                    raise TypeError(
-                        f"In the given list, all f_muscle_force_model_data_path must be str type,"
-                        f" path index n°{i} is not str type"
-                    )
-                if not force_model_data_path[i].endswith(".pkl"):
-                    raise TypeError(
-                        f"In the given list, all f_muscle_force_model_data_path must be pickle type and end with .pkl,"
-                        f" path index n°{i} is not ending with .pkl"
-                    )
-        elif isinstance(force_model_data_path, str):
-            force_model_data_path = [force_model_data_path]
-            if not force_model_data_path[0].endswith(".pkl"):
-                raise TypeError(
-                    f"In the given list, all f_muscle_force_model_data_path must be pickle type and end with .pkl,"
-                    f" path index is not ending with .pkl"
-                )
-        else:
-            raise TypeError(
-                f"In the given path, all f_muscle_force_model_data_path must be str type,"
-                f" the input is {type(force_model_data_path)} type and not str type"
-            )
+        if force_model_data_path:
+            self.data_sanity(force_model_data_path, "force")
 
         # --- Fatigue model --- #
-        if isinstance(fatigue_model_data_path, list):
-            for i in range(len(fatigue_model_data_path)):
-                if not isinstance(fatigue_model_data_path[i], str):
-                    raise TypeError(
-                        f"In the given list, all f_muscle_fatigue_model_data_path must be str type,"
-                        f" path index n°{i} is not str type"
-                    )
-                if not fatigue_model_data_path[i].endswith(".pkl"):
+        if fatigue_model_data_path:
+            self.data_sanity(fatigue_model_data_path, "fatigue")
+
+        # --- Check model parameters --- #
+        if not isinstance(self.a_rest, None | int | float):
+            raise TypeError(f"a_rest must be None, int or float type, the given type is {type(self.a_rest)}")
+
+        if not isinstance(self.km_rest, None | int | float):
+            raise TypeError(f"km_rest must be None, int or float type, the given type is {type(self.km_rest)}")
+
+        if not isinstance(self.tau1_rest, None | int | float):
+            raise TypeError(f"tau1_rest must be None, int or float type, the given type is {type(self.tau1_rest)}")
+
+        if not isinstance(self.tau2, None | int | float):
+            raise TypeError(f"tau2 must be None, int or float type, the given type is {type(self.tau2)}")
+
+    @staticmethod
+    def data_sanity(data_path, model_type):
+        if model_type == "force":
+            if isinstance(data_path, list):
+                for i in range(len(data_path)):
+                    if not isinstance(data_path[i], str):
+                        raise TypeError(
+                            f"In the given list, all f_muscle_force_model_data_path must be str type,"
+                            f" path index n°{i} is not str type"
+                        )
+                    if not data_path[i].endswith(".pkl"):
+                        raise TypeError(
+                            f"In the given list, all f_muscle_force_model_data_path must be pickle type and end with .pkl,"
+                            f" path index n°{i} is not ending with .pkl"
+                        )
+            elif isinstance(data_path, str):
+                force_model_data_path = [data_path]
+                if not force_model_data_path[0].endswith(".pkl"):
                     raise TypeError(
                         f"In the given list, all f_muscle_force_model_data_path must be pickle type and end with .pkl,"
-                        f" path index n°{i} is not ending with .pkl"
+                        f" path index is not ending with .pkl"
                     )
-        elif isinstance(fatigue_model_data_path, str):
-            fatigue_model_data_path = [fatigue_model_data_path]
-            if not fatigue_model_data_path[0].endswith(".pkl"):
+            else:
                 raise TypeError(
-                    f"In the given list, all f_muscle_force_model_data_path must be pickle type and end with .pkl,"
-                    f" path index is not ending with .pkl"
+                    f"In the given path, all f_muscle_force_model_data_path must be str type,"
+                    f" the input is {type(data_path)} type and not str type"
                 )
-        else:
-            raise TypeError(
-                f"In the given path, all f_muscle_fatigue_model_data_path must be str type,"
-                f" the input is {type(fatigue_model_data_path)} type and not str type"
-            )
 
-        # --- Data extraction --- #
-        # --- Force model --- #
+        # --- Fatigue model --- #
+        if model_type == "fatigue":
+            if isinstance(data_path, list):
+                for i in range(len(data_path)):
+                    if not isinstance(data_path[i], str):
+                        raise TypeError(
+                            f"In the given list, all f_muscle_fatigue_model_data_path must be str type,"
+                            f" path index n°{i} is not str type"
+                        )
+                    if not data_path[i].endswith(".pkl"):
+                        raise TypeError(
+                            f"In the given list, all f_muscle_force_model_data_path must be pickle type and end with .pkl,"
+                            f" path index n°{i} is not ending with .pkl"
+                        )
+            elif isinstance(data_path, str):
+                fatigue_model_data_path = [data_path]
+                if not fatigue_model_data_path[0].endswith(".pkl"):
+                    raise TypeError(
+                        f"In the given list, all f_muscle_force_model_data_path must be pickle type and end with .pkl,"
+                        f" path index is not ending with .pkl"
+                    )
+            else:
+                raise TypeError(
+                    f"In the given path, all f_muscle_fatigue_model_data_path must be str type,"
+                    f" the input is {type(data_path)} type and not str type"
+                )
+
+    @staticmethod
+    def full_data_extraction(model_data_path):
         import pickle
 
-        global_force_model_muscle_data = []
-        global_force_model_stim_apparition_time = []
-        global_force_model_time_data = []
+        global_model_muscle_data = []
+        global_model_stim_apparition_time = []
+        global_model_time_data = []
 
-        force_discontinuity_phase_list = []
-        for i in range(len(force_model_data_path)):
-            with open(force_model_data_path[i], "rb") as f:
+        discontinuity_phase_list = []
+        for i in range(len(model_data_path)):
+            with open(model_data_path[i], "rb") as f:
                 data = pickle.load(f)
-            force_model_data = data["biceps"]
+            model_data = data["biceps"]
 
             # Arranging the data to have the beginning time starting at 0 second for all data
-            force_model_stim_apparition_time = (
+            model_stim_apparition_time = (
                 data["stim_time"]
                 if data["stim_time"][0] == 0
                 else [stim_time - data["stim_time"][0] for stim_time in data["stim_time"]]
             )
 
-            force_model_time_data = (
+            model_time_data = (
                 data["time"]
                 if data["stim_time"][0] == 0
                 else [[(time - data["stim_time"][0]) for time in row] for row in data["time"]]
             )
 
-            """
-            # # Average on each force curve
+            model_data = [item for sublist in model_data for item in sublist]
+            model_time_data = [item for sublist in model_time_data for item in sublist]
+
+            # Indexing the current data time on the previous one to ensure time continuity
+            if i != 0:
+                discontinuity_phase_list.append(
+                    len(model_stim_apparition_time[-1]) - 1
+                    if discontinuity_phase_list == []
+                    else discontinuity_phase_list[-1] + len(model_stim_apparition_time[-1])
+                    # + (1 * i - 2)  # TODO : find a better way to fix this than + (1 * i - 2)
+                )
+
+                model_stim_apparition_time = [
+                    stim_time + global_model_time_data[i - 1][-1] for stim_time in model_stim_apparition_time
+                ]
+
+                model_time_data = [(time + global_model_time_data[i - 1][-1]) for time in model_time_data]
+                model_stim_apparition_time = [
+                    (time + global_model_time_data[i - 1][-1]) for time in model_stim_apparition_time
+                ]
+
+            # Storing data into global lists
+            global_model_muscle_data.append(model_data)
+            global_model_stim_apparition_time.append(model_stim_apparition_time)
+            global_model_time_data.append(model_time_data)
+        # Expending global lists
+        global_model_muscle_data = [item for sublist in global_model_muscle_data for item in sublist]
+        global_model_stim_apparition_time = [item for sublist in global_model_stim_apparition_time for item in sublist]
+        global_model_time_data = [item for sublist in global_model_time_data for item in sublist]
+        return (
+            global_model_time_data,
+            global_model_stim_apparition_time,
+            global_model_muscle_data,
+            discontinuity_phase_list,
+        )
+
+    @staticmethod
+    def average_data_extraction(model_data_path):
+        import pickle
+
+        global_model_muscle_data = []
+        global_model_stim_apparition_time = []
+        global_model_time_data = []
+
+        discontinuity_phase_list = []
+        for i in range(len(model_data_path)):
+            with open(model_data_path[i], "rb") as f:
+                data = pickle.load(f)
+            model_data = data["biceps"]
+
+            # Arranging the data to have the beginning time starting at 0 second for all data
+            model_stim_apparition_time = (
+                data["stim_time"]
+                if data["stim_time"][0] == 0
+                else [stim_time - data["stim_time"][0] for stim_time in data["stim_time"]]
+            )
+
+            model_time_data = (
+                data["time"]
+                if data["stim_time"][0] == 0
+                else [[(time - data["stim_time"][0]) for time in row] for row in data["time"]]
+            )
+
+            # Average on each force curve
             smallest_list = 0
-            for j in range(len(force_model_data)):
+            for j in range(len(model_data)):
                 if j == 0:
-                    smallest_list = len(force_model_data[j])
-                if len(force_model_data[j]) < smallest_list:
-                    smallest_list = len(force_model_data[j])
-            force_model_data = np.mean([row[:smallest_list] for row in force_model_data], axis=0).tolist()
-            """
+                    smallest_list = len(model_data[j])
+                if len(model_data[j]) < smallest_list:
+                    smallest_list = len(model_data[j])
 
-            force_model_data = [item for sublist in force_model_data for item in sublist]
-            force_model_time_data = [item for sublist in force_model_time_data for item in sublist]
+            model_data = np.mean([row[:smallest_list] for row in model_data], axis=0).tolist()
+            # model_data = [item for sublist in model_data for item in sublist]
+            model_time_data = [item for sublist in model_time_data for item in sublist]
 
-            """
-            force_model_time_data = force_model_time_data[:smallest_list]
+            model_time_data = model_time_data[:smallest_list]
             frequency = 33
             train_duration = 1
-            average_stim_apparition = np.linspace(0, train_duration, (frequency*train_duration) + 1)[:-1]
-            average_stim_apparition = np.append(average_stim_apparition, force_model_time_data[-1]).tolist()
-            """
+            average_stim_apparition = np.linspace(0, train_duration, (frequency * train_duration) + 1)[:-1]
+            average_stim_apparition = np.append(average_stim_apparition, model_time_data[-1]).tolist()
 
             # Indexing the current data time on the previous one to ensure time continuity
             if i != 0:
-                # average_stim_apparition = average_stim_apparition[1:]
-                force_discontinuity_phase_list.append(
-                    len(global_force_model_stim_apparition_time[-1]) - 1
-                    if force_discontinuity_phase_list == []
-                    else force_discontinuity_phase_list[-1] + len(global_force_model_stim_apparition_time[-1]) # + (1 * i - 2)  # TODO : find a better way to fix this than + (1 * i - 2)
+                average_stim_apparition = average_stim_apparition[1:]
+                discontinuity_phase_list.append(
+                    len(global_model_stim_apparition_time[-1]) - 1
+                    if discontinuity_phase_list == []
+                    else discontinuity_phase_list[-1] + len(global_model_stim_apparition_time[-1])
+                    # + (1 * i - 2)  # TODO : find a better way to fix this than + (1 * i - 2)
                 )
 
-                force_model_stim_apparition_time = [
-                    stim_time + global_force_model_time_data[i - 1][-1]
-                    for stim_time in force_model_stim_apparition_time
+                model_time_data = [(time + global_model_time_data[i - 1][-1]) for time in model_time_data]
+                average_stim_apparition = [
+                    (time + global_model_time_data[i - 1][-1]) for time in average_stim_apparition
                 ]
-
-                force_model_time_data = [(time + global_force_model_time_data[i - 1][-1]) for time in force_model_time_data]
-                force_model_stim_apparition_time = [(time + global_force_model_time_data[i - 1][-1]) for time in force_model_stim_apparition_time]
-                # average_stim_apparition = [(time + global_force_model_time_data[i - 1][-1]) for time in average_stim_apparition]
-                # average_stim_apparition = average_stim_apparition[1:]
+                average_stim_apparition = average_stim_apparition[1:]
             # Storing data into global lists
-            global_force_model_muscle_data.append(force_model_data)
-            global_force_model_stim_apparition_time.append(force_model_stim_apparition_time)
-            # global_force_model_stim_apparition_time.append(average_stim_apparition)
-            global_force_model_time_data.append(force_model_time_data)
+            global_model_muscle_data.append(model_data)
+            global_model_stim_apparition_time.append(average_stim_apparition)
+            global_model_time_data.append(model_time_data)
+
         # Expending global lists
-        global_force_model_muscle_data = [item for sublist in global_force_model_muscle_data for item in sublist]
-        global_force_model_stim_apparition_time = [
-            item for sublist in global_force_model_stim_apparition_time for item in sublist
-        ]
-        global_force_model_time_data = [item for sublist in global_force_model_time_data for item in sublist]
+        global_model_muscle_data = [item for sublist in global_model_muscle_data for item in sublist]
+        global_model_stim_apparition_time = [item for sublist in global_model_stim_apparition_time for item in sublist]
+        global_model_time_data = [item for sublist in global_model_time_data for item in sublist]
+        return (
+            global_model_time_data,
+            global_model_stim_apparition_time,
+            global_model_muscle_data,
+            discontinuity_phase_list,
+        )
 
-        # --- Fatigue model --- #
-        global_fatigue_model_muscle_data = []
-        global_fatigue_model_stim_apparition_time = []
-        global_fatigue_model_time_data = []
+    @staticmethod
+    def sparse_data_extraction(model_data_path, force_curve_number=5):
+        import pickle
 
-        fatigue_discontinuity_phase_list = []
-        for i in range(len(fatigue_model_data_path)):
-            with open(fatigue_model_data_path[i], "rb") as f:
+        global_model_muscle_data = []
+        global_model_stim_apparition_time = []
+        global_model_time_data = []
+
+        discontinuity_phase_list = []
+        for i in range(len(model_data_path)):
+            with open(model_data_path[i], "rb") as f:
                 data = pickle.load(f)
-            fatigue_model_data = data["biceps"]
+            model_data = data["biceps"]
+
             # Arranging the data to have the beginning time starting at 0 second for all data
-            fatigue_model_stim_apparition_time = (
+            model_stim_apparition_time = (
                 data["stim_time"]
                 if data["stim_time"][0] == 0
                 else [stim_time - data["stim_time"][0] for stim_time in data["stim_time"]]
             )
-            fatigue_model_time_data = (
+
+            model_time_data = (
                 data["time"]
                 if data["stim_time"][0] == 0
                 else [[(time - data["stim_time"][0]) for time in row] for row in data["time"]]
             )
+
+            # TODO : check this part
+            model_data = model_data[0:force_curve_number] + model_data[:-force_curve_number]
+            model_time_data = model_time_data[0:force_curve_number] + model_time_data[:-force_curve_number]
+
+            # TODO correct this part
+            model_stim_apparition_time = (
+                model_stim_apparition_time[0:force_curve_number] + model_stim_apparition_time[:-force_curve_number]
+            )
+
+            model_data = [item for sublist in model_data for item in sublist]
+            model_time_data = [item for sublist in model_time_data for item in sublist]
+
             # Indexing the current data time on the previous one to ensure time continuity
             if i != 0:
-                fatigue_discontinuity_phase_list.append(
-                    len(global_fatigue_model_stim_apparition_time[-1]) - 1
-                    if fatigue_discontinuity_phase_list == []
-                    else fatigue_discontinuity_phase_list[-1] + len(global_fatigue_model_stim_apparition_time[-1]) - 1
+                discontinuity_phase_list.append(
+                    len(global_model_stim_apparition_time[-1]) - 1
+                    if discontinuity_phase_list == []
+                    else discontinuity_phase_list[-1] + len(global_model_stim_apparition_time[-1])
+                    # + (1 * i - 2)  # TODO : find a better way to fix this than + (1 * i - 2)
                 )
-                fatigue_model_stim_apparition_time = [
-                    stim_time + global_fatigue_model_time_data[i - 1][-1]
-                    for stim_time in fatigue_model_stim_apparition_time
+
+                model_stim_apparition_time = [
+                    stim_time + global_model_time_data[i - 1][-1] for stim_time in model_stim_apparition_time
                 ]
-                fatigue_model_time_data = [
-                    [(time + global_fatigue_model_time_data[i - 1][-1]) for time in row]
-                    for row in fatigue_model_time_data
+
+                model_time_data = [(time + global_model_time_data[i - 1][-1]) for time in model_time_data]
+                model_stim_apparition_time = [
+                    (time + global_model_time_data[i - 1][-1]) for time in model_stim_apparition_time
                 ]
-            # Expending lists
-            fatigue_model_data = [item for sublist in fatigue_model_data for item in sublist]
-            fatigue_model_time_data = [item for sublist in fatigue_model_time_data for item in sublist]
+
             # Storing data into global lists
-            global_fatigue_model_muscle_data.append(fatigue_model_data)
-            global_fatigue_model_stim_apparition_time.append(fatigue_model_stim_apparition_time)
-            global_fatigue_model_time_data.append(fatigue_model_time_data)
+            global_model_muscle_data.append(model_data)
+            global_model_stim_apparition_time.append(model_stim_apparition_time)
+            global_model_time_data.append(model_time_data)
         # Expending global lists
-        global_fatigue_model_muscle_data = [item for sublist in global_fatigue_model_muscle_data for item in sublist]
-        global_fatigue_model_stim_apparition_time = [
-            item for sublist in global_fatigue_model_stim_apparition_time for item in sublist
-        ]
-        global_fatigue_model_time_data = [item for sublist in global_fatigue_model_time_data for item in sublist]
+        global_model_muscle_data = [item for sublist in global_model_muscle_data for item in sublist]
+        global_model_stim_apparition_time = [item for sublist in global_model_stim_apparition_time for item in sublist]
+        global_model_time_data = [item for sublist in global_model_time_data for item in sublist]
+
+        return (
+            global_model_time_data,
+            global_model_stim_apparition_time,
+            global_model_muscle_data,
+            discontinuity_phase_list,
+        )
+
+    @staticmethod
+    def force_at_node_in_ocp(time, force, n_shooting, n_stim, final_time_phase, sparse=None):
+        temp_time = []
+        for i in range(n_stim):
+            for j in range(n_shooting[i]):
+                temp_time.append(sum(final_time_phase[:i]) + j * final_time_phase[i] / (n_shooting[i]))
+        force_at_node = np.interp(temp_time, time, force).tolist()
+        if sparse:  # TODO check this part
+            force_at_node = force_at_node[0:sparse] + force_at_node[:-sparse]
+        return force_at_node
+
+    @staticmethod
+    def node_shooting_list_creation(stim, stimulated_n_shooting, rest_n_shooting=None):
+        final_time_phase = ()
+
+        for i in range(len(stim)):
+            final_time_phase = (stim[1],) if i == 0 else final_time_phase + (stim[i] - stim[i - 1],)
+
+        stimulation_interval_average = np.mean(final_time_phase)
+        n_shooting = []
+
+        for i in range(len(stim)):
+            if final_time_phase[i] > stimulation_interval_average:
+                temp_final_time = final_time_phase[i]
+                if rest_n_shooting is None:
+                    rest_n_shooting = int(stimulated_n_shooting * temp_final_time / stimulation_interval_average)
+                n_shooting.append(rest_n_shooting)
+            else:
+                n_shooting.append(stimulated_n_shooting)
+
+        return n_shooting, final_time_phase
+
+    def force_model_identification(self):
+        self.data_sanity(self.force_model_data_path, "force")
+        # --- Data extraction --- #
+        # --- Force model --- #
+        stimulated_n_shooting = self.kwargs["n_shooting"] if "n_shooting" in self.kwargs else 5
+        rest_n_shooting = self.kwargs["n_shooting"] if "n_shooting" in self.kwargs else None
+        force_curve_number = None
+
+        if self.force_model_identification_method == "full":
+            time, stim, force, discontinuity = self.full_data_extraction(self.force_model_data_path)
+
+        elif self.force_model_identification_method == "average":
+            time, stim, force, discontinuity = self.average_data_extraction(self.force_model_data_path)
+
+        elif self.force_model_identification_method == "sparse":
+            force_curve_number = self.kwargs["force_curve_number"] if "force_curve_number" in self.kwargs else 5
+            time, stim, force, discontinuity = self.sparse_data_extraction(
+                self.force_model_data_path, force_curve_number
+            )
+        else:
+            raise ValueError(
+                f"The given force_model_identification_method is not valid,"
+                f"only 'full', 'average' and 'sparse' are available,"
+                f" the given value is {self.force_model_identification_method}"
+            )
+
+        n_stim = len(stim)
+        n_shooting, final_time_phase = self.node_shooting_list_creation(stim, stimulated_n_shooting, rest_n_shooting)
+        force_at_node = self.force_at_node_in_ocp(time, force, n_shooting, n_stim, final_time_phase, force_curve_number)
 
         # --- Building force ocp --- #
         self.force_ocp = FunctionalElectricStimulationOptimalControlProgramIdentification(
-            model=model,
+            model=self.model,
             with_fatigue=False,
-            stimulated_n_shooting=5,  # 5
-            rest_n_shooting=165,  # 165
-            force_tracking=[np.array(global_force_model_time_data), np.array(global_force_model_muscle_data)],
-            pulse_apparition_time=global_force_model_stim_apparition_time,
+            # stimulated_n_shooting=stimulated_n_shooting,
+            # rest_n_shooting=rest_n_shooting,
+            force_tracking=force_at_node,
+            pulse_apparition_time=stim,
             pulse_duration=None,
             pulse_intensity=None,
-            discontinuity_in_ocp=force_discontinuity_phase_list,
-            use_sx=kwargs["use_sx"] if "use_sx" in kwargs else False,
+            discontinuity_in_ocp=discontinuity,
+            use_sx=self.kwargs["use_sx"] if "use_sx" in self.kwargs else False,
+            ode_solver=self.kwargs["ode_solver"]
+            if "ode_solver" in self.kwargs
+            else OdeSolver.RK4(n_integration_steps=1),
         )
-        # del global_force_model_muscle_data, global_force_model_stim_apparition_time, global_force_model_time_data
 
-        result = self.force_ocp.solve(Solver.IPOPT())
-        # result.graphs(show_bounds=True)
+        self.force_identification_result = self.force_ocp.solve(Solver.IPOPT())
 
-        for i in range(len(global_force_model_stim_apparition_time)):
-            self.final_time_phase = () if i == 0 else self.final_time_phase + (global_force_model_stim_apparition_time[i] - global_force_model_stim_apparition_time[i - 1],)
+        self.a_rest = self.force_identification_result.parameters["a_rest"][0][0]
+        self.km_rest = self.force_identification_result.parameters["km_rest"][0][0]
+        self.tau1_rest = self.force_identification_result.parameters["tau1_rest"][0][0]
+        self.tau2 = self.force_identification_result.parameters["tau2"][0][0]
 
-        self.n_stim = len(self.final_time_phase)
+        return self.a_rest, self.km_rest, self.tau1_rest, self.tau2
 
-        stimulation_interval_average = np.mean(self.final_time_phase)
-        self.n_shooting = []
-        for i in range(self.n_stim):
-            if self.final_time_phase[i] > stimulation_interval_average:
-                temp_final_time = self.final_time_phase[i]
-                rest_n_shooting = int(5 * temp_final_time / stimulation_interval_average)
-                self.n_shooting.append(rest_n_shooting)
-            else:
-                self.n_shooting.append(5)
+    def fatigue_model_identification(self):
+        self.data_sanity(self.fatigue_model_data_path, "fatigue")
+        # --- Data extraction --- #
+        # --- Fatigue model --- #
+        stimulated_n_shooting = self.kwargs["n_shooting"] if "n_shooting" in self.kwargs else 5
+        rest_n_shooting = self.kwargs["n_shooting"] if "n_shooting" in self.kwargs else None
+        force_curve_number = None
 
-        self.force_at_node = []
-        temp_time = []
-        for i in range(self.n_stim):
-            for j in range(self.n_shooting[i]):
-                temp_time.append(sum(self.final_time_phase[:i]) + j * self.final_time_phase[i] / (self.n_shooting[i]))
-        self.force_at_node = np.interp(temp_time, np.array(global_force_model_time_data), np.array(global_force_model_muscle_data)).tolist()
+        if self.fatigue_model_identification_method == "full":
+            time, stim, force, discontinuity = self.full_data_extraction(self.fatigue_model_data_path)
+        elif self.fatigue_model_identification_method == "average":
+            time, stim, force, discontinuity = self.average_data_extraction(self.fatigue_model_data_path)
+        elif self.fatigue_model_identification_method == "sparse":
+            force_curve_number = self.kwargs["force_curve_number"] if "force_curve_number" in self.kwargs else 5
+            time, stim, force, discontinuity = self.sparse_data_extraction(
+                self.fatigue_model_data_path, force_curve_number
+            )
+        else:
+            raise ValueError(
+                f"The given fatigue_model_identification_method is not valid,"
+                f"only 'full', 'average' and 'sparse' are available,"
+                f" the given value is {self.fatigue_model_identification_method}"
+            )
 
-        # --- Print force model results --- #
-        print(result.parameters)
-        result_merged = result.merge_phases()
-        plt.scatter(result_merged.time, result_merged.states["F"][0], label="identification")
-        # global_force_model_muscle_data = np.array(
-        #     np.where(np.array(global_force_model_muscle_data) < 0, 0, global_force_model_muscle_data)
-        # ).tolist()
-        plt.scatter(temp_time, self.force_at_node, label="tracking")
-        # for discontinuity in force_discontinuity_phase_list:
-        for i in range(len(global_force_model_stim_apparition_time)):
-            # plt.axvline(x=temp_time[sum(self.n_shooting[:stim])], ls='--', color='black')
-            plt.axvline(x=global_force_model_stim_apparition_time[i], ls='--', color='black')
-        plt.legend()
-        plt.show()
+        n_stim = len(stim)
+        n_shooting, final_time_phase = self.node_shooting_list_creation(stim, stimulated_n_shooting, rest_n_shooting)
+        force_at_node = self.force_at_node_in_ocp(time, force, n_shooting, n_stim, final_time_phase, force_curve_number)
 
         # --- Building fatigue ocp --- #
-        self.fatigue_ocp = FunctionalElectricStimulationOptimalControlProgramIdentification(
-            model=model,
-            with_fatigue=True,
-            stimulated_n_shooting=5,  # 5
-            # rest_n_shooting=165,  # 165
-            force_tracking=[np.array(global_fatigue_model_time_data), np.array(global_fatigue_model_muscle_data)],
-            pulse_apparition_time=global_fatigue_model_stim_apparition_time,
-            pulse_duration=None,
-            pulse_intensity=None,
-            a_rest=result.parameters["a_rest"][0][0],
-            km_rest=result.parameters["km_rest"][0][0],
-            tau1_rest=result.parameters["tau1_rest"][0][0],
-            tau2=result.parameters["tau2"][0][0],
-            # a_rest=1582.43,
-            # km_rest=1,
-            # tau1_rest=0.0034,
-            # tau2=0.2032,
-            discontinuity_in_ocp=fatigue_discontinuity_phase_list,
-            use_sx=kwargs["use_sx"] if "use_sx" in kwargs else False,
-        )
-    #
-    # # del global_fatigue_model_muscle_data, global_fatigue_model_stim_apparition_time, global_fatigue_model_time_data
-    #
-        result_fatigue = self.fatigue_ocp.solve(Solver.IPOPT())
-        # --- Print fatigue model results --- #
-        print(result_fatigue.parameters)
-        result_merged = result.merge_phases()
-        plt.plot(result_merged.time, result_merged.states["F"][0], label="identification")
-        global_fatigue_model_muscle_data = np.array(
-            np.where(np.array(global_fatigue_model_muscle_data) < 0, 0, global_fatigue_model_muscle_data)
-        ).tolist()
-        plt.plot(global_fatigue_model_time_data, global_fatigue_model_muscle_data, label="tracking")
-        plt.legend()
-        plt.show()
+        if self.a_rest and self.km_rest and self.tau1_rest and self.tau2:
+            self.fatigue_ocp = FunctionalElectricStimulationOptimalControlProgramIdentification(
+                model=self.model,
+                with_fatigue=True,
+                # stimulated_n_shooting=5,  # 5
+                # # rest_n_shooting=165,  # 165
+                force_tracking=force_at_node,
+                pulse_apparition_time=stim,
+                pulse_duration=None,
+                pulse_intensity=None,
+                a_rest=self.a_rest,
+                km_rest=self.km_rest,
+                tau1_rest=self.tau1_rest,
+                tau2=self.tau2,
+                discontinuity_in_ocp=discontinuity,
+                use_sx=self.kwargs["use_sx"] if "use_sx" in self.kwargs else False,
+            )
+        else:
+            raise ValueError(
+                "If no force identification is done before fatigue identification, a_rest, km_rest,"
+                " tau1_rest and tau2 must be given in class arguments"
+            )
+
+        self.fatigue_identification_result = self.fatigue_ocp.solve(Solver.IPOPT())
+
+        self.alpha_a = self.fatigue_identification_result.parameters["alpha_a"][0][0]
+        self.alpha_km = self.fatigue_identification_result.parameters["alpha_km"][0][0]
+        self.alpha_tau1 = self.fatigue_identification_result.parameters["alpha_tau1"][0][0]
+        self.tau_fat = self.fatigue_identification_result.parameters["tau_fat"][0][0]
+
+        return self.alpha_a, self.alpha_km, self.alpha_tau1, self.tau_fat
 
 
 if __name__ == "__main__":
-    DingModelFrequencyParameterIdentification(
+    a = DingModelFrequencyParameterIdentification(
         model=DingModelFrequency,
-        force_model_data_path=["D:/These/Programmation/Modele_Musculaire/optistim/data_process/biceps_force_70_1.pkl",
-                               "D:/These/Programmation/Modele_Musculaire/optistim/data_process/biceps_force_70_2.pkl",
-                               "D:/These/Programmation/Modele_Musculaire/optistim/data_process/biceps_force_70_3.pkl"],
-                               # "D:/These/Programmation/Modele_Musculaire/optistim/data_process/biceps_force_90_1.pkl",
-                               # "D:/These/Programmation/Modele_Musculaire/optistim/data_process/biceps_force_90_2.pkl",
-                               # "D:/These/Programmation/Modele_Musculaire/optistim/data_process/biceps_force_90_3.pkl",
-                               # "D:/These/Programmation/Modele_Musculaire/optistim/data_process/biceps_force_110_1.pkl",
-                               # "D:/These/Programmation/Modele_Musculaire/optistim/data_process/biceps_force_110_2.pkl",
-                               # "D:/These/Programmation/Modele_Musculaire/optistim/data_process/biceps_force_110_3.pkl"],
+        force_model_data_path=[
+            "D:/These/Programmation/Modele_Musculaire/optistim/data_process/biceps_force_70_1.pkl",
+            "D:/These/Programmation/Modele_Musculaire/optistim/data_process/biceps_force_70_2.pkl",
+            "D:/These/Programmation/Modele_Musculaire/optistim/data_process/biceps_force_70_3.pkl",
+        ],
+        # "D:/These/Programmation/Modele_Musculaire/optistim/data_process/biceps_force_90_1.pkl",
+        # "D:/These/Programmation/Modele_Musculaire/optistim/data_process/biceps_force_90_2.pkl",
+        # "D:/These/Programmation/Modele_Musculaire/optistim/data_process/biceps_force_90_3.pkl",
+        # "D:/These/Programmation/Modele_Musculaire/optistim/data_process/biceps_force_110_1.pkl",
+        # "D:/These/Programmation/Modele_Musculaire/optistim/data_process/biceps_force_110_2.pkl",
+        # "D:/These/Programmation/Modele_Musculaire/optistim/data_process/biceps_force_110_3.pkl"],
+        force_model_identification_method="average",
         fatigue_model_data_path=[
             "D:/These/Programmation/Modele_Musculaire/optistim/data_process/biceps_force_fatigue_0.pkl"
         ],
+        fatigue_model_identification_method="full",
         use_sx=True,
     )
+
+    a_rest, km_rest, tau1_rest, tau2 = a.force_model_identification()
+    a.force_identification_result.graphs()
