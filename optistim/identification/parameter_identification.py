@@ -231,18 +231,13 @@ class DingModelFrequencyParameterIdentification:
                 data = pickle.load(f)
             model_data = data["biceps"]
 
-            # Arranging the data to have the beginning time starting at 0 second for all data
-            model_stim_apparition_time = (
-                data["stim_time"]
-                if data["stim_time"][0] == 0
-                else [stim_time - data["stim_time"][0] for stim_time in data["stim_time"]]
-            )
-
-            # TODO : To implement later
-            # temp_stimulation_instant = []
-            # for j in range(1, data["stim_time"]):
-            #     temp_stimulation_instant.append(data["stim_time"][j] - data["stim_time"][j-1])
-            # stimulation_temp_frequency = 1/np.mean(temp_stimulation_instant)
+            temp_stimulation_instant = []
+            stim_threshold = data["stim_time"][1] - data["stim_time"][0]
+            for j in range(1, len(data["stim_time"])):
+                stim_interval = data["stim_time"][j] - data["stim_time"][j-1]
+                if stim_interval < stim_threshold * 1.5:
+                    temp_stimulation_instant.append(data["stim_time"][j] - data["stim_time"][j-1])
+            stimulation_temp_frequency = round(1/np.mean(temp_stimulation_instant), 0)
 
             model_time_data = (
                 data["time"]
@@ -263,31 +258,26 @@ class DingModelFrequencyParameterIdentification:
             model_time_data = [item for sublist in model_time_data for item in sublist]
 
             model_time_data = model_time_data[:smallest_list]
-            frequency = 33
             train_duration = 1
 
-            # TODO : To implement later
-            # average_stim_apparition = np.linspace(0, train_duration, (stimulation_temp_frequency * train_duration) + 1)[:-1]
-            # average_stim_apparition = np.append(average_stim_apparition, model_time_data[-1]).tolist()
-
-            average_stim_apparition = np.linspace(0, train_duration, (frequency * train_duration) + 1)[:-1]
-            average_stim_apparition = np.append(average_stim_apparition, model_time_data[-1]).tolist()
+            average_stim_apparition = np.linspace(0, train_duration, int(stimulation_temp_frequency * train_duration) + 1)[:-1]
+            average_stim_apparition = [time for time in average_stim_apparition]
+            if i == len(model_data_path)-1:
+                average_stim_apparition = np.append(average_stim_apparition, model_time_data[-1]).tolist()
 
             # Indexing the current data time on the previous one to ensure time continuity
             if i != 0:
-                average_stim_apparition = average_stim_apparition[1:]
                 discontinuity_phase_list.append(
-                    len(global_model_stim_apparition_time[-1]) - 1
+                    len(global_model_stim_apparition_time[-1])
                     if discontinuity_phase_list == []
                     else discontinuity_phase_list[-1] + len(global_model_stim_apparition_time[-1])
-                         # + (1 * i - 2)  # TODO : find a better way to fix this than + (1 * i - 2)
                 )
 
                 model_time_data = [(time + global_model_time_data[i - 1][-1]) for time in model_time_data]
                 average_stim_apparition = [
                     (time + global_model_time_data[i - 1][-1]) for time in average_stim_apparition
                 ]
-                average_stim_apparition = average_stim_apparition[1:]
+
             # Storing data into global lists
             global_model_muscle_data.append(model_data)
             global_model_stim_apparition_time.append(average_stim_apparition)
@@ -434,8 +424,11 @@ class DingModelFrequencyParameterIdentification:
                 f" the given value is {self.force_model_identification_method}"
             )
 
+
         n_stim = len(stim)
-        n_shooting, final_time_phase = self.node_shooting_list_creation(stim, stimulated_n_shooting, rest_n_shooting)
+        n_shooting, final_time_phase = self.node_shooting_list_creation(stim,
+                                                                        stimulated_n_shooting,
+                                                                        rest_n_shooting)
         force_at_node = self.force_at_node_in_ocp(time, force, n_shooting, final_time_phase, force_curve_number)
 
         # --- Building force ocp --- #
@@ -528,8 +521,8 @@ if __name__ == "__main__":
         model=DingModelFrequency,
         force_model_data_path=[
             "D:/These/Programmation/Modele_Musculaire/optistim/data_process/biceps_force_70_1.pkl",
-            "D:/These/Programmation/Modele_Musculaire/optistim/data_process/biceps_force_70_2.pkl",
-            "D:/These/Programmation/Modele_Musculaire/optistim/data_process/biceps_force_70_3.pkl",
+            # "D:/These/Programmation/Modele_Musculaire/optistim/data_process/biceps_force_70_2.pkl",
+            # "D:/These/Programmation/Modele_Musculaire/optistim/data_process/biceps_force_70_3.pkl",
         ],
         # "D:/These/Programmation/Modele_Musculaire/optistim/data_process/biceps_force_90_1.pkl",
         # "D:/These/Programmation/Modele_Musculaire/optistim/data_process/biceps_force_90_2.pkl",
@@ -537,7 +530,7 @@ if __name__ == "__main__":
         # "D:/These/Programmation/Modele_Musculaire/optistim/data_process/biceps_force_110_1.pkl",
         # "D:/These/Programmation/Modele_Musculaire/optistim/data_process/biceps_force_110_2.pkl",
         # "D:/These/Programmation/Modele_Musculaire/optistim/data_process/biceps_force_110_3.pkl"],
-        force_model_identification_method="average",
+        force_model_identification_method="full",
         fatigue_model_data_path=[
             "D:/These/Programmation/Modele_Musculaire/optistim/data_process/biceps_force_fatigue_0.pkl"
         ],
@@ -547,3 +540,4 @@ if __name__ == "__main__":
 
     a_rest, km_rest, tau1_rest, tau2 = a.force_model_identification()
     a.force_identification_result.graphs()
+    print("a_rest : ", a_rest, "km_rest : ", km_rest, "tau1_rest : ", tau1_rest, "tau2 : ", tau2)
