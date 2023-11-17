@@ -80,6 +80,10 @@ class FunctionalElectricStimulationOptimalControlProgramIdentification(OptimalCo
         pulse_duration: list[int] | list[float] = None,
         pulse_intensity: list[int] | list[float] = None,
         discontinuity_in_ocp: list[int] = None,
+        initial_a_rest: float = None,
+        initial_km_rest: float = None,
+        initial_tau1_rest: float = None,
+        initial_tau2: float = None,
         a_rest: float = None,
         km_rest: float = None,
         tau1_rest: float = None,
@@ -97,7 +101,12 @@ class FunctionalElectricStimulationOptimalControlProgramIdentification(OptimalCo
             if a_rest is None or km_rest is None or tau1_rest is None or tau2 is None:
                 raise ValueError("a_rest, km_rest, tau1_rest and tau2 must be set for fatigue model identification")
 
-        self.model = model(with_fatigue=self.with_fatigue)
+        self.initial_a_rest = initial_a_rest
+        self.initial_km_rest = initial_km_rest
+        self.initial_tau1_rest = initial_tau1_rest
+        self.initial_tau2 = initial_tau2
+
+        self.model = model(with_fatigue=self.with_fatigue, sum_stim_truncation=1)
         if self.with_fatigue:
             self.model.set_a_rest(model=None, a_rest=a_rest)
             self.model.set_km_rest(model=None, km_rest=km_rest)
@@ -197,7 +206,7 @@ class FunctionalElectricStimulationOptimalControlProgramIdentification(OptimalCo
             # u_bounds=self.u_bounds,
             objective_functions=self.objective_functions,
             constraints=self.constraints,
-            ode_solver=kwargs["ode_solver"] if "ode_solver" in kwargs else OdeSolver.RK4(n_integration_steps=1),
+            ode_solver=kwargs["ode_solver"] if "ode_solver" in kwargs else OdeSolver.RK1(n_integration_steps=1),
             control_type=ControlType.NONE,
             use_sx=kwargs["use_sx"] if "use_sx" in kwargs else False,
             parameters=self.parameters,
@@ -328,8 +337,12 @@ class FunctionalElectricStimulationOptimalControlProgramIdentification(OptimalCo
 
         if self.force_at_node:
             node_idx = 0
+            # reduce_counter = 0
             for i in range(self.n_stim):
                 for j in range(self.n_shooting[i]):
+                    # if reduce_counter < 10:
+                    #     pass
+                    # else:
                     self.objective_functions.add(
                         CustomObjective.track_state_from_time_interpolate,
                         custom_type=ObjectiveFcn.Mayer,
@@ -341,7 +354,9 @@ class FunctionalElectricStimulationOptimalControlProgramIdentification(OptimalCo
                         weight=1,
                         phase=i,
                     )
+                    # reduce_counter = 0
                     node_idx += 1
+                    # reduce_counter += 1
 
     def _set_parameters(self):
         self.parameters = ParameterList()
@@ -465,7 +480,7 @@ class FunctionalElectricStimulationOptimalControlProgramIdentification(OptimalCo
             )
 
             # --- Initial guess parameters --- #
-            self.parameters_init["a_rest"] = np.array([1000])  # TODO : fine tune initial guess
-            self.parameters_init["km_rest"] = np.array([0.1])  # TODO : fine tune initial guess
-            self.parameters_init["tau1_rest"] = np.array([0.1])  # TODO : fine tune initial guess
-            self.parameters_init["tau2"] = np.array([0.1])  # TODO : fine tune initial guess
+            self.parameters_init["a_rest"] = np.array([self.initial_a_rest if self.initial_a_rest else 1000])  # TODO : fine tune initial guess
+            self.parameters_init["km_rest"] = np.array([self.initial_km_rest if self.initial_km_rest else 0.1])  # TODO : fine tune initial guess
+            self.parameters_init["tau1_rest"] = np.array([self.initial_tau1_rest if self.initial_tau1_rest else 0.1])  # TODO : fine tune initial guess
+            self.parameters_init["tau2"] = np.array([self.initial_tau2 if self.initial_tau2 else 0.1])  # TODO : fine tune initial guess

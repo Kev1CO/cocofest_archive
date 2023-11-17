@@ -51,6 +51,7 @@ class DingModelFrequencyParameterIdentification:
         model: DingModelFrequency | DingModelPulseDurationFrequency | DingModelIntensityFrequency,
         force_model_data_path: str | list[str] = None,
         force_model_identification_method: str = "full",
+        force_model_identification_with_average_method_initial_guess: bool = False,
         fatigue_model_data_path: str | list[str] = None,
         fatigue_model_identification_method: str = "full",
         a_rest: float = None,
@@ -62,6 +63,7 @@ class DingModelFrequencyParameterIdentification:
         self.model = model
         self.force_model_data_path = force_model_data_path
         self.force_model_identification_method = force_model_identification_method
+        self.force_model_identification_with_average_method_initial_guess = force_model_identification_with_average_method_initial_guess
         self.fatigue_model_data_path = fatigue_model_data_path
         self.fatigue_model_identification_method = fatigue_model_identification_method
         self.a_rest = a_rest
@@ -398,6 +400,44 @@ class DingModelFrequencyParameterIdentification:
 
         return n_shooting, final_time_phase
 
+    def _force_model_identification_for_initial_guess(self):
+        self.data_sanity(self.force_model_data_path, "force")
+        # --- Data extraction --- #
+        # --- Force model --- #
+        stimulated_n_shooting = self.kwargs["n_shooting"] if "n_shooting" in self.kwargs else 5
+        rest_n_shooting = self.kwargs["n_shooting"] if "n_shooting" in self.kwargs else None
+        force_curve_number = None
+
+        time, stim, force, discontinuity = self.average_data_extraction(self.force_model_data_path)
+
+        n_shooting, final_time_phase = self.node_shooting_list_creation(stim,
+                                                                        stimulated_n_shooting,
+                                                                        rest_n_shooting)
+        force_at_node = self.force_at_node_in_ocp(time, force, n_shooting, final_time_phase, force_curve_number)
+
+        # --- Building force ocp --- #
+        self.force_ocp = FunctionalElectricStimulationOptimalControlProgramIdentification(
+            model=self.model,
+            with_fatigue=False,
+            final_time_phase=final_time_phase,
+            n_shooting=n_shooting,
+            force_tracking=force_at_node,
+            pulse_apparition_time=stim,
+            pulse_duration=None,
+            pulse_intensity=None,
+            discontinuity_in_ocp=discontinuity,
+            use_sx=self.kwargs["use_sx"] if "use_sx" in self.kwargs else False,
+        )
+
+        self.force_identification_result = self.force_ocp.solve(Solver.IPOPT())
+
+        initial_a_rest = self.force_identification_result.parameters["a_rest"][0][0]
+        initial_km_rest = self.force_identification_result.parameters["km_rest"][0][0]
+        initial_tau1_rest = self.force_identification_result.parameters["tau1_rest"][0][0]
+        initial_tau2 = self.force_identification_result.parameters["tau2"][0][0]
+
+        return initial_a_rest, initial_km_rest, initial_tau1_rest, initial_tau2
+
     def force_model_identification(self):
         self.data_sanity(self.force_model_data_path, "force")
         # --- Data extraction --- #
@@ -424,12 +464,16 @@ class DingModelFrequencyParameterIdentification:
                 f" the given value is {self.force_model_identification_method}"
             )
 
-
-        n_stim = len(stim)
         n_shooting, final_time_phase = self.node_shooting_list_creation(stim,
                                                                         stimulated_n_shooting,
                                                                         rest_n_shooting)
         force_at_node = self.force_at_node_in_ocp(time, force, n_shooting, final_time_phase, force_curve_number)
+
+        if self.force_model_identification_with_average_method_initial_guess:
+            initial_a_rest, initial_km_rest, initial_tau1_rest, initial_tau2 = self._force_model_identification_for_initial_guess()
+
+        else:
+            initial_a_rest, initial_km_rest, initial_tau1_rest, initial_tau2 = None, None, None, None
 
         # --- Building force ocp --- #
         self.force_ocp = FunctionalElectricStimulationOptimalControlProgramIdentification(
@@ -443,6 +487,10 @@ class DingModelFrequencyParameterIdentification:
             pulse_intensity=None,
             discontinuity_in_ocp=discontinuity,
             use_sx=self.kwargs["use_sx"] if "use_sx" in self.kwargs else False,
+            initial_a_rest=initial_a_rest,
+            initial_km_rest=initial_km_rest,
+            initial_tau1_rest=initial_tau1_rest,
+            initial_tau2=initial_tau2,
         )
 
         self.force_identification_result = self.force_ocp.solve(Solver.IPOPT())
@@ -478,7 +526,6 @@ class DingModelFrequencyParameterIdentification:
                 f" the given value is {self.fatigue_model_identification_method}"
             )
 
-        n_stim = len(stim)
         n_shooting, final_time_phase = self.node_shooting_list_creation(stim, stimulated_n_shooting, rest_n_shooting)
         force_at_node = self.force_at_node_in_ocp(time, force, n_shooting, final_time_phase, force_curve_number)
 
@@ -531,6 +578,7 @@ if __name__ == "__main__":
         # "D:/These/Programmation/Modele_Musculaire/optistim/data_process/biceps_force_110_2.pkl",
         # "D:/These/Programmation/Modele_Musculaire/optistim/data_process/biceps_force_110_3.pkl"],
         force_model_identification_method="full",
+        force_model_identification_with_average_method_initial_guess=True,
         fatigue_model_data_path=[
             "D:/These/Programmation/Modele_Musculaire/optistim/data_process/biceps_force_fatigue_0.pkl"
         ],
@@ -539,5 +587,5 @@ if __name__ == "__main__":
     )
 
     a_rest, km_rest, tau1_rest, tau2 = a.force_model_identification()
-    a.force_identification_result.graphs()
+    # a.force_identification_result.graphs()
     print("a_rest : ", a_rest, "km_rest : ", km_rest, "tau1_rest : ", tau1_rest, "tau2 : ", tau2)

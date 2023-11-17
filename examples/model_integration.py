@@ -18,10 +18,6 @@ def build_initial_guess_from_ocp(ocp):
             for k in range(len(ocp.parameters)):
                 p.add(ocp.parameters.keys()[k], phase=i)
                 np.append(p[i][ocp.parameters.keys()[k]], ocp.parameters[k].mx * len(ocp.nlp))
-        # else:
-        #     p.add("", phase=i)
-        # u.add("", phase=i)
-        # s.add("", phase=i)
 
     return x, u, p, s
 
