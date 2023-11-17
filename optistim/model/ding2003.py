@@ -258,7 +258,7 @@ class DingModelFrequency:
             sum_multiplier += ri * exp_time  # Part of Eq n°1
         else:
             if self._sum_stim_truncation and len(t_stim_prev) > self._sum_stim_truncation:
-                t_stim_prev = t_stim_prev[-self._sum_stim_truncation :]
+                t_stim_prev = t_stim_prev[-self._sum_stim_truncation-1:]
             for i in range(1, len(t_stim_prev)):
                 previous_phase_time = t_stim_prev[i] - t_stim_prev[i - 1]
                 ri = self.ri_fun(r0, previous_phase_time)  # Part of Eq n°1
