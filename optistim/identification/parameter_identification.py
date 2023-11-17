@@ -1,3 +1,5 @@
+import time as time_package
+
 import numpy as np
 
 from bioptim import Solver
@@ -476,6 +478,7 @@ class DingModelFrequencyParameterIdentification:
             initial_a_rest, initial_km_rest, initial_tau1_rest, initial_tau2 = None, None, None, None
 
         # --- Building force ocp --- #
+        start_time = time_package.time()
         self.force_ocp = FunctionalElectricStimulationOptimalControlProgramIdentification(
             model=self.model,
             with_fatigue=False,
@@ -492,6 +495,8 @@ class DingModelFrequencyParameterIdentification:
             initial_tau1_rest=initial_tau1_rest,
             initial_tau2=initial_tau2,
         )
+
+        print(f"OCP creation time : {time_package.time() - start_time} seconds")
 
         self.force_identification_result = self.force_ocp.solve(Solver.IPOPT())
 
@@ -578,7 +583,7 @@ if __name__ == "__main__":
         # "D:/These/Programmation/Modele_Musculaire/optistim/data_process/biceps_force_110_2.pkl",
         # "D:/These/Programmation/Modele_Musculaire/optistim/data_process/biceps_force_110_3.pkl"],
         force_model_identification_method="full",
-        force_model_identification_with_average_method_initial_guess=True,
+        force_model_identification_with_average_method_initial_guess=False,
         fatigue_model_data_path=[
             "D:/These/Programmation/Modele_Musculaire/optistim/data_process/biceps_force_fatigue_0.pkl"
         ],
