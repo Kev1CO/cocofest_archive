@@ -3,15 +3,13 @@
 `Cocofest` : Custom Optimal Control Optimization for Functional Electrical Stimulation, is an optimal control program (OCP) package for functional electrical stimulation (FES).
 It is based on the [bioptim](https://github.com/pyomeca/bioptim) framework for the optimal control construction.
 Bioptim uses [biorbd](https://github.com/pyomeca/biorbd) a biomechanics library and benefits from the powerful algorithmic diff provided by [CasADi](https://web.casadi.org/).
-And to solve the OCP, the robust solver [Ipopt](https://github.com/coin-or/Ipopt) has been implemented. 
+To solve the OCP, the robust solver [Ipopt](https://github.com/coin-or/Ipopt) has been implemented. 
 
 ## Status
 
 | Type          | Status |
 |---------------|---|
 | License       | <a href="https://opensource.org/licenses/MIT"><img src="https://img.shields.io/badge/license-MIT-success" alt="License"/></a> |
-| Code coverage | [![codecov](https://codecov.io/gh/pyomeca/bioptim/branch/master/graph/badge.svg?token=NK1V6QE2CK)](https://codecov.io/gh/pyomeca/bioptim) |
-| Code climate  | [![codecov](https://codecov.io/gh/pyomeca/bioptim/branch/master/graph/badge.svg?token=NK1V6QE2CK)](https://codecov.io/gh/pyomeca/bioptim) |
 
 # Table of Contents 
 
@@ -43,19 +41,19 @@ And to solve the OCP, the robust solver [Ipopt](https://github.com/coin-or/Ipopt
 
 
 # How to install 
-Up to date, no anaconda package is available so the installation must be done from the sources.
+Currently, no anaconda installation is available. The installation must be done from the sources.
 Cloning the repository is the first step to be able to use the package.
 
 ## Dependencies
 `Cocofest` relies on several libraries. 
-Based on `bioptim`, the user is invited to directly download the framework from anaconda
+Based on `bioptim`, the user is invited to directly download the framework from anaconda or from the [sources](https://github.com/pyomeca/bioptim) by cloning the repository
 ```bash
 conda install -c conda-forge bioptim
 ```
-or from the [sources](https://github.com/pyomeca/bioptim) by cloning the repository
+The other [bioptim dependencies](https://github.com/pyomeca/bioptim#dependencies) must be installed as well.
 
 # Available FES models
-The available FES models are subject to increase in the future if a need is expressed.
+The available FES models are likely to increase so stay tune.
 ## Ding2003
 Ding, J., Wexler, A. S., & Binder-Macleod, S. A. (2003).
 Mathematical models for fatigue minimization during functional electrical stimulation.
@@ -73,9 +71,9 @@ In 2018 40th Annual International Conference of the IEEE Engineering in Medicine
 
 
 # Create your own FES OCP
-The user can create its own FES OCP by following the steps below:
+You can create your own FES OCP by following the steps below:
 1. Create a new python file
-2. Import the desired model from `Cocofest` (i.g. Ding2003) and the fes_ocp package
+2. Import the desired model from `Cocofest` (i.g. Ding2003) and the fes_ocp class
 
 ```python
 from optistim import DingModelFrequency, FunctionalElectricStimulationOptimalControlProgram
@@ -121,15 +119,15 @@ ocp = FunctionalElectricStimulationOptimalControlProgram(
 )
 ```
 
-## Is optimal control
-The is_optimal_control flag is a boolean parameter that can be set to True or False.
+## For optimal control
+The for_optimal_control flag is a boolean parameter that can be set to True or False.
 If True, the OCP will be optimized and solved by IPOPT.
 If False, the OCP will not be optimized but the problem will be integrated starting from the initial guesses.
 
 ```python
 ocp = FunctionalElectricStimulationOptimalControlProgram(
-    ding_model=DingModelFrequency(is_optimal_control=False),
-    ...
+    ding_model=DingModelFrequency(with_fatigue=False),
+    for_optimal_control=False,
 )
 ```
 
@@ -139,7 +137,7 @@ It will truncate the calcium summation used by the models.
 The integer number defines the number of stimulation to keep for this summation.
 ```python
 ocp = FunctionalElectricStimulationOptimalControlProgram(
-    ding_model=DingModelFrequency(summation_truncation=2),
+    ding_model=DingModelFrequency(sum_stim_truncation=2),
     ...
 )
 ```
