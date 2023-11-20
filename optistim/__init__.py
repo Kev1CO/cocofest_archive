@@ -9,3 +9,5 @@ from optistim.optimization.fes_identification_ocp import (
 )
 from optistim.fourier_approx import FourierSeries
 from optistim.read_data import ExtractData
+from optistim.integration.intial_guess_from_ocp import build_initial_guess_from_ocp
+from optistim.identification.parameter_identification import DingModelFrequencyParameterIdentification

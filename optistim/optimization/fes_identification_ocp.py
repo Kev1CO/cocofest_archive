@@ -269,7 +269,7 @@ class FunctionalElectricStimulationOptimalControlProgramIdentification(OptimalCo
             for j in range(len(variable_bound_list)):
                 if (
                     i == 0 or i in self.discontinuity_in_ocp
-                ):  # TODO : ask if "or i in self.discontinuity_in_ocp:" is relevant here
+                ):
                     self.x_bounds.add(
                         variable_bound_list[j],
                         min_bound=np.array([starting_bounds_min[j]]),
@@ -480,7 +480,15 @@ class FunctionalElectricStimulationOptimalControlProgramIdentification(OptimalCo
             )
 
             # --- Initial guess parameters --- #
-            self.parameters_init["a_rest"] = np.array([self.initial_a_rest if self.initial_a_rest else 1000])  # TODO : fine tune initial guess
-            self.parameters_init["km_rest"] = np.array([self.initial_km_rest if self.initial_km_rest else 0.1])  # TODO : fine tune initial guess
-            self.parameters_init["tau1_rest"] = np.array([self.initial_tau1_rest if self.initial_tau1_rest else 0.1])  # TODO : fine tune initial guess
-            self.parameters_init["tau2"] = np.array([self.initial_tau2 if self.initial_tau2 else 0.1])  # TODO : fine tune initial guess
+            self.parameters_init["a_rest"] = np.array(
+                [self.initial_a_rest if self.initial_a_rest else 1000]
+            )
+            self.parameters_init["km_rest"] = np.array(
+                [self.initial_km_rest if self.initial_km_rest else 0.1]
+            )
+            self.parameters_init["tau1_rest"] = np.array(
+                [self.initial_tau1_rest if self.initial_tau1_rest else 0.1]
+            )
+            self.parameters_init["tau2"] = np.array(
+                [self.initial_tau2 if self.initial_tau2 else 0.1]
+            )

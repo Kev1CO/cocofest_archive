@@ -466,14 +466,14 @@ class ForceSensorToMuscleForce:  # TODO : Enable several muscles (biceps, tricep
 
         """
         # TODO Might be an error when not at 90°
-        hand_local_force_data = [[[-x for x in data] for data
-                                 in sensor_data[0]],
-                                 sensor_data[2],
-                                 sensor_data[1],
-                                 [[-x for x in data] for data
-                                 in sensor_data[3]],
-                                 sensor_data[5],
-                                 sensor_data[4]]
+        hand_local_force_data = [
+            [[-x for x in data] for data in sensor_data[0]],
+            sensor_data[2],
+            sensor_data[1],
+            [[-x for x in data] for data in sensor_data[3]],
+            sensor_data[5],
+            sensor_data[4],
+        ]
         return hand_local_force_data
 
     @staticmethod
@@ -587,12 +587,14 @@ class ForceSensorToMuscleForce:  # TODO : Enable several muscles (biceps, tricep
                 #     a,
                 # )  # TODO make it a list : local_torque_force_vector
 
-                hand_local_vector = [local_torque_force_vector[i][0][j],
-                                     local_torque_force_vector[i][1][j],
-                                     local_torque_force_vector[i][2][j],
-                                     local_torque_force_vector[i][3][j],
-                                     local_torque_force_vector[i][4][j],
-                                     local_torque_force_vector[i][5][j]]
+                hand_local_vector = [
+                    local_torque_force_vector[i][0][j],
+                    local_torque_force_vector[i][1][j],
+                    local_torque_force_vector[i][2][j],
+                    local_torque_force_vector[i][3][j],
+                    local_torque_force_vector[i][4][j],
+                    local_torque_force_vector[i][5][j],
+                ]
 
                 #
                 # external_forces = np.array(t_global)[:, np.newaxis]
@@ -600,9 +602,11 @@ class ForceSensorToMuscleForce:  # TODO : Enable several muscles (biceps, tricep
 
                 external_forces_vector = np.array(hand_local_vector)
                 external_forces_set = self.model.externalForceSet()
-                external_forces_set.addInSegmentReferenceFrame(segmentName="r_ulna_radius_hand",
-                                                               vector=external_forces_vector,
-                                                               pointOfApplication=np.array([0, 0, 0]))
+                external_forces_set.addInSegmentReferenceFrame(
+                    segmentName="r_ulna_radius_hand",
+                    vector=external_forces_vector,
+                    pointOfApplication=np.array([0, 0, 0]),
+                )
 
                 # tau = self.model.InverseDynamics(self.Q, self.Qdot, self.Qddot, f_ext=external_forces_v).to_array()[1]
                 tau = self.model.InverseDynamics(self.Q, self.Qdot, self.Qddot, external_forces_set).to_array()

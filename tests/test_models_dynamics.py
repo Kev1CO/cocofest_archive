@@ -194,7 +194,9 @@ def test_ocp_dynamics(model):
         )
         np.testing.assert_almost_equal(
             np.array(
-                model.system_dynamics_with_fatigue(cn=5, f=100, a=3009, tau1=0.050957, km=0.103, t=0.11, t_stim_prev=[0, 0.1])
+                model.system_dynamics_with_fatigue(
+                    cn=5, f=100, a=3009, tau1=0.050957, km=0.103, t=0.11, t_stim_prev=[0, 0.1]
+                )
             ).squeeze(),
             np.array(DM([-219.644, 2037.07, -0.0004, 0.021, 1.9e-05])).squeeze(),
             decimal=3,
