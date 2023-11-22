@@ -149,22 +149,25 @@ class FunctionalElectricStimulationOptimalControlProgram(OptimalControlProgram):
                     self.final_time_phase = self.final_time_phase + (step,)
 
             elif pulse_mode == "Doublet":
-                step = final_time / (n_stim / 2)
                 doublet_step = 0.005
-                self.final_time_phase = (step,)
+                step = final_time / (n_stim / 2) - doublet_step
+                self.final_time_phase = (doublet_step,)
                 for i in range(int(n_stim / 2)):
                     self.final_time_phase = self.final_time_phase + (step,)
                     self.final_time_phase = self.final_time_phase + (doublet_step,)
 
             elif pulse_mode == "Triplet":
-                step = final_time / (n_stim / 3)
                 doublet_step = 0.005
                 triplet_step = 0.005
-                self.final_time_phase = (step,)
+                step = final_time / (n_stim / 3) - doublet_step - triplet_step
+                self.final_time_phase = (doublet_step, triplet_step,)
                 for i in range(int(n_stim / 3)):
                     self.final_time_phase = self.final_time_phase + (step,)
                     self.final_time_phase = self.final_time_phase + (doublet_step,)
                     self.final_time_phase = self.final_time_phase + (triplet_step,)
+
+            else:
+                raise ValueError("Pulse mode not yet implemented")
 
         elif time_min is not None and time_max is None or time_min is None and time_max is not None:
             raise ValueError("time_min and time_max must be both entered or none of them in order to work")
