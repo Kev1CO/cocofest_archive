@@ -193,9 +193,9 @@ class DingModelFrequencyParameterIdentification:
             # Indexing the current data time on the previous one to ensure time continuity
             if i != 0:
                 discontinuity_phase_list.append(
-                    len(model_stim_apparition_time[-1]) - 1
+                    len(global_model_stim_apparition_time[-1])
                     if discontinuity_phase_list == []
-                    else discontinuity_phase_list[-1] + len(model_stim_apparition_time[-1])
+                    else discontinuity_phase_list[-1] + len(global_model_stim_apparition_time[-1])
                 )
 
                 model_stim_apparition_time = [
@@ -430,7 +430,7 @@ class DingModelFrequencyParameterIdentification:
             use_sx=self.kwargs["use_sx"] if "use_sx" in self.kwargs else False,
         )
 
-        self.force_identification_result = self.force_ocp.solve(Solver.IPOPT())
+        self.force_identification_result = self.force_ocp.solve(Solver.IPOPT(_hessian_approximation="limited-memory"))
 
         initial_a_rest = self.force_identification_result.parameters["a_rest"][0][0]
         initial_km_rest = self.force_identification_result.parameters["km_rest"][0][0]
@@ -500,7 +500,8 @@ class DingModelFrequencyParameterIdentification:
 
         print(f"OCP creation time : {time_package.time() - start_time} seconds")
 
-        self.force_identification_result = self.force_ocp.solve(Solver.IPOPT())
+        self.force_identification_result = self.force_ocp.solve(Solver.IPOPT(_hessian_approximation="limited-memory"))
+        self.force_identification_result.graphs()
 
         self.a_rest = self.force_identification_result.parameters["a_rest"][0][0]
         self.km_rest = self.force_identification_result.parameters["km_rest"][0][0]

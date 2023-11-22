@@ -106,7 +106,7 @@ class FunctionalElectricStimulationOptimalControlProgramIdentification(OptimalCo
         self.initial_tau1_rest = initial_tau1_rest
         self.initial_tau2 = initial_tau2
 
-        self.model = model(with_fatigue=self.with_fatigue, sum_stim_truncation=1)
+        self.model = model(with_fatigue=self.with_fatigue)  #, sum_stim_truncation=1
         if self.with_fatigue:
             self.model.set_a_rest(model=None, a_rest=a_rest)
             self.model.set_km_rest(model=None, km_rest=km_rest)
@@ -469,13 +469,13 @@ class FunctionalElectricStimulationOptimalControlProgramIdentification(OptimalCo
             self.parameters_bounds.add(
                 "tau1_rest",
                 min_bound=np.array([0.0001]),  # TODO : fine tune bounds
-                max_bound=np.array([10]),
+                max_bound=np.array([2]),
                 interpolation=InterpolationType.CONSTANT,
             )
             self.parameters_bounds.add(
                 "tau2",
                 min_bound=np.array([0.0001]),  # TODO : fine tune bounds
-                max_bound=np.array([10]),
+                max_bound=np.array([2]),
                 interpolation=InterpolationType.CONSTANT,
             )
 
@@ -484,11 +484,11 @@ class FunctionalElectricStimulationOptimalControlProgramIdentification(OptimalCo
                 [self.initial_a_rest if self.initial_a_rest else 1000]
             )
             self.parameters_init["km_rest"] = np.array(
-                [self.initial_km_rest if self.initial_km_rest else 0.1]
+                [self.initial_km_rest if self.initial_km_rest else 0.5]
             )
             self.parameters_init["tau1_rest"] = np.array(
-                [self.initial_tau1_rest if self.initial_tau1_rest else 0.1]
+                [self.initial_tau1_rest if self.initial_tau1_rest else 0.5]
             )
             self.parameters_init["tau2"] = np.array(
-                [self.initial_tau2 if self.initial_tau2 else 0.1]
+                [self.initial_tau2 if self.initial_tau2 else 0.5]
             )

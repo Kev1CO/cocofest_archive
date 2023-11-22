@@ -1,8 +1,8 @@
 import time
 
 import matplotlib.pyplot as plt
-import numpy as np
-from bioptim import InitialGuessList, Solution, Shooting, SolutionIntegrator
+
+from bioptim import Solution, Shooting, SolutionIntegrator
 from optistim import (
     DingModelFrequency,
     FunctionalElectricStimulationOptimalControlProgram,
