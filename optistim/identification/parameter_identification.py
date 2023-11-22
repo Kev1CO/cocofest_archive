@@ -302,75 +302,77 @@ class DingModelFrequencyParameterIdentification:
 
     @staticmethod
     def sparse_data_extraction(model_data_path, force_curve_number=5):
-        import pickle
+        raise NotImplementedError("This method has not been tested yet")
 
-        global_model_muscle_data = []
-        global_model_stim_apparition_time = []
-        global_model_time_data = []
-
-        discontinuity_phase_list = []
-        for i in range(len(model_data_path)):
-            with open(model_data_path[i], "rb") as f:
-                data = pickle.load(f)
-            model_data = data["biceps"]
-
-            # Arranging the data to have the beginning time starting at 0 second for all data
-            model_stim_apparition_time = (
-                data["stim_time"]
-                if data["stim_time"][0] == 0
-                else [stim_time - data["stim_time"][0] for stim_time in data["stim_time"]]
-            )
-
-            model_time_data = (
-                data["time"]
-                if data["stim_time"][0] == 0
-                else [[(time - data["stim_time"][0]) for time in row] for row in data["time"]]
-            )
-
-            # TODO : check this part
-            model_data = model_data[0:force_curve_number] + model_data[:-force_curve_number]
-            model_time_data = model_time_data[0:force_curve_number] + model_time_data[:-force_curve_number]
-
-            # TODO correct this part
-            model_stim_apparition_time = (
-                model_stim_apparition_time[0:force_curve_number] + model_stim_apparition_time[:-force_curve_number]
-            )
-
-            model_data = [item for sublist in model_data for item in sublist]
-            model_time_data = [item for sublist in model_time_data for item in sublist]
-
-            # Indexing the current data time on the previous one to ensure time continuity
-            if i != 0:
-                discontinuity_phase_list.append(
-                    len(global_model_stim_apparition_time[-1]) - 1
-                    if discontinuity_phase_list == []
-                    else discontinuity_phase_list[-1] + len(global_model_stim_apparition_time[-1])
-                )
-
-                model_stim_apparition_time = [
-                    stim_time + global_model_time_data[i - 1][-1] for stim_time in model_stim_apparition_time
-                ]
-
-                model_time_data = [(time + global_model_time_data[i - 1][-1]) for time in model_time_data]
-                model_stim_apparition_time = [
-                    (time + global_model_time_data[i - 1][-1]) for time in model_stim_apparition_time
-                ]
-
-            # Storing data into global lists
-            global_model_muscle_data.append(model_data)
-            global_model_stim_apparition_time.append(model_stim_apparition_time)
-            global_model_time_data.append(model_time_data)
-        # Expending global lists
-        global_model_muscle_data = [item for sublist in global_model_muscle_data for item in sublist]
-        global_model_stim_apparition_time = [item for sublist in global_model_stim_apparition_time for item in sublist]
-        global_model_time_data = [item for sublist in global_model_time_data for item in sublist]
-
-        return (
-            global_model_time_data,
-            global_model_stim_apparition_time,
-            global_model_muscle_data,
-            discontinuity_phase_list,
-        )
+        # import pickle
+        #
+        # global_model_muscle_data = []
+        # global_model_stim_apparition_time = []
+        # global_model_time_data = []
+        #
+        # discontinuity_phase_list = []
+        # for i in range(len(model_data_path)):
+        #     with open(model_data_path[i], "rb") as f:
+        #         data = pickle.load(f)
+        #     model_data = data["biceps"]
+        #
+        #     # Arranging the data to have the beginning time starting at 0 second for all data
+        #     model_stim_apparition_time = (
+        #         data["stim_time"]
+        #         if data["stim_time"][0] == 0
+        #         else [stim_time - data["stim_time"][0] for stim_time in data["stim_time"]]
+        #     )
+        #
+        #     model_time_data = (
+        #         data["time"]
+        #         if data["stim_time"][0] == 0
+        #         else [[(time - data["stim_time"][0]) for time in row] for row in data["time"]]
+        #     )
+        #
+        #     # TODO : check this part
+        #     model_data = model_data[0:force_curve_number] + model_data[:-force_curve_number]
+        #     model_time_data = model_time_data[0:force_curve_number] + model_time_data[:-force_curve_number]
+        #
+        #     # TODO correct this part
+        #     model_stim_apparition_time = (
+        #         model_stim_apparition_time[0:force_curve_number] + model_stim_apparition_time[:-force_curve_number]
+        #     )
+        #
+        #     model_data = [item for sublist in model_data for item in sublist]
+        #     model_time_data = [item for sublist in model_time_data for item in sublist]
+        #
+        #     # Indexing the current data time on the previous one to ensure time continuity
+        #     if i != 0:
+        #         discontinuity_phase_list.append(
+        #             len(global_model_stim_apparition_time[-1]) - 1
+        #             if discontinuity_phase_list == []
+        #             else discontinuity_phase_list[-1] + len(global_model_stim_apparition_time[-1])
+        #         )
+        #
+        #         model_stim_apparition_time = [
+        #             stim_time + global_model_time_data[i - 1][-1] for stim_time in model_stim_apparition_time
+        #         ]
+        #
+        #         model_time_data = [(time + global_model_time_data[i - 1][-1]) for time in model_time_data]
+        #         model_stim_apparition_time = [
+        #             (time + global_model_time_data[i - 1][-1]) for time in model_stim_apparition_time
+        #         ]
+        #
+        #     # Storing data into global lists
+        #     global_model_muscle_data.append(model_data)
+        #     global_model_stim_apparition_time.append(model_stim_apparition_time)
+        #     global_model_time_data.append(model_time_data)
+        # # Expending global lists
+        # global_model_muscle_data = [item for sublist in global_model_muscle_data for item in sublist]
+        # global_model_stim_apparition_time = [item for sublist in global_model_stim_apparition_time for item in sublist]
+        # global_model_time_data = [item for sublist in global_model_time_data for item in sublist]
+        #
+        # return (
+        #     global_model_time_data,
+        #     global_model_stim_apparition_time,
+        #     global_model_muscle_data,
+        #     discontinuity_phase_list,
+        # )
 
     @staticmethod
     def force_at_node_in_ocp(time, force, n_shooting, final_time_phase, sparse=None):
@@ -379,8 +381,8 @@ class DingModelFrequencyParameterIdentification:
             for j in range(n_shooting[i]):
                 temp_time.append(sum(final_time_phase[:i]) + j * final_time_phase[i] / (n_shooting[i]))
         force_at_node = np.interp(temp_time, time, force).tolist()
-        if sparse:  # TODO check this part
-            force_at_node = force_at_node[0:sparse] + force_at_node[:-sparse]
+        # if sparse:  # TODO check this part
+        #     force_at_node = force_at_node[0:sparse] + force_at_node[:-sparse]
         return force_at_node
 
     @staticmethod
@@ -402,6 +404,7 @@ class DingModelFrequencyParameterIdentification:
                 n_shooting.append(stimulated_n_shooting)
 
         return n_shooting, final_time_phase
+
 
     def _force_model_identification_for_initial_guess(self):
         self.data_sanity(self.force_model_data_path, "force")
@@ -430,7 +433,7 @@ class DingModelFrequencyParameterIdentification:
             use_sx=self.kwargs["use_sx"] if "use_sx" in self.kwargs else False,
         )
 
-        self.force_identification_result = self.force_ocp.solve(Solver.IPOPT(_hessian_approximation="limited-memory"))
+        self.force_identification_result = self.force_ocp.solve(Solver.IPOPT())  # _hessian_approximation="limited-memory"
 
         initial_a_rest = self.force_identification_result.parameters["a_rest"][0][0]
         initial_km_rest = self.force_identification_result.parameters["km_rest"][0][0]
@@ -500,8 +503,8 @@ class DingModelFrequencyParameterIdentification:
 
         print(f"OCP creation time : {time_package.time() - start_time} seconds")
 
-        self.force_identification_result = self.force_ocp.solve(Solver.IPOPT(_hessian_approximation="limited-memory"))
-        self.force_identification_result.graphs()
+        self.force_identification_result = self.force_ocp.solve(Solver.IPOPT(_hessian_approximation="limited-memory"))  # _hessian_approximation="limited-memory"
+        # self.force_identification_result.graphs()
 
         self.a_rest = self.force_identification_result.parameters["a_rest"][0][0]
         self.km_rest = self.force_identification_result.parameters["km_rest"][0][0]
