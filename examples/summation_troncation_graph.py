@@ -15,16 +15,16 @@ from optistim import (
 # --- Build ocp --- #
 # This problem was build to be integrated and has no objectives nor parameter to optimize.
 # Therefore, the flag for_optimal_control is set to False.
-total_results = []
-results_per_frequency = []
-computations_time = []
-parameter_list = []
 counter = 0
 min_stim = 1
 max_stim = 101
 nb = int((max_stim - min_stim)**2 / 2 + (max_stim - min_stim) / 2) * 3
 node_shooting = 1000
 for mode in ["Single", "Doublet", "Triplet"]:
+    total_results = []
+    results_per_frequency = []
+    computations_time = []
+    parameter_list = []
     if mode == "Single":
         coefficient = 1
     elif mode == "Doublet":
@@ -72,8 +72,15 @@ for mode in ["Single", "Doublet", "Triplet"]:
         "computations_time": computations_time,
     }
 
-    with open("truncation.pkl", "wb") as file:
-        pickle.dump(dictionary, file)
+    if mode == "Single":
+        with open("truncation_single.pkl", "wb") as file:
+            pickle.dump(dictionary, file)
+    elif mode == "Doublet":
+        with open("truncation_doublet.pkl", "wb") as file:
+            pickle.dump(dictionary, file)
+    elif mode == "Triplet":
+        with open("truncation_triplet.pkl", "wb") as file:
+            pickle.dump(dictionary, file)
 
 # --- Plotting the results --- #
 '''
