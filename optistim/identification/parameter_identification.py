@@ -405,7 +405,6 @@ class DingModelFrequencyParameterIdentification:
 
         return n_shooting, final_time_phase
 
-
     def _force_model_identification_for_initial_guess(self):
         self.data_sanity(self.force_model_data_path, "force")
         # --- Data extraction --- #
@@ -433,7 +432,9 @@ class DingModelFrequencyParameterIdentification:
             use_sx=self.kwargs["use_sx"] if "use_sx" in self.kwargs else False,
         )
 
-        self.force_identification_result = self.force_ocp.solve(Solver.IPOPT())  # _hessian_approximation="limited-memory"
+        self.force_identification_result = self.force_ocp.solve(
+            Solver.IPOPT()
+        )  # _hessian_approximation="limited-memory"
 
         initial_a_rest = self.force_identification_result.parameters["a_rest"][0][0]
         initial_km_rest = self.force_identification_result.parameters["km_rest"][0][0]
@@ -503,7 +504,9 @@ class DingModelFrequencyParameterIdentification:
 
         print(f"OCP creation time : {time_package.time() - start_time} seconds")
 
-        self.force_identification_result = self.force_ocp.solve(Solver.IPOPT(_hessian_approximation="limited-memory"))  # _hessian_approximation="limited-memory"
+        self.force_identification_result = self.force_ocp.solve(
+            Solver.IPOPT(_hessian_approximation="limited-memory")
+        )  # _hessian_approximation="limited-memory"
         # self.force_identification_result.graphs()
 
         self.a_rest = self.force_identification_result.parameters["a_rest"][0][0]

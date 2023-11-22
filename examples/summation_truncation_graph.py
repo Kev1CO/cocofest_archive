@@ -42,22 +42,36 @@ min_computation_time = min(computations_time)
 counter = 0
 fig, axs = plt.subplots(1, 2)
 
-im1 = axs[0].scatter(np.array(parameter_list)[:, 0], np.array(parameter_list)[:, 1], edgecolors='none', s=20, c=list_error,
-                     vmin=min_error, vmax=max_error)
+im1 = axs[0].scatter(
+    np.array(parameter_list)[:, 0],
+    np.array(parameter_list)[:, 1],
+    edgecolors="none",
+    s=20,
+    c=list_error,
+    vmin=min_error,
+    vmax=max_error,
+)
 
-im2 = axs[1].scatter(np.array(parameter_list)[:, 0], np.array(parameter_list)[:, 1], edgecolors='none', s=20, c=computations_time,
-                     vmin=min_computation_time, vmax=max_computation_time)
+im2 = axs[1].scatter(
+    np.array(parameter_list)[:, 0],
+    np.array(parameter_list)[:, 1],
+    edgecolors="none",
+    s=20,
+    c=computations_time,
+    vmin=min_computation_time,
+    vmax=max_computation_time,
+)
 
 fig.colorbar(im1, ax=axs[0], label="Absolute error (N) log scale")
 fig.colorbar(im2, ax=axs[1], label="Computation time (s)")
 
-axs[0].set_ylabel('Stimulation kept prior calculation (n)')
+axs[0].set_ylabel("Stimulation kept prior calculation (n)")
 axs[0].yaxis.set_major_locator(MaxNLocator(integer=True))
-axs[0].set_xlabel('Frequency (Hz)')
+axs[0].set_xlabel("Frequency (Hz)")
 axs[0].xaxis.set_major_locator(MaxNLocator(integer=True))
-axs[1].set_xlabel('Frequency (Hz)')
+axs[1].set_xlabel("Frequency (Hz)")
 axs[1].xaxis.set_major_locator(MaxNLocator(integer=True))
-axs[1].set_ylabel('Stimulation kept prior calculation (n)')
+axs[1].set_ylabel("Stimulation kept prior calculation (n)")
 axs[1].yaxis.set_major_locator(MaxNLocator(integer=True))
 
 ticks = np.arange(1, 101, 1).tolist()

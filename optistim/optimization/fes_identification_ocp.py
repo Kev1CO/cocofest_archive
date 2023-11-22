@@ -106,7 +106,7 @@ class FunctionalElectricStimulationOptimalControlProgramIdentification(OptimalCo
         self.initial_tau1_rest = initial_tau1_rest
         self.initial_tau2 = initial_tau2
 
-        self.model = model(with_fatigue=self.with_fatigue)  #, sum_stim_truncation=1
+        self.model = model(with_fatigue=self.with_fatigue)  # , sum_stim_truncation=1
         if self.with_fatigue:
             self.model.set_a_rest(model=None, a_rest=a_rest)
             self.model.set_km_rest(model=None, km_rest=km_rest)
@@ -267,9 +267,7 @@ class FunctionalElectricStimulationOptimalControlProgramIdentification(OptimalCo
 
         for i in range(self.n_stim):
             for j in range(len(variable_bound_list)):
-                if (
-                    i == 0 or i in self.discontinuity_in_ocp
-                ):
+                if i == 0 or i in self.discontinuity_in_ocp:
                     self.x_bounds.add(
                         variable_bound_list[j],
                         min_bound=np.array([starting_bounds_min[j]]),
@@ -480,15 +478,7 @@ class FunctionalElectricStimulationOptimalControlProgramIdentification(OptimalCo
             )
 
             # --- Initial guess parameters --- #
-            self.parameters_init["a_rest"] = np.array(
-                [self.initial_a_rest if self.initial_a_rest else 1000]
-            )
-            self.parameters_init["km_rest"] = np.array(
-                [self.initial_km_rest if self.initial_km_rest else 0.5]
-            )
-            self.parameters_init["tau1_rest"] = np.array(
-                [self.initial_tau1_rest if self.initial_tau1_rest else 0.5]
-            )
-            self.parameters_init["tau2"] = np.array(
-                [self.initial_tau2 if self.initial_tau2 else 0.5]
-            )
+            self.parameters_init["a_rest"] = np.array([self.initial_a_rest if self.initial_a_rest else 1000])
+            self.parameters_init["km_rest"] = np.array([self.initial_km_rest if self.initial_km_rest else 0.5])
+            self.parameters_init["tau1_rest"] = np.array([self.initial_tau1_rest if self.initial_tau1_rest else 0.5])
+            self.parameters_init["tau2"] = np.array([self.initial_tau2 if self.initial_tau2 else 0.5])

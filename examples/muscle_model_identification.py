@@ -1,15 +1,17 @@
 import pickle
 import shutil
-from optistim import (DingModelFrequencyParameterIdentification,
-                      DingModelFrequency,
-                      FunctionalElectricStimulationOptimalControlProgram,
-                      build_initial_guess_from_ocp)
+from optistim import (
+    DingModelFrequencyParameterIdentification,
+    DingModelFrequency,
+    FunctionalElectricStimulationOptimalControlProgram,
+    build_initial_guess_from_ocp,
+)
 
 from bioptim import Shooting, SolutionIntegrator, Solution
 import matplotlib.pyplot as plt
 
 # Example n°1 : Identification of the parameters of the Ding model with the frequency method for experimental data
-'''
+"""
 ocp = DingModelFrequencyParameterIdentification(
     model=DingModelFrequency,
     force_model_data_path=["data/biceps_force.pkl"],
@@ -20,7 +22,7 @@ ocp = DingModelFrequencyParameterIdentification(
 
 a_rest, km_rest, tau1_rest, tau2 = ocp.force_model_identification()
 print("a_rest : ", a_rest, "km_rest : ", km_rest, "tau1_rest : ", tau1_rest, "tau2 : ", tau2)
-'''
+"""
 
 # Example n°2 : Identification of the parameters of the Ding model with the frequency method for simulated data
 # --- Simulating data --- #
@@ -49,7 +51,7 @@ result = sol_from_initial_guess.integrate(
 force = result.states["F"].tolist()
 time = [result.time.tolist()]
 stim_temp = [0 if i == 0 else result.ocp.nlp[i].tf for i in range(len(result.ocp.nlp))]
-stim = [sum(stim_temp[:i+1]) for i in range(len(stim_temp))]
+stim = [sum(stim_temp[: i + 1]) for i in range(len(stim_temp))]
 
 dictionary = {
     "time": time,
@@ -110,7 +112,12 @@ identified_force = identified_result.states["F"][0]
 # global_model_time_data = [item for sublist in identified_time_list for item in sublist]
 # global_model_force_data = [item for sublist in identified_force_list for item in sublist]
 
-pickle_time_data, pickle_stim_apparition_time, pickle_muscle_data, pickle_discontinuity_phase_list = DingModelFrequencyParameterIdentification.full_data_extraction(["data/temp_identification_simulation.pkl"])
+(
+    pickle_time_data,
+    pickle_stim_apparition_time,
+    pickle_muscle_data,
+    pickle_discontinuity_phase_list,
+) = DingModelFrequencyParameterIdentification.full_data_extraction(["data/temp_identification_simulation.pkl"])
 
 # Plotting the identification result
 plt.title("Force state result")
@@ -144,7 +151,7 @@ plt.show()
 # Example n°3 : Identification of the fatigue model parameters based on the Ding model
 # with the frequency method for simulated data
 # /!\ This example is not working yet because it is too heavy to compute /!\
-'''
+"""
 # --- Simulating data --- #
 ocp = DingModelFrequencyParameterIdentification(
     model=DingModelFrequency,
@@ -159,4 +166,4 @@ ocp = DingModelFrequencyParameterIdentification(
 
 alpha_a, alpha_km, alpha_tau1, tau_fat = ocp.fatigue_model_identification()
 print("alpha_a : ", alpha_a, "alpha_km : ", alpha_km, "alpha_tau1 : ", alpha_tau1, "tau_fat : ", tau_fat)
-'''
+"""

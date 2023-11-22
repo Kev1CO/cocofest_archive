@@ -51,7 +51,7 @@ plt.show()
 # Example n°2 : This part shows how the truncation_single.pkl, truncation_doublet.pkl and
 # truncation_triplet.pkl were computed.
 # The associated graph is in the summation_truncation_graph example.
-'''
+"""
 import pickle
 
 counter = 0
@@ -120,4 +120,4 @@ for mode in ["Single", "Doublet", "Triplet"]:
     elif mode == "Triplet":
         with open("truncation_triplet.pkl", "wb") as file:
             pickle.dump(dictionary, file)
-'''
+"""
