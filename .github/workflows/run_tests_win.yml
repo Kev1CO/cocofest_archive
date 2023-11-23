@@ -48,7 +48,7 @@ jobs:
           cd external
           ./bioptim_install_windows.sh 4 ${{ env.PREFIX_WINDOWS }}
           cd ..
-        if: matrix.os == 'windows-latest' && matrix.shard == 1
+#        if: matrix.os == 'windows-latest' && matrix.shard == 1
 
       - name: Install extra dependencies
         run: mamba install pytest-cov black pytest pytest-cov codecov packaging -cconda-forge
@@ -64,45 +64,6 @@ jobs:
           path: |
             coverage.xml
             .coverage
-
-#      - name: Rename coverage files
-#        run: |
-#          for shard in {1,2}; do
-#            mv coverage${shard}/coverage.xml coverage${shard}.xml
-#            mv coverage${shard}/.coverage* .coverage${shard}
-#          done
-#
-#      - name: Show current dir content
-#        run: pwd; ls -a -l
-#
-#      - name: Merge coverage reports
-#        run: coverage combine .coverage1 .coverage2 .coverage3 .coverage4
-#
-#      - name: Show current dir content with new .coverage file
-#        run: pwd; ls -a
-#
-#      - name: Generate XML report
-#        run: |
-#          coverage xml
-#          coverage report -m
-#
-#      - name: Upload coverage to Codecov
-#        uses: codecov/codecov-action@v2
-#        with:
-#          #token: ${{ secrets.CODECOV_TOKEN }}
-#          file: ./coverage.xml
-#          #files: ./coverage1.xml, ./coverage2.xml, ./coverage3.xml, ./coverage4.xml
-#          flags: unittests
-#          fail_ci_if_error: true
-#          verbose: true
-
-#      - name: Run tests without code coverage
-#        run: pytest -v --color=yes tests/shard${{ matrix.shard }}
-#
-#      - name: Upload coverage reports to Codecov
-#        uses: codecov/codecov-action@v3
-#        env:
-#          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
 
   merge-coverage:
     needs: build
