@@ -1,6 +1,6 @@
 """
 An example of how to use multi-start to find local minima from stimulation parameter.
-This example is a variation of the fes frequency in examples/step1.py.
+This example is a variation of the fes frequency in examples/frequency_optimization.py.
 """
 import shutil
 
@@ -12,7 +12,7 @@ from optistim import DingModelFrequency, FunctionalElectricStimulationMultiStart
 # Plus the number of stimulation will be different at each optimization 10 to 15 in this example.
 save_folder = "./temporary"
 fes_multi_start = FunctionalElectricStimulationMultiStart(
-    ding_model=[DingModelFrequency()],
+    model=[DingModelFrequency()],
     n_stim=[10, 11, 12, 13, 14, 15],
     n_shooting=[20],
     final_time=[1],

@@ -3,7 +3,7 @@ This custom objective is to enable the tracking of a curve by a state at all nod
 such as functional electro stimulation
 """
 import numpy as np
-from casadi import MX, SX, minus, fabs
+from casadi import MX, SX
 
 from bioptim import PenaltyController
 from .fourier_approx import FourierSeries
@@ -37,3 +37,34 @@ class CustomObjective:
             mode="casadi",
         )
         return value_from_fourier - controller.states[key].cx
+
+    @staticmethod
+    def track_state_from_time_interpolate(
+        controller: PenaltyController, force: np.ndarray, key: str, minimization_type: str = "LS"
+    ) -> MX:
+        """
+        Minimize the states variables.
+        This function least square.
+        Targets (default=np.zeros()) and indices (default=all_idx) can be specified.
+
+        Parameters
+        ----------
+        controller: PenaltyController
+            The penalty node elements
+        force: np.ndarray
+            The force vector
+        key: str
+            The name of the state to minimize
+        minimization_type: str
+            The type of minimization to perform. Either "LS" for least square or "BF" for best fit
+
+        Returns
+        -------
+        The difference between the two keys
+        """
+        if minimization_type == "LS":
+            return force - controller.states[key].cx
+        elif minimization_type == "BF":
+            return 1 - (force / controller.states[key].cx)
+        else:
+            raise RuntimeError(f"Minimization type {minimization_type} not implemented")
