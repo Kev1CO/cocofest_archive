@@ -6,14 +6,12 @@ import numpy as np
 from optistim import (
     FunctionalElectricStimulationOptimalControlProgram,
     FunctionalElectricStimulationMultiStart,
-    ExtractData,
     DingModelFrequency,
     DingModelPulseDurationFrequency,
     DingModelIntensityFrequency,
 )
 
-
-# time, force = ExtractData.load_data("../../optistim/examples/data/hand_cycling_force.bio")
+# Force and time data coming form examples/data/hand_cycling_force.bio file
 force = np.array(
     [
         0,
@@ -223,6 +221,7 @@ time = np.array(
         1.0,
     ]
 )
+
 init_force = force - force[0]
 init_n_stim = 3
 init_final_time = 0.3
