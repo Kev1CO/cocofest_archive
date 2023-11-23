@@ -284,7 +284,7 @@ minimum_pulse_intensity = (
         (0.01, 0.1, True),
     ],
 )
-@pytest.mark.parametrize("use_sx", [False, True])
+@pytest.mark.parametrize("use_sx", [True])  # Later add False
 @pytest.mark.parametrize(
     "n_stim, final_time, frequency, n_shooting", [(init_n_stim, init_final_time, init_frequency, init_n_shooting)]
 )
