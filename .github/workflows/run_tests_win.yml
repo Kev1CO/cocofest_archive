@@ -42,12 +42,12 @@ jobs:
           mamba info
           mamba list
 
-      - name: Install bioptim on Windows
-        run:
-          uses: actions/checkout@v2
-          with:
-            submodules: bioptim
-              python setup.py install
+#      - name: Install bioptim on Windows
+#        run:
+#          uses: actions/checkout@v2
+#          with:
+#            submodules: bioptim
+#              python setup.py install
 
 #      - name: Install bioptim on Windows
 #        run: |
@@ -57,13 +57,13 @@ jobs:
 #          pwd
 #          python setup.py install
 
-#      - name: Install bioptim on Windows
-#        run: |
-#          pwd
-#          cd external
-#          ./bioptim_install_windows.sh 4 ${{ env.PREFIX_WINDOWS }}
-#          cd ..
-#        if: matrix.os == 'windows-latest' && matrix.shard == 1
+      - name: Install bioptim on Windows
+        run: |
+          pwd
+          cd external
+          ./bioptim_install_windows.sh 4 ${{ env.PREFIX_WINDOWS }}
+          cd ..
+        if: matrix.os == 'windows-latest' && matrix.shard == 1
 
       - name: Install extra dependencies
         run: mamba install pytest-cov black pytest pytest-cov codecov packaging -cconda-forge
