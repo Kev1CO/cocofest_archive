@@ -3,7 +3,7 @@ name: optistim
 channels:
 - conda-forge
 dependencies:
-- biorbd >= 1.9.9
+- biorbd = 1.10.2
 - biosiglive
 - bioviz
 - bioptim
