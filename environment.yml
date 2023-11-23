@@ -6,6 +6,6 @@ dependencies:
 - biorbd = 1.10.2
 - biosiglive
 - bioviz
-- bioptim
+#- bioptim
 - python-graphviz
 - pyqtgraph
