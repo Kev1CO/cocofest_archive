@@ -249,10 +249,30 @@ minimum_pulse_intensity = (
     [
         (DingModelFrequency(name="ding2003"), None, None, None, None, None, None, None, None),
         (DingModelPulseDurationFrequency(name="ding2007"), 0.0002, None, None, None, None, None, None, None),
-        (DingModelPulseDurationFrequency(name="ding2007"), None, minimum_pulse_duration, 0.0006, False, None, None, None, None),
+        (
+            DingModelPulseDurationFrequency(name="ding2007"),
+            None,
+            minimum_pulse_duration,
+            0.0006,
+            False,
+            None,
+            None,
+            None,
+            None,
+        ),
         # (DingModelPulseDurationFrequency(), None, minimum_pulse_duration, 0.0006, True, None, None, None, None), parameter mapping not yet implemented
         (DingModelIntensityFrequency(name="hmed2018"), None, None, None, None, 20, None, None, None),
-        (DingModelIntensityFrequency(name="hmed2018"), None, None, None, None, None, minimum_pulse_intensity, 130, False),
+        (
+            DingModelIntensityFrequency(name="hmed2018"),
+            None,
+            None,
+            None,
+            None,
+            None,
+            minimum_pulse_intensity,
+            130,
+            False,
+        ),
         # (DingModelIntensityFrequency(), None, None, None, None, None, minimum_pulse_intensity, 130, True), parameter mapping not yet implemented
     ],
 )
@@ -298,9 +318,21 @@ def test_ocp_building(
 ):
     if model.name == "ding2003" and time_min is None and time_max is None:
         for_optimal_control = False
-    elif model.name == "ding2007" and time_min is None and time_max is None and pulse_time_min is None and pulse_time_max is None:
+    elif (
+        model.name == "ding2007"
+        and time_min is None
+        and time_max is None
+        and pulse_time_min is None
+        and pulse_time_max is None
+    ):
         for_optimal_control = False
-    elif model.name == "hmed2018" and time_min is None and time_max is None and pulse_intensity_min is None and pulse_intensity_max is None:
+    elif (
+        model.name == "hmed2018"
+        and time_min is None
+        and time_max is None
+        and pulse_intensity_min is None
+        and pulse_intensity_max is None
+    ):
         for_optimal_control = False
     else:
         for_optimal_control = True
@@ -378,10 +410,9 @@ def test_ocp_building(
 
 def test_ocp_not_for_optimal_error():
     with pytest.raises(
-            ValueError,
-            match=
-            "This is not an optimal control problem,"
-            " add parameter to optimize or set for_optimal_control flag to false"
+        ValueError,
+        match="This is not an optimal control problem,"
+        " add parameter to optimize or set for_optimal_control flag to false",
     ):
         ocp = FunctionalElectricStimulationOptimalControlProgram(
             model=DingModelFrequency(),

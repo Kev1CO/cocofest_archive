@@ -18,7 +18,6 @@ def test_ding2003_modification():
                 model.alpha_km,
                 model.alpha_tau1,
                 model.tau_fat,
-
             ]
         ),
         np.array([3009, 0.103, 0.050957, 0.060, -4.0 * 10e-7, 1.9 * 10e-8, 2.1 * 10e-5, 127]),
@@ -44,7 +43,6 @@ def test_ding2003_modification():
                 model.alpha_km,
                 model.alpha_tau1,
                 model.tau_fat,
-
             ]
         ),
         np.array([1, 1, 1, 1, 1, 1, 1, 1]),
