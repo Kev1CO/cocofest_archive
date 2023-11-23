@@ -1,13 +1,17 @@
 # Contributing to `cocofest`
-All contributions, bug reports, bug fixes, documentation improvements, enhancements, and ideas are welcome.
-We recommend going through the list of [`issues`](https://github.com/Kev1CO/optistim/issues) to find issues that interest you.
-You can then get your development environment setup with the following instructions.
+We warmly welcome all contributions, including bug reports, bug fixes, documentation improvements, enhancements, and innovative ideas. 
+But first take a look at our list of [`issues`](https://github.com/Kev1CO/cocofest/issues) on GitHub.
+You might find issues that already matches your needs.
+
 
 ## Forking `cocofest`
 
-You will need your own fork to work on the code.
-Go to the [cocofest project page](https://github.com/Kev1CO/cocofest/) and hit the `Fork` button.
-You will want to clone your fork to your machine:
+To make contributions, you'll need to create your own fork of the cocofest repository. Here's how to get started:
+
+1. Visit the [cocofest project page](https://github.com/Kev1CO/cocofest).
+2. Click the Fork button to create your personal fork.
+
+After forking, clone your repository to your local machine using the following command:
 
 ```bash
 git clone https://github.com/your-user-name/cocofest.git
@@ -15,10 +19,11 @@ git clone https://github.com/your-user-name/cocofest.git
 
 ## Creating and activating conda environment
 
-Before starting any development, we recommend that you create an isolated development environment. 
-The easiest and most efficient way (due to the numerous dependencies of `cocofest`) is to use an anaconda virtual environment and to create it based on the `environment.yml` file. 
+Before diving into development, we recommend setting up an isolated development environment, especially considering the numerous dependencies of cocofest. The quickest and most efficient way to do this is by using an Anaconda virtual environment created from the provided environment.yml file. Follow these steps:
 
-- Install [miniconda](https://conda.io/miniconda.html) or [anaconda](https://www.anaconda.com/).
+1. Install [miniconda](https://conda.io/miniconda.html).
+2. Navigate to the cocofest source directory.
+3. Install the required dependencies with the following command:
 
 ```bash
 conda env create -f environment.yml
@@ -26,58 +31,45 @@ conda env create -f environment.yml
 
 ## Implementing new features
 
-Before implementing your awesome new feature, please discuss with the code owner to prevent any clashing with some other competing developments. 
-It is also a good idea to check the current opened pull-request not to redo something currently being developed. 
-If your feature is mentioned in the issue section of GitHub, please assign it to yourself.
-Otherwise, please open a new issue explaining what you are currently working on.
 
-As soon as possible, you are asked to open a pull-request (see below) with a short but descriptive name. 
-Unless that pull-request is ready to be merged, please tag it as `work in progress` by adding `[WIP]` at the beginning of the pull-request name.
-If you are ready to get your PR reviewed, you can add the tag `ready to review` by adding `[RTR]`.
-If you think your PR is ready for the last review, please use the tag `ready to merge` by adding `[RTM]`.
-Send commits that are as small as possible; 1 to 10 lines is probably a good guess, with again short but descriptive commit names. 
-Be aware of the review done by the maintainers, they will contain useful tips and advice that should be integrated ASAP. 
-Once you have responded to a specific comment, please respond `Done!` and tag it as resolved.
+When working on implementing new features, collaboration and communication are key to ensure a smooth development process. Here are some guidelines to follow:
 
-Make sure you add a minimal but meaningful example of your new feature in the `examples` folder and that you create a test with numerical values for comparison.
-If this feature changes the API, this should also be reflected in the ReadMe.
-During your development, you can create a `sandbox` folder in the examples folder. 
-Everything in this folder will automatically be ignored by Git. 
-If by accident you add a binary file in the history file (by not using a sandbox), your pull-request will be rejected and you will have to produce a new pull-request free from the binary file. 
-
-When you have completed the implementation of your new feature, navigate to your pull-request in GitHub and select `Kev1CO` in the `Reviewers` drop menu. 
-At the same time, if you think your review is ready to be merged, remove the `[WIP]` tag in the name (otherwise, your pull-request won't be merged). 
-If your pull-request is accepted, there is nothing more to do, Congrats! 
-If changes are required, reply to all the comments and, as stated previously, respond `Done!` and tag them as resolved. 
-Be aware that sometimes the maintainer can push modifications directly to your branch, so make sure to pull before continuing your work on that branch.
+- Discuss your proposed feature with the code owner to avoid conflicts with ongoing development efforts.
+- Check for open pull requests to avoid duplicating work.
+- If your feature is related to an existing issue, assign it to yourself. If not, open a new issue to describe your work and assign it to yourself.
+- When you are ready, open a pull request with a concise yet descriptive title. Use [WIP] at the beginning of the title if it's a `work in progress`, [RTR] when it's `ready for review`, and [RTM] when it's `ready for merging`.
+- Submit small, focused commits with clear and informative commit messages.
+- Pay attention to feedback from maintainers and respond to comments promptly, marking them as "Done!" when resolved.
+- Include a meaningful example of your new feature in the examples folder and create tests with numerical values for comparison.
+- If your feature alters the API, update the ReadMe accordingly.
+- Once your feature is ready for review, select Kev1CO as the reviewer on GitHub. Remove the [WIP] tag from the pull request title if necessary.
+- If your pull request is accepted, congratulations! Otherwise, address the requested changes and mark comments as resolved.
 
 ## Testing your code
 
-Adding tests are required to get your development merged to the master branch. 
-Therefore, it is very good practice to get the habit of writing tests ahead of time so this is never an issue.
-The `cocofest` test suite runs automatically on GitHub every time a commit is submitted.
-However, we strongly encourage running tests locally prior to submitting the pull-request.
-To do so, simply run the tests folder in pytest (`pytest tests`).
+Adding tests is essential to merge your code into the master branch.
+We strongly recommend writing tests early in the development process.
+The cocofest test suite runs automatically on GitHub with every commit, but testing locally is a good practice.
+To launch tests locally, run the tests folder in pytest (`pytest tests`).
 
 ## Commenting
 
-Every function, class and module should have their respective proper docstrings completed.
-The docstring convention used is NumPy. 
-Moreover, if your new features is available to the lay user (i.e., it changes the API), the `ReadMe.md` should be modified accordingly.
+To maintain code quality and clarity, ensure that every function, class, and module has proper docstrings following the NumPy convention.
+If your new feature changes the API, update the `ReadMe.md` accordingly.
 
 ## Convention of coding
 
-`Cocofest` tries to follow as much as possible the PEP recommendations (https://www.python.org/dev/peps/). 
+`cocofest` tries to follow as much as possible the PEP recommendations (https://www.python.org/dev/peps/). 
 Unless you have good reasons to disregard them, your pull-request is required to follow these recommendations.
 
 All variable names that could be plural should be written as such.
 
 Black is used to enforce the code spacing. 
-`Cocofest` is linted with the 120-character max per line's option. 
+`cocofest` is linted with the 120-character max per line's option. 
 This means that your pull-request tests on GitHub will appear to fail if black fails. 
-The easiest way to make sure black is happy is to locally run this command:
+The easiest way to make sure the black test goes through is to locally run this command:
 ```bash
 black . -l120 --exclude "external/*"
 ```
-If you need to install black, you can do it via conda using the conda-forge channel.
-
+If you need to install black, you can do so via conda using the conda-forge channel.
+Your adherence to these conventions will help streamline the review process and enhance the overall code quality.
