@@ -43,12 +43,19 @@ jobs:
           mamba list
 
       - name: Install bioptim on Windows
-        run: |
-          pwd
-          cd external/bioptim
-          ls
-          pwd
-          python setup.py install
+        run:
+          uses: actions/checkout@v2
+          with:
+            submodules: bioptim
+              python setup.py install
+
+#      - name: Install bioptim on Windows
+#        run: |
+#          pwd
+#          cd external/bioptim
+#          ls
+#          pwd
+#          python setup.py install
 
 #      - name: Install bioptim on Windows
 #        run: |
