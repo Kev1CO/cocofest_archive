@@ -1,12 +1,13 @@
 import pickle
 import numpy as np
 import matplotlib.pyplot as plt
-from matplotlib.ticker import MaxNLocator
+from matplotlib.ticker import MaxNLocator, FixedLocator, IndexLocator
+from matplotlib import colors
 
 
 # --- Extracting the results from the files --- #
 
-desired_mode = "single"  # "single", "doublet" or triplet
+desired_mode = "triplet"  # "single", "doublet" or triplet
 
 if desired_mode == "single":
     with open(r"data\truncation_single.pkl", "rb") as f:
@@ -26,12 +27,16 @@ computations_time = data["computations_time"]
 
 # --- Plotting the results --- #
 list_error = []
+ground_truth_parameter = []
+counter = 0
 for i in range(len(total_results)):
     ground_truth_f = total_results[i][-1]
     for j, result in enumerate(total_results[i]):
         error_val = abs(ground_truth_f - result)
-        error_val = 0 if error_val == 0 else abs(np.log(error_val + 1))
+        if error_val == 0:
+            ground_truth_parameter.append(parameter_list[counter])
         list_error.append(error_val)
+        counter += 1
 
 max_error = max(list_error)
 min_error = min(list_error)
@@ -42,17 +47,28 @@ min_computation_time = min(computations_time)
 counter = 0
 fig, axs = plt.subplots(1, 2)
 
+cmap = plt.get_cmap().copy()
+cmap = cmap.with_extremes(under="black")
+
 im1 = axs[0].scatter(
     np.array(parameter_list)[:, 0],
     np.array(parameter_list)[:, 1],
     edgecolors="none",
     s=20,
     c=list_error,
-    vmin=min_error,
-    vmax=max_error,
+    norm=colors.LogNorm(vmin=1e-10, vmax=max_error),
+    cmap=cmap,
 )
 
-im2 = axs[1].scatter(
+im2 = axs[0].scatter(
+    np.array(ground_truth_parameter)[:, 0],
+    np.array(ground_truth_parameter)[:, 1],
+    edgecolors="none",
+    s=20,
+    color="black",
+)
+
+im3 = axs[1].scatter(
     np.array(parameter_list)[:, 0],
     np.array(parameter_list)[:, 1],
     edgecolors="none",
@@ -62,16 +78,69 @@ im2 = axs[1].scatter(
     vmax=max_computation_time,
 )
 
-fig.colorbar(im1, ax=axs[0], label="Absolute error (N) log scale")
-fig.colorbar(im2, ax=axs[1], label="Computation time (s)")
+cbar1 = fig.colorbar(
+    im1,
+    ax=axs[0],
+    label="Absolute error (N)",
+    extend="min",
+    ticks=[1e-10, 1e-8, 1e-6, 1e-4, 1e-2, 1, max_error],
+    cmap=cmap,
+)
 
-axs[0].set_ylabel("Stimulation kept prior calculation (n)")
-axs[0].yaxis.set_major_locator(MaxNLocator(integer=True))
+cbar1.ax.set_yticklabels(
+    [
+        "{:.0e}".format(float(1e-10)),
+        "{:.0e}".format(float(1e-8)),
+        "{:.0e}".format(float(1e-6)),
+        "{:.0e}".format(float(1e-4)),
+        "{:.0e}".format(float(1e-2)),
+        "{:.0e}".format(float(1)),
+        "{:.1e}".format(float(round(max_error))),
+    ],
+    style="italic",
+)
+
+if desired_mode == "single":
+    cbar2 = fig.colorbar(
+        im3,
+        ax=axs[1],
+        label="Computation time (s)",
+        ticks=[round(min_computation_time + 0.001, 3), 3.5, 4, 4.5, 5, round(max_computation_time - 0.001, 3)],
+    )
+    cbar2.ax.set_yticklabels(
+        [round(min_computation_time + 0.001, 3), 3.5, 4, 4.5, 5, round(max_computation_time - 0.001, 3)], style="italic"
+    )
+
+elif desired_mode == "doublet":
+    cbar2 = fig.colorbar(
+        im3,
+        ax=axs[1],
+        label="Computation time (s)",
+        ticks=[round(min_computation_time + 0.001, 3), 4, 5, 6, 7, round(max_computation_time - 0.001, 3)],
+    )
+    cbar2.ax.set_yticklabels(
+        [round(min_computation_time + 0.001, 3), 4, 5, 6, 7, round(max_computation_time - 0.001, 3)], style="italic"
+    )
+
+elif desired_mode == "triplet":
+    cbar2 = fig.colorbar(
+        im3,
+        ax=axs[1],
+        label="Computation time (s)",
+        ticks=[round(min_computation_time + 0.001, 3), 4, 5, 6, 7, 8, 9, round(max_computation_time - 0.001, 3)],
+    )
+    cbar2.ax.set_yticklabels(
+        [round(min_computation_time + 0.001, 3), 4, 5, 6, 7, 8, 9, round(max_computation_time - 0.001, 3)],
+        style="italic",
+    )
+
 axs[0].set_xlabel("Frequency (Hz)")
 axs[0].xaxis.set_major_locator(MaxNLocator(integer=True))
+axs[0].set_ylabel("Previous stimulation kept for computation (n)")
+axs[0].yaxis.set_major_locator(MaxNLocator(integer=True))
 axs[1].set_xlabel("Frequency (Hz)")
 axs[1].xaxis.set_major_locator(MaxNLocator(integer=True))
-axs[1].set_ylabel("Stimulation kept prior calculation (n)")
+axs[1].set_ylabel("Previous stimulation kept for computation (n)")
 axs[1].yaxis.set_major_locator(MaxNLocator(integer=True))
 
 ticks = np.arange(1, 101, 1).tolist()
@@ -79,15 +148,23 @@ ticks_label = np.arange(1, 101, 1)
 ticks_label = np.where(np.logical_or((ticks_label % 10 == 0), (ticks_label == 1)), ticks_label, "").tolist()
 axs[0].set_xticks(ticks)
 axs[0].set_xticklabels(ticks_label)
+axs[0].xaxis.set_minor_locator(IndexLocator(base=1, offset=0))
+axs[0].xaxis.set_major_locator(FixedLocator([1, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100]))
 axs[0].set_yticks(ticks)
 axs[0].set_yticklabels(ticks_label)
+axs[0].yaxis.set_minor_locator(IndexLocator(base=1, offset=0))
+axs[0].yaxis.set_major_locator(FixedLocator([1, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100]))
 axs[1].set_xticks(ticks)
 axs[1].set_xticklabels(ticks_label)
+axs[1].xaxis.set_minor_locator(IndexLocator(base=1, offset=0))
+axs[1].xaxis.set_major_locator(FixedLocator([1, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100]))
 axs[1].set_yticks(ticks)
 axs[1].set_yticklabels(ticks_label)
+axs[1].yaxis.set_minor_locator(IndexLocator(base=1, offset=0))
+axs[1].yaxis.set_major_locator(FixedLocator([1, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100]))
 
 axs[0].set_axisbelow(True)
-axs[0].grid()
+axs[0].grid(which="both")
 axs[1].set_axisbelow(True)
-axs[1].grid()
+axs[1].grid(which="both")
 plt.show()
