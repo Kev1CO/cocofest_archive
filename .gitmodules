@@ -1,3 +1,3 @@
 [submodule "external/bioptim"]
 	path = external/bioptim
-	url = https://github.com/Kev1CO/bioptim
+	url = https://github.com/Kev1CO/bioptim/tree/node_time_mx
