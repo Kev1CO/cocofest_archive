@@ -247,12 +247,12 @@ minimum_pulse_intensity = (
     " pulse_intensity_max,"
     " pulse_intensity_bimapping,",
     [
-        (DingModelFrequency(), None, None, None, None, None, None, None, None),
-        (DingModelPulseDurationFrequency(), 0.0002, None, None, None, None, None, None, None),
-        (DingModelPulseDurationFrequency(), None, minimum_pulse_duration, 0.0006, False, None, None, None, None),
+        (DingModelFrequency(name="ding2003"), None, None, None, None, None, None, None, None),
+        (DingModelPulseDurationFrequency(name="ding2007"), 0.0002, None, None, None, None, None, None, None),
+        (DingModelPulseDurationFrequency(name="ding2007"), None, minimum_pulse_duration, 0.0006, False, None, None, None, None),
         # (DingModelPulseDurationFrequency(), None, minimum_pulse_duration, 0.0006, True, None, None, None, None), parameter mapping not yet implemented
-        (DingModelIntensityFrequency(), None, None, None, None, 20, None, None, None),
-        (DingModelIntensityFrequency(), None, None, None, None, None, minimum_pulse_intensity, 130, False),
+        (DingModelIntensityFrequency(name="hmed2018"), None, None, None, None, 20, None, None, None),
+        (DingModelIntensityFrequency(name="hmed2018"), None, None, None, None, None, minimum_pulse_intensity, 130, False),
         # (DingModelIntensityFrequency(), None, None, None, None, None, minimum_pulse_intensity, 130, True), parameter mapping not yet implemented
     ],
 )
@@ -271,6 +271,8 @@ minimum_pulse_intensity = (
 @pytest.mark.parametrize(
     "force_tracking, end_node_tracking", [(init_force_tracking, None), (None, init_end_node_tracking)]
 )
+@pytest.mark.parametrize("sum_stim_truncation", [None, 2])
+@pytest.mark.parametrize("with_fatigue", [False, True])
 def test_ocp_building(
     model,
     n_stim,
@@ -291,9 +293,23 @@ def test_ocp_building(
     pulse_intensity_max,
     pulse_intensity_bimapping,
     use_sx,
+    sum_stim_truncation,
+    with_fatigue,
 ):
+    if model.name == "ding2003" and time_min is None and time_max is None:
+        for_optimal_control = False
+    elif model.name == "ding2007" and time_min is None and time_max is None and pulse_time_min is None and pulse_time_max is None:
+        for_optimal_control = False
+    elif model.name == "hmed2018" and time_min is None and time_max is None and pulse_intensity_min is None and pulse_intensity_max is None:
+        for_optimal_control = False
+    else:
+        for_optimal_control = True
+
+    model._with_fatigue = with_fatigue
+    model._sum_stim_truncation = sum_stim_truncation
+
     ocp_1 = FunctionalElectricStimulationOptimalControlProgram.from_frequency_and_final_time(
-        ding_model=model,
+        model=model,
         n_shooting=n_shooting,
         final_time=final_time,
         force_tracking=force_tracking,
@@ -312,10 +328,11 @@ def test_ocp_building(
         pulse_intensity_max=pulse_intensity_max,
         pulse_intensity_bimapping=pulse_intensity_bimapping,
         use_sx=use_sx,
+        for_optimal_control=for_optimal_control,
     )
 
     ocp_2 = FunctionalElectricStimulationOptimalControlProgram.from_frequency_and_n_stim(
-        ding_model=model,
+        model=model,
         n_shooting=n_shooting,
         n_stim=n_stim,
         force_tracking=force_tracking,
@@ -333,10 +350,11 @@ def test_ocp_building(
         pulse_intensity_max=pulse_intensity_max,
         pulse_intensity_bimapping=pulse_intensity_bimapping,
         use_sx=use_sx,
+        for_optimal_control=for_optimal_control,
     )
 
     ocp_3 = FunctionalElectricStimulationOptimalControlProgram(
-        ding_model=model,
+        model=model,
         n_shooting=n_shooting,
         n_stim=n_stim,
         final_time=0.3,
@@ -354,7 +372,25 @@ def test_ocp_building(
         pulse_intensity_max=pulse_intensity_max,
         pulse_intensity_bimapping=pulse_intensity_bimapping,
         use_sx=use_sx,
+        for_optimal_control=for_optimal_control,
     )
+
+
+def test_ocp_not_for_optimal_error():
+    with pytest.raises(
+            ValueError,
+            match=
+            "This is not an optimal control problem,"
+            " add parameter to optimize or set for_optimal_control flag to false"
+    ):
+        ocp = FunctionalElectricStimulationOptimalControlProgram(
+            model=DingModelFrequency(),
+            n_stim=1,
+            n_shooting=10,
+            final_time=1,
+            use_sx=True,
+            for_optimal_control=True,
+        )
 
 
 @pytest.mark.parametrize(
@@ -364,7 +400,7 @@ def test_ocp_building(
 def test_multi_start_building(force_tracking, end_node_tracking, min_pulse_duration, min_pulse_intensity):
     multi_start = FunctionalElectricStimulationMultiStart(
         methode="standard",
-        ding_model=[DingModelFrequency(), DingModelPulseDurationFrequency(), DingModelIntensityFrequency()],
+        model=[DingModelFrequency(), DingModelPulseDurationFrequency(), DingModelIntensityFrequency()],
         n_stim=[10],
         n_shooting=[20],
         final_time=[1],
