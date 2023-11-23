@@ -11,7 +11,7 @@ jobs:
       fail-fast: false
       matrix:
         os: [windows-latest]
-        shard: [1]
+        shard: [1, 2]
     name: Tests on ${{ matrix.os }}-shard ${{ matrix.shard }}
     runs-on: ${{ matrix.os }}
     defaults:
@@ -53,10 +53,122 @@ jobs:
       - name: Install extra dependencies
         run: mamba install pytest-cov black pytest pytest-cov codecov packaging -cconda-forge
 
-      - name: Run tests without code coverage
-        run: pytest -v --color=yes tests/shard${{ matrix.shard }}
+      - name: Run tests with code coverage
+        run: pytest -v --color=yes --cov-report term-missing --cov=bioptim --cov-report=xml:coverage.xml tests/shard${{ matrix.shard }}
 
-      - name: Upload coverage reports to Codecov
-        uses: codecov/codecov-action@v3
-        env:
-          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+      - name: Archive coverage report
+        id: archive
+        uses: actions/upload-artifact@v3
+        with:
+          name: coverage${{ matrix.shard }}
+          path: |
+            coverage.xml
+            .coverage
+
+#      - name: Rename coverage files
+#        run: |
+#          for shard in {1,2}; do
+#            mv coverage${shard}/coverage.xml coverage${shard}.xml
+#            mv coverage${shard}/.coverage* .coverage${shard}
+#          done
+#
+#      - name: Show current dir content
+#        run: pwd; ls -a -l
+#
+#      - name: Merge coverage reports
+#        run: coverage combine .coverage1 .coverage2 .coverage3 .coverage4
+#
+#      - name: Show current dir content with new .coverage file
+#        run: pwd; ls -a
+#
+#      - name: Generate XML report
+#        run: |
+#          coverage xml
+#          coverage report -m
+#
+#      - name: Upload coverage to Codecov
+#        uses: codecov/codecov-action@v2
+#        with:
+#          #token: ${{ secrets.CODECOV_TOKEN }}
+#          file: ./coverage.xml
+#          #files: ./coverage1.xml, ./coverage2.xml, ./coverage3.xml, ./coverage4.xml
+#          flags: unittests
+#          fail_ci_if_error: true
+#          verbose: true
+
+#      - name: Run tests without code coverage
+#        run: pytest -v --color=yes tests/shard${{ matrix.shard }}
+#
+#      - name: Upload coverage reports to Codecov
+#        uses: codecov/codecov-action@v3
+#        env:
+#          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+
+  merge-coverage:
+    needs: build
+    runs-on: windows-latest
+    defaults:
+      run:
+        shell: bash -l {0}
+
+    steps:
+      - name: Set prefix windows
+        run: |
+          echo "PREFIX=${{ env.PREFIX_WINDOWS }}" >> $GITHUB_ENV
+
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Setup environment
+        uses: conda-incubator/setup-miniconda@v2
+        with:
+          miniforge-variant: Mambaforge
+          miniforge-version: latest
+          use-mamba: true
+          activate-environment: bioptim
+          environment-file: environment.yml
+
+      - name: Print mamba info
+        run: |
+          mamba config --show
+          mamba info
+
+      - name: Install extra dependencies
+        run: |
+          sudo apt-get install -y python3-pip
+          pip3 install coverage
+
+      - name: Download all workflow run artifacts
+        id: download
+        uses: actions/download-artifact@v3
+
+      - name: Rename coverage files
+        run: |
+          for shard in {1,2}; do
+            mv coverage${shard}/coverage.xml coverage${shard}.xml
+            mv coverage${shard}/.coverage* .coverage${shard}
+          done
+
+      - name: Show current dir content
+        run: pwd; ls -a -l
+
+      - name: Merge coverage reports
+        run: coverage combine .coverage1 .coverage2 .coverage3 .coverage4
+
+      - name: Show current dir content with new .coverage file
+        run: pwd; ls -a
+
+      - name: Generate XML report
+        run: |
+          coverage xml
+          coverage report -m
+
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v2
+        with:
+          #token: ${{ secrets.CODECOV_TOKEN }}
+          file: ./coverage.xml
+          #files: ./coverage1.xml, ./coverage2.xml, ./coverage3.xml, ./coverage4.xml
+          flags: unittests
+          fail_ci_if_error: true
+          verbose: true
