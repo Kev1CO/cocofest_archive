@@ -533,7 +533,7 @@ class FunctionalElectricStimulationMultiStart(MultiStart):
 
 
 if __name__ == "__main__":
-    time, force = ExtractData.load_data("../examples/data/hand_cycling_force.bio")
+    time, force = ExtractData.load_data("examples/data/hand_cycling_force.bio")
     force = force - force[0]
     force = [time, force]
 

@@ -1,0 +1,1 @@
+Examples can be found in {ROOT_FOLDER}/optistim/examples/

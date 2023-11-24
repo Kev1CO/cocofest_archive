@@ -1,0 +1,141 @@
+name: Run the tests
+
+on: [pull_request]
+
+env:
+  PREFIX_WINDOWS: C:\Miniconda3\envs\optistim
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest]
+        shard: [1, 2]
+    name: Tests on ${{ matrix.os }}-shard ${{ matrix.shard }}
+    runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        shell: bash -l {0}
+
+    steps:
+      - name: Set prefix windows
+        run: |
+          echo "PREFIX=${{ env.PREFIX_WINDOWS }}" >> $GITHUB_ENV
+        if: matrix.os == 'windows-latest'
+
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Setup environment
+        uses: conda-incubator/setup-miniconda@v2
+        with:
+          miniforge-variant: Mambaforge
+          miniforge-version: latest
+          use-mamba: true
+          activate-environment: optistim
+          environment-file: environment.yml
+
+      - name: Print mamba info
+        run: |
+          mamba config --show
+          mamba info
+          mamba list
+
+      - name: Install bioptim on Windows
+        run: |
+          pwd
+          cd external
+          ./bioptim_install_windows.sh 4 ${{ env.PREFIX_WINDOWS }}
+          cd ..
+#        if: matrix.os == 'windows-latest' && matrix.shard == 1
+
+      - name: Install extra dependencies
+        run: mamba install pytest-cov black pytest pytest-cov codecov packaging -cconda-forge
+
+      - name: Run tests with code coverage
+        run: pytest -v --color=yes --cov-report term-missing --cov=optistim --cov-report=xml:coverage.xml tests/shard${{ matrix.shard }}
+
+      - name: Archive coverage report
+        id: archive
+        uses: actions/upload-artifact@v3
+        with:
+          name: coverage${{ matrix.shard }}
+          path: |
+            coverage.xml
+            .coverage
+
+  merge-coverage:
+    needs: build
+    runs-on: windows-latest
+    defaults:
+      run:
+        shell: bash -l {0}
+
+    steps:
+      - name: Set prefix windows
+        run: |
+          echo "PREFIX=${{ env.PREFIX_WINDOWS }}" >> $GITHUB_ENV
+
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Setup environment
+        uses: conda-incubator/setup-miniconda@v2
+        with:
+          miniforge-variant: Mambaforge
+          miniforge-version: latest
+          use-mamba: true
+          activate-environment: optistim
+          environment-file: environment.yml
+
+      - name: Print mamba info
+        run: |
+          mamba config --show
+          mamba info
+
+      - name: Install bioptim on Windows
+        run: |
+          pwd
+          cd external
+          ./bioptim_install_windows.sh 4 ${{ env.PREFIX_WINDOWS }}
+          cd ..
+
+      - name: Install extra dependencies
+        run: pip install coverage
+            #mamba install coverage -cconda-forge
+      - name: Download all workflow run artifacts
+        id: download
+        uses: actions/download-artifact@v3
+
+      - name: Rename coverage files
+        run: |
+          for shard in {1,2}; do
+            mv coverage${shard}/coverage.xml coverage${shard}.xml
+            mv coverage${shard}/.coverage* .coverage${shard}
+          done
+
+      - name: Show current dir content
+        run: pwd; ls -a -l
+
+      - name: Merge coverage reports
+        run: coverage combine .coverage1 .coverage2
+
+      - name: Show current dir content with new .coverage file
+        run: pwd; ls -a
+
+      - name: Generate XML report
+        run: |
+          coverage xml
+          coverage report -m
+
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v2
+        with:
+          #token: ${{ secrets.CODECOV_TOKEN }}
+          file: ./coverage.xml
+          #files: ./coverage1.xml, ./coverage2.xml, ./coverage3.xml, ./coverage4.xml
+          flags: unittests
+          fail_ci_if_error: true
+          verbose: true
+          token: ${{ secrets.CODECOV_TOKEN }}
