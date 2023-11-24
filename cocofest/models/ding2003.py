@@ -1,8 +1,3 @@
-"""
-This script implements several custom models to work with bioptim. Bioptim has a deep connection with biorbd,
-but it is possible to use bioptim without biorbd. This is an example of how to parameter a models to use bioptim with
-different custom models.
-"""
 from typing import Callable
 
 from casadi import MX, exp, vertcat
@@ -22,7 +17,11 @@ class DingModelFrequency:
     As CustomModel is an abstract class, some methods are mandatory and must be implemented.
     Such as serialize, name_dof, nb_state and name.
 
-    This is the Ding 2003 models using the stimulation frequency in input.
+    This is the Ding 2003 model using the stimulation frequency in input.
+
+    Ding, J., Wexler, A. S., & Binder-Macleod, S. A. (2003).
+    Mathematical models for fatigue minimization during functional electrical stimulation.
+    Journal of Electromyography and Kinesiology, 13(6), 575-588.
     """
 
     def __init__(
@@ -137,7 +136,7 @@ class DingModelFrequency:
         cn: MX,
         f: MX,
         t: MX = None,
-        **extra_arguments: list[MX] | list[float],
+        t_stim_prev: list[MX] | list[float] = None,
     ) -> MX:
         """
         The system dynamics is the function that describes the models.
@@ -150,16 +149,15 @@ class DingModelFrequency:
             The value of the force (N)
         t: MX
             The current time at which the dynamics is evaluated (ms)
-        **extra_arguments: list[MX]
-            t_stim_prev: list[MX]
-                The time list of the previous stimulations (ms)
+        t_stim_prev: list[MX]
+            The time list of the previous stimulations (ms)
 
         Returns
         -------
         The value of the derivative of each state dx/dt at the current time t
         """
         r0 = self.km_rest + self.r0_km_relationship  # Simplification
-        cn_dot = self.cn_dot_fun(cn, r0, t, t_stim_prev=extra_arguments["t_stim_prev"])  # Equation n°1
+        cn_dot = self.cn_dot_fun(cn, r0, t, t_stim_prev=t_stim_prev)  # Equation n°1
         f_dot = self.f_dot_fun(cn, f, self.a_rest, self.tau1_rest, self.km_rest)  # Equation n°2
         return vertcat(cn_dot, f_dot)
 
@@ -171,7 +169,7 @@ class DingModelFrequency:
         tau1: MX = None,
         km: MX = None,
         t: MX = None,
-        **extra_arguments: list[MX] | list[float],
+        t_stim_prev: list[MX] | list[float] = None,
     ) -> MX:
         """
         The system dynamics is the function that describes the models.
@@ -190,16 +188,15 @@ class DingModelFrequency:
             The value of the cross_bridges (unitless)
         t: MX
             The current time at which the dynamics is evaluated (ms)
-        **extra_arguments: list[MX]
-            t_stim_prev: list[MX]
-                The time list of the previous stimulations (ms)
+        t_stim_prev: list[MX]
+            The time list of the previous stimulations (ms)
 
         Returns
         -------
         The value of the derivative of each state dx/dt at the current time t
         """
         r0 = km + self.r0_km_relationship  # Simplification
-        cn_dot = self.cn_dot_fun(cn, r0, t, t_stim_prev=extra_arguments["t_stim_prev"])  # Equation n°1
+        cn_dot = self.cn_dot_fun(cn, r0, t, t_stim_prev=t_stim_prev)  # Equation n°1
         f_dot = self.f_dot_fun(cn, f, a, tau1, km)  # Equation n°2
         a_dot = self.a_dot_fun(a, f)  # Equation n°5
         tau1_dot = self.tau1_dot_fun(tau1, f)  # Equation n°9
@@ -252,13 +249,14 @@ class DingModelFrequency:
         A part of the n°1 equation
         """
         sum_multiplier = 0
+        enough_stim_to_truncate = self._sum_stim_truncation and len(t_stim_prev) > self._sum_stim_truncation
+        if enough_stim_to_truncate:
+            t_stim_prev = t_stim_prev[-self._sum_stim_truncation - 1:]
         if len(t_stim_prev) == 1:
             ri = 1
             exp_time = self.exp_time_fun(t, t_stim_prev[0])  # Part of Eq n°1
             sum_multiplier += ri * exp_time  # Part of Eq n°1
         else:
-            if self._sum_stim_truncation and len(t_stim_prev) > self._sum_stim_truncation:
-                t_stim_prev = t_stim_prev[-self._sum_stim_truncation - 1 :]
             for i in range(1, len(t_stim_prev)):
                 previous_phase_time = t_stim_prev[i] - t_stim_prev[i - 1]
                 ri = self.ri_fun(r0, previous_phase_time)  # Part of Eq n°1
@@ -266,7 +264,7 @@ class DingModelFrequency:
                 sum_multiplier += ri * exp_time  # Part of Eq n°1
         return sum_multiplier
 
-    def cn_dot_fun(self, cn: MX, r0: MX | float, t: MX, **extra_arguments: MX | list[MX] | list[float]) -> MX | float:
+    def cn_dot_fun(self, cn: MX, r0: MX | float, t: MX, t_stim_prev: list[MX]) -> MX | float:
         """
         Parameters
         ----------
@@ -276,15 +274,14 @@ class DingModelFrequency:
             Mathematical term characterizing the magnitude of enhancement in CN from the following stimuli (unitless)
         t: MX
             The current time at which the dynamics is evaluated (ms)
-        **extra_arguments: list[MX] | list[float]
-            t_stim_prev: list[MX] | list[float]
-                The time list of the previous stimulations (ms)
+        t_stim_prev: list[MX]
+            The time list of the previous stimulations (ms)
 
         Returns
         -------
         The value of the derivative ca_troponin_complex (unitless)
         """
-        sum_multiplier = self.cn_sum_fun(r0, t, t_stim_prev=extra_arguments["t_stim_prev"])  # Part of Eq n°1
+        sum_multiplier = self.cn_sum_fun(r0, t, t_stim_prev=t_stim_prev)  # Part of Eq n°1
 
         return (1 / self.tauc) * sum_multiplier - (cn / self.tauc)  # Equation n°1
 

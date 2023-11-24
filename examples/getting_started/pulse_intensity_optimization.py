@@ -10,9 +10,7 @@ from cocofest import DingModelIntensityFrequency, FunctionalElectricStimulationO
 # This ocp was build to match a force value of 200N at the end of the last node.
 # The stimulation won't be optimized and is already set to one pulse every 0.1 seconds (n_stim/final_time).
 # Plus the pulsation intensity will be optimized between 0 and 130 mA and are not the same across the problem.
-minimum_pulse_intensity = (
-    np.arctanh(-DingModelIntensityFrequency().cr) / DingModelIntensityFrequency().bs
-) + DingModelIntensityFrequency().Is
+minimum_pulse_intensity = DingModelIntensityFrequency.min_pulse_intensity(DingModelIntensityFrequency())
 ocp = FunctionalElectricStimulationOptimalControlProgram(
     model=DingModelIntensityFrequency(with_fatigue=False),
     n_stim=10,

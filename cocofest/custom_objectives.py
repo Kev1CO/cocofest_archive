@@ -40,7 +40,7 @@ class CustomObjective:
 
     @staticmethod
     def track_state_from_time_interpolate(
-        controller: PenaltyController, force: np.ndarray, key: str, minimization_type: str = "LS"
+        controller: PenaltyController, force: np.ndarray, key: str, minimization_type: str = "least square"
     ) -> MX:
         """
         Minimize the states variables.
@@ -56,15 +56,15 @@ class CustomObjective:
         key: str
             The name of the state to minimize
         minimization_type: str
-            The type of minimization to perform. Either "LS" for least square or "BF" for best fit
+            The type of minimization to perform. Either "least square" or "best fit"
 
         Returns
         -------
         The difference between the two keys
         """
-        if minimization_type == "LS":
+        if minimization_type == "least square":
             return force - controller.states[key].cx
-        elif minimization_type == "BF":
+        elif minimization_type == "best fit":
             return 1 - (force / controller.states[key].cx)
         else:
             raise RuntimeError(f"Minimization type {minimization_type} not implemented")

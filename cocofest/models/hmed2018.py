@@ -1,17 +1,31 @@
 from typing import Callable
 
 from casadi import MX, vertcat, tanh
+import numpy as np
+
 from bioptim import (
-    OptimalControlProgram,
-    NonLinearProgram,
-    DynamicsEvaluation,
     ConfigureProblem,
+    DynamicsEvaluation,
+    NonLinearProgram,
+    OptimalControlProgram,
     ParameterList,
 )
 from cocofest import DingModelFrequency
 
 
 class DingModelIntensityFrequency(DingModelFrequency):
+    """
+    This is a custom models that inherits from bioptim. CustomModel.
+    As CustomModel is an abstract class, some methods are mandatory and must be implemented.
+    Such as serialize, name_dof, nb_state.
+
+    This is the Hmed 2018 model using the stimulation frequency and pulse intensity in input.
+
+    Hmed, A. B., Bakir, T., Garnier, Y. M., Sakly, A., Lepers, R., & Binczak, S. (2018).
+    An approach to a muscle force model with force-pulse amplitude relationship of human quadriceps muscles.
+    Computers in Biology and Medicine, 101, 218-228.
+    """
+
     def __init__(self, name: str = None, with_fatigue: bool = True, sum_stim_truncation: int = None):
         super(DingModelIntensityFrequency, self).__init__(
             name=name, with_fatigue=with_fatigue, sum_stim_truncation=sum_stim_truncation
@@ -69,7 +83,8 @@ class DingModelIntensityFrequency(DingModelFrequency):
         cn: MX,
         f: MX,
         t: MX = None,
-        **extra_arguments: list[MX] | list[float],
+        t_stim_prev: list[MX] | list[float] = None,
+        intensity_stim: list[MX] | list[float] = None,
     ) -> MX:
         """
         The system dynamics is the function that describes the models.
@@ -82,11 +97,10 @@ class DingModelIntensityFrequency(DingModelFrequency):
             The value of the force (N)
         t: MX
             The current time at which the dynamics is evaluated (ms)
-        **extra_arguments: list[MX]
-            t_stim_prev: list[MX]
-                The time list of the previous stimulations (ms)
-            intensity_stim: list[MX]
-                The pulsation intensity of the current stimulation (mA)
+        t_stim_prev: list[MX]
+            The time list of the previous stimulations (ms)
+        intensity_stim: list[MX]
+            The pulsation intensity of the current stimulation (mA)
 
         Returns
         -------
@@ -94,7 +108,7 @@ class DingModelIntensityFrequency(DingModelFrequency):
         """
         r0 = self.km_rest + self.r0_km_relationship  # Simplification
         cn_dot = self.cn_dot_fun(
-            cn, r0, t, t_stim_prev=extra_arguments["t_stim_prev"], intensity_stim=extra_arguments["intensity_stim"]
+            cn, r0, t, t_stim_prev=t_stim_prev, intensity_stim=intensity_stim
         )  # Equation n°1
         f_dot = self.f_dot_fun(cn, f, self.a_rest, self.tau1_rest, self.km_rest)  # Equation n°2
         return vertcat(cn_dot, f_dot)
@@ -107,7 +121,8 @@ class DingModelIntensityFrequency(DingModelFrequency):
         tau1: MX = None,
         km: MX = None,
         t: MX = None,
-        **extra_arguments: list[MX] | list[float],
+        t_stim_prev: list[MX] | list[float] = None,
+        intensity_stim: list[MX] | list[float] = None,
     ) -> MX:
         """
         The system dynamics is the function that describes the models.
@@ -126,11 +141,10 @@ class DingModelIntensityFrequency(DingModelFrequency):
             The value of the cross_bridges (unitless)
         t: MX
             The current time at which the dynamics is evaluated (ms)
-        **extra_arguments: list[MX]
-            t_stim_prev: list[MX]
-                The time list of the previous stimulations (ms)
-            intensity_stim: list[MX]
-                The pulsation intensity of the current stimulation (mA)
+        t_stim_prev: list[MX]
+            The time list of the previous stimulations (ms)
+        intensity_stim: list[MX]
+            The pulsation intensity of the current stimulation (mA)
 
         Returns
         -------
@@ -138,7 +152,7 @@ class DingModelIntensityFrequency(DingModelFrequency):
         """
         r0 = km + self.r0_km_relationship  # Simplification
         cn_dot = self.cn_dot_fun(
-            cn, r0, t, t_stim_prev=extra_arguments["t_stim_prev"], intensity_stim=extra_arguments["intensity_stim"]
+            cn, r0, t, t_stim_prev=t_stim_prev, intensity_stim=intensity_stim
         )  # Equation n°1
         f_dot = self.f_dot_fun(cn, f, a, tau1, km)  # Equation n°2
         a_dot = self.a_dot_fun(a, f)  # Equation n°5
@@ -146,7 +160,7 @@ class DingModelIntensityFrequency(DingModelFrequency):
         km_dot = self.km_dot_fun(km, f)  # Equation n°11
         return vertcat(cn_dot, f_dot, a_dot, tau1_dot, km_dot)
 
-    def cn_dot_fun(self, cn: MX, r0: MX | float, t: MX, **extra_arguments: list[MX]) -> MX | float:
+    def cn_dot_fun(self, cn: MX, r0: MX | float, t: MX, t_stim_prev: list[MX], intensity_stim: list[MX] = None) -> MX | float:
         """
         Parameters
         ----------
@@ -156,22 +170,21 @@ class DingModelIntensityFrequency(DingModelFrequency):
             Mathematical term characterizing the magnitude of enhancement in CN from the following stimuli (unitless)
         t: MX
             The current time at which the dynamics is evaluated (ms)
-        **extra_arguments: list[MX]
-            t_stim_prev: list[MX]
-                The time list of the previous stimulations (ms)
-            intensity_stim: list[MX]
-                The pulsation intensity of the current stimulation (mA)
+        t_stim_prev: list[MX]
+            The time list of the previous stimulations (ms)
+        intensity_stim: list[MX]
+            The pulsation intensity of the current stimulation (mA)
         Returns
         -------
         The value of the derivative ca_troponin_complex (unitless)
         """
         sum_multiplier = self.cn_sum_fun(
-            r0, t, t_stim_prev=extra_arguments["t_stim_prev"], intensity_stim=extra_arguments["intensity_stim"]
+            r0, t, t_stim_prev=t_stim_prev, intensity_stim=intensity_stim
         )
 
         return (1 / self.tauc) * sum_multiplier - (cn / self.tauc)  # Eq(1)
 
-    def cn_sum_fun(self, r0: MX | float, t: MX, **extra_arguments: list[MX]) -> MX | float:
+    def cn_sum_fun(self, r0: MX | float, t: MX, t_stim_prev: list[MX] = None, intensity_stim: list[MX] = None) -> MX | float:
         """
         Parameters
         ----------
@@ -179,30 +192,30 @@ class DingModelIntensityFrequency(DingModelFrequency):
             Mathematical term characterizing the magnitude of enhancement in CN from the following stimuli (unitless)
         t: MX
             The current time at which the dynamics is evaluated (ms)
-        **extra_arguments: list[MX]
-            t_stim_prev: list[MX]
-                The time list of the previous stimulations (ms)
-            intensity_stim: list[MX]
-                The pulsation intensity of the current stimulation (mA)
+        t_stim_prev: list[MX]
+            The time list of the previous stimulations (ms)
+        intensity_stim: list[MX]
+            The pulsation intensity of the current stimulation (mA)
 
         Returns
         -------
         A part of the n°1 equation
         """
         sum_multiplier = 0
-        if self._sum_stim_truncation and len(extra_arguments["t_stim_prev"]) > self._sum_stim_truncation:
-            extra_arguments["t_stim_prev"] = extra_arguments["t_stim_prev"][-self._sum_stim_truncation :]
-        for i in range(len(extra_arguments["t_stim_prev"])):  # Eq from [1]
-            if i == 0 and len(extra_arguments["t_stim_prev"]) == 1:  # Eq from Bakir et al.
+        enough_stim_to_truncate = self._sum_stim_truncation and len(t_stim_prev) > self._sum_stim_truncation
+        if enough_stim_to_truncate:
+            t_stim_prev = t_stim_prev[-self._sum_stim_truncation:]
+        for i in range(len(t_stim_prev)):  # Eq from [1]
+            if i == 0 and len(t_stim_prev) == 1:  # Eq from Bakir et al.
                 ri = 1
-            elif i == 0 and len(extra_arguments["t_stim_prev"]) != 1:
-                previous_phase_time = extra_arguments["t_stim_prev"][i + 1] - extra_arguments["t_stim_prev"][i]
+            elif i == 0 and len(t_stim_prev) != 1:
+                previous_phase_time = t_stim_prev[i + 1] - t_stim_prev[i]
                 ri = self.ri_fun(r0, previous_phase_time)
             else:
-                previous_phase_time = extra_arguments["t_stim_prev"][i] - extra_arguments["t_stim_prev"][i - 1]
+                previous_phase_time = t_stim_prev[i] - t_stim_prev[i - 1]
                 ri = self.ri_fun(r0, previous_phase_time)
-            exp_time = self.exp_time_fun(t, extra_arguments["t_stim_prev"][i])
-            lambda_i = self.lambda_i_calculation(extra_arguments["intensity_stim"][i])
+            exp_time = self.exp_time_fun(t, t_stim_prev[i])
+            lambda_i = self.lambda_i_calculation(intensity_stim[i])
             sum_multiplier += lambda_i * ri * exp_time
         return sum_multiplier
 
@@ -344,3 +357,11 @@ class DingModelIntensityFrequency(DingModelFrequency):
             self.configure_cross_bridges(ocp=ocp, nlp=nlp, as_states=True, as_controls=False)
         stim_apparition = self.get_stim_prev(ocp, nlp)
         ConfigureProblem.configure_dynamics_function(ocp, nlp, dyn_func=self.dynamics, stim_apparition=stim_apparition)
+
+    def min_pulse_intensity(self):
+        """
+        Returns
+        -------
+        The minimum pulse intensity
+        """
+        return (np.arctanh(-self.cr) / self.bs) + self.Is
