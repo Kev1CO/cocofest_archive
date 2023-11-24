@@ -102,8 +102,8 @@ jobs:
           cd ..
 
       - name: Install extra dependencies
-        run: mamba install coverage -cconda-forge
-
+        run: pip install coverage
+            #mamba install coverage -cconda-forge
       - name: Download all workflow run artifacts
         id: download
         uses: actions/download-artifact@v3
