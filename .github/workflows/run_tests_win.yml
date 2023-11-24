@@ -94,6 +94,13 @@ jobs:
           mamba config --show
           mamba info
 
+      - name: Install bioptim on Windows
+        run: |
+          pwd
+          cd external
+          ./bioptim_install_windows.sh 4 ${{ env.PREFIX_WINDOWS }}
+          cd ..
+
       - name: Install extra dependencies
         run: mamba install coverage -cconda-forge
 
