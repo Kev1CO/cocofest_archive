@@ -7,9 +7,11 @@ To solve the OCP, the robust solver [Ipopt](https://github.com/coin-or/Ipopt) ha
 
 ## Status
 
-| Type          | Status |
-|---------------|---|
-| License       | <a href="https://opensource.org/licenses/MIT"><img src="https://img.shields.io/badge/license-MIT-success" alt="License"/></a> |
+| Type          | Status                                                                                                                                                                |
+|---------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| License       | <a href="https://opensource.org/licenses/MIT"><img src="https://img.shields.io/badge/license-MIT-success" alt="License"/></a>                                         |
+| Code coverage | [![codecov](https://codecov.io/github/Kev1CO/cocofest/graph/badge.svg?token=85XHAQGLWQ)](https://codecov.io/github/Kev1CO/cocofest)                                   |
+| Code climate  | <a href="https://codeclimate.com/github/Kev1CO/cocofest/maintainability"><img src="https://api.codeclimate.com/v1/badges/182958cea2246eacf5b0/maintainability" /></a> |
 
 # Table of Contents 
 
