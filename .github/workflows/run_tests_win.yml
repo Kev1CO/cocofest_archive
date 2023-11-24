@@ -54,7 +54,7 @@ jobs:
         run: mamba install pytest-cov black pytest pytest-cov codecov packaging -cconda-forge
 
       - name: Run tests with code coverage
-        run: pytest -v --color=yes --cov-report term-missing --cov=bioptim --cov-report=xml:coverage.xml tests/shard${{ matrix.shard }}
+        run: pytest -v --color=yes --cov-report term-missing --cov=optistim --cov-report=xml:coverage.xml tests/shard${{ matrix.shard }}
 
       - name: Archive coverage report
         id: archive
@@ -138,3 +138,4 @@ jobs:
           flags: unittests
           fail_ci_if_error: true
           verbose: true
+          token: ${{ secrets.CODECOV_TOKEN }}
