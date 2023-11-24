@@ -98,7 +98,7 @@ jobs:
         run: |
 #          sudo apt-get install -y python3-pip
 #          pip3 install coverage
-          mamba install coverage -cconda-forge
+          pip install coverage
 
       - name: Download all workflow run artifacts
         id: download
