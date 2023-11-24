@@ -4,7 +4,7 @@ This example is a variation of the fes frequency in examples/frequency_optimizat
 """
 import shutil
 
-from optistim import DingModelFrequency, FunctionalElectricStimulationMultiStart
+from cocofest import DingModelFrequency, FunctionalElectricStimulationMultiStart
 
 # --- Build multi start --- #
 # This multi start was build to match a force value of 270N at the end of the last node.

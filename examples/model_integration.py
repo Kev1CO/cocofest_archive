@@ -1,7 +1,7 @@
 import matplotlib.pyplot as plt
 import numpy as np
 from bioptim import InitialGuessList, Solution, Shooting, SolutionIntegrator
-from optistim import (
+from cocofest import (
     DingModelFrequency,
     FunctionalElectricStimulationOptimalControlProgram,
     build_initial_guess_from_ocp,

@@ -19,8 +19,8 @@ from bioptim import (
     PhaseTransitionList,
 )
 
-from optistim.custom_objectives import CustomObjective
-from optistim import DingModelFrequency, DingModelPulseDurationFrequency, DingModelIntensityFrequency
+from cocofest.custom_objectives import CustomObjective
+from cocofest import DingModelFrequency, DingModelPulseDurationFrequency, DingModelIntensityFrequency
 
 
 class FunctionalElectricStimulationOptimalControlProgramIdentification(OptimalControlProgram):

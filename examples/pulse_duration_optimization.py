@@ -3,7 +3,7 @@ This example will do a 10 stimulation example with Ding's 2007 pulse duration an
 This ocp was build to match a force value of 200N at the end of the last node.
 """
 
-from optistim import DingModelPulseDurationFrequency, FunctionalElectricStimulationOptimalControlProgram
+from cocofest import DingModelPulseDurationFrequency, FunctionalElectricStimulationOptimalControlProgram
 
 # --- Build ocp --- #
 # This ocp was build to match a force value of 200N at the end of the last node.

@@ -1,7 +1,7 @@
 import numpy as np
 from casadi import DM
 
-from optistim import (
+from cocofest import (
     DingModelFrequency,
     DingModelPulseDurationFrequency,
     DingModelIntensityFrequency,

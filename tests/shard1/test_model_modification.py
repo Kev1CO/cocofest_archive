@@ -1,6 +1,6 @@
 import numpy as np
 
-from optistim import (
+from cocofest import (
     DingModelFrequency,
 )
 

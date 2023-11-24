@@ -4,7 +4,7 @@ This ocp was build to match a force value of 200N at the end of the last node.
 """
 import numpy as np
 
-from optistim import DingModelIntensityFrequency, FunctionalElectricStimulationOptimalControlProgram
+from cocofest import DingModelIntensityFrequency, FunctionalElectricStimulationOptimalControlProgram
 
 # --- Build ocp --- #
 # This ocp was build to match a force value of 200N at the end of the last node.

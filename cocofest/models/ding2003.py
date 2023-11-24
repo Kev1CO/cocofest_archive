@@ -1,6 +1,6 @@
 """
-This script implements several custom model to work with bioptim. Bioptim has a deep connection with biorbd,
-but it is possible to use bioptim without biorbd. This is an example of how to parameter a model to use bioptim with
+This script implements several custom models to work with bioptim. Bioptim has a deep connection with biorbd,
+but it is possible to use bioptim without biorbd. This is an example of how to parameter a models to use bioptim with
 different custom models.
 """
 from typing import Callable
@@ -18,11 +18,11 @@ from bioptim import (
 
 class DingModelFrequency:
     """
-    This is a custom model that inherits from bioptim. CustomModel.
+    This is a custom models that inherits from bioptim. CustomModel.
     As CustomModel is an abstract class, some methods are mandatory and must be implemented.
     Such as serialize, name_dof, nb_state and name.
 
-    This is the Ding 2003 model using the stimulation frequency in input.
+    This is the Ding 2003 models using the stimulation frequency in input.
     """
 
     def __init__(
@@ -38,19 +38,19 @@ class DingModelFrequency:
         self.tauc = 0.020  # Value from Ding's experimentation [1] (s)
         self.r0_km_relationship = 1.04  # (unitless)
         # ---- Different values for each person ---- #
-        # ---- Force model ---- #
+        # ---- Force models ---- #
         self.a_rest = 3009  # Value from Ding's experimentation [1] (N.s-1)
         self.tau1_rest = 0.050957  # Value from Ding's experimentation [1] (s)
         self.tau2 = 0.060  # Close value from Ding's experimentation [2] (s)
         self.km_rest = 0.103  # Value from Ding's experimentation [1] (unitless)
-        # ---- Fatigue model ---- #
+        # ---- Fatigue models ---- #
         self.alpha_a = -4.0 * 10e-7  # Value from Ding's experimentation [1] (s^-2)
         self.alpha_tau1 = 2.1 * 10e-5  # Value from Ding's experimentation [1] (N^-1)
         self.tau_fat = 127  # Value from Ding's experimentation [1] (s)
         self.alpha_km = 1.9 * 10e-8  # Value from Ding's experimentation [1] (s^-1.N^-1)
 
     def set_a_rest(self, model, a_rest: MX | float):
-        # model is required for bioptim compatibility
+        # models is required for bioptim compatibility
         self.a_rest = a_rest
 
     def set_km_rest(self, model, km_rest: MX | float):
@@ -88,8 +88,8 @@ class DingModelFrequency:
 
     # ---- Absolutely needed methods ---- #
     def serialize(self) -> tuple[Callable, dict]:
-        # This is where you can serialize your model
-        # This is useful if you want to save your model and load it later
+        # This is where you can serialize your models
+        # This is useful if you want to save your models and load it later
         return (
             (
                 DingModelFrequency,
@@ -140,7 +140,7 @@ class DingModelFrequency:
         **extra_arguments: list[MX] | list[float],
     ) -> MX:
         """
-        The system dynamics is the function that describes the model.
+        The system dynamics is the function that describes the models.
 
         Parameters
         ----------
@@ -174,7 +174,7 @@ class DingModelFrequency:
         **extra_arguments: list[MX] | list[float],
     ) -> MX:
         """
-        The system dynamics is the function that describes the model.
+        The system dynamics is the function that describes the models.
 
         Parameters
         ----------

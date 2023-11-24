@@ -3,7 +3,7 @@ import time as time_package
 import numpy as np
 
 from bioptim import Solver
-from optistim import (
+from cocofest import (
     DingModelFrequency,
     DingModelPulseDurationFrequency,
     DingModelIntensityFrequency,

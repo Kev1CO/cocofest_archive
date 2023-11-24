@@ -3,7 +3,7 @@ name: Run the tests
 on: [pull_request]
 
 env:
-  PREFIX_WINDOWS: C:\Miniconda3\envs\optistim
+  PREFIX_WINDOWS: C:\Miniconda3\envs\cocofest
 
 jobs:
   build:
@@ -33,7 +33,7 @@ jobs:
           miniforge-variant: Mambaforge
           miniforge-version: latest
           use-mamba: true
-          activate-environment: optistim
+          activate-environment: cocofest
           environment-file: environment.yml
 
       - name: Print mamba info
@@ -54,7 +54,7 @@ jobs:
         run: mamba install pytest-cov black pytest pytest-cov codecov packaging -cconda-forge
 
       - name: Run tests with code coverage
-        run: pytest -v --color=yes --cov-report term-missing --cov=optistim --cov-report=xml:coverage.xml tests/shard${{ matrix.shard }}
+        run: pytest -v --color=yes --cov-report term-missing --cov=cocofest --cov-report=xml:coverage.xml tests/shard${{ matrix.shard }}
 
       - name: Archive coverage report
         id: archive
@@ -86,7 +86,7 @@ jobs:
           miniforge-variant: Mambaforge
           miniforge-version: latest
           use-mamba: true
-          activate-environment: optistim
+          activate-environment: cocofest
           environment-file: environment.yml
 
       - name: Print mamba info

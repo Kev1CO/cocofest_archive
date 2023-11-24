@@ -23,7 +23,7 @@ from bioptim import (
 
 from ..custom_objectives import CustomObjective
 from ..fourier_approx import FourierSeries
-from optistim import DingModelFrequency, DingModelPulseDurationFrequency, DingModelIntensityFrequency
+from cocofest import DingModelFrequency, DingModelPulseDurationFrequency, DingModelIntensityFrequency
 
 
 class FunctionalElectricStimulationOptimalControlProgram(OptimalControlProgram):

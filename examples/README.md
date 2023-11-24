@@ -1,1 +1,1 @@
-Examples can be found in {ROOT_FOLDER}/optistim/examples/
+Examples can be found in {ROOT_FOLDER}/cocofest/examples/

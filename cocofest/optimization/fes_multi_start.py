@@ -4,7 +4,7 @@ import numpy as np
 import pickle
 
 from bioptim import Solver, MultiStart, Solution
-from optistim import DingModelFrequency, DingModelPulseDurationFrequency, DingModelIntensityFrequency
+from cocofest import DingModelFrequency, DingModelPulseDurationFrequency, DingModelIntensityFrequency
 from .fes_ocp import FunctionalElectricStimulationOptimalControlProgram
 from ..read_data import ExtractData
 
@@ -533,7 +533,7 @@ class FunctionalElectricStimulationMultiStart(MultiStart):
 
 
 if __name__ == "__main__":
-    time, force = ExtractData.load_data("examples/data/hand_cycling_force.bio")
+    time, force = ExtractData.load_data("../../examples/data/hand_cycling_force.bio")
     force = force - force[0]
     force = [time, force]
 

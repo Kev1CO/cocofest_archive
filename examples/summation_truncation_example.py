@@ -3,7 +3,7 @@ import time
 import matplotlib.pyplot as plt
 
 from bioptim import Solution, Shooting, SolutionIntegrator
-from optistim import (
+from cocofest import (
     DingModelFrequency,
     FunctionalElectricStimulationOptimalControlProgram,
     build_initial_guess_from_ocp,

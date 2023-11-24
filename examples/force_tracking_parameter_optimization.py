@@ -5,7 +5,7 @@ This ocp was build to match a force curve across all optimization.
 import matplotlib.pyplot as plt
 import numpy as np
 
-from optistim import (
+from cocofest import (
     DingModelIntensityFrequency,
     FunctionalElectricStimulationOptimalControlProgram,
     ExtractData,

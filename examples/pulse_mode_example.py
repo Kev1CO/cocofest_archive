@@ -3,7 +3,7 @@ This example will do a 10 stimulation example using doublets and triplets.
 The example model is the Ding2003 frequency model.
 """
 
-from optistim import DingModelFrequency, FunctionalElectricStimulationOptimalControlProgram
+from cocofest import DingModelFrequency, FunctionalElectricStimulationOptimalControlProgram
 
 # --- Example n°1 : Doublets --- #
 # --- Build ocp --- #
