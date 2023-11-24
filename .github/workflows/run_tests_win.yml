@@ -95,10 +95,7 @@ jobs:
           mamba info
 
       - name: Install extra dependencies
-        run: |
-#          sudo apt-get install -y python3-pip
-#          pip3 install coverage
-          pip install coverage
+        run: mamba install coverage -cconda-forge
 
       - name: Download all workflow run artifacts
         id: download
