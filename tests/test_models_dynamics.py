@@ -67,7 +67,7 @@ def test_ocp_dynamics(model):
         )
         np.testing.assert_almost_equal(
             np.array(
-                model.system_dynamics(
+                model.system_dynamics_with_fatigue(
                     cn=5, f=100, tau1=0.050957, km=0.103, t=0.11, t_stim_prev=[0, 0.1], impulse_time=[0.0002]
                 )
             ).squeeze(),
@@ -142,7 +142,7 @@ def test_ocp_dynamics(model):
         )
         np.testing.assert_almost_equal(
             np.array(
-                model.system_dynamics(
+                model.system_dynamics_with_fatigue(
                     cn=5, f=100, a=3009, tau1=0.050957, km=0.103, t=0.11, t_stim_prev=[0, 0.1], intensity_stim=[30, 50]
                 )
             ).squeeze(),
@@ -194,7 +194,9 @@ def test_ocp_dynamics(model):
         )
         np.testing.assert_almost_equal(
             np.array(
-                model.system_dynamics(cn=5, f=100, a=3009, tau1=0.050957, km=0.103, t=0.11, t_stim_prev=[0, 0.1])
+                model.system_dynamics_with_fatigue(
+                    cn=5, f=100, a=3009, tau1=0.050957, km=0.103, t=0.11, t_stim_prev=[0, 0.1]
+                )
             ).squeeze(),
             np.array(DM([-219.644, 2037.07, -0.0004, 0.021, 1.9e-05])).squeeze(),
             decimal=3,
@@ -230,7 +232,7 @@ minimum_pulse_intensity = (
 def test_ocp_output(model, force_tracking, use_sx, min_pulse_duration, min_pulse_intensity):
     if isinstance(model, DingModelPulseDurationFrequency):
         ocp = FunctionalElectricStimulationOptimalControlProgram(
-            ding_model=model,
+            model=model,
             n_shooting=20,
             n_stim=10,
             final_time=1,
@@ -250,7 +252,7 @@ def test_ocp_output(model, force_tracking, use_sx, min_pulse_duration, min_pulse
 
     elif isinstance(model, DingModelIntensityFrequency):
         ocp = FunctionalElectricStimulationOptimalControlProgram(
-            ding_model=model,
+            model=model,
             n_shooting=20,
             n_stim=10,
             final_time=1,
@@ -270,7 +272,7 @@ def test_ocp_output(model, force_tracking, use_sx, min_pulse_duration, min_pulse
 
     elif isinstance(model, DingModelFrequency):
         ocp = FunctionalElectricStimulationOptimalControlProgram(
-            ding_model=model,
+            model=model,
             n_shooting=20,
             n_stim=10,
             final_time=1,
