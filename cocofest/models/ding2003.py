@@ -251,7 +251,7 @@ class DingModelFrequency:
         sum_multiplier = 0
         enough_stim_to_truncate = self._sum_stim_truncation and len(t_stim_prev) > self._sum_stim_truncation
         if enough_stim_to_truncate:
-            t_stim_prev = t_stim_prev[-self._sum_stim_truncation - 1:]
+            t_stim_prev = t_stim_prev[-self._sum_stim_truncation - 1 :]
         if len(t_stim_prev) == 1:
             ri = 1
             exp_time = self.exp_time_fun(t, t_stim_prev[0])  # Part of Eq n°1

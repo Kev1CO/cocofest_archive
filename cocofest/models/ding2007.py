@@ -124,9 +124,7 @@ class DingModelPulseDurationFrequency(DingModelFrequency):
         The value of the derivative of each state dx/dt at the current time t
         """
         r0 = self.km_rest + self.r0_km_relationship  # Simplification
-        cn_dot = self.cn_dot_fun(
-            cn, r0, t, t_stim_prev=t_stim_prev
-        )  # Equation n°1 from Ding's 2003 article
+        cn_dot = self.cn_dot_fun(cn, r0, t, t_stim_prev=t_stim_prev)  # Equation n°1 from Ding's 2003 article
         a = self.a_calculation(impulse_time=impulse_time)  # Equation n°3 from Ding's 2007 article
         f_dot = self.f_dot_fun(cn, f, a, self.tau1_rest, self.km_rest)  # Equation n°2 from Ding's 2003 article
         return vertcat(cn_dot, f_dot)
@@ -166,9 +164,7 @@ class DingModelPulseDurationFrequency(DingModelFrequency):
         The value of the derivative of each state dx/dt at the current time t
         """
         r0 = km + self.r0_km_relationship  # Simplification
-        cn_dot = self.cn_dot_fun(
-            cn, r0, t, t_stim_prev=t_stim_prev
-        )  # Equation n°1 from Ding's 2003 article
+        cn_dot = self.cn_dot_fun(cn, r0, t, t_stim_prev=t_stim_prev)  # Equation n°1 from Ding's 2003 article
         a = self.a_calculation(impulse_time=impulse_time)  # Equation n°3 from Ding's 2007 article
         f_dot = self.f_dot_fun(cn, f, a, tau1, km)  # Equation n°2 from Ding's 2003 article
         tau1_dot = self.tau1_dot_fun(tau1, f)  # Equation n°9 from Ding's 2003 article

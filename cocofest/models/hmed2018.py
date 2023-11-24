@@ -107,9 +107,7 @@ class DingModelIntensityFrequency(DingModelFrequency):
         The value of the derivative of each state dx/dt at the current time t
         """
         r0 = self.km_rest + self.r0_km_relationship  # Simplification
-        cn_dot = self.cn_dot_fun(
-            cn, r0, t, t_stim_prev=t_stim_prev, intensity_stim=intensity_stim
-        )  # Equation n°1
+        cn_dot = self.cn_dot_fun(cn, r0, t, t_stim_prev=t_stim_prev, intensity_stim=intensity_stim)  # Equation n°1
         f_dot = self.f_dot_fun(cn, f, self.a_rest, self.tau1_rest, self.km_rest)  # Equation n°2
         return vertcat(cn_dot, f_dot)
 
@@ -151,16 +149,16 @@ class DingModelIntensityFrequency(DingModelFrequency):
         The value of the derivative of each state dx/dt at the current time t
         """
         r0 = km + self.r0_km_relationship  # Simplification
-        cn_dot = self.cn_dot_fun(
-            cn, r0, t, t_stim_prev=t_stim_prev, intensity_stim=intensity_stim
-        )  # Equation n°1
+        cn_dot = self.cn_dot_fun(cn, r0, t, t_stim_prev=t_stim_prev, intensity_stim=intensity_stim)  # Equation n°1
         f_dot = self.f_dot_fun(cn, f, a, tau1, km)  # Equation n°2
         a_dot = self.a_dot_fun(a, f)  # Equation n°5
         tau1_dot = self.tau1_dot_fun(tau1, f)  # Equation n°9
         km_dot = self.km_dot_fun(km, f)  # Equation n°11
         return vertcat(cn_dot, f_dot, a_dot, tau1_dot, km_dot)
 
-    def cn_dot_fun(self, cn: MX, r0: MX | float, t: MX, t_stim_prev: list[MX], intensity_stim: list[MX] = None) -> MX | float:
+    def cn_dot_fun(
+        self, cn: MX, r0: MX | float, t: MX, t_stim_prev: list[MX], intensity_stim: list[MX] = None
+    ) -> MX | float:
         """
         Parameters
         ----------
@@ -178,13 +176,13 @@ class DingModelIntensityFrequency(DingModelFrequency):
         -------
         The value of the derivative ca_troponin_complex (unitless)
         """
-        sum_multiplier = self.cn_sum_fun(
-            r0, t, t_stim_prev=t_stim_prev, intensity_stim=intensity_stim
-        )
+        sum_multiplier = self.cn_sum_fun(r0, t, t_stim_prev=t_stim_prev, intensity_stim=intensity_stim)
 
         return (1 / self.tauc) * sum_multiplier - (cn / self.tauc)  # Eq(1)
 
-    def cn_sum_fun(self, r0: MX | float, t: MX, t_stim_prev: list[MX] = None, intensity_stim: list[MX] = None) -> MX | float:
+    def cn_sum_fun(
+        self, r0: MX | float, t: MX, t_stim_prev: list[MX] = None, intensity_stim: list[MX] = None
+    ) -> MX | float:
         """
         Parameters
         ----------
@@ -204,7 +202,7 @@ class DingModelIntensityFrequency(DingModelFrequency):
         sum_multiplier = 0
         enough_stim_to_truncate = self._sum_stim_truncation and len(t_stim_prev) > self._sum_stim_truncation
         if enough_stim_to_truncate:
-            t_stim_prev = t_stim_prev[-self._sum_stim_truncation:]
+            t_stim_prev = t_stim_prev[-self._sum_stim_truncation :]
         for i in range(len(t_stim_prev)):  # Eq from [1]
             if i == 0 and len(t_stim_prev) == 1:  # Eq from Bakir et al.
                 ri = 1

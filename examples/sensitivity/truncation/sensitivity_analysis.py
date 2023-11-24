@@ -15,7 +15,7 @@ from cocofest import (
 counter = 0
 min_stim = 1
 max_stim = 101
-nb = int((max_stim - min_stim)**2 / 2 + (max_stim - min_stim) / 2) * 3
+nb = int((max_stim - min_stim) ** 2 / 2 + (max_stim - min_stim) / 2) * 3
 node_shooting = 1000
 for mode in ["Single", "Doublet", "Triplet"]:
     total_results = []
@@ -32,7 +32,7 @@ for mode in ["Single", "Doublet", "Triplet"]:
         raise RuntimeError("Mode not recognized")
     for i in range(min_stim, max_stim):
         n_stim = i * coefficient
-        for j in range(1, i+1):
+        for j in range(1, i + 1):
             temp_node_shooting = int(node_shooting / n_stim)
             start_time = time.time()
             problem = FunctionalElectricStimulationOptimalControlProgram(

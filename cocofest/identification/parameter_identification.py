@@ -496,9 +496,7 @@ class DingModelFrequencyParameterIdentification:
 
         print(f"OCP creation time : {time_package.time() - start_time} seconds")
 
-        self.force_identification_result = self.force_ocp.solve(
-            Solver.IPOPT(_hessian_approximation="limited-memory")
-        )
+        self.force_identification_result = self.force_ocp.solve(Solver.IPOPT(_hessian_approximation="limited-memory"))
 
         self.a_rest = self.force_identification_result.parameters["a_rest"][0][0]
         self.km_rest = self.force_identification_result.parameters["km_rest"][0][0]
