@@ -8,7 +8,7 @@ from bioptim import (
     ConfigureProblem,
     ParameterList,
 )
-from optistim import DingModelFrequency
+from cocofest import DingModelFrequency
 
 
 class DingModelIntensityFrequency(DingModelFrequency):
@@ -17,7 +17,7 @@ class DingModelIntensityFrequency(DingModelFrequency):
             name=name, with_fatigue=with_fatigue, sum_stim_truncation=sum_stim_truncation
         )
         # ---- Custom values for the example ---- #
-        # ---- Force model ---- #
+        # ---- Force models ---- #
         self.ar = 0.586  # (-) Translation of axis coordinates.
         self.bs = 0.026  # (-) Fiber muscle recruitment constant identification.
         self.Is = 63.1  # (mA) Muscle saturation intensity.
@@ -26,8 +26,8 @@ class DingModelIntensityFrequency(DingModelFrequency):
 
     # ---- Absolutely needed methods ---- #
     def serialize(self) -> tuple[Callable, dict]:
-        # This is where you can serialize your model
-        # This is useful if you want to save your model and load it later
+        # This is where you can serialize your models
+        # This is useful if you want to save your models and load it later
         return (
             (
                 DingModelIntensityFrequency,
@@ -72,7 +72,7 @@ class DingModelIntensityFrequency(DingModelFrequency):
         **extra_arguments: list[MX] | list[float],
     ) -> MX:
         """
-        The system dynamics is the function that describes the model.
+        The system dynamics is the function that describes the models.
 
         Parameters
         ----------
@@ -110,7 +110,7 @@ class DingModelIntensityFrequency(DingModelFrequency):
         **extra_arguments: list[MX] | list[float],
     ) -> MX:
         """
-        The system dynamics is the function that describes the model.
+        The system dynamics is the function that describes the models.
 
         Parameters
         ----------

@@ -76,7 +76,7 @@ You can create your own FES OCP by following the steps below:
 2. Import the desired model from `Cocofest` (e.g. Ding2003) and the fes_ocp class
 
 ```python
-from optistim import DingModelFrequency, FunctionalElectricStimulationOptimalControlProgram
+from cocofest import DingModelFrequency, FunctionalElectricStimulationOptimalControlProgram
 ```
 
 3. Create your own optimal control problem by adding the stimulation pulse number, the number of shooting points,
@@ -105,7 +105,7 @@ result = ocp.solve()
 ```
 
 # Examples
-You can find all the available examples in the [examples](https://github.com/Kev1CO/optistim/tree/main/examples) file.
+You can find all the available examples in the [examples](https://github.com/Kev1CO/cocofest/tree/main/examples) file.
 
 # Other functionalities
 

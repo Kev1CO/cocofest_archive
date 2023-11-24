@@ -2,7 +2,7 @@ import numpy as np
 import pytest
 
 from bioptim import Solver
-from optistim import (
+from cocofest import (
     DingModelFrequency,
     DingModelPulseDurationFrequency,
     DingModelIntensityFrequency,

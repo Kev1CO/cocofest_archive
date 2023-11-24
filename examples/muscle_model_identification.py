@@ -1,6 +1,6 @@
 import pickle
 import shutil
-from optistim import (
+from cocofest import (
     DingModelFrequencyParameterIdentification,
     DingModelFrequency,
     FunctionalElectricStimulationOptimalControlProgram,

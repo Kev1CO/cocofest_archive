@@ -9,7 +9,7 @@ from bioptim import (
     ConfigureProblem,
     ParameterList,
 )
-from optistim import DingModelFrequency
+from cocofest import DingModelFrequency
 
 
 class DingModelPulseDurationFrequency(DingModelFrequency):
@@ -19,7 +19,7 @@ class DingModelPulseDurationFrequency(DingModelFrequency):
         )
         self.impulse_time = None
         # ---- Custom values for the example ---- #
-        # ---- Force model ---- #
+        # ---- Force models ---- #
         self.a_scale = 4920  # Value from Ding's 2007 article (N/s)
         self.pd0 = 0.000131405  # Value from Ding's 2007 article (s)
         self.pdt = 0.000194138  # Value from Ding's 2007 article (s)
@@ -46,8 +46,8 @@ class DingModelPulseDurationFrequency(DingModelFrequency):
         return np.array([[0], [0], [self.tau1_rest], [self.km_rest]]) if self._with_fatigue else np.array([[0], [0]])
 
     def serialize(self) -> tuple[Callable, dict]:
-        # This is where you can serialize your model
-        # This is useful if you want to save your model and load it later
+        # This is where you can serialize your models
+        # This is useful if you want to save your models and load it later
         return (
             (
                 DingModelPulseDurationFrequency,
@@ -90,7 +90,7 @@ class DingModelPulseDurationFrequency(DingModelFrequency):
         **extra_arguments: list[MX] | list[float],
     ) -> MX:
         """
-        The system dynamics is the function that describes the model.
+        The system dynamics is the function that describes the models.
 
         Parameters
         ----------
@@ -128,7 +128,7 @@ class DingModelPulseDurationFrequency(DingModelFrequency):
         **extra_arguments: list[MX] | list[float],
     ) -> MX:
         """
-        The system dynamics is the function that describes the model.
+        The system dynamics is the function that describes the models.
 
         Parameters
         ----------

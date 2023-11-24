@@ -3,7 +3,7 @@ This example will do a 10 stimulation example with Ding's 2003 frequency model.
 This ocp was build to match a force value of 270N at the end of the last node.
 """
 
-from optistim import DingModelFrequency, FunctionalElectricStimulationOptimalControlProgram
+from cocofest import DingModelFrequency, FunctionalElectricStimulationOptimalControlProgram
 
 # --- Build ocp --- #
 # This ocp was build to match a force value of 270N at the end of the last node.
