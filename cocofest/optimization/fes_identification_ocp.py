@@ -7,7 +7,6 @@ from bioptim import (
     DynamicsList,
     InitialGuessList,
     InterpolationType,
-    Objective,
     ObjectiveFcn,
     ObjectiveList,
     OdeSolver,
@@ -34,10 +33,10 @@ class FunctionalElectricStimulationOptimalControlProgramIdentification(OptimalCo
         The model used to solve the ocp
     with_fatigue: bool,
         If True, the fatigue model is used
-    stimulated_n_shooting: int,
-        The number of shooting points for the stimulated phases
-    rest_n_shooting: int,
-        The number of shooting points for the rest phases
+    final_time_phase: list[float],
+        The final time of each phase
+    n_shooting: list[int],
+        The number of shooting points for each phase
     force_tracking: list[np.ndarray, np.ndarray],
         The force tracking to follow
     pulse_apparition_time: list[int] | list[float],
@@ -56,15 +55,12 @@ class FunctionalElectricStimulationOptimalControlProgramIdentification(OptimalCo
         tau1_rest parameter of the model
     tau2: float,
         tau2 parameter of the model
-    **kwargs:
-        objective: list[Objective]
-            Additional objective for the system
-        ode_solver: OdeSolver
-            The ode solver to use
-        use_sx: bool
-            The nature of the casadi variables. MX are used if False.
-        n_threads: int
-            The number of thread to use while solving (multi-threading if > 1)
+    ode_solver: OdeSolver
+        The ode solver to use
+    use_sx: bool
+        The nature of the casadi variables. MX are used if False.
+    n_thread: int
+        The number of thread to use while solving (multi-threading if > 1)
 
     """
 
@@ -74,7 +70,6 @@ class FunctionalElectricStimulationOptimalControlProgramIdentification(OptimalCo
         with_fatigue: bool = None,
         final_time_phase: list = None,
         n_shooting: list = None,
-        # stimulated_n_shooting: int = None,
         force_tracking: list[np.ndarray, np.ndarray] = None,
         pulse_apparition_time: list[int] | list[float] = None,
         pulse_duration: list[int] | list[float] = None,
@@ -88,7 +83,9 @@ class FunctionalElectricStimulationOptimalControlProgramIdentification(OptimalCo
         km_rest: float = None,
         tau1_rest: float = None,
         tau2: float = None,
-        **kwargs,
+        ode_solver: OdeSolver = OdeSolver.RK4(n_integration_steps=1),
+        use_sx: bool = True,
+        n_thread: int = 1,
     ):
         self.with_fatigue = with_fatigue
         if not isinstance(self.with_fatigue, bool):
@@ -142,39 +139,16 @@ class FunctionalElectricStimulationOptimalControlProgramIdentification(OptimalCo
         self.parameter_mappings = None
         self.parameters = None
 
-        # for i in range(len(pulse_apparition_time)):
-        #     self.final_time_phase = (
-        #         () if i == 0 else self.final_time_phase + (pulse_apparition_time[i] - pulse_apparition_time[i - 1],)
-        #     )
         self.final_time_phase = final_time_phase
-
         self.n_stim = len(self.final_time_phase)
-
         self.models = [self.model for i in range(self.n_stim)]
-
-        # stimulation_interval_average = np.mean(self.final_time_phase)
         self.n_shooting = n_shooting
-        # for i in range(self.n_stim):
-        #     if self.final_time_phase[i] > stimulation_interval_average:
-        #         temp_final_time = self.final_time_phase[i]
-        #         rest_n_shooting = int(stimulated_n_shooting * temp_final_time / stimulation_interval_average)
-        #         self.n_shooting.append(rest_n_shooting)
-        #     else:
-        #         self.n_shooting.append(stimulated_n_shooting)
-
-        # self.force_at_node = []
-        # temp_time = []
-        # for i in range(self.n_stim):
-        #     for j in range(self.n_shooting[i]):
-        #         temp_time.append(sum(self.final_time_phase[:i]) + j * self.final_time_phase[i] / (self.n_shooting[i]))
-
         self.force_at_node = force_tracking
 
         self.constraints = ConstraintList()
         self._set_parameters()
         self._declare_dynamics()
         self._set_bounds()
-        self.kwargs = kwargs
         self._set_objective()
         self.phase_transitions = PhaseTransitionList()
         if self.discontinuity_in_ocp:
@@ -183,17 +157,14 @@ class FunctionalElectricStimulationOptimalControlProgramIdentification(OptimalCo
                     PhaseTransitionFcn.DISCONTINUOUS, phase_pre_idx=self.discontinuity_in_ocp[i] - 1
                 )
 
-        if "ode_solver" in kwargs:
-            if not isinstance(kwargs["ode_solver"], OdeSolver):
-                raise ValueError("ode_solver kwarg must be a OdeSolver type")
+        if not isinstance(ode_solver, (OdeSolver.RK1, OdeSolver.RK2, OdeSolver.RK4, OdeSolver.COLLOCATION)):
+            raise ValueError("ode_solver must be a OdeSolver type")
 
-        if "use_sx" in kwargs:
-            if not isinstance(kwargs["use_sx"], bool):
-                raise ValueError("use_sx kwarg must be a bool type")
+        if not isinstance(use_sx, bool):
+            raise ValueError("use_sx must be a bool type")
 
-        if "n_thread" in kwargs:
-            if not isinstance(kwargs["n_thread"], int):
-                raise ValueError("n_thread kwarg must be a int type")
+        if not isinstance(n_thread, int):
+            raise ValueError("n_thread must be a int type")
 
         super().__init__(
             bio_model=self.models,
@@ -201,20 +172,18 @@ class FunctionalElectricStimulationOptimalControlProgramIdentification(OptimalCo
             n_shooting=self.n_shooting,
             phase_time=self.final_time_phase,
             x_init=self.x_init,
-            # u_init=self.u_init,
             x_bounds=self.x_bounds,
-            # u_bounds=self.u_bounds,
             objective_functions=self.objective_functions,
             constraints=self.constraints,
-            ode_solver=kwargs["ode_solver"] if "ode_solver" in kwargs else OdeSolver.RK1(n_integration_steps=1),
+            ode_solver=ode_solver,
             control_type=ControlType.NONE,
-            use_sx=kwargs["use_sx"] if "use_sx" in kwargs else False,
+            use_sx=use_sx,
             parameters=self.parameters,
             parameter_bounds=self.parameters_bounds,
             parameter_init=self.parameters_init,
             parameter_objectives=self.parameter_objectives,
             phase_transitions=self.phase_transitions,
-            n_threads=kwargs["n_thread"] if "n_thread" in kwargs else 1,
+            n_threads=n_thread,
         )
 
     def _declare_dynamics(self):
@@ -286,7 +255,6 @@ class FunctionalElectricStimulationOptimalControlProgramIdentification(OptimalCo
 
         self.x_init = InitialGuessList()
         for i in range(self.n_stim):
-            # force_in_phase = self.input_force(self.force_tracking[0], self.force_tracking[1], i)
             min_node = sum(self.n_shooting[:i])
             max_node = sum(self.n_shooting[: i + 1])
             force_in_phase = self.force_at_node[min_node : max_node + 1]
@@ -301,60 +269,26 @@ class FunctionalElectricStimulationOptimalControlProgramIdentification(OptimalCo
                     else:
                         self.x_init.add(variable_bound_list[j], self.model.standard_rest_values()[j])
 
-        # # Creates the controls of our problem (in our case, equals to an empty list)
-        # self.u_bounds = BoundsList()
-        # for i in range(self.n_stim):
-        #     self.u_bounds.add("", min_bound=[], max_bound=[])
-        #
-        # self.u_init = InitialGuessList()
-        # for i in range(self.n_stim):
-        #     self.u_init.add("", min_bound=[], max_bound=[])
-
-    # def input_force(self, time, force, phase_idx):
-    #     current_time = sum(self.final_time_phase[:phase_idx])
-    #     dt = self.final_time_phase[phase_idx] / (self.n_shooting[phase_idx] + 1)
-    #     force_in_phase = []
-    #     for i in range(self.n_shooting[phase_idx] + 1):
-    #         interpolated_force = np.interp(current_time, time, force)
-    #         force_in_phase.append(interpolated_force if interpolated_force > 0 else 0)
-    #         current_time += dt
-    #     return force_in_phase
-
     def _set_objective(self):
         # Creates the objective for our problem (in this case, match a force curve)
         self.objective_functions = ObjectiveList()
-        if "objective" in self.kwargs:
-            if self.kwargs["objective"] is not None:
-                if not isinstance(self.kwargs["objective"], list):
-                    raise ValueError("objective kwarg must be a list type")
-                if all(isinstance(x, Objective) for x in self.kwargs["objective"]):
-                    for i in range(len(self.kwargs["objective"])):
-                        self.objective_functions.add(self.kwargs["objective"][i])
-                else:
-                    raise ValueError("All elements in objective kwarg must be an Objective type")
 
         if self.force_at_node:
             node_idx = 0
-            # reduce_counter = 0
             for i in range(self.n_stim):
                 for j in range(self.n_shooting[i]):
-                    # if reduce_counter < 10:
-                    #     pass
-                    # else:
                     self.objective_functions.add(
                         CustomObjective.track_state_from_time_interpolate,
                         custom_type=ObjectiveFcn.Mayer,
                         node=j,
                         force=self.force_at_node[node_idx],
                         key="F",
-                        minimization_type="BF" if self.with_fatigue else "LS",
+                        minimization_type="best fit" if self.with_fatigue else "least square",
                         quadratic=True,
                         weight=1,
                         phase=i,
                     )
-                    # reduce_counter = 0
                     node_idx += 1
-                    # reduce_counter += 1
 
     def _set_parameters(self):
         self.parameters = ParameterList()

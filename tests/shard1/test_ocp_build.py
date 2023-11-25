@@ -317,25 +317,7 @@ def test_ocp_building(
     with_fatigue,
 ):
     if model.name == "ding2003" and time_min is None and time_max is None:
-        for_optimal_control = False
-    elif (
-        model.name == "ding2007"
-        and time_min is None
-        and time_max is None
-        and pulse_time_min is None
-        and pulse_time_max is None
-    ):
-        for_optimal_control = False
-    elif (
-        model.name == "hmed2018"
-        and time_min is None
-        and time_max is None
-        and pulse_intensity_min is None
-        and pulse_intensity_max is None
-    ):
-        for_optimal_control = False
-    else:
-        for_optimal_control = True
+        return
 
     model._with_fatigue = with_fatigue
     model._sum_stim_truncation = sum_stim_truncation
@@ -360,7 +342,6 @@ def test_ocp_building(
         pulse_intensity_max=pulse_intensity_max,
         pulse_intensity_bimapping=pulse_intensity_bimapping,
         use_sx=use_sx,
-        for_optimal_control=for_optimal_control,
     )
 
     ocp_2 = FunctionalElectricStimulationOptimalControlProgram.from_frequency_and_n_stim(
@@ -382,7 +363,6 @@ def test_ocp_building(
         pulse_intensity_max=pulse_intensity_max,
         pulse_intensity_bimapping=pulse_intensity_bimapping,
         use_sx=use_sx,
-        for_optimal_control=for_optimal_control,
     )
 
     ocp_3 = FunctionalElectricStimulationOptimalControlProgram(
@@ -404,7 +384,6 @@ def test_ocp_building(
         pulse_intensity_max=pulse_intensity_max,
         pulse_intensity_bimapping=pulse_intensity_bimapping,
         use_sx=use_sx,
-        for_optimal_control=for_optimal_control,
     )
 
 

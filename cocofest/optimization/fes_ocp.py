@@ -67,15 +67,14 @@ class FunctionalElectricStimulationOptimalControlProgram(OptimalControlProgram):
         Maximum pulse intensity for a phase
     pulse_intensity_bimapping: bool
         Set pulse intensity constant among phases
-    **kwargs:
-        objective: list[Objective]
-            Additional objective for the system
-        ode_solver: OdeSolver
-            The ode solver to use
-        use_sx: bool
-            The nature of the casadi variables. MX are used if False.
-        n_threads: int
-            The number of thread to use while solving (multi-threading if > 1)
+    objective: list[Objective]
+        Additional objective for the system
+    ode_solver: OdeSolver
+        The ode solver to use
+    use_sx: bool
+        The nature of the casadi variables. MX are used if False.
+    n_threads: int
+        The number of thread to use while solving (multi-threading if > 1)
 
     Methods
     -------
@@ -106,7 +105,10 @@ class FunctionalElectricStimulationOptimalControlProgram(OptimalControlProgram):
         pulse_intensity_bimapping: bool = None,
         pulse_mode: str = "Single",
         for_optimal_control: bool = True,
-        **kwargs,
+        objective: list[Objective] = None,
+        ode_solver: OdeSolver = OdeSolver.RK4(n_integration_steps=1),
+        use_sx: bool = True,
+        n_threads: int = 1,
     ):
         self.model = model
 
@@ -376,20 +378,17 @@ class FunctionalElectricStimulationOptimalControlProgram(OptimalControlProgram):
         self.n_stim = n_stim
         self._declare_dynamics()
         self._set_bounds()
-        self.kwargs = kwargs
+        self.objective = objective
         self._set_objective()
 
-        if "ode_solver" in kwargs:
-            if not isinstance(kwargs["ode_solver"], OdeSolver):
-                raise ValueError("ode_solver kwarg must be a OdeSolver type")
+        if not isinstance(ode_solver, (OdeSolver.RK1, OdeSolver.RK2, OdeSolver.RK4, OdeSolver.COLLOCATION)):
+            raise ValueError("ode_solver must be a OdeSolver type")
 
-        if "use_sx" in kwargs:
-            if not isinstance(kwargs["use_sx"], bool):
-                raise ValueError("use_sx kwarg must be a bool type")
+        if not isinstance(use_sx, bool):
+            raise ValueError("use_sx must be a bool type")
 
-        if "n_thread" in kwargs:
-            if not isinstance(kwargs["n_thread"], int):
-                raise ValueError("n_thread kwarg must be a int type")
+        if not isinstance(n_threads, int):
+            raise ValueError("n_thread must be a int type")
 
         super().__init__(
             bio_model=self.models,
@@ -401,14 +400,14 @@ class FunctionalElectricStimulationOptimalControlProgram(OptimalControlProgram):
             objective_functions=self.objective_functions,
             time_phase_mapping=phase_time_bimapping,
             constraints=constraints,
-            ode_solver=kwargs["ode_solver"] if "ode_solver" in kwargs else OdeSolver.RK4(n_integration_steps=1),
+            ode_solver=ode_solver,
             control_type=ControlType.NONE,
-            use_sx=kwargs["use_sx"] if "use_sx" in kwargs else False,
+            use_sx=use_sx,
             parameters=parameters,
             parameter_bounds=parameters_bounds,
             parameter_init=parameters_init,
             parameter_objectives=parameter_objectives,
-            n_threads=kwargs["n_thread"] if "n_thread" in kwargs else 1,
+            n_threads=n_threads,
         )
 
     def _declare_dynamics(self):
@@ -484,15 +483,14 @@ class FunctionalElectricStimulationOptimalControlProgram(OptimalControlProgram):
     def _set_objective(self):
         # Creates the objective for our problem (in this case, match a force curve)
         self.objective_functions = ObjectiveList()
-        if "objective" in self.kwargs:
-            if self.kwargs["objective"] is not None:
-                if not isinstance(self.kwargs["objective"], list):
-                    raise ValueError("objective kwarg must be a list type")
-                if all(isinstance(x, Objective) for x in self.kwargs["objective"]):
-                    for i in range(len(self.kwargs["objective"])):
-                        self.objective_functions.add(self.kwargs["objective"][i])
-                else:
-                    raise ValueError("All elements in objective kwarg must be an Objective type")
+        if self.objective:
+            if not isinstance(self.objective, list):
+                raise ValueError("objective must be a list type")
+            if all(isinstance(x, Objective) for x in self.objective):
+                for i in range(len(self.objective)):
+                    self.objective_functions.add(self.objective[i])
+            else:
+                raise ValueError("All elements in objective must be an Objective type")
 
         if self.force_fourier_coef is not None:
             for phase in range(self.n_stim):
@@ -543,7 +541,7 @@ class FunctionalElectricStimulationOptimalControlProgram(OptimalControlProgram):
         pulse_intensity_min: int | float = None,
         pulse_intensity_max: int | float = None,
         pulse_intensity_bimapping: bool = None,
-        **kwargs,
+        use_sx: bool = True,
     ):
         n_stim = final_time * frequency
         if round_down or n_stim.is_integer():
@@ -558,7 +556,6 @@ class FunctionalElectricStimulationOptimalControlProgram(OptimalControlProgram):
             n_stim=n_stim,
             n_shooting=n_shooting,
             final_time=final_time,
-            frequency=frequency,
             force_tracking=force_tracking,
             end_node_tracking=end_node_tracking,
             time_min=time_min,
@@ -572,7 +569,7 @@ class FunctionalElectricStimulationOptimalControlProgram(OptimalControlProgram):
             pulse_intensity_min=pulse_intensity_min,
             pulse_intensity_max=pulse_intensity_max,
             pulse_intensity_bimapping=pulse_intensity_bimapping,
-            **kwargs,
+            use_sx=use_sx,
         )
 
     @classmethod
@@ -595,7 +592,7 @@ class FunctionalElectricStimulationOptimalControlProgram(OptimalControlProgram):
         pulse_intensity_min: int | float = None,
         pulse_intensity_max: int | float = None,
         pulse_intensity_bimapping: bool = None,
-        **kwargs,
+        use_sx: bool = True,
     ):
         final_time = n_stim / frequency
         return cls(
@@ -603,7 +600,6 @@ class FunctionalElectricStimulationOptimalControlProgram(OptimalControlProgram):
             n_stim=n_stim,
             n_shooting=n_shooting,
             final_time=final_time,
-            frequency=frequency,
             force_tracking=force_tracking,
             end_node_tracking=end_node_tracking,
             time_min=time_min,
@@ -617,5 +613,5 @@ class FunctionalElectricStimulationOptimalControlProgram(OptimalControlProgram):
             pulse_intensity_min=pulse_intensity_min,
             pulse_intensity_max=pulse_intensity_max,
             pulse_intensity_bimapping=pulse_intensity_bimapping,
-            **kwargs,
+            use_sx=use_sx,
         )

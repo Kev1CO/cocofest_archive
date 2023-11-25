@@ -3,6 +3,10 @@ from bioptim import InitialGuessList
 
 
 def build_initial_guess_from_ocp(ocp):
+    """
+    Build a state, control, parameters and stochastic initial guesses for each phases from a given ocp
+    """
+
     x = InitialGuessList()
     u = InitialGuessList()
     p = InitialGuessList()

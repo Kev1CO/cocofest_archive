@@ -37,15 +37,10 @@ class DingModelFrequencyParameterIdentification:
         The tau1_rest parameter for the fatigue model, mandatory if not identified from force model
     tau2: float,
         The tau2 parameter for the fatigue model, mandatory if not identified from force model
-    **kwargs:
-        objective: list[Objective]
-            Additional objective for the system
-        ode_solver: OdeSolver
-            The ode solver to use
-        use_sx: bool
-            The nature of the casadi variables. MX are used if False.
-        n_threads: int
-            The number of thread to use while solving (multi-threading if > 1)
+    n_shooting: int,
+        The number of shooting points for the ocp
+    use_sx: bool
+        The nature of the casadi variables. MX are used if False.
     """
 
     def __init__(
@@ -60,6 +55,7 @@ class DingModelFrequencyParameterIdentification:
         km_rest: float = None,
         tau1_rest: float = None,
         tau2: float = None,
+        n_shooting: int = 5,
         **kwargs,
     ):
         self.model = model
@@ -82,6 +78,7 @@ class DingModelFrequencyParameterIdentification:
         self.tau_fat = None
         self.fatigue_identification_result = None
         self.fatigue_ocp = None
+        self.n_shooting = n_shooting
         self.kwargs = kwargs
 
         # --- Force model --- #
@@ -386,7 +383,7 @@ class DingModelFrequencyParameterIdentification:
         return force_at_node
 
     @staticmethod
-    def node_shooting_list_creation(stim, stimulated_n_shooting, rest_n_shooting=None):
+    def node_shooting_list_creation(stim, stimulated_n_shooting):
         final_time_phase = ()
         for i in range(len(stim)):
             final_time_phase = () if i == 0 else final_time_phase + (stim[i] - stim[i - 1],)
@@ -397,11 +394,8 @@ class DingModelFrequencyParameterIdentification:
         for i in range(len(final_time_phase)):
             if final_time_phase[i] > stimulation_interval_average:
                 temp_final_time = final_time_phase[i]
-                if rest_n_shooting is None:
-                    rest_n_shooting = int(stimulated_n_shooting * temp_final_time / stimulation_interval_average)
+                rest_n_shooting = int(stimulated_n_shooting * temp_final_time / stimulation_interval_average)
                 n_shooting.append(rest_n_shooting)
-            else:
-                n_shooting.append(stimulated_n_shooting)
 
         return n_shooting, final_time_phase
 
@@ -409,13 +403,12 @@ class DingModelFrequencyParameterIdentification:
         self.data_sanity(self.force_model_data_path, "force")
         # --- Data extraction --- #
         # --- Force model --- #
-        stimulated_n_shooting = self.kwargs["n_shooting"] if "n_shooting" in self.kwargs else 5
-        rest_n_shooting = self.kwargs["n_shooting"] if "n_shooting" in self.kwargs else None
+        stimulated_n_shooting = self.n_shooting
         force_curve_number = None
 
         time, stim, force, discontinuity = self.average_data_extraction(self.force_model_data_path)
 
-        n_shooting, final_time_phase = self.node_shooting_list_creation(stim, stimulated_n_shooting, rest_n_shooting)
+        n_shooting, final_time_phase = self.node_shooting_list_creation(stim, stimulated_n_shooting)
         force_at_node = self.force_at_node_in_ocp(time, force, n_shooting, final_time_phase, force_curve_number)
 
         # --- Building force ocp --- #
@@ -429,7 +422,7 @@ class DingModelFrequencyParameterIdentification:
             pulse_duration=None,
             pulse_intensity=None,
             discontinuity_in_ocp=discontinuity,
-            use_sx=self.kwargs["use_sx"] if "use_sx" in self.kwargs else False,
+            use_sx=True,
         )
 
         self.force_identification_result = self.force_ocp.solve(
@@ -447,8 +440,7 @@ class DingModelFrequencyParameterIdentification:
         self.data_sanity(self.force_model_data_path, "force")
         # --- Data extraction --- #
         # --- Force model --- #
-        stimulated_n_shooting = self.kwargs["n_shooting"] if "n_shooting" in self.kwargs else 5
-        rest_n_shooting = self.kwargs["n_shooting"] if "n_shooting" in self.kwargs else None
+        stimulated_n_shooting = self.n_shooting
         force_curve_number = None
 
         if self.force_model_identification_method == "full":
@@ -469,7 +461,7 @@ class DingModelFrequencyParameterIdentification:
                 f" the given value is {self.force_model_identification_method}"
             )
 
-        n_shooting, final_time_phase = self.node_shooting_list_creation(stim, stimulated_n_shooting, rest_n_shooting)
+        n_shooting, final_time_phase = self.node_shooting_list_creation(stim, stimulated_n_shooting)
         force_at_node = self.force_at_node_in_ocp(time, force, n_shooting, final_time_phase, force_curve_number)
 
         if self.force_model_identification_with_average_method_initial_guess:
@@ -495,7 +487,7 @@ class DingModelFrequencyParameterIdentification:
             pulse_duration=None,
             pulse_intensity=None,
             discontinuity_in_ocp=discontinuity,
-            use_sx=self.kwargs["use_sx"] if "use_sx" in self.kwargs else False,
+            use_sx=True,
             initial_a_rest=initial_a_rest,
             initial_km_rest=initial_km_rest,
             initial_tau1_rest=initial_tau1_rest,
@@ -504,10 +496,7 @@ class DingModelFrequencyParameterIdentification:
 
         print(f"OCP creation time : {time_package.time() - start_time} seconds")
 
-        self.force_identification_result = self.force_ocp.solve(
-            Solver.IPOPT(_hessian_approximation="limited-memory")
-        )  # _hessian_approximation="limited-memory"
-        # self.force_identification_result.graphs()
+        self.force_identification_result = self.force_ocp.solve(Solver.IPOPT(_hessian_approximation="limited-memory"))
 
         self.a_rest = self.force_identification_result.parameters["a_rest"][0][0]
         self.km_rest = self.force_identification_result.parameters["km_rest"][0][0]
@@ -520,8 +509,7 @@ class DingModelFrequencyParameterIdentification:
         self.data_sanity(self.fatigue_model_data_path, "fatigue")
         # --- Data extraction --- #
         # --- Fatigue model --- #
-        stimulated_n_shooting = self.kwargs["n_shooting"] if "n_shooting" in self.kwargs else 5
-        rest_n_shooting = self.kwargs["n_shooting"] if "n_shooting" in self.kwargs else None
+        stimulated_n_shooting = self.n_shooting
         force_curve_number = None
 
         if self.fatigue_model_identification_method == "full":
@@ -540,7 +528,7 @@ class DingModelFrequencyParameterIdentification:
                 f" the given value is {self.fatigue_model_identification_method}"
             )
 
-        n_shooting, final_time_phase = self.node_shooting_list_creation(stim, stimulated_n_shooting, rest_n_shooting)
+        n_shooting, final_time_phase = self.node_shooting_list_creation(stim, stimulated_n_shooting)
         force_at_node = self.force_at_node_in_ocp(time, force, n_shooting, final_time_phase, force_curve_number)
 
         # --- Building fatigue ocp --- #
@@ -559,7 +547,7 @@ class DingModelFrequencyParameterIdentification:
                 tau1_rest=self.tau1_rest,
                 tau2=self.tau2,
                 discontinuity_in_ocp=discontinuity,
-                use_sx=self.kwargs["use_sx"] if "use_sx" in self.kwargs else False,
+                use_sx=True,
             )
         else:
             raise ValueError(

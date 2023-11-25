@@ -1,18 +1,31 @@
 from typing import Callable
 
-import numpy as np
 from casadi import MX, vertcat, exp
+import numpy as np
+
 from bioptim import (
-    OptimalControlProgram,
-    NonLinearProgram,
-    DynamicsEvaluation,
     ConfigureProblem,
+    DynamicsEvaluation,
+    NonLinearProgram,
+    OptimalControlProgram,
     ParameterList,
 )
 from cocofest import DingModelFrequency
 
 
 class DingModelPulseDurationFrequency(DingModelFrequency):
+    """
+    This is a custom models that inherits from bioptim. CustomModel.
+    As CustomModel is an abstract class, some methods are mandatory and must be implemented.
+    Such as serialize, name_dof, nb_state.
+
+    This is the Ding 2007 model using the stimulation frequency and pulse duration in input.
+
+    Ding, J., Chou, L. W., Kesar, T. M., Lee, S. C., Johnston, T. E., Wexler, A. S., & Binder‐Macleod, S. A. (2007).
+    Mathematical model that predicts the force–intensity and force–frequency relationships after spinal cord injuries.
+    Muscle & Nerve: Official Journal of the American Association of Electrodiagnostic Medicine, 36(2), 214-222.
+    """
+
     def __init__(self, name: str = None, with_fatigue: bool = True, sum_stim_truncation: int = None):
         super(DingModelPulseDurationFrequency, self).__init__(
             name=name, with_fatigue=with_fatigue, sum_stim_truncation=sum_stim_truncation
@@ -87,7 +100,8 @@ class DingModelPulseDurationFrequency(DingModelFrequency):
         cn: MX,
         f: MX,
         t: MX = None,
-        **extra_arguments: list[MX] | list[float],
+        t_stim_prev: list[MX] | list[float] = None,
+        impulse_time: MX = None,
     ) -> MX:
         """
         The system dynamics is the function that describes the models.
@@ -100,21 +114,18 @@ class DingModelPulseDurationFrequency(DingModelFrequency):
             The value of the force (N)
         t: MX
             The current time at which the dynamics is evaluated (ms)
-        **extra_arguments: list[MX]
-            t_stim_prev: list[MX]
-                The time list of the previous stimulations (ms)
-            impulse_time: MX
-                The pulsation duration of the current stimulation (ms)
+        t_stim_prev: list[MX]
+            The time list of the previous stimulations (ms)
+        impulse_time: MX
+            The pulsation duration of the current stimulation (ms)
 
         Returns
         -------
         The value of the derivative of each state dx/dt at the current time t
         """
         r0 = self.km_rest + self.r0_km_relationship  # Simplification
-        cn_dot = self.cn_dot_fun(
-            cn, r0, t, t_stim_prev=extra_arguments["t_stim_prev"]
-        )  # Equation n°1 from Ding's 2003 article
-        a = self.a_calculation(impulse_time=extra_arguments["impulse_time"])  # Equation n°3 from Ding's 2007 article
+        cn_dot = self.cn_dot_fun(cn, r0, t, t_stim_prev=t_stim_prev)  # Equation n°1 from Ding's 2003 article
+        a = self.a_calculation(impulse_time=impulse_time)  # Equation n°3 from Ding's 2007 article
         f_dot = self.f_dot_fun(cn, f, a, self.tau1_rest, self.km_rest)  # Equation n°2 from Ding's 2003 article
         return vertcat(cn_dot, f_dot)
 
@@ -125,7 +136,8 @@ class DingModelPulseDurationFrequency(DingModelFrequency):
         tau1: MX = None,
         km: MX = None,
         t: MX = None,
-        **extra_arguments: list[MX] | list[float],
+        t_stim_prev: list[MX] | list[float] = None,
+        impulse_time: MX = None,
     ) -> MX:
         """
         The system dynamics is the function that describes the models.
@@ -142,21 +154,18 @@ class DingModelPulseDurationFrequency(DingModelFrequency):
             The value of the cross_bridges (unitless)
         t: MX
             The current time at which the dynamics is evaluated (ms)
-        **extra_arguments: list[MX]
-            t_stim_prev: list[MX]
-                The time list of the previous stimulations (ms)
-            impulse_time: MX
-                The pulsation duration of the current stimulation (ms)
+        t_stim_prev: list[MX]
+            The time list of the previous stimulations (ms)
+        impulse_time: MX
+            The pulsation duration of the current stimulation (ms)
 
         Returns
         -------
         The value of the derivative of each state dx/dt at the current time t
         """
         r0 = km + self.r0_km_relationship  # Simplification
-        cn_dot = self.cn_dot_fun(
-            cn, r0, t, t_stim_prev=extra_arguments["t_stim_prev"]
-        )  # Equation n°1 from Ding's 2003 article
-        a = self.a_calculation(impulse_time=extra_arguments["impulse_time"])  # Equation n°3 from Ding's 2007 article
+        cn_dot = self.cn_dot_fun(cn, r0, t, t_stim_prev=t_stim_prev)  # Equation n°1 from Ding's 2003 article
+        a = self.a_calculation(impulse_time=impulse_time)  # Equation n°3 from Ding's 2007 article
         f_dot = self.f_dot_fun(cn, f, a, tau1, km)  # Equation n°2 from Ding's 2003 article
         tau1_dot = self.tau1_dot_fun(tau1, f)  # Equation n°9 from Ding's 2003 article
         km_dot = self.km_dot_fun(km, f)  # Equation n°11 from Ding's 2003 article

@@ -10,13 +10,13 @@ from matplotlib import colors
 desired_mode = "triplet"  # "single", "doublet" or triplet
 
 if desired_mode == "single":
-    with open(r"data\truncation_single.pkl", "rb") as f:
+    with open(r"../../data/truncation_single.pkl", "rb") as f:
         data = pickle.load(f)
 elif desired_mode == "doublet":
-    with open(r"data\truncation_doublet.pkl", "rb") as f:
+    with open(r"../../data/truncation_doublet.pkl", "rb") as f:
         data = pickle.load(f)
 elif desired_mode == "triplet":
-    with open(r"data\truncation_triplet.pkl", "rb") as f:
+    with open(r"../../data/truncation_triplet.pkl", "rb") as f:
         data = pickle.load(f)
 else:
     raise ValueError("Not available pulse mode")
