@@ -69,15 +69,15 @@ class DingModelFrequency:
         # This is where you can serialize your models
         # This is useful if you want to save your models and load it later
         return (
-                DingModelFrequency,
-                {
-                    "tauc": self.tauc,
-                    "a_rest": self.a_rest,
-                    "tau1_rest": self.tau1_rest,
-                    "km_rest": self.km_rest,
-                    "tau2": self.tau2,
-                },
-            )
+            DingModelFrequency,
+            {
+                "tauc": self.tauc,
+                "a_rest": self.a_rest,
+                "tau1_rest": self.tau1_rest,
+                "km_rest": self.km_rest,
+                "tau2": self.tau2,
+            },
+        )
 
     # ---- Needed for the example ---- #
     @property
@@ -261,14 +261,14 @@ class DingModelFrequency:
         """
 
         return DynamicsEvaluation(
-                dxdt=nlp.model.system_dynamics(
-                    cn=states[0],
-                    f=states[1],
-                    t=time,
-                    t_stim_prev=stim_apparition,
-                ),
-                defects=None,
-            )
+            dxdt=nlp.model.system_dynamics(
+                cn=states[0],
+                f=states[1],
+                t=time,
+                t_stim_prev=stim_apparition,
+            ),
+            defects=None,
+        )
 
     def declare_ding_variables(self, ocp: OptimalControlProgram, nlp: NonLinearProgram):
         """

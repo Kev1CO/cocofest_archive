@@ -27,9 +27,7 @@ class DingModelIntensityFrequency(DingModelFrequency):
     """
 
     def __init__(self, name: str = None, sum_stim_truncation: int = None):
-        super(DingModelIntensityFrequency, self).__init__(
-            name=name, sum_stim_truncation=sum_stim_truncation
-        )
+        super(DingModelIntensityFrequency, self).__init__(name=name, sum_stim_truncation=sum_stim_truncation)
         # ---- Custom values for the example ---- #
         # ---- Force models ---- #
         self.ar = 0.586  # (-) Translation of axis coordinates.
@@ -43,19 +41,19 @@ class DingModelIntensityFrequency(DingModelFrequency):
         # This is where you can serialize your models
         # This is useful if you want to save your models and load it later
         return (
-                DingModelIntensityFrequency,
-                {
-                    "tauc": self.tauc,
-                    "a_rest": self.a_rest,
-                    "tau1_rest": self.tau1_rest,
-                    "km_rest": self.km_rest,
-                    "tau2": self.tau2,
-                    "ar": self.ar,
-                    "bs": self.bs,
-                    "Is": self.Is,
-                    "cr": self.cr,
-                },
-            )
+            DingModelIntensityFrequency,
+            {
+                "tauc": self.tauc,
+                "a_rest": self.a_rest,
+                "tau1_rest": self.tau1_rest,
+                "km_rest": self.km_rest,
+                "tau2": self.tau2,
+                "ar": self.ar,
+                "bs": self.bs,
+                "Is": self.Is,
+                "cr": self.cr,
+            },
+        )
 
     def system_dynamics(
         self,
@@ -244,15 +242,15 @@ class DingModelIntensityFrequency(DingModelFrequency):
                 intensity_stim_prev.append(intensity_parameters[i])
 
         return DynamicsEvaluation(
-                dxdt=nlp.model.system_dynamics(
-                    cn=states[0],
-                    f=states[1],
-                    t=time,
-                    t_stim_prev=stim_apparition,
-                    intensity_stim=intensity_stim_prev,
-                ),
-                defects=None,
-            )
+            dxdt=nlp.model.system_dynamics(
+                cn=states[0],
+                f=states[1],
+                t=time,
+                t_stim_prev=stim_apparition,
+                intensity_stim=intensity_stim_prev,
+            ),
+            defects=None,
+        )
 
     def declare_ding_variables(self, ocp: OptimalControlProgram, nlp: NonLinearProgram):
         """

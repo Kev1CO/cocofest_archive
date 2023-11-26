@@ -57,22 +57,23 @@ class DingModelPulseDurationFrequencyWithFatigue(DingModelPulseDurationFrequency
     def serialize(self) -> tuple[Callable, dict]:
         # This is where you can serialize your models
         # This is useful if you want to save your models and load it later
-        return (DingModelPulseDurationFrequencyWithFatigue,
-                    {
-                        "tauc": self.tauc,
-                        "a_rest": self.a_rest,
-                        "tau1_rest": self.tau1_rest,
-                        "km_rest": self.km_rest,
-                        "tau2": self.tau2,
-                        "alpha_a": self.alpha_a,
-                        "alpha_tau1": self.alpha_tau1,
-                        "alpha_km": self.alpha_km,
-                        "tau_fat": self.tau_fat,
-                        "a_scale": self.a_scale,
-                        "pd0": self.pd0,
-                        "pdt": self.pdt,
-                    },
-                )
+        return (
+            DingModelPulseDurationFrequencyWithFatigue,
+            {
+                "tauc": self.tauc,
+                "a_rest": self.a_rest,
+                "tau1_rest": self.tau1_rest,
+                "km_rest": self.km_rest,
+                "tau2": self.tau2,
+                "alpha_a": self.alpha_a,
+                "alpha_tau1": self.alpha_tau1,
+                "alpha_km": self.alpha_km,
+                "tau_fat": self.tau_fat,
+                "a_scale": self.a_scale,
+                "pd0": self.pd0,
+                "pdt": self.pdt,
+            },
+        )
 
     def system_dynamics(
         self,
@@ -187,17 +188,17 @@ class DingModelPulseDurationFrequencyWithFatigue(DingModelPulseDurationFrequency
             impulse_time = pulse_duration_parameters[nlp.phase_idx]
 
         return DynamicsEvaluation(
-                dxdt=nlp.model.system_dynamics(
-                    cn=states[0],
-                    f=states[1],
-                    tau1=states[2],
-                    km=states[3],
-                    t=time,
-                    t_stim_prev=stim_apparition,
-                    impulse_time=impulse_time,
-                ),
-                defects=None,
-            )
+            dxdt=nlp.model.system_dynamics(
+                cn=states[0],
+                f=states[1],
+                tau1=states[2],
+                km=states[3],
+                t=time,
+                t_stim_prev=stim_apparition,
+                impulse_time=impulse_time,
+            ),
+            defects=None,
+        )
 
     def declare_ding_variables(self, ocp: OptimalControlProgram, nlp: NonLinearProgram):
         """
@@ -219,11 +220,11 @@ class DingModelPulseDurationFrequencyWithFatigue(DingModelPulseDurationFrequency
 
     @staticmethod
     def configure_time_state_force_no_cross_bridge(
-            ocp: OptimalControlProgram,
-            nlp: NonLinearProgram,
-            as_states: bool,
-            as_controls: bool,
-            as_states_dot: bool = False,
+        ocp: OptimalControlProgram,
+        nlp: NonLinearProgram,
+        as_states: bool,
+        as_controls: bool,
+        as_states_dot: bool = False,
     ):
         """
         Configure a new variable for time constant of force decline at the absence of strongly bound cross-bridges (ms)
@@ -255,11 +256,11 @@ class DingModelPulseDurationFrequencyWithFatigue(DingModelPulseDurationFrequency
 
     @staticmethod
     def configure_cross_bridges(
-            ocp: OptimalControlProgram,
-            nlp: NonLinearProgram,
-            as_states: bool,
-            as_controls: bool,
-            as_states_dot: bool = False,
+        ocp: OptimalControlProgram,
+        nlp: NonLinearProgram,
+        as_states: bool,
+        as_controls: bool,
+        as_states_dot: bool = False,
     ):
         """
         Configure a new variable for sensitivity of strongly bound cross-bridges to Cn (unitless)

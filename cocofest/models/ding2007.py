@@ -27,9 +27,7 @@ class DingModelPulseDurationFrequency(DingModelFrequency):
     """
 
     def __init__(self, name: str = None, sum_stim_truncation: int = None):
-        super(DingModelPulseDurationFrequency, self).__init__(
-            name=name, sum_stim_truncation=sum_stim_truncation
-        )
+        super(DingModelPulseDurationFrequency, self).__init__(name=name, sum_stim_truncation=sum_stim_truncation)
 
         self.impulse_time = None
         # ---- Custom values for the example ---- #
@@ -46,18 +44,18 @@ class DingModelPulseDurationFrequency(DingModelFrequency):
         # This is where you can serialize your models
         # This is useful if you want to save your models and load it later
         return (
-                DingModelPulseDurationFrequency,
-                {
-                    "tauc": self.tauc,
-                    "a_rest": self.a_rest,
-                    "tau1_rest": self.tau1_rest,
-                    "km_rest": self.km_rest,
-                    "tau2": self.tau2,
-                    "a_scale": self.a_scale,
-                    "pd0": self.pd0,
-                    "pdt": self.pdt,
-                },
-            )
+            DingModelPulseDurationFrequency,
+            {
+                "tauc": self.tauc,
+                "a_rest": self.a_rest,
+                "tau1_rest": self.tau1_rest,
+                "km_rest": self.km_rest,
+                "tau2": self.tau2,
+                "a_scale": self.a_scale,
+                "pd0": self.pd0,
+                "pdt": self.pdt,
+            },
+        )
 
     def system_dynamics(
         self,
@@ -178,15 +176,15 @@ class DingModelPulseDurationFrequency(DingModelFrequency):
             impulse_time = pulse_duration_parameters[nlp.phase_idx]
 
         return DynamicsEvaluation(
-                dxdt=nlp.model.system_dynamics(
-                    cn=states[0],
-                    f=states[1],
-                    t=time,
-                    t_stim_prev=stim_apparition,
-                    impulse_time=impulse_time,
-                ),
-                defects=None,
-            )
+            dxdt=nlp.model.system_dynamics(
+                cn=states[0],
+                f=states[1],
+                t=time,
+                t_stim_prev=stim_apparition,
+                impulse_time=impulse_time,
+            ),
+            defects=None,
+        )
 
     def declare_ding_variables(self, ocp: OptimalControlProgram, nlp: NonLinearProgram):
         """

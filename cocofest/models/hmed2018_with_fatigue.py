@@ -27,9 +27,7 @@ class DingModelIntensityFrequencyWithFatigue(DingModelIntensityFrequency):
     """
 
     def __init__(self, name: str = None, sum_stim_truncation: int = None):
-        super(DingModelIntensityFrequency, self).__init__(
-            name=name, sum_stim_truncation=sum_stim_truncation
-        )
+        super(DingModelIntensityFrequency, self).__init__(name=name, sum_stim_truncation=sum_stim_truncation)
 
         # ---- Fatigue models ---- #
         self.alpha_a = -4.0 * 10e-7  # Value from Ding's experimentation [1] (s^-2)
@@ -41,23 +39,24 @@ class DingModelIntensityFrequencyWithFatigue(DingModelIntensityFrequency):
     def serialize(self) -> tuple[Callable, dict]:
         # This is where you can serialize your models
         # This is useful if you want to save your models and load it later
-        return (DingModelIntensityFrequencyWithFatigue,
-                {
-                    "tauc": self.tauc,
-                    "a_rest": self.a_rest,
-                    "tau1_rest": self.tau1_rest,
-                    "km_rest": self.km_rest,
-                    "tau2": self.tau2,
-                    "alpha_a": self.alpha_a,
-                    "alpha_tau1": self.alpha_tau1,
-                    "alpha_km": self.alpha_km,
-                    "tau_fat": self.tau_fat,
-                    "ar": self.ar,
-                    "bs": self.bs,
-                    "Is": self.Is,
-                    "cr": self.cr,
-                },
-            )
+        return (
+            DingModelIntensityFrequencyWithFatigue,
+            {
+                "tauc": self.tauc,
+                "a_rest": self.a_rest,
+                "tau1_rest": self.tau1_rest,
+                "km_rest": self.km_rest,
+                "tau2": self.tau2,
+                "alpha_a": self.alpha_a,
+                "alpha_tau1": self.alpha_tau1,
+                "alpha_km": self.alpha_km,
+                "tau_fat": self.tau_fat,
+                "ar": self.ar,
+                "bs": self.bs,
+                "Is": self.Is,
+                "cr": self.cr,
+            },
+        )
 
     def system_dynamics(
         self,
@@ -194,20 +193,18 @@ class DingModelIntensityFrequencyWithFatigue(DingModelIntensityFrequency):
             for i in range(nlp.phase_idx + 1):
                 intensity_stim_prev.append(intensity_parameters[i])
 
-        return (
-            DynamicsEvaluation(
-                dxdt=nlp.model.system_dynamics(
-                    cn=states[0],
-                    f=states[1],
-                    a=states[2],
-                    tau1=states[3],
-                    km=states[4],
-                    t=time,
-                    t_stim_prev=stim_apparition,
-                    intensity_stim=intensity_stim_prev,
-                ),
-                defects=None,
-            )
+        return DynamicsEvaluation(
+            dxdt=nlp.model.system_dynamics(
+                cn=states[0],
+                f=states[1],
+                a=states[2],
+                tau1=states[3],
+                km=states[4],
+                t=time,
+                t_stim_prev=stim_apparition,
+                intensity_stim=intensity_stim_prev,
+            ),
+            defects=None,
         )
 
     def declare_ding_variables(self, ocp: OptimalControlProgram, nlp: NonLinearProgram):
@@ -231,11 +228,11 @@ class DingModelIntensityFrequencyWithFatigue(DingModelIntensityFrequency):
 
     @staticmethod
     def configure_scaling_factor(
-            ocp: OptimalControlProgram,
-            nlp: NonLinearProgram,
-            as_states: bool,
-            as_controls: bool,
-            as_states_dot: bool = False,
+        ocp: OptimalControlProgram,
+        nlp: NonLinearProgram,
+        as_states: bool,
+        as_controls: bool,
+        as_states_dot: bool = False,
     ):
         """
         Configure a new variable of the scaling factor (N/ms)
@@ -267,11 +264,11 @@ class DingModelIntensityFrequencyWithFatigue(DingModelIntensityFrequency):
 
     @staticmethod
     def configure_time_state_force_no_cross_bridge(
-            ocp: OptimalControlProgram,
-            nlp: NonLinearProgram,
-            as_states: bool,
-            as_controls: bool,
-            as_states_dot: bool = False,
+        ocp: OptimalControlProgram,
+        nlp: NonLinearProgram,
+        as_states: bool,
+        as_controls: bool,
+        as_states_dot: bool = False,
     ):
         """
         Configure a new variable for time constant of force decline at the absence of strongly bound cross-bridges (ms)
@@ -303,11 +300,11 @@ class DingModelIntensityFrequencyWithFatigue(DingModelIntensityFrequency):
 
     @staticmethod
     def configure_cross_bridges(
-            ocp: OptimalControlProgram,
-            nlp: NonLinearProgram,
-            as_states: bool,
-            as_controls: bool,
-            as_states_dot: bool = False,
+        ocp: OptimalControlProgram,
+        nlp: NonLinearProgram,
+        as_states: bool,
+        as_controls: bool,
+        as_states_dot: bool = False,
     ):
         """
         Configure a new variable for sensitivity of strongly bound cross-bridges to Cn (unitless)

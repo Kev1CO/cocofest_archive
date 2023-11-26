@@ -64,19 +64,19 @@ class DingModelFrequencyWithFatigue(DingModelFrequency):
         # This is where you can serialize your models
         # This is useful if you want to save your models and load it later
         return (
-                DingModelFrequencyWithFatigue,
-                {
-                    "tauc": self.tauc,
-                    "a_rest": self.a_rest,
-                    "tau1_rest": self.tau1_rest,
-                    "km_rest": self.km_rest,
-                    "tau2": self.tau2,
-                    "alpha_a": self.alpha_a,
-                    "alpha_tau1": self.alpha_tau1,
-                    "alpha_km": self.alpha_km,
-                    "tau_fat": self.tau_fat,
-                },
-            )
+            DingModelFrequencyWithFatigue,
+            {
+                "tauc": self.tauc,
+                "a_rest": self.a_rest,
+                "tau1_rest": self.tau1_rest,
+                "km_rest": self.km_rest,
+                "tau2": self.tau2,
+                "alpha_a": self.alpha_a,
+                "alpha_tau1": self.alpha_tau1,
+                "alpha_km": self.alpha_km,
+                "tau_fat": self.tau_fat,
+            },
+        )
 
     # ---- Needed for the example ---- #
     @property
@@ -93,14 +93,14 @@ class DingModelFrequencyWithFatigue(DingModelFrequency):
 
     # ---- Model's dynamics ---- #
     def system_dynamics(
-            self,
-            cn: MX,
-            f: MX,
-            a: MX = None,
-            tau1: MX = None,
-            km: MX = None,
-            t: MX = None,
-            t_stim_prev: list[MX] | list[float] = None,
+        self,
+        cn: MX,
+        f: MX,
+        a: MX = None,
+        tau1: MX = None,
+        km: MX = None,
+        t: MX = None,
+        t_stim_prev: list[MX] | list[float] = None,
     ) -> MX:
         """
         The system dynamics is the function that describes the models.
@@ -214,17 +214,17 @@ class DingModelFrequencyWithFatigue(DingModelFrequency):
         """
 
         return DynamicsEvaluation(
-                dxdt=nlp.model.system_dynamics(
-                    cn=states[0],
-                    f=states[1],
-                    a=states[2],
-                    tau1=states[3],
-                    km=states[4],
-                    t=time,
-                    t_stim_prev=stim_apparition,
-                ),
-                defects=None,
-            )
+            dxdt=nlp.model.system_dynamics(
+                cn=states[0],
+                f=states[1],
+                a=states[2],
+                tau1=states[3],
+                km=states[4],
+                t=time,
+                t_stim_prev=stim_apparition,
+            ),
+            defects=None,
+        )
 
     def declare_ding_variables(self, ocp: OptimalControlProgram, nlp: NonLinearProgram):
         """
