@@ -1,3 +1,10 @@
+<p align="center">
+    <img
+      src="https://github.com/Kev1CO/cocofest/tree/main/docs/cocofest_logo.jpg"
+      alt="logo"
+    />
+</p>
+
 # COCOFEST
 
 `Cocofest` : Custom Optimal Control Optimization for Functional Electrical Stimulation, is an optimal control program (OCP) package for functional electrical stimulation (FES).
