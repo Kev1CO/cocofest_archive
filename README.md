@@ -1,6 +1,6 @@
 <p align="center">
     <img
-      src="https://github.com/Kev1CO/cocofest/tree/main/docs/cocofest_logo.jpg"
+      src="https://github.com/Kev1CO/cocofest/tree/main/docs/cocofest_logo.png"
       alt="logo"
     />
 </p>
