@@ -3,7 +3,7 @@ This example will do a 10 stimulation example using doublets and triplets.
 The example model is the Ding2003 frequency model.
 """
 
-from cocofest import DingModelFrequency, FunctionalElectricStimulationOptimalControlProgram
+from cocofest import DingModelFrequencyWithFatigue, FunctionalElectricStimulationOptimalControlProgram
 
 # --- Example n°1 : Doublets --- #
 # --- Build ocp --- #
@@ -11,7 +11,7 @@ from cocofest import DingModelFrequency, FunctionalElectricStimulationOptimalCon
 # The stimulation won't be optimized.
 # The flag with_fatigue is set to True by default, this will include the fatigue model.
 ocp = FunctionalElectricStimulationOptimalControlProgram(
-    model=DingModelFrequency(with_fatigue=True),
+    model=DingModelFrequencyWithFatigue(),
     n_stim=20,
     n_shooting=5,
     final_time=1,
@@ -33,7 +33,7 @@ sol.graphs()
 # The stimulation won't be optimized.
 # The flag with_fatigue is set to True by default, this will include the fatigue model.
 ocp = FunctionalElectricStimulationOptimalControlProgram(
-    model=DingModelFrequency(with_fatigue=True),
+    model=DingModelFrequencyWithFatigue(),
     n_stim=30,
     n_shooting=5,
     final_time=1,

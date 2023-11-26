@@ -2,7 +2,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 from bioptim import InitialGuessList, Solution, Shooting, SolutionIntegrator
 from cocofest import (
-    DingModelFrequency,
+    DingModelFrequencyWithFatigue,
     FunctionalElectricStimulationOptimalControlProgram,
     build_initial_guess_from_ocp,
 )
@@ -12,7 +12,7 @@ from cocofest import (
 # This problem was build to be integrated and has no objectives nor parameter to optimize.
 # Therefore, the flag for_optimal_control is set to False.
 problem = FunctionalElectricStimulationOptimalControlProgram(
-    model=DingModelFrequency(with_fatigue=True),
+    model=DingModelFrequencyWithFatigue(),
     n_stim=10,
     n_shooting=20,
     final_time=1,

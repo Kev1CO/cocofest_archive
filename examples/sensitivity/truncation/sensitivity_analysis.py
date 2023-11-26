@@ -4,7 +4,7 @@ import pickle
 
 from bioptim import Solution, Shooting, SolutionIntegrator
 from cocofest import (
-    DingModelFrequency,
+    DingModelFrequencyWithFatigue,
     FunctionalElectricStimulationOptimalControlProgram,
     build_initial_guess_from_ocp,
 )
@@ -36,7 +36,7 @@ for mode in ["Single", "Doublet", "Triplet"]:
             temp_node_shooting = int(node_shooting / n_stim)
             start_time = time.time()
             problem = FunctionalElectricStimulationOptimalControlProgram(
-                model=DingModelFrequency(with_fatigue=True, sum_stim_truncation=j),
+                model=DingModelFrequencyWithFatigue(sum_stim_truncation=j),
                 n_stim=n_stim,
                 n_shooting=temp_node_shooting,
                 final_time=1,

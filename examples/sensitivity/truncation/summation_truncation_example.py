@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 
 from bioptim import Solution, Shooting, SolutionIntegrator
 from cocofest import (
-    DingModelFrequency,
+    DingModelFrequencyWithFatigue,
     FunctionalElectricStimulationOptimalControlProgram,
     build_initial_guess_from_ocp,
 )
@@ -17,7 +17,7 @@ computations_time = []
 for i in range(10):
     start_time = time.time()
     problem = FunctionalElectricStimulationOptimalControlProgram(
-        model=DingModelFrequency(with_fatigue=True, sum_stim_truncation=i if i != 0 else None),
+        model=DingModelFrequencyWithFatigue(sum_stim_truncation=i if i != 0 else None),
         n_stim=10,
         n_shooting=100,
         final_time=1,

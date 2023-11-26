@@ -29,7 +29,7 @@ print("a_rest : ", a_rest, "km_rest : ", km_rest, "tau1_rest : ", tau1_rest, "ta
 # This problem was build to be integrated and has no objectives nor parameter to optimize.
 # Therefore, the flag for_optimal_control is set to False.
 problem = FunctionalElectricStimulationOptimalControlProgram(
-    model=DingModelFrequency(with_fatigue=False),
+    model=DingModelFrequency(),
     n_stim=10,
     n_shooting=100,
     final_time=1,
@@ -75,7 +75,7 @@ ocp = DingModelFrequencyParameterIdentification(
 a_rest, km_rest, tau1_rest, tau2 = ocp.force_model_identification()
 print("a_rest : ", a_rest, "km_rest : ", km_rest, "tau1_rest : ", tau1_rest, "tau2 : ", tau2)
 
-identified_model = DingModelFrequency(with_fatigue=False)
+identified_model = DingModelFrequency()
 identified_model.a_rest = a_rest
 identified_model.km_rest = km_rest
 identified_model.tau1_rest = tau1_rest
