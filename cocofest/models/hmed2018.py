@@ -10,7 +10,7 @@ from bioptim import (
     OptimalControlProgram,
     ParameterList,
 )
-from cocofest import DingModelFrequency
+from .ding2003 import DingModelFrequency
 
 
 class DingModelIntensityFrequency(DingModelFrequency):
@@ -26,9 +26,9 @@ class DingModelIntensityFrequency(DingModelFrequency):
     Computers in Biology and Medicine, 101, 218-228.
     """
 
-    def __init__(self, name: str = None, with_fatigue: bool = True, sum_stim_truncation: int = None):
+    def __init__(self, name: str = None, sum_stim_truncation: int = None):
         super(DingModelIntensityFrequency, self).__init__(
-            name=name, with_fatigue=with_fatigue, sum_stim_truncation=sum_stim_truncation
+            name=name, sum_stim_truncation=sum_stim_truncation
         )
         # ---- Custom values for the example ---- #
         # ---- Force models ---- #
@@ -43,26 +43,6 @@ class DingModelIntensityFrequency(DingModelFrequency):
         # This is where you can serialize your models
         # This is useful if you want to save your models and load it later
         return (
-            (
-                DingModelIntensityFrequency,
-                {
-                    "tauc": self.tauc,
-                    "a_rest": self.a_rest,
-                    "tau1_rest": self.tau1_rest,
-                    "km_rest": self.km_rest,
-                    "tau2": self.tau2,
-                    "alpha_a": self.alpha_a,
-                    "alpha_tau1": self.alpha_tau1,
-                    "alpha_km": self.alpha_km,
-                    "tau_fat": self.tau_fat,
-                    "ar": self.ar,
-                    "bs": self.bs,
-                    "Is": self.Is,
-                    "cr": self.cr,
-                },
-            )
-            if self._with_fatigue
-            else (
                 DingModelIntensityFrequency,
                 {
                     "tauc": self.tauc,
@@ -76,9 +56,8 @@ class DingModelIntensityFrequency(DingModelFrequency):
                     "cr": self.cr,
                 },
             )
-        )
 
-    def system_dynamics_without_fatigue(
+    def system_dynamics(
         self,
         cn: MX,
         f: MX,
@@ -110,51 +89,6 @@ class DingModelIntensityFrequency(DingModelFrequency):
         cn_dot = self.cn_dot_fun(cn, r0, t, t_stim_prev=t_stim_prev, intensity_stim=intensity_stim)  # Equation n°1
         f_dot = self.f_dot_fun(cn, f, self.a_rest, self.tau1_rest, self.km_rest)  # Equation n°2
         return vertcat(cn_dot, f_dot)
-
-    def system_dynamics_with_fatigue(
-        self,
-        cn: MX,
-        f: MX,
-        a: MX = None,
-        tau1: MX = None,
-        km: MX = None,
-        t: MX = None,
-        t_stim_prev: list[MX] | list[float] = None,
-        intensity_stim: list[MX] | list[float] = None,
-    ) -> MX:
-        """
-        The system dynamics is the function that describes the models.
-
-        Parameters
-        ----------
-        cn: MX
-            The value of the ca_troponin_complex (unitless)
-        f: MX
-            The value of the force (N)
-        a: MX
-            The value of the scaling factor (unitless)
-        tau1: MX
-            The value of the time_state_force_no_cross_bridge (ms)
-        km: MX
-            The value of the cross_bridges (unitless)
-        t: MX
-            The current time at which the dynamics is evaluated (ms)
-        t_stim_prev: list[MX]
-            The time list of the previous stimulations (ms)
-        intensity_stim: list[MX]
-            The pulsation intensity of the current stimulation (mA)
-
-        Returns
-        -------
-        The value of the derivative of each state dx/dt at the current time t
-        """
-        r0 = km + self.r0_km_relationship  # Simplification
-        cn_dot = self.cn_dot_fun(cn, r0, t, t_stim_prev=t_stim_prev, intensity_stim=intensity_stim)  # Equation n°1
-        f_dot = self.f_dot_fun(cn, f, a, tau1, km)  # Equation n°2
-        a_dot = self.a_dot_fun(a, f)  # Equation n°5
-        tau1_dot = self.tau1_dot_fun(tau1, f)  # Equation n°9
-        km_dot = self.km_dot_fun(km, f)  # Equation n°11
-        return vertcat(cn_dot, f_dot, a_dot, tau1_dot, km_dot)
 
     def cn_dot_fun(
         self, cn: MX, r0: MX | float, t: MX, t_stim_prev: list[MX], intensity_stim: list[MX] = None
@@ -309,23 +243,8 @@ class DingModelIntensityFrequency(DingModelFrequency):
             for i in range(nlp.phase_idx + 1):
                 intensity_stim_prev.append(intensity_parameters[i])
 
-        return (
-            DynamicsEvaluation(
-                dxdt=nlp.model.system_dynamics_with_fatigue(
-                    cn=states[0],
-                    f=states[1],
-                    a=states[2],
-                    tau1=states[3],
-                    km=states[4],
-                    t=time,
-                    t_stim_prev=stim_apparition,
-                    intensity_stim=intensity_stim_prev,
-                ),
-                defects=None,
-            )
-            if nlp.model._with_fatigue
-            else DynamicsEvaluation(
-                dxdt=nlp.model.system_dynamics_without_fatigue(
+        return DynamicsEvaluation(
+                dxdt=nlp.model.system_dynamics(
                     cn=states[0],
                     f=states[1],
                     t=time,
@@ -334,7 +253,6 @@ class DingModelIntensityFrequency(DingModelFrequency):
                 ),
                 defects=None,
             )
-        )
 
     def declare_ding_variables(self, ocp: OptimalControlProgram, nlp: NonLinearProgram):
         """
@@ -349,10 +267,6 @@ class DingModelIntensityFrequency(DingModelFrequency):
         """
         self.configure_ca_troponin_complex(ocp=ocp, nlp=nlp, as_states=True, as_controls=False)
         self.configure_force(ocp=ocp, nlp=nlp, as_states=True, as_controls=False)
-        if self._with_fatigue:
-            self.configure_scaling_factor(ocp=ocp, nlp=nlp, as_states=True, as_controls=False)
-            self.configure_time_state_force_no_cross_bridge(ocp=ocp, nlp=nlp, as_states=True, as_controls=False)
-            self.configure_cross_bridges(ocp=ocp, nlp=nlp, as_states=True, as_controls=False)
         stim_apparition = self.get_stim_prev(ocp, nlp)
         ConfigureProblem.configure_dynamics_function(ocp, nlp, dyn_func=self.dynamics, stim_apparition=stim_apparition)
 
