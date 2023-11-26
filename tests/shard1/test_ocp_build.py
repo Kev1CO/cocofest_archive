@@ -275,7 +275,7 @@ minimum_pulse_intensity = (
             None,
             None,
             None,
-        )
+        ),
         # (DingModelPulseDurationFrequency(), None, minimum_pulse_duration, 0.0006, True, None, None, None, None), parameter mapping not yet implemented
         (DingModelIntensityFrequency(name="hmed2018"), None, None, None, None, 20, None, None, None),
         (DingModelIntensityFrequencyWithFatigue(name="hmed2018"), None, None, None, None, 20, None, None, None),
