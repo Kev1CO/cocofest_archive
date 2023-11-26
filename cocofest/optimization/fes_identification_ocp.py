@@ -31,8 +31,6 @@ class FunctionalElectricStimulationOptimalControlProgramIdentification(OptimalCo
     ----------
     model: DingModelFrequency | DingModelPulseDurationFrequency | DingModelIntensityFrequency,
         The model used to solve the ocp
-    with_fatigue: bool,
-        If True, the fatigue model is used
     final_time_phase: list[float],
         The final time of each phase
     n_shooting: list[int],
