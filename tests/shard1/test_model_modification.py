@@ -1,12 +1,12 @@
 import numpy as np
 
 from cocofest import (
-    DingModelFrequency,
+    DingModelFrequencyWithFatigue,
 )
 
 
 def test_ding2003_modification():
-    model = DingModelFrequency()
+    model = DingModelFrequencyWithFatigue()
     np.testing.assert_almost_equal(
         np.array(
             [

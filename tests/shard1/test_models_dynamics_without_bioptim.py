@@ -2,14 +2,14 @@ import numpy as np
 from casadi import DM
 
 from cocofest import (
-    DingModelFrequency,
-    DingModelPulseDurationFrequency,
-    DingModelIntensityFrequency,
+    DingModelFrequencyWithFatigue,
+    DingModelPulseDurationFrequencyWithFatigue,
+    DingModelIntensityFrequencyWithFatigue,
 )
 
 
 def test_ding2003_dynamics():
-    model = DingModelFrequency()
+    model = DingModelFrequencyWithFatigue()
     assert model.nb_state == 5
     assert model.name_dof == ["Cn", "F", "A", "Tau1", "Km"]
     np.testing.assert_almost_equal(
@@ -34,7 +34,7 @@ def test_ding2003_dynamics():
     )
     np.testing.assert_almost_equal(
         np.array(
-            model.system_dynamics_with_fatigue(
+            model.system_dynamics(
                 cn=5, f=100, a=3009, tau1=0.050957, km=0.103, t=0.11, t_stim_prev=[0, 0.1]
             )
         ).squeeze(),
@@ -52,7 +52,7 @@ def test_ding2003_dynamics():
 
 
 def test_ding2007_dynamics():
-    model = DingModelPulseDurationFrequency()
+    model = DingModelPulseDurationFrequencyWithFatigue()
     assert model.nb_state == 4
     assert model.name_dof == [
         "Cn",
@@ -103,7 +103,7 @@ def test_ding2007_dynamics():
     )
     np.testing.assert_almost_equal(
         np.array(
-            model.system_dynamics_with_fatigue(
+            model.system_dynamics(
                 cn=5, f=100, tau1=0.050957, km=0.103, t=0.11, t_stim_prev=[0, 0.1], impulse_time=[0.0002]
             )
         ).squeeze(),
@@ -115,7 +115,8 @@ def test_ding2007_dynamics():
     np.testing.assert_almost_equal(model.cn_sum_fun(r0=1.05, t=0.11, t_stim_prev=[0, 0.1]), 0.40289259152562124)
     np.testing.assert_almost_equal(model.cn_dot_fun(cn=0, r0=1.05, t=0.11, t_stim_prev=[0, 0.1]), 36.626599229601936)
     np.testing.assert_almost_equal(model.f_dot_fun(cn=5, f=100, a=3009, tau1=0.050957, km=0.103), 1022.8492662547173)
-    np.testing.assert_almost_equal(model.a_dot_fun(a=5, f=100), 23.653143307086616)
+    # this doesn't look relevant for this fatigue model as it doesn't include A as a state right @kev1co ?
+    # np.testing.assert_almost_equal(model.a_dot_fun(a=5, f=100), 23.653143307086616)
     np.testing.assert_almost_equal(model.tau1_dot_fun(tau1=0.060601, f=100), 0.021)
     np.testing.assert_almost_equal(model.km_dot_fun(km=0.103, f=100), 1.8999999999999998e-05)
     np.testing.assert_almost_equal(
@@ -124,7 +125,7 @@ def test_ding2007_dynamics():
 
 
 def test_hmed2018_dynamics():
-    model = DingModelIntensityFrequency()
+    model = DingModelIntensityFrequencyWithFatigue()
     assert model.nb_state == 5
     assert model.name_dof == [
         "Cn",
