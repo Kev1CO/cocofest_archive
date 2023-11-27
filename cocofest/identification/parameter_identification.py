@@ -396,6 +396,8 @@ class DingModelFrequencyParameterIdentification:
                 temp_final_time = final_time_phase[i]
                 rest_n_shooting = int(stimulated_n_shooting * temp_final_time / stimulation_interval_average)
                 n_shooting.append(rest_n_shooting)
+            else:
+                n_shooting.append(stimulated_n_shooting)
 
         return n_shooting, final_time_phase
 
