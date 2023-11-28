@@ -208,23 +208,17 @@ class IvpFes(OptimalControlProgram):
         """
         Build a state, control, parameters and stochastic initial guesses for each phases from a given ocp
         """
-        initial_parameter_guess = None
         x = InitialGuessList()
         u = InitialGuessList()
         p = InitialGuessList()
         s = InitialGuessList()
 
-        if isinstance(ocp.model, DingModelPulseDurationFrequency):
-            initial_parameter_guess = self.parameters_init["pulse_duration"]
-        elif isinstance(ocp.model, DingModelIntensityFrequency):
-            initial_parameter_guess = self.parameters_init["pulse_intensity"]
-
         for i in range(self.n_stim):
             for j in range(len(self.model.name_dof)):
                 x.add(ocp.model.name_dof[j], ocp.model.standard_rest_values()[j], phase=i)
-            if len(ocp.parameters) != 0:
-                for k in range(len(self.parameters)):
-                    p.add(self.parameters.keys()[k], initial_guess=initial_parameter_guess, phase=i)
+        if len(ocp.parameters) != 0:
+            for key in ocp.parameters.keys():
+                p.add(key=key, initial_guess=ocp.parameters_init[key])
         return x, u, p, s
 
     @classmethod
