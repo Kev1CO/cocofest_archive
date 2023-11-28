@@ -9,5 +9,5 @@ from cocofest.optimization.fes_identification_ocp import (
 )
 from cocofest.fourier_approx import FourierSeries
 from cocofest.read_data import ExtractData
-from cocofest.integration.intial_guess_from_ocp import build_initial_guess_from_ocp
 from cocofest.identification.parameter_identification import DingModelFrequencyParameterIdentification
+from cocofest.integration.ivp_fes import IvpFes

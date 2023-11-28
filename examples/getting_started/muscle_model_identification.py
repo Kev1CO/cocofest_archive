@@ -1,10 +1,10 @@
 import pickle
-import shutil
+import os
 from cocofest import (
     DingModelFrequencyParameterIdentification,
     DingModelFrequency,
     FunctionalElectricStimulationOptimalControlProgram,
-    build_initial_guess_from_ocp,
+    IvpFes,
 )
 
 from bioptim import Shooting, SolutionIntegrator, Solution
@@ -28,20 +28,16 @@ print("a_rest : ", a_rest, "km_rest : ", km_rest, "tau1_rest : ", tau1_rest, "ta
 # --- Simulating data --- #
 # This problem was build to be integrated and has no objectives nor parameter to optimize.
 # Therefore, the flag for_optimal_control is set to False.
-problem = FunctionalElectricStimulationOptimalControlProgram(
+ivp = IvpFes(
     model=DingModelFrequency(with_fatigue=False),
     n_stim=10,
     n_shooting=100,
     final_time=1,
     use_sx=True,
-    for_optimal_control=False,
 )
 
-# Building initial guesses for the integration
-x, u, p, s = build_initial_guess_from_ocp(problem)
-
 # Creating the solution from the initial guess
-sol_from_initial_guess = Solution.from_initial_guess(problem, [x, u, p, s])
+sol_from_initial_guess = Solution.from_initial_guess(ivp, [ivp.x_init, ivp.u_init, ivp.p_init, ivp.s_init])
 
 # Integrating the solution
 result = sol_from_initial_guess.integrate(
@@ -59,13 +55,13 @@ dictionary = {
     "stim_time": stim,
 }
 
-pickle_file_name = "data/temp_identification_simulation.pkl"
+pickle_file_name = "../data/temp_identification_simulation.pkl"
 with open(pickle_file_name, "wb") as file:
     pickle.dump(dictionary, file)
 
 ocp = DingModelFrequencyParameterIdentification(
     model=DingModelFrequency,
-    force_model_data_path=["data/temp_identification_simulation.pkl"],
+    force_model_data_path=[pickle_file_name],
     force_model_identification_method="full",
     force_model_identification_with_average_method_initial_guess=False,
     n_shooting=100,
@@ -84,20 +80,24 @@ identified_model.tau2 = tau2
 identified_force_list = []
 identified_time_list = []
 
-from_identification = FunctionalElectricStimulationOptimalControlProgram(
+ivp_from_identification = IvpFes(
     model=identified_model,
     n_stim=10,
     n_shooting=100,
     final_time=1,
     use_sx=True,
-    for_optimal_control=False,
 )
 
-# Building initial guesses for the integration
-x, u, p, s = build_initial_guess_from_ocp(from_identification)
-
 # Creating the solution from the initial guess
-identified_sol_from_initial_guess = Solution.from_initial_guess(from_identification, [x, u, p, s])
+identified_sol_from_initial_guess = Solution.from_initial_guess(
+    ivp_from_identification,
+    [
+        ivp_from_identification.x_init,
+        ivp_from_identification.u_init,
+        ivp_from_identification.p_init,
+        ivp_from_identification.s_init,
+    ],
+)
 
 # Integrating the solution
 identified_result = identified_sol_from_initial_guess.integrate(
@@ -105,19 +105,14 @@ identified_result = identified_sol_from_initial_guess.integrate(
 )
 
 identified_time = identified_result.time.tolist()
-# identified_time_list.append(identified_time)
 identified_force = identified_result.states["F"][0]
-# identified_force_list.append(identified_result.states["F"][0])
-
-# global_model_time_data = [item for sublist in identified_time_list for item in sublist]
-# global_model_force_data = [item for sublist in identified_force_list for item in sublist]
 
 (
     pickle_time_data,
     pickle_stim_apparition_time,
     pickle_muscle_data,
     pickle_discontinuity_phase_list,
-) = DingModelFrequencyParameterIdentification.full_data_extraction(["data/temp_identification_simulation.pkl"])
+) = DingModelFrequencyParameterIdentification.full_data_extraction([pickle_file_name])
 
 # Plotting the identification result
 plt.title("Force state result")
@@ -142,7 +137,7 @@ plt.annotate(str(0.050957), xy=(0.85, 0.15), xycoords="axes fraction", color="bl
 plt.annotate(str(0.060), xy=(0.85, 0.10), xycoords="axes fraction", color="blue")
 
 # --- Delete the temp file ---#
-shutil.rmtree(r"data\temp_identification_simulation.pkl")
+os.remove(f"../data/temp_identification_simulation.pkl")
 
 plt.legend()
 plt.show()

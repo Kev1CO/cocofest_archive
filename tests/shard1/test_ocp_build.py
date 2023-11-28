@@ -433,3 +433,29 @@ def test_multi_start_building(force_tracking, end_node_tracking, min_pulse_durat
 
     # --- Delete the temp file ---#
     shutil.rmtree("./temp")
+
+
+def test_ding2007_build():
+    min_duration = DingModelPulseDurationFrequency().pd0
+    ocp = FunctionalElectricStimulationOptimalControlProgram(
+        model=DingModelPulseDurationFrequency(),
+        n_stim=1,
+        n_shooting=10,
+        final_time=0.1,
+        pulse_time_min=min_duration,
+        pulse_time_max=0.005,
+        use_sx=True,
+    )
+
+
+def test_hmed2018_build():
+    min_intensity = DingModelIntensityFrequency().min_pulse_intensity()
+    ocp = FunctionalElectricStimulationOptimalControlProgram(
+        model=DingModelIntensityFrequency(),
+        n_stim=1,
+        n_shooting=10,
+        final_time=0.1,
+        pulse_intensity_max=100,
+        pulse_intensity_min=min_intensity,
+        use_sx=True,
+    )
