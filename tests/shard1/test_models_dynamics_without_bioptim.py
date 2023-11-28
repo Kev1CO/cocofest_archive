@@ -104,7 +104,7 @@ def test_ding2007_dynamics():
     np.testing.assert_almost_equal(
         np.array(
             model.system_dynamics_with_fatigue(
-                cn=5, f=100, tau1=0.050957, km=0.103, t=0.11, t_stim_prev=[0, 0.1], impulse_time=[0.0002]
+                cn=5, f=100, tau1=0.050957, km=0.103, t=0.11, t_stim_prev=[0, 0.1], impulse_time=0.0002
             )
         ).squeeze(),
         np.array(DM([-417.918, -490.511, 0.0210759, 1.9e-05])).squeeze(),
@@ -119,7 +119,7 @@ def test_ding2007_dynamics():
     np.testing.assert_almost_equal(model.tau1_dot_fun(tau1=0.060601, f=100), 0.021)
     np.testing.assert_almost_equal(model.km_dot_fun(km=0.103, f=100), 1.8999999999999998e-05)
     np.testing.assert_almost_equal(
-        np.array(model.a_calculation(impulse_time=[0.0002])).squeeze(), np.array(DM(1464.4646488)).squeeze()
+        np.array(model.a_calculation(impulse_time=0.0002)).squeeze(), np.array(DM(1464.4646488)).squeeze()
     )
 
 
