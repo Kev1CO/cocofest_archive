@@ -9,6 +9,7 @@ from cocofest import (
     DingModelFrequency,
     DingModelPulseDurationFrequency,
     DingModelIntensityFrequency,
+    OcpFes,
 )
 
 # Force and time data coming form examples/data/hand_cycling_force.bio file
@@ -279,7 +280,7 @@ minimum_pulse_intensity = (
 @pytest.mark.parametrize(
     "time_min, time_max, time_bimapping",
     [
-        (None, None, None),
+        (None, None, False),
         (0.01, 0.1, False),
         (0.01, 0.1, True),
     ],
@@ -322,7 +323,29 @@ def test_ocp_building(
     model._with_fatigue = with_fatigue
     model._sum_stim_truncation = sum_stim_truncation
 
-    ocp_1 = FunctionalElectricStimulationOptimalControlProgram.from_frequency_and_final_time(
+    # ocp_1 = FunctionalElectricStimulationOptimalControlProgram.from_frequency_and_final_time(
+    #     model=model,
+    #     n_shooting=n_shooting,
+    #     final_time=final_time,
+    #     force_tracking=force_tracking,
+    #     end_node_tracking=end_node_tracking,
+    #     round_down=True,
+    #     frequency=frequency,
+    #     time_min=time_min,
+    #     time_max=time_max,
+    #     time_bimapping=time_bimapping,
+    #     pulse_time=pulse_time,
+    #     pulse_time_min=pulse_time_min,
+    #     pulse_time_max=pulse_time_max,
+    #     pulse_time_bimapping=pulse_time_bimapping,
+    #     pulse_intensity=pulse_intensity,
+    #     pulse_intensity_min=pulse_intensity_min,
+    #     pulse_intensity_max=pulse_intensity_max,
+    #     pulse_intensity_bimapping=pulse_intensity_bimapping,
+    #     use_sx=use_sx,
+    # )
+
+    ocp_1 = OcpFes().prepare_ocp(
         model=model,
         n_shooting=n_shooting,
         final_time=final_time,
@@ -344,7 +367,11 @@ def test_ocp_building(
         use_sx=use_sx,
     )
 
-    ocp_2 = FunctionalElectricStimulationOptimalControlProgram.from_frequency_and_n_stim(
+
+
+
+
+    ocp_2 = OcpFes().prepare_ocp(
         model=model,
         n_shooting=n_shooting,
         n_stim=n_stim,
@@ -365,7 +392,7 @@ def test_ocp_building(
         use_sx=use_sx,
     )
 
-    ocp_3 = FunctionalElectricStimulationOptimalControlProgram(
+    ocp_3 = OcpFes().prepare_ocp(
         model=model,
         n_shooting=n_shooting,
         n_stim=n_stim,

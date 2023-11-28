@@ -11,3 +11,4 @@ from cocofest.fourier_approx import FourierSeries
 from cocofest.read_data import ExtractData
 from cocofest.identification.parameter_identification import DingModelFrequencyParameterIdentification
 from cocofest.integration.ivp_fes import IvpFes
+from cocofest.optimization.fes_ocp import OcpFes
