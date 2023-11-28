@@ -47,19 +47,18 @@ class IvpFes(OptimalControlProgram):
     """
 
     def __init__(
-            self,
-            model: DingModelFrequency | DingModelPulseDurationFrequency | DingModelIntensityFrequency,
-            n_stim: int = None,
-            n_shooting: int = None,
-            final_time: float = None,
-            pulse_duration: int | float | list[int] | list[float] = None,
-            pulse_intensity: int | float | list[int] | list[float] = None,
-            pulse_mode: str = "Single",
-            ode_solver: OdeSolver = OdeSolver.RK4(n_integration_steps=1),
-            use_sx: bool = True,
-            n_threads: int = 1,
-            ):
-
+        self,
+        model: DingModelFrequency | DingModelPulseDurationFrequency | DingModelIntensityFrequency,
+        n_stim: int = None,
+        n_shooting: int = None,
+        final_time: float = None,
+        pulse_duration: int | float | list[int] | list[float] = None,
+        pulse_intensity: int | float | list[int] | list[float] = None,
+        pulse_mode: str = "Single",
+        ode_solver: OdeSolver = OdeSolver.RK4(n_integration_steps=1),
+        use_sx: bool = True,
+        n_threads: int = 1,
+    ):
         self.model = model
         self.n_stim = n_stim
         self.pulse_duration = pulse_duration
@@ -98,19 +97,21 @@ class IvpFes(OptimalControlProgram):
                 self.final_time_phase = self.final_time_phase + (doublet_step,)
                 self.final_time_phase = self.final_time_phase + (triplet_step,)
 
-            else:
-                raise ValueError("Pulse mode not yet implemented")
+        else:
+            raise ValueError("Pulse mode not yet implemented")
 
         parameters = ParameterList()
         parameters_init = InitialGuessList()
         if isinstance(model, DingModelPulseDurationFrequency):
             minimum_pulse_duration = model.pd0
-            if isinstance(pulse_duration, int | float):
+            if isinstance(pulse_duration, bool) or not isinstance(pulse_duration, int | float | list):
+                raise TypeError("pulse_duration must be int, float or list type")
+            elif isinstance(pulse_duration, int | float):
                 if pulse_duration < minimum_pulse_duration:
                     raise ValueError(
                         f"The pulse duration set ({pulse_duration})"
                         f" is lower than minimum duration required."
-                        f" Set a value above {minimum_pulse_duration} seconds "
+                        f" Set a value above {minimum_pulse_duration} seconds"
                     )
                 parameters_init["pulse_duration"] = np.array([pulse_duration] * n_stim)
 
@@ -122,12 +123,9 @@ class IvpFes(OptimalControlProgram):
                         raise ValueError(
                             f"The pulse duration set ({pulse_duration[i]} at index {i})"
                             f" is lower than minimum duration required."
-                            f" Set a value above {minimum_pulse_duration} seconds "
+                            f" Set a value above {minimum_pulse_duration} seconds"
                         )
                 parameters_init["pulse_duration"] = np.array(pulse_duration)
-
-            else:
-                raise ValueError("pulse_duration must be int, float or list type")
 
             parameters.add(
                 parameter_name="pulse_duration",
@@ -137,12 +135,14 @@ class IvpFes(OptimalControlProgram):
 
         if isinstance(model, DingModelIntensityFrequency):
             minimum_pulse_intensity = model.min_pulse_intensity()
-            if isinstance(pulse_intensity, int | float):
+            if isinstance(pulse_intensity, bool) or not isinstance(pulse_intensity, int | float | list):
+                raise TypeError("pulse_intensity must be int, float or list type")
+            elif isinstance(pulse_intensity, int | float):
                 if pulse_intensity < minimum_pulse_intensity:
                     raise ValueError(
                         f"The pulse intensity set ({pulse_intensity})"
                         f" is lower than minimum intensity required."
-                        f" Set a value above {minimum_pulse_intensity} seconds "
+                        f" Set a value above {minimum_pulse_intensity} seconds"
                     )
                 parameters_init["pulse_intensity"] = np.array([pulse_intensity] * n_stim)
 
@@ -154,12 +154,9 @@ class IvpFes(OptimalControlProgram):
                         raise ValueError(
                             f"The pulse intensity set ({pulse_intensity[i]} at index {i})"
                             f" is lower than minimum intensity required."
-                            f" Set a value above {minimum_pulse_intensity} mA "
+                            f" Set a value above {minimum_pulse_intensity} mA"
                         )
                 parameters_init["pulse_intensity"] = np.array(pulse_intensity)
-
-            else:
-                raise ValueError("pulse_intensity must be int, float or list type")
 
             parameters.add(
                 parameter_name="pulse_intensity",
@@ -187,10 +184,6 @@ class IvpFes(OptimalControlProgram):
             dynamics=self.dynamics,
             n_shooting=self.n_shooting,
             phase_time=self.final_time_phase,
-            # x_init=x_init,
-            # u_init=u_init,
-            # p_init=p_init,
-            # s_init=s_init,
             ode_solver=ode_solver,
             control_type=ControlType.NONE,
             use_sx=use_sx,
@@ -236,26 +229,26 @@ class IvpFes(OptimalControlProgram):
 
     @classmethod
     def from_frequency_and_final_time(
-            cls,
-            model: DingModelFrequency | DingModelPulseDurationFrequency | DingModelIntensityFrequency,
-            n_shooting: int,
-            final_time: float,
-            frequency: int | float = None,
-            round_down: bool = False,
-            pulse_duration: int | float | list[int] | list[float] = None,
-            pulse_intensity: int | float | list[int] | list[float] = None,
-            pulse_mode: str = "Single",
-            ode_solver: OdeSolver = OdeSolver.RK4(n_integration_steps=1),
-            use_sx: bool = True,
-            n_threads: int = 1,
+        cls,
+        model: DingModelFrequency | DingModelPulseDurationFrequency | DingModelIntensityFrequency,
+        n_shooting: int,
+        final_time: float,
+        frequency: int | float = None,
+        round_down: bool = False,
+        pulse_duration: int | float | list[int] | list[float] = None,
+        pulse_intensity: int | float | list[int] | list[float] = None,
+        pulse_mode: str = "Single",
+        ode_solver: OdeSolver = OdeSolver.RK4(n_integration_steps=1),
+        use_sx: bool = True,
+        n_threads: int = 1,
     ):
         n_stim = final_time * frequency
         if round_down or n_stim.is_integer():
             n_stim = int(n_stim)
         else:
             raise ValueError(
-                "The number of stimulation needs to be integer within the final time t, set round down"
-                "to True or set final_time * frequency to make the result a integer."
+                "The number of stimulation needs to be integer within the final time t, set round down "
+                "to True or set final_time * frequency to make the result an integer."
             )
         return cls(
             model=model,
@@ -272,17 +265,17 @@ class IvpFes(OptimalControlProgram):
 
     @classmethod
     def from_frequency_and_n_stim(
-            cls,
-            model: DingModelFrequency | DingModelPulseDurationFrequency | DingModelIntensityFrequency,
-            n_stim: int,
-            n_shooting: int,
-            frequency: int | float = None,
-            pulse_duration: int | float | list[int] | list[float] = None,
-            pulse_intensity: int | float | list[int] | list[float] = None,
-            pulse_mode: str = "Single",
-            ode_solver: OdeSolver = OdeSolver.RK4(n_integration_steps=1),
-            use_sx: bool = True,
-            n_threads: int = 1,
+        cls,
+        model: DingModelFrequency | DingModelPulseDurationFrequency | DingModelIntensityFrequency,
+        n_stim: int,
+        n_shooting: int,
+        frequency: int | float = None,
+        pulse_duration: int | float | list[int] | list[float] = None,
+        pulse_intensity: int | float | list[int] | list[float] = None,
+        pulse_mode: str = "Single",
+        ode_solver: OdeSolver = OdeSolver.RK4(n_integration_steps=1),
+        use_sx: bool = True,
+        n_threads: int = 1,
     ):
         final_time = n_stim / frequency
         return cls(

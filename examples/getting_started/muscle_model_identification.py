@@ -89,10 +89,15 @@ ivp_from_identification = IvpFes(
 )
 
 # Creating the solution from the initial guess
-identified_sol_from_initial_guess = Solution.from_initial_guess(ivp_from_identification, [ivp_from_identification.x_init,
-                                                                                          ivp_from_identification.u_init,
-                                                                                          ivp_from_identification.p_init,
-                                                                                          ivp_from_identification.s_init])
+identified_sol_from_initial_guess = Solution.from_initial_guess(
+    ivp_from_identification,
+    [
+        ivp_from_identification.x_init,
+        ivp_from_identification.u_init,
+        ivp_from_identification.p_init,
+        ivp_from_identification.s_init,
+    ],
+)
 
 # Integrating the solution
 identified_result = identified_sol_from_initial_guess.integrate(
