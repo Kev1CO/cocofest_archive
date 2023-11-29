@@ -5,8 +5,8 @@ import pickle
 
 from bioptim import Solver, MultiStart, Solution
 from cocofest import DingModelFrequency, DingModelPulseDurationFrequency, DingModelIntensityFrequency
-from .fes_ocp import FunctionalElectricStimulationOptimalControlProgram
 from ..read_data import ExtractData
+from .fes_ocp import OcpFes
 
 
 class FunctionalElectricStimulationMultiStart(MultiStart):
@@ -441,7 +441,7 @@ class FunctionalElectricStimulationMultiStart(MultiStart):
         pulse_intensity_bimapping: bool = None,
     ):
         if self.methode is None or self.methode == "standard":
-            ocp = FunctionalElectricStimulationOptimalControlProgram(
+            ocp = OcpFes.prepare_ocp(
                 model=model,
                 n_stim=n_stim,
                 n_shooting=n_shooting,
@@ -460,15 +460,10 @@ class FunctionalElectricStimulationMultiStart(MultiStart):
                 pulse_intensity_max=pulse_intensity_max,
                 pulse_intensity_bimapping=pulse_intensity_bimapping,
                 use_sx=True,
-                objective=None
-                if self.kwarg_fes is None
-                else None
-                if "objective" not in self.kwarg_fes
-                else self.kwarg_fes["objective"],
             )
 
         elif self.methode == "from_frequency_and_final_time":
-            ocp = FunctionalElectricStimulationOptimalControlProgram.from_frequency_and_final_time(
+            ocp = OcpFes.prepare_ocp(
                 model=model,
                 n_shooting=n_shooting,
                 final_time=final_time,
@@ -488,15 +483,10 @@ class FunctionalElectricStimulationMultiStart(MultiStart):
                 pulse_intensity_max=pulse_intensity_max,
                 pulse_intensity_bimapping=pulse_intensity_bimapping,
                 use_sx=True,
-                objective=None
-                if self.kwarg_fes is None
-                else None
-                if "objective" not in self.kwarg_fes
-                else self.kwarg_fes["objective"],
             )
 
         elif self.methode == "from_frequency_and_n_stim":
-            ocp = FunctionalElectricStimulationOptimalControlProgram.from_frequency_and_n_stim(
+            ocp = OcpFes.prepare_ocp(
                 model=model,
                 n_shooting=n_shooting,
                 n_stim=n_stim,
@@ -515,11 +505,6 @@ class FunctionalElectricStimulationMultiStart(MultiStart):
                 pulse_intensity_max=pulse_intensity_max,
                 pulse_intensity_bimapping=pulse_intensity_bimapping,
                 use_sx=True,
-                objective=None
-                if self.kwarg_fes is None
-                else None
-                if "objective" not in self.kwarg_fes
-                else self.kwarg_fes["objective"],
             )
 
         else:

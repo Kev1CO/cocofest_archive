@@ -95,16 +95,10 @@ the minimum and maximum time between two stimulation pulse, the time bimapping
 (If True, will act like a frequency at constant pulse interval).
 
 ```python
-ocp = OcpFes().prepare_ocp(
-    ding_model=DingModelFrequency(),
-    n_stim=10,
-    n_shooting=20,
-    final_time=1,
-    end_node_tracking=100,
-    time_min=0.01,
-    time_max=0.1,
-    time_bimapping=True,
-)
+ocp = OcpFes.prepare_ocp(...,
+                         n_stim=10,
+                         n_shooting=20,
+                         ...,)
 ```
 
 4. Solve you OCP
@@ -125,10 +119,7 @@ If False, the fatigue equation will not be added to the model and the muscle for
 constant during the simulation regardless of the previous stimulation appearance.
 
 ```python
-ocp = OcpFes().prepare_ocp(
-    ding_model=DingModelFrequency(with_fatigue=False),
-    ...
-)
+ocp = OcpFes().prepare_ocp()
 ```
 
 ## Initital value problem
@@ -147,10 +138,7 @@ It will truncate the stimulation apparition list used for the calcium summation.
 The integer number defines the stimulation number to keep for this summation.
 
 ```python
-ocp = OcpFes().prepare_ocp(
-    ding_model=DingModelFrequency(sum_stim_truncation=2),
-    ...
-)
+ocp = OcpFes().prepare_ocp()
 ```
 
 

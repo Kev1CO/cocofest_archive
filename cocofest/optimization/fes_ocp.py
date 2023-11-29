@@ -39,7 +39,8 @@ class OcpFes:
         Calculates the final ocp time from frequency and stimulation number
     """
 
-    def prepare_ocp(self,
+    @staticmethod
+    def prepare_ocp(
                     model: DingModelFrequency | DingModelPulseDurationFrequency | DingModelIntensityFrequency = None,
                     n_stim: int = None,
                     n_shooting: int = None,
@@ -113,13 +114,12 @@ class OcpFes:
                 The number of thread to use while solving (multi-threading if > 1)
         """
 
-        self._sanity_check(model=model,
+        OcpFes._sanity_check(model=model,
                            n_stim=n_stim,
                            n_shooting=n_shooting,
                            final_time=final_time,
                            pulse_mode=pulse_mode,
                            frequency=frequency,
-                           round_down=round_down,
                            time_min=time_min,
                            time_max=time_max,
                            time_bimapping=time_bimapping,
@@ -138,23 +138,28 @@ class OcpFes:
                            ode_solver=ode_solver,
                            n_threads=n_threads)
 
-        n_stim, final_time = self._build_phase_parameter(n_stim=n_stim,
+        OcpFes._sanity_check_2(n_stim=n_stim,
+                             final_time=final_time,
+                             frequency=frequency,
+                             round_down=round_down)
+
+        n_stim, final_time = OcpFes._build_phase_parameter(n_stim=n_stim,
                                                          final_time=final_time,
                                                          frequency=frequency,
                                                          pulse_mode=pulse_mode,
                                                          round_down=round_down)
 
-        force_fourier_coef = None if force_tracking is None else self._build_fourrier_coeff(force_tracking)
+        force_fourier_coef = None if force_tracking is None else OcpFes._build_fourrier_coeff(force_tracking)
         end_node_tracking = end_node_tracking
         models = [model] * n_stim
         n_shooting = [n_shooting] * n_stim
-        final_time_phase, constraints, phase_time_bimapping = self._build_phase_time(final_time=final_time,
+        final_time_phase, constraints, phase_time_bimapping = OcpFes._build_phase_time(final_time=final_time,
                                                                                           n_stim=n_stim,
                                                                                           pulse_mode=pulse_mode,
                                                                                           time_min=time_min,
                                                                                           time_max=time_max,
                                                                                           time_bimapping=time_bimapping)
-        parameters, parameters_bounds, parameters_init, parameter_objectives = self._build_parameters(model=model,
+        parameters, parameters_bounds, parameters_init, parameter_objectives = OcpFes._build_parameters(model=model,
                                                                                                       n_stim=n_stim,
                                                                                                       pulse_time=pulse_time,
                                                                                                       pulse_time_min=pulse_time_min,
@@ -171,9 +176,9 @@ class OcpFes:
                 " add parameter to optimize or use the IvpFes method to build your problem"
             )
 
-        dynamics = self._declare_dynamics(models, n_stim)
-        x_bounds, x_init = self._set_bounds(model, n_stim)
-        objective_functions = self._set_objective(n_stim, n_shooting, force_fourier_coef, end_node_tracking,
+        dynamics = OcpFes._declare_dynamics(models, n_stim)
+        x_bounds, x_init = OcpFes._set_bounds(model, n_stim)
+        objective_functions = OcpFes._set_objective(n_stim, n_shooting, force_fourier_coef, end_node_tracking,
                                                   custom_objective)
 
         return OptimalControlProgram(
@@ -197,10 +202,10 @@ class OcpFes:
         )
 
     @staticmethod
-    def _sanity_check(model, n_stim, n_shooting, final_time, pulse_mode, frequency, round_down, time_min, time_max, time_bimapping, pulse_time,
-                      pulse_time_min, pulse_time_max, pulse_time_bimapping, pulse_intensity, pulse_intensity_min,
-                      pulse_intensity_max, pulse_intensity_bimapping, force_tracking, end_node_tracking,
-                      custom_objective, use_sx, ode_solver, n_threads):
+    def _sanity_check(model=None, n_stim=None, n_shooting=None, final_time=None, pulse_mode=None, frequency=None, time_min=None, time_max=None, time_bimapping=None, pulse_time=None,
+                      pulse_time_min=None, pulse_time_max=None, pulse_time_bimapping=None, pulse_intensity=None, pulse_intensity_min=None,
+                      pulse_intensity_max=None, pulse_intensity_bimapping=None, force_tracking=None, end_node_tracking=None,
+                      custom_objective=None, use_sx=None, ode_solver=None, n_threads=None):
 
         if not isinstance(model, DingModelFrequency | DingModelPulseDurationFrequency | DingModelIntensityFrequency):
             raise TypeError(
@@ -213,11 +218,12 @@ class OcpFes:
             else:
                 raise TypeError("n_stim must be int type")
 
-        if isinstance(n_shooting, int):
-            if n_shooting <= 0:
-                raise ValueError("n_shooting must be positive")
-        else:
-            raise TypeError("n_shooting must be int type")
+        if n_shooting:
+            if isinstance(n_shooting, int):
+                if n_shooting <= 0:
+                    raise ValueError("n_shooting must be positive")
+            else:
+                raise TypeError("n_shooting must be int type")
 
         if final_time:
             if isinstance(final_time, int | float):
@@ -226,8 +232,9 @@ class OcpFes:
             else:
                 raise TypeError("final_time must be int or float type")
 
-        if pulse_mode not in ("Single", "Doublet", "Triplet"):
-            raise NotImplementedError(f"Pulse mode '{pulse_mode}' is not yet implemented")
+        if pulse_mode:
+            if pulse_mode not in ("Single", "Doublet", "Triplet"):
+                raise NotImplementedError(f"Pulse mode '{pulse_mode}' is not yet implemented")
 
         if frequency:
             if isinstance(frequency, int | float):
@@ -236,23 +243,12 @@ class OcpFes:
             else:
                 raise TypeError("frequency must be int or float type")
 
-        if n_stim is None and final_time is None and frequency is None:
-            raise ValueError("At least two variable must be set from n_stim, final_time or frequency")
-
-        if n_stim and final_time and frequency:
-            if n_stim != final_time * frequency:
-                raise ValueError("Can not satisfy n_stim equal to final_time * frequency with the given parameters."
-                                 "Consider setting only two of the three parameters")
-
-        if round_down:
-            if not isinstance(round_down, bool):
-                raise TypeError("round_down must be bool type")
-
         if time_min is not None and time_max is None or time_min is None and time_max is not None:
             raise ValueError("time_min and time_max must be both entered or none of them in order to work")
 
-        if not isinstance(time_bimapping, bool):
-            raise TypeError("time_bimapping must be bool type")
+        if time_bimapping:
+            if not isinstance(time_bimapping, bool):
+                raise TypeError("time_bimapping must be bool type")
 
         if isinstance(model, DingModelPulseDurationFrequency):
             if pulse_time is None and pulse_time_min is not None and pulse_time_max is None:
@@ -381,6 +377,20 @@ class OcpFes:
 
         if not isinstance(n_threads, int):
             raise TypeError("n_thread must be a int type")
+
+    @staticmethod
+    def _sanity_check_2(n_stim, final_time, frequency, round_down):
+        if n_stim is None and final_time is None and frequency is None:
+            raise ValueError("At least two variable must be set from n_stim, final_time or frequency")
+
+        if n_stim and final_time and frequency:
+            if n_stim != final_time * frequency:
+                raise ValueError("Can not satisfy n_stim equal to final_time * frequency with the given parameters."
+                                 "Consider setting only two of the three parameters")
+
+        if round_down:
+            if not isinstance(round_down, bool):
+                raise TypeError("round_down must be bool type")
 
     @staticmethod
     def _build_fourrier_coeff(force_tracking):
