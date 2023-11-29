@@ -41,30 +41,31 @@ class OcpFes:
 
     @staticmethod
     def prepare_ocp(
-                    model: DingModelFrequency | DingModelPulseDurationFrequency | DingModelIntensityFrequency = None,
-                    n_stim: int = None,
-                    n_shooting: int = None,
-                    final_time: int | float = None,
-                    pulse_mode: str = "Single",
-                    frequency: int | float = None,
-                    round_down: bool = False,
-                    time_min: int | float = None,
-                    time_max: int | float = None,
-                    time_bimapping: bool = False,
-                    pulse_time: int | float = None,
-                    pulse_time_min: int | float = None,
-                    pulse_time_max: int | float = None,
-                    pulse_time_bimapping: bool = False,
-                    pulse_intensity: int | float = None,
-                    pulse_intensity_min: int | float = None,
-                    pulse_intensity_max: int | float = None,
-                    pulse_intensity_bimapping: bool = False,
-                    force_tracking: list = None,
-                    end_node_tracking: int | float = None,
-                    custom_objective: list[Objective] = None,
-                    use_sx: bool = True,
-                    ode_solver: OdeSolver = OdeSolver.RK4(n_integration_steps=1),
-                    n_threads: int = 1):
+        model: DingModelFrequency | DingModelPulseDurationFrequency | DingModelIntensityFrequency = None,
+        n_stim: int = None,
+        n_shooting: int = None,
+        final_time: int | float = None,
+        pulse_mode: str = "Single",
+        frequency: int | float = None,
+        round_down: bool = False,
+        time_min: int | float = None,
+        time_max: int | float = None,
+        time_bimapping: bool = False,
+        pulse_time: int | float = None,
+        pulse_time_min: int | float = None,
+        pulse_time_max: int | float = None,
+        pulse_time_bimapping: bool = False,
+        pulse_intensity: int | float = None,
+        pulse_intensity_min: int | float = None,
+        pulse_intensity_max: int | float = None,
+        pulse_intensity_bimapping: bool = False,
+        force_tracking: list = None,
+        end_node_tracking: int | float = None,
+        custom_objective: list[Objective] = None,
+        use_sx: bool = True,
+        ode_solver: OdeSolver = OdeSolver.RK4(n_integration_steps=1),
+        n_threads: int = 1,
+    ):
         """
         This definition prepares the ocp to be solved
         .
@@ -114,61 +115,62 @@ class OcpFes:
                 The number of thread to use while solving (multi-threading if > 1)
         """
 
-        OcpFes._sanity_check(model=model,
-                           n_stim=n_stim,
-                           n_shooting=n_shooting,
-                           final_time=final_time,
-                           pulse_mode=pulse_mode,
-                           frequency=frequency,
-                           time_min=time_min,
-                           time_max=time_max,
-                           time_bimapping=time_bimapping,
-                           pulse_time=pulse_time,
-                           pulse_time_min=pulse_time_min,
-                           pulse_time_max=pulse_time_max,
-                           pulse_time_bimapping=pulse_time_bimapping,
-                           pulse_intensity=pulse_intensity,
-                           pulse_intensity_min=pulse_intensity_min,
-                           pulse_intensity_max=pulse_intensity_max,
-                           pulse_intensity_bimapping=pulse_intensity_bimapping,
-                           force_tracking=force_tracking,
-                           end_node_tracking=end_node_tracking,
-                           custom_objective=custom_objective,
-                           use_sx=use_sx,
-                           ode_solver=ode_solver,
-                           n_threads=n_threads)
+        OcpFes._sanity_check(
+            model=model,
+            n_stim=n_stim,
+            n_shooting=n_shooting,
+            final_time=final_time,
+            pulse_mode=pulse_mode,
+            frequency=frequency,
+            time_min=time_min,
+            time_max=time_max,
+            time_bimapping=time_bimapping,
+            pulse_time=pulse_time,
+            pulse_time_min=pulse_time_min,
+            pulse_time_max=pulse_time_max,
+            pulse_time_bimapping=pulse_time_bimapping,
+            pulse_intensity=pulse_intensity,
+            pulse_intensity_min=pulse_intensity_min,
+            pulse_intensity_max=pulse_intensity_max,
+            pulse_intensity_bimapping=pulse_intensity_bimapping,
+            force_tracking=force_tracking,
+            end_node_tracking=end_node_tracking,
+            custom_objective=custom_objective,
+            use_sx=use_sx,
+            ode_solver=ode_solver,
+            n_threads=n_threads,
+        )
 
-        OcpFes._sanity_check_2(n_stim=n_stim,
-                             final_time=final_time,
-                             frequency=frequency,
-                             round_down=round_down)
+        OcpFes._sanity_check_2(n_stim=n_stim, final_time=final_time, frequency=frequency, round_down=round_down)
 
-        n_stim, final_time = OcpFes._build_phase_parameter(n_stim=n_stim,
-                                                         final_time=final_time,
-                                                         frequency=frequency,
-                                                         pulse_mode=pulse_mode,
-                                                         round_down=round_down)
+        n_stim, final_time = OcpFes._build_phase_parameter(
+            n_stim=n_stim, final_time=final_time, frequency=frequency, pulse_mode=pulse_mode, round_down=round_down
+        )
 
         force_fourier_coef = None if force_tracking is None else OcpFes._build_fourrier_coeff(force_tracking)
         end_node_tracking = end_node_tracking
         models = [model] * n_stim
         n_shooting = [n_shooting] * n_stim
-        final_time_phase, constraints, phase_time_bimapping = OcpFes._build_phase_time(final_time=final_time,
-                                                                                          n_stim=n_stim,
-                                                                                          pulse_mode=pulse_mode,
-                                                                                          time_min=time_min,
-                                                                                          time_max=time_max,
-                                                                                          time_bimapping=time_bimapping)
-        parameters, parameters_bounds, parameters_init, parameter_objectives = OcpFes._build_parameters(model=model,
-                                                                                                      n_stim=n_stim,
-                                                                                                      pulse_time=pulse_time,
-                                                                                                      pulse_time_min=pulse_time_min,
-                                                                                                      pulse_time_max=pulse_time_max,
-                                                                                                      pulse_time_bimapping=pulse_time_bimapping,
-                                                                                                      pulse_intensity=pulse_intensity,
-                                                                                                      pulse_intensity_min=pulse_intensity_min,
-                                                                                                      pulse_intensity_max=pulse_intensity_max,
-                                                                                                      pulse_intensity_bimapping=pulse_intensity_bimapping)
+        final_time_phase, constraints, phase_time_bimapping = OcpFes._build_phase_time(
+            final_time=final_time,
+            n_stim=n_stim,
+            pulse_mode=pulse_mode,
+            time_min=time_min,
+            time_max=time_max,
+            time_bimapping=time_bimapping,
+        )
+        parameters, parameters_bounds, parameters_init, parameter_objectives = OcpFes._build_parameters(
+            model=model,
+            n_stim=n_stim,
+            pulse_time=pulse_time,
+            pulse_time_min=pulse_time_min,
+            pulse_time_max=pulse_time_max,
+            pulse_time_bimapping=pulse_time_bimapping,
+            pulse_intensity=pulse_intensity,
+            pulse_intensity_min=pulse_intensity_min,
+            pulse_intensity_max=pulse_intensity_max,
+            pulse_intensity_bimapping=pulse_intensity_bimapping,
+        )
 
         if len(constraints) == 0 and len(parameters) == 0:
             raise ValueError(
@@ -178,8 +180,9 @@ class OcpFes:
 
         dynamics = OcpFes._declare_dynamics(models, n_stim)
         x_bounds, x_init = OcpFes._set_bounds(model, n_stim)
-        objective_functions = OcpFes._set_objective(n_stim, n_shooting, force_fourier_coef, end_node_tracking,
-                                                  custom_objective)
+        objective_functions = OcpFes._set_objective(
+            n_stim, n_shooting, force_fourier_coef, end_node_tracking, custom_objective
+        )
 
         return OptimalControlProgram(
             bio_model=models,
@@ -202,14 +205,35 @@ class OcpFes:
         )
 
     @staticmethod
-    def _sanity_check(model=None, n_stim=None, n_shooting=None, final_time=None, pulse_mode=None, frequency=None, time_min=None, time_max=None, time_bimapping=None, pulse_time=None,
-                      pulse_time_min=None, pulse_time_max=None, pulse_time_bimapping=None, pulse_intensity=None, pulse_intensity_min=None,
-                      pulse_intensity_max=None, pulse_intensity_bimapping=None, force_tracking=None, end_node_tracking=None,
-                      custom_objective=None, use_sx=None, ode_solver=None, n_threads=None):
-
+    def _sanity_check(
+        model=None,
+        n_stim=None,
+        n_shooting=None,
+        final_time=None,
+        pulse_mode=None,
+        frequency=None,
+        time_min=None,
+        time_max=None,
+        time_bimapping=None,
+        pulse_time=None,
+        pulse_time_min=None,
+        pulse_time_max=None,
+        pulse_time_bimapping=None,
+        pulse_intensity=None,
+        pulse_intensity_min=None,
+        pulse_intensity_max=None,
+        pulse_intensity_bimapping=None,
+        force_tracking=None,
+        end_node_tracking=None,
+        custom_objective=None,
+        use_sx=None,
+        ode_solver=None,
+        n_threads=None,
+    ):
         if not isinstance(model, DingModelFrequency | DingModelPulseDurationFrequency | DingModelIntensityFrequency):
             raise TypeError(
-                "model must be a DingModelFrequency, DingModelPulseDurationFrequency or DingModelIntensityFrequency type")
+                "model must be a DingModelFrequency, DingModelPulseDurationFrequency or DingModelIntensityFrequency type"
+            )
 
         if n_stim:
             if isinstance(n_stim, int):
@@ -256,10 +280,10 @@ class OcpFes:
             if pulse_time is not None and pulse_time_min is not None and pulse_time_max is not None:
                 raise ValueError("Either Time pulse or Time pulse min max bounds need to be set for this model")
             if (
-                    pulse_time_min is not None
-                    and pulse_time_max is None
-                    or pulse_time_min is None
-                    and pulse_time_max is not None
+                pulse_time_min is not None
+                and pulse_time_max is None
+                or pulse_time_min is None
+                and pulse_time_max is not None
             ):
                 raise ValueError("Both Time pulse min max bounds need to be set for this model")
 
@@ -306,10 +330,10 @@ class OcpFes:
                     "Either Intensity pulse or Intensity pulse min max bounds need to be set for this model"
                 )
             if (
-                    pulse_intensity_min is not None
-                    and pulse_intensity_max is None
-                    or pulse_intensity_min is None
-                    and pulse_intensity_max is not None
+                pulse_intensity_min is not None
+                and pulse_intensity_max is None
+                or pulse_intensity_min is None
+                and pulse_intensity_max is not None
             ):
                 raise ValueError("Both Intensity pulse min max bounds need to be set for this model")
 
@@ -385,8 +409,10 @@ class OcpFes:
 
         if n_stim and final_time and frequency:
             if n_stim != final_time * frequency:
-                raise ValueError("Can not satisfy n_stim equal to final_time * frequency with the given parameters."
-                                 "Consider setting only two of the three parameters")
+                raise ValueError(
+                    "Can not satisfy n_stim equal to final_time * frequency with the given parameters."
+                    "Consider setting only two of the three parameters"
+                )
 
         if round_down:
             if not isinstance(round_down, bool):
@@ -398,7 +424,6 @@ class OcpFes:
 
     @staticmethod
     def _build_phase_time(final_time, n_stim, pulse_mode, time_min, time_max, time_bimapping):
-
         constraints = ConstraintList()
         final_time_phase = None
         # parameter_bimapping = BiMappingList()
@@ -450,8 +475,18 @@ class OcpFes:
         return final_time_phase, constraints, phase_time_bimapping
 
     @staticmethod
-    def _build_parameters(model, n_stim, pulse_time, pulse_time_min, pulse_time_max, pulse_time_bimapping,
-                          pulse_intensity, pulse_intensity_min, pulse_intensity_max, pulse_intensity_bimapping):
+    def _build_parameters(
+        model,
+        n_stim,
+        pulse_time,
+        pulse_time_min,
+        pulse_time_max,
+        pulse_time_bimapping,
+        pulse_intensity,
+        pulse_intensity_min,
+        pulse_intensity_max,
+        pulse_intensity_bimapping,
+    ):
         parameters = ParameterList()
         parameters_bounds = BoundsList()
         parameters_init = InitialGuessList()
@@ -462,10 +497,10 @@ class OcpFes:
             if pulse_time is not None and pulse_time_min is not None and pulse_time_max is not None:
                 raise ValueError("Either Time pulse or Time pulse min max bounds need to be set for this model")
             if (
-                    pulse_time_min is not None
-                    and pulse_time_max is None
-                    or pulse_time_min is None
-                    and pulse_time_max is not None
+                pulse_time_min is not None
+                and pulse_time_max is None
+                or pulse_time_min is None
+                and pulse_time_max is not None
             ):
                 raise ValueError("Both Time pulse min max bounds need to be set for this model")
 
@@ -548,10 +583,10 @@ class OcpFes:
                     "Either Intensity pulse or Intensity pulse min max bounds need to be set for this model"
                 )
             if (
-                    pulse_intensity_min is not None
-                    and pulse_intensity_max is None
-                    or pulse_intensity_min is None
-                    and pulse_intensity_max is not None
+                pulse_intensity_min is not None
+                and pulse_intensity_max is None
+                or pulse_intensity_min is None
+                and pulse_intensity_max is not None
             ):
                 raise ValueError("Both Intensity pulse min max bounds need to be set for this model")
 

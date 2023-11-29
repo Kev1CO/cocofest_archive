@@ -344,10 +344,6 @@ def test_ocp_building(
         use_sx=use_sx,
     )
 
-
-
-
-
     ocp_2 = OcpFes().prepare_ocp(
         model=model,
         n_shooting=n_shooting,
@@ -395,7 +391,7 @@ def test_ocp_not_for_optimal_error():
     with pytest.raises(
         ValueError,
         match="This is not an optimal control problem,"
-              " add parameter to optimize or use the IvpFes method to build your problem",
+        " add parameter to optimize or use the IvpFes method to build your problem",
     ):
         ocp = OcpFes().prepare_ocp(
             model=DingModelFrequency(),

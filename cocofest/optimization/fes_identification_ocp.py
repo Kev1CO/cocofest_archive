@@ -26,24 +26,25 @@ class OcpFesId(OcpFes):
         super(OcpFesId, self).__init__()
 
     @staticmethod
-    def prepare_ocp(model: DingModelFrequency | DingModelPulseDurationFrequency | DingModelIntensityFrequency = None,
-                    n_stim: int = None,
-                    n_shooting: list[int] = None,
-                    final_time_phase: list[int] | list[float] = None,
-                    pulse_duration: int | float = None,
-                    pulse_intensity: int | float = None,
-                    force_tracking: list = None,
-                    custom_objective: list[Objective] = None,
-                    discontinuity_in_ocp: list[int] = None,
-                    a_rest: float = None,
-                    km_rest: float = None,
-                    tau1_rest: float = None,
-                    tau2: float = None,
-                    use_sx: bool = True,
-                    ode_solver: OdeSolver = OdeSolver.RK4(n_integration_steps=1),
-                    n_threads: int = 1,
-                    **kwargs):
-
+    def prepare_ocp(
+        model: DingModelFrequency | DingModelPulseDurationFrequency | DingModelIntensityFrequency = None,
+        n_stim: int = None,
+        n_shooting: list[int] = None,
+        final_time_phase: list[int] | list[float] = None,
+        pulse_duration: int | float = None,
+        pulse_intensity: int | float = None,
+        force_tracking: list = None,
+        custom_objective: list[Objective] = None,
+        discontinuity_in_ocp: list[int] = None,
+        a_rest: float = None,
+        km_rest: float = None,
+        tau1_rest: float = None,
+        tau2: float = None,
+        use_sx: bool = True,
+        ode_solver: OdeSolver = OdeSolver.RK4(n_integration_steps=1),
+        n_threads: int = 1,
+        **kwargs,
+    ):
         """
         The main class to define an ocp. This class prepares the full program and gives all
         the needed parameters to solve a functional electrical stimulation ocp
@@ -84,22 +85,26 @@ class OcpFesId(OcpFes):
             The number of thread to use while solving (multi-threading if > 1)
         """
 
-        OcpFesId._sanity_check(model=model,
-                           n_stim=n_stim,
-                           custom_objective=custom_objective,
-                           use_sx=use_sx,
-                           ode_solver=ode_solver,
-                           n_threads=n_threads)
+        OcpFesId._sanity_check(
+            model=model,
+            n_stim=n_stim,
+            custom_objective=custom_objective,
+            use_sx=use_sx,
+            ode_solver=ode_solver,
+            n_threads=n_threads,
+        )
 
-        OcpFesId._sanity_check_2(model=model,
-                                 n_shooting=n_shooting,
-                                 a_rest=a_rest,
-                                 km_rest=km_rest,
-                                 tau1_rest=tau1_rest,
-                                 tau2=tau2,
-                                 force_tracking=force_tracking,
-                                 pulse_duration=pulse_duration,
-                                 pulse_intensity=pulse_intensity,)
+        OcpFesId._sanity_check_2(
+            model=model,
+            n_shooting=n_shooting,
+            a_rest=a_rest,
+            km_rest=km_rest,
+            tau1_rest=tau1_rest,
+            tau2=tau2,
+            force_tracking=force_tracking,
+            pulse_duration=pulse_duration,
+            pulse_intensity=pulse_intensity,
+        )
 
         if model._with_fatigue:
             model.set_a_rest(model=None, a_rest=a_rest)
@@ -113,9 +118,20 @@ class OcpFesId(OcpFes):
         constraints = ConstraintList()
         parameters, parameters_bounds, parameters_init = OcpFesId._set_parameters(model=model)
         dynamics = OcpFesId._declare_dynamics(models=models, n_stim=n_stim)
-        x_bounds, x_init = OcpFesId._set_bounds(model=model, n_stim=n_stim, n_shooting=n_shooting, force_tracking=force_tracking,
-                             discontinuity_in_ocp=discontinuity_in_ocp)
-        objective_functions = OcpFesId._set_objective(model=model, n_stim=n_stim, n_shooting=n_shooting, force_tracking=force_tracking, custom_objective=custom_objective)
+        x_bounds, x_init = OcpFesId._set_bounds(
+            model=model,
+            n_stim=n_stim,
+            n_shooting=n_shooting,
+            force_tracking=force_tracking,
+            discontinuity_in_ocp=discontinuity_in_ocp,
+        )
+        objective_functions = OcpFesId._set_objective(
+            model=model,
+            n_stim=n_stim,
+            n_shooting=n_shooting,
+            force_tracking=force_tracking,
+            custom_objective=custom_objective,
+        )
         phase_transitions = OcpFesId._set_phase_transition(discontinuity_in_ocp)
 
         return OptimalControlProgram(
@@ -138,36 +154,34 @@ class OcpFesId(OcpFes):
         )
 
     @staticmethod
-    def _sanity_check_2(model=None, n_shooting=None, a_rest=None, km_rest=None, tau1_rest=None, tau2=None, force_tracking=None, pulse_duration=None, pulse_intensity=None):
+    def _sanity_check_2(
+        model=None,
+        n_shooting=None,
+        a_rest=None,
+        km_rest=None,
+        tau1_rest=None,
+        tau2=None,
+        force_tracking=None,
+        pulse_duration=None,
+        pulse_intensity=None,
+    ):
         if model._with_fatigue:
             if a_rest is None or km_rest is None or tau1_rest is None or tau2 is None:
                 raise ValueError("a_rest, km_rest, tau1_rest and tau2 must be set for fatigue model identification")
             elif not isinstance(a_rest, float):
-                raise TypeError(
-                    f"a_rest must be float type," f" currently a_rest is {type(a_rest)}) type."
-                )
+                raise TypeError(f"a_rest must be float type," f" currently a_rest is {type(a_rest)}) type.")
             elif not isinstance(km_rest, float):
-                raise TypeError(
-                    f"km_rest must be float type," f" currently km_rest is {type(km_rest)}) type."
-                )
+                raise TypeError(f"km_rest must be float type," f" currently km_rest is {type(km_rest)}) type.")
             elif not isinstance(tau1_rest, float):
-                raise TypeError(
-                    f"tau1_rest must be float type," f" currently tau1_rest is {type(tau1_rest)}) type."
-                )
+                raise TypeError(f"tau1_rest must be float type," f" currently tau1_rest is {type(tau1_rest)}) type.")
             elif not isinstance(tau2, float):
-                raise TypeError(
-                    f"tau2 must be float type," f" currently tau2 is {type(tau2)}) type."
-                )
+                raise TypeError(f"tau2 must be float type," f" currently tau2 is {type(tau2)}) type.")
 
         if not isinstance(n_shooting, list):
-            raise TypeError(
-                f"n_shooting must be list type," f" currently n_shooting is {type(n_shooting)}) type."
-            )
+            raise TypeError(f"n_shooting must be list type," f" currently n_shooting is {type(n_shooting)}) type.")
         else:
             if not all(isinstance(val, int) for val in n_shooting):
-                raise TypeError(
-                    f"n_shooting must be list of int type."
-                )
+                raise TypeError(f"n_shooting must be list of int type.")
 
         if not isinstance(force_tracking, list):
             raise TypeError(
@@ -175,9 +189,7 @@ class OcpFesId(OcpFes):
             )
         else:
             if not all(isinstance(val, int | float) for val in force_tracking):
-                raise TypeError(
-                    f"force_tracking must be list of int or float type."
-                )
+                raise TypeError(f"force_tracking must be list of int or float type.")
 
         if isinstance(model, DingModelPulseDurationFrequency):
             if not isinstance(pulse_duration, list):
@@ -428,7 +440,5 @@ class OcpFesId(OcpFes):
         phase_transitions = PhaseTransitionList()
         if discontinuity_in_ocp:
             for i in range(len(discontinuity_in_ocp)):
-                phase_transitions.add(
-                    PhaseTransitionFcn.DISCONTINUOUS, phase_pre_idx=discontinuity_in_ocp[i] - 1
-                )
+                phase_transitions.add(PhaseTransitionFcn.DISCONTINUOUS, phase_pre_idx=discontinuity_in_ocp[i] - 1)
         return phase_transitions
