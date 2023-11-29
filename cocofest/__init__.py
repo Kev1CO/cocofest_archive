@@ -3,7 +3,6 @@ from cocofest.models.ding2003 import DingModelFrequency
 from cocofest.models.ding2007 import DingModelPulseDurationFrequency
 from cocofest.models.hmed2018 import DingModelIntensityFrequency
 from cocofest.optimization.fes_multi_start import FunctionalElectricStimulationMultiStart
-from cocofest.optimization.fes_ocp import FunctionalElectricStimulationOptimalControlProgram
 from cocofest.optimization.fes_identification_ocp import (
     FunctionalElectricStimulationOptimalControlProgramIdentification,
 )

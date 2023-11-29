@@ -3,7 +3,6 @@ import os
 from cocofest import (
     DingModelFrequencyParameterIdentification,
     DingModelFrequency,
-    FunctionalElectricStimulationOptimalControlProgram,
     IvpFes,
 )
 

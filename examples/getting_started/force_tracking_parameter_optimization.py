@@ -7,9 +7,9 @@ import numpy as np
 
 from cocofest import (
     DingModelIntensityFrequency,
-    FunctionalElectricStimulationOptimalControlProgram,
     ExtractData,
     FourierSeries,
+    OcpFes,
 )
 
 # --- Building force to track ---#
@@ -24,7 +24,7 @@ force_tracking = [time, force]
 minimum_pulse_intensity = (
     np.arctanh(-DingModelIntensityFrequency().cr) / DingModelIntensityFrequency().bs
 ) + DingModelIntensityFrequency().Is
-ocp = FunctionalElectricStimulationOptimalControlProgram(
+ocp = OcpFes().prepare_ocp(
     model=DingModelIntensityFrequency(),
     n_stim=10,
     n_shooting=20,

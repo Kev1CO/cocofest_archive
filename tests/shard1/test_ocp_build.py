@@ -4,7 +4,6 @@ import shutil
 import numpy as np
 
 from cocofest import (
-    FunctionalElectricStimulationOptimalControlProgram,
     FunctionalElectricStimulationMultiStart,
     DingModelFrequency,
     DingModelPulseDurationFrequency,
@@ -323,28 +322,6 @@ def test_ocp_building(
     model._with_fatigue = with_fatigue
     model._sum_stim_truncation = sum_stim_truncation
 
-    # ocp_1 = FunctionalElectricStimulationOptimalControlProgram.from_frequency_and_final_time(
-    #     model=model,
-    #     n_shooting=n_shooting,
-    #     final_time=final_time,
-    #     force_tracking=force_tracking,
-    #     end_node_tracking=end_node_tracking,
-    #     round_down=True,
-    #     frequency=frequency,
-    #     time_min=time_min,
-    #     time_max=time_max,
-    #     time_bimapping=time_bimapping,
-    #     pulse_time=pulse_time,
-    #     pulse_time_min=pulse_time_min,
-    #     pulse_time_max=pulse_time_max,
-    #     pulse_time_bimapping=pulse_time_bimapping,
-    #     pulse_intensity=pulse_intensity,
-    #     pulse_intensity_min=pulse_intensity_min,
-    #     pulse_intensity_max=pulse_intensity_max,
-    #     pulse_intensity_bimapping=pulse_intensity_bimapping,
-    #     use_sx=use_sx,
-    # )
-
     ocp_1 = OcpFes().prepare_ocp(
         model=model,
         n_shooting=n_shooting,
@@ -420,13 +397,12 @@ def test_ocp_not_for_optimal_error():
         match="This is not an optimal control problem,"
         " add parameter to optimize or set for_optimal_control flag to false",
     ):
-        ocp = FunctionalElectricStimulationOptimalControlProgram(
+        ocp = OcpFes().prepare_ocp(
             model=DingModelFrequency(),
             n_stim=1,
             n_shooting=10,
             final_time=1,
             use_sx=True,
-            for_optimal_control=True,
         )
 
 
@@ -464,7 +440,7 @@ def test_multi_start_building(force_tracking, end_node_tracking, min_pulse_durat
 
 def test_ding2007_build():
     min_duration = DingModelPulseDurationFrequency().pd0
-    ocp = FunctionalElectricStimulationOptimalControlProgram(
+    ocp = OcpFes().prepare_ocp(
         model=DingModelPulseDurationFrequency(),
         n_stim=1,
         n_shooting=10,
@@ -477,7 +453,7 @@ def test_ding2007_build():
 
 def test_hmed2018_build():
     min_intensity = DingModelIntensityFrequency().min_pulse_intensity()
-    ocp = FunctionalElectricStimulationOptimalControlProgram(
+    ocp = OcpFes().prepare_ocp(
         model=DingModelIntensityFrequency(),
         n_stim=1,
         n_shooting=10,
