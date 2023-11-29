@@ -61,7 +61,7 @@ class OcpFes:
         pulse_intensity_bimapping: bool = False,
         force_tracking: list = None,
         end_node_tracking: int | float = None,
-        custom_objective: list[Objective] = None,
+        custom_objective: ObjectiveList = None,
         use_sx: bool = True,
         ode_solver: OdeSolver = OdeSolver.RK4(n_integration_steps=1),
         n_threads: int = 1,
@@ -257,7 +257,7 @@ class OcpFes:
                 raise TypeError("final_time must be int or float type")
 
         if pulse_mode:
-            if pulse_mode not in ("Single", "Doublet", "Triplet"):
+            if pulse_mode != "Single":
                 raise NotImplementedError(f"Pulse mode '{pulse_mode}' is not yet implemented")
 
         if frequency:
@@ -302,7 +302,7 @@ class OcpFes:
 
             elif pulse_time_min is not None and pulse_time_max is not None:
                 if not isinstance(pulse_time_min, int | float) or not isinstance(pulse_time_max, int | float):
-                    raise TypeError("pulse_time_min and pulse_time_max must be equal int or float type")
+                    raise TypeError("pulse_time_min and pulse_time_max must be int or float type")
                 if pulse_time_max < pulse_time_min:
                     raise ValueError("The set minimum pulse duration is higher than maximum pulse duration.")
                 if pulse_time_min < minimum_pulse_duration:
@@ -360,11 +360,6 @@ class OcpFes:
                         f" is lower than minimum intensity required."
                         f" Set a value above {minimum_pulse_intensity} mA "
                     )
-            else:
-                raise ValueError(
-                    "Intensity pulse parameter has not been set, input either pulse_intensity or pulse_intensity_min"
-                    " and pulse_intensity_max"
-                )
 
             if pulse_intensity_bimapping is not None:
                 if pulse_intensity_bimapping is True:
@@ -373,7 +368,7 @@ class OcpFes:
         if force_tracking is not None:
             if isinstance(force_tracking, list):
                 if isinstance(force_tracking[0], np.ndarray) and isinstance(force_tracking[1], np.ndarray):
-                    if len(force_tracking[0]) != len(force_tracking[1]) and len(force_tracking) != 2:
+                    if len(force_tracking[0]) != len(force_tracking[1]) or len(force_tracking) != 2:
                         raise ValueError(
                             "force_tracking time and force argument must be same length and force_tracking "
                             "list size 2"
@@ -388,10 +383,10 @@ class OcpFes:
                 raise TypeError("end_node_tracking must be int or float type")
 
         if custom_objective:
-            if not isinstance(custom_objective, list):
-                raise TypeError("custom_objective must be a list type")
-            if not all(isinstance(x, Objective) for x in custom_objective):
-                raise TypeError("All elements in objective must be an Objective type")
+            if not isinstance(custom_objective, ObjectiveList):
+                raise TypeError("custom_objective must be a ObjectiveList type")
+            if not all(isinstance(x, Objective) for x in custom_objective[0]):
+                raise TypeError("All elements in ObjectiveList must be an Objective type")
 
         if not isinstance(ode_solver, (OdeSolver.RK1, OdeSolver.RK2, OdeSolver.RK4, OdeSolver.COLLOCATION)):
             raise TypeError("ode_solver must be a OdeSolver type")
@@ -404,7 +399,7 @@ class OcpFes:
 
     @staticmethod
     def _sanity_check_2(n_stim, final_time, frequency, round_down):
-        if n_stim is None and final_time is None and frequency is None:
+        if [n_stim, final_time, frequency].count(None) == 2:
             raise ValueError("At least two variable must be set from n_stim, final_time or frequency")
 
         if n_stim and final_time and frequency:
@@ -492,56 +487,21 @@ class OcpFes:
         parameters_init = InitialGuessList()
         parameter_objectives = ParameterObjectiveList()
         if isinstance(model, DingModelPulseDurationFrequency):
-            if pulse_time is None and pulse_time_min is not None and pulse_time_max is None:
-                raise ValueError("Time pulse or Time pulse min max bounds need to be set for this model")
-            if pulse_time is not None and pulse_time_min is not None and pulse_time_max is not None:
-                raise ValueError("Either Time pulse or Time pulse min max bounds need to be set for this model")
-            if (
-                pulse_time_min is not None
-                and pulse_time_max is None
-                or pulse_time_min is None
-                and pulse_time_max is not None
-            ):
-                raise ValueError("Both Time pulse min max bounds need to be set for this model")
-
-            minimum_pulse_duration = DingModelPulseDurationFrequency().pd0
-
             if pulse_time is not None:
-                if isinstance(pulse_time, int | float):
-                    if pulse_time < minimum_pulse_duration:
-                        raise ValueError(
-                            f"The pulse duration set ({pulse_time})"
-                            f" is lower than minimum duration required."
-                            f" Set a value above {minimum_pulse_duration} seconds "
-                        )
-
-                    parameters_bounds.add(
-                        "pulse_duration",
-                        min_bound=np.array([pulse_time] * n_stim),
-                        max_bound=np.array([pulse_time] * n_stim),
-                        interpolation=InterpolationType.CONSTANT,
-                    )
-                    parameters_init["pulse_duration"] = np.array([pulse_time] * n_stim)
-                    parameters.add(
-                        parameter_name="pulse_duration",
-                        function=DingModelPulseDurationFrequency.set_impulse_duration,
-                        size=n_stim,
-                    )
-                else:
-                    raise ValueError("Wrong pulse_time type, only int or float accepted")
+                parameters_bounds.add(
+                    "pulse_duration",
+                    min_bound=np.array([pulse_time] * n_stim),
+                    max_bound=np.array([pulse_time] * n_stim),
+                    interpolation=InterpolationType.CONSTANT,
+                )
+                parameters_init["pulse_duration"] = np.array([pulse_time] * n_stim)
+                parameters.add(
+                    parameter_name="pulse_duration",
+                    function=DingModelPulseDurationFrequency.set_impulse_duration,
+                    size=n_stim,
+                )
 
             elif pulse_time_min is not None and pulse_time_max is not None:
-                if not isinstance(pulse_time_min, int | float) or not isinstance(pulse_time_max, int | float):
-                    raise ValueError("pulse_time_min and pulse_time_max must be equal int or float type")
-                if pulse_time_max < pulse_time_min:
-                    raise ValueError("The set minimum pulse duration is higher than maximum pulse duration.")
-                if pulse_time_min < minimum_pulse_duration:
-                    raise ValueError(
-                        f"The pulse duration set ({pulse_time_min})"
-                        f" is lower than minimum duration required."
-                        f" Set a value above {minimum_pulse_duration} seconds "
-                    )
-
                 parameters_bounds.add(
                     "pulse_duration",
                     min_bound=[pulse_time_min],
@@ -555,12 +515,6 @@ class OcpFes:
                     size=n_stim,
                 )
 
-            else:
-                raise ValueError(
-                    "Time pulse parameter has not been set, input either pulse_time or pulse_time_min and"
-                    " pulse_time_max"
-                )
-
             parameter_objectives.add(
                 ObjectiveFcn.Parameter.MINIMIZE_PARAMETER,
                 weight=0.0001,
@@ -571,39 +525,14 @@ class OcpFes:
 
             if pulse_time_bimapping is not None:
                 if pulse_time_bimapping is True:
-                    raise ValueError("Parameter mapping in bioptim not yet implemented")
+                    pass
                     # parameter_bimapping.add(name="pulse_duration", to_second=[0 for _ in range(n_stim)], to_first=[0])
                     # TODO : Fix Bimapping in Bioptim
 
         if isinstance(model, DingModelIntensityFrequency):
-            if pulse_intensity is None and pulse_intensity_min is None and pulse_intensity_max is None:
-                raise ValueError("Intensity pulse or Intensity pulse min max bounds need to be set for this model")
-            if pulse_intensity is not None and pulse_intensity_min is not None and pulse_intensity_max is not None:
-                raise ValueError(
-                    "Either Intensity pulse or Intensity pulse min max bounds need to be set for this model"
-                )
-            if (
-                pulse_intensity_min is not None
-                and pulse_intensity_max is None
-                or pulse_intensity_min is None
-                and pulse_intensity_max is not None
-            ):
-                raise ValueError("Both Intensity pulse min max bounds need to be set for this model")
-
-            is_ = DingModelIntensityFrequency().Is
-            bs = DingModelIntensityFrequency().bs
-            cr = DingModelIntensityFrequency().cr
-            minimum_pulse_intensity = (np.arctanh(-cr) / bs) + is_
+            minimum_pulse_intensity = DingModelIntensityFrequency().min_pulse_intensity()
 
             if pulse_intensity is not None:
-                if not isinstance(pulse_intensity, int | float):
-                    raise ValueError("pulse_intensity must be int or float type")
-                if pulse_intensity < minimum_pulse_intensity:
-                    raise ValueError(
-                        f"The pulse intensity set ({pulse_intensity})"
-                        f" is lower than minimum intensity required."
-                        f" Set a value above {minimum_pulse_intensity} mA "
-                    )
                 parameters_bounds.add(
                     "pulse_intensity",
                     min_bound=np.array([pulse_intensity] * n_stim),
@@ -618,17 +547,6 @@ class OcpFes:
                 )
 
             elif pulse_intensity_min is not None and pulse_intensity_max is not None:
-                if not isinstance(pulse_intensity_min, int | float) or not isinstance(pulse_intensity_max, int | float):
-                    raise ValueError("pulse_intensity_min and pulse_intensity_max must be int or float type")
-                if pulse_intensity_max < pulse_intensity_min:
-                    raise ValueError("The set minimum pulse intensity is higher than maximum pulse intensity.")
-                if pulse_intensity_min < minimum_pulse_intensity:
-                    raise ValueError(
-                        f"The pulse intensity set ({pulse_intensity_min})"
-                        f" is lower than minimum intensity required."
-                        f" Set a value above {minimum_pulse_intensity} mA "
-                    )
-
                 parameters_bounds.add(
                     "pulse_intensity",
                     min_bound=[pulse_intensity_min],
@@ -643,12 +561,6 @@ class OcpFes:
                     size=n_stim,
                 )
 
-            else:
-                raise ValueError(
-                    "Intensity pulse parameter has not been set, input either pulse_intensity or pulse_intensity_min"
-                    " and pulse_intensity_max"
-                )
-
             parameter_objectives.add(
                 ObjectiveFcn.Parameter.MINIMIZE_PARAMETER,
                 weight=0.0001,
@@ -659,7 +571,7 @@ class OcpFes:
 
             if pulse_intensity_bimapping is not None:
                 if pulse_intensity_bimapping is True:
-                    raise ValueError("Parameter mapping in bioptim not yet implemented")
+                    pass
                 # parameter_bimapping.add(name="pulse_intensity", to_second=[0 for _ in range(n_stim)], to_first=[0])
                 # TODO : Fix Bimapping in Bioptim
 
