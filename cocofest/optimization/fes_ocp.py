@@ -143,10 +143,9 @@ class OcpFes:
                                                          frequency=frequency,
                                                          pulse_mode=pulse_mode,
                                                          round_down=round_down)
-        model = model
+
         force_fourier_coef = None if force_tracking is None else self._build_fourrier_coeff(force_tracking)
         end_node_tracking = end_node_tracking
-        n_stim = n_stim
         models = [model] * n_stim
         n_shooting = [n_shooting] * n_stim
         final_time_phase, constraints, phase_time_bimapping = self._build_phase_time(final_time=final_time,
@@ -733,7 +732,7 @@ class OcpFes:
         return objective_functions
 
     @staticmethod
-    def _build_phase_parameter(n_stim, final_time, frequency, pulse_mode, round_down):
+    def _build_phase_parameter(n_stim, final_time, frequency=None, pulse_mode="Single", round_down=False):
         pulse_mode_multiplier = 1 if pulse_mode == "Single" else 2 if pulse_mode == "Doublet" else 3
         if n_stim and frequency:
             final_time = n_stim / frequency / pulse_mode_multiplier
