@@ -95,14 +95,14 @@ class DingModelPulseDurationFrequency(DingModelFrequency):
         """
         Parameters
         ----------
-        impulse_time: list[MX]
+        impulse_time: MX
             The pulsation duration of the current stimulation (s)
 
         Returns
         -------
         The value of scaling factor (unitless)
         """
-        return self.a_scale * (1 - exp(-(impulse_time[0] - self.pd0) / self.pdt))
+        return self.a_scale * (1 - exp(-(impulse_time - self.pd0) / self.pdt))
 
     def set_impulse_duration(self, value: list[MX]):
         """

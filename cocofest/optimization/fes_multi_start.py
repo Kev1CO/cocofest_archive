@@ -5,8 +5,8 @@ import pickle
 
 from bioptim import Solver, MultiStart, Solution
 from cocofest import DingModelFrequency, DingModelPulseDurationFrequency, DingModelIntensityFrequency
-from .fes_ocp import FunctionalElectricStimulationOptimalControlProgram
 from ..read_data import ExtractData
+from .fes_ocp import OcpFes
 
 
 class FunctionalElectricStimulationMultiStart(MultiStart):
@@ -36,13 +36,13 @@ class FunctionalElectricStimulationMultiStart(MultiStart):
         Maximum time for a phase
     time_bimapping: list[bool]
         Set phase time constant
-    pulse_time: list[int | float]
+    pulse_duration: list[int | float]
         Setting a chosen pulse time among phases
-    pulse_time_min: list[int | float]
+    pulse_duration_min: list[int | float]
         Minimum pulse time for a phase
-    pulse_time_max: list[int | float]
+    pulse_duration_max: list[int | float]
         Maximum pulse time for a phase
-    pulse_time_bimapping: list[bool]
+    pulse_duration_bimapping: list[bool]
         Set pulse time constant among phases
     pulse_intensity: list[int | float]
         Setting a chosen pulse intensity among phases
@@ -97,10 +97,10 @@ class FunctionalElectricStimulationMultiStart(MultiStart):
         time_min: list[int] | list[float] | list[None] = None,
         time_max: list[int] | list[float] | list[None] = None,
         time_bimapping: list[bool] | list[None] = None,
-        pulse_time: list[int] | list[float] | list[None] = None,
-        pulse_time_min: list[int] | list[float] | list[None] = None,
-        pulse_time_max: list[int] | list[float] | list[None] = None,
-        pulse_time_bimapping: list[bool] | list[None] = None,
+        pulse_duration: list[int] | list[float] | list[None] = None,
+        pulse_duration_min: list[int] | list[float] | list[None] = None,
+        pulse_duration_max: list[int] | list[float] | list[None] = None,
+        pulse_duration_bimapping: list[bool] | list[None] = None,
         pulse_intensity: list[int] | list[float] | list[None] = None,
         pulse_intensity_min: list[int] | list[float] | list[None] = None,
         pulse_intensity_max: list[int] | list[float] | list[None] = None,
@@ -121,10 +121,10 @@ class FunctionalElectricStimulationMultiStart(MultiStart):
             "time_min": [None] if time_min is None else time_min,
             "time_max": [None] if time_max is None else time_max,
             "time_bimapping": [None] if time_bimapping is None else time_bimapping,
-            "pulse_time": [None] if pulse_time is None else pulse_time,
-            "pulse_time_min": [None] if pulse_time_min is None else pulse_time_min,
-            "pulse_time_max": [None] if pulse_time_max is None else pulse_time_max,
-            "pulse_time_bimapping": [None] if pulse_time_bimapping is None else pulse_time_bimapping,
+            "pulse_duration": [None] if pulse_duration is None else pulse_duration,
+            "pulse_duration_min": [None] if pulse_duration_min is None else pulse_duration_min,
+            "pulse_duration_max": [None] if pulse_duration_max is None else pulse_duration_max,
+            "pulse_duration_bimapping": [None] if pulse_duration_bimapping is None else pulse_duration_bimapping,
             "pulse_intensity": [None] if pulse_intensity is None else pulse_intensity,
             "pulse_intensity_min": [None] if pulse_intensity_min is None else pulse_intensity_min,
             "pulse_intensity_max": [None] if pulse_intensity_max is None else pulse_intensity_max,
@@ -176,10 +176,10 @@ class FunctionalElectricStimulationMultiStart(MultiStart):
             time_min,
             time_max,
             time_bimapping,
-            pulse_time,
-            pulse_time_min,
-            pulse_time_max,
-            pulse_time_bimapping,
+            pulse_duration,
+            pulse_duration_min,
+            pulse_duration_max,
+            pulse_duration_bimapping,
             pulse_intensity,
             pulse_intensity_min,
             pulse_intensity_max,
@@ -203,18 +203,18 @@ class FunctionalElectricStimulationMultiStart(MultiStart):
             frequency = n_stim / final_time
 
         file_list = [
-            f"{save_path}/DingModelPulseDurationFrequency_multi_start_{n_stim}_stimulation_{n_shooting}_node_shooting_force_tracking_{time_min}_min_{time_max}_max_time_bimapped{time_bimapping}_and_{pulse_time_min}_min_{pulse_time_max}_max_pulse_time_bimapped{pulse_time_bimapping}.pkl",
-            f"{save_path}/DingModelPulseDurationFrequency_multi_start_{n_stim}_stimulation_{n_shooting}_node_shooting_{end_node_tracking}N_end_node_tracking_{time_min}_min_{time_max}_max_time_bimapped{time_bimapping}_and_{pulse_time_min}_min_{pulse_time_max}_max_pulse_time_bimapped{pulse_time_bimapping}.pkl",
-            f"{save_path}/DingModelPulseDurationFrequency_multi_start_{n_stim}_stimulation_{n_shooting}_node_shooting_{time_min}_min_{time_max}_max_time_bimapped{time_bimapping}_and_{pulse_time_min}_min_{pulse_time_max}_max_pulse_time_bimapped{pulse_time_bimapping}.pkl",
-            f"{save_path}/DingModelPulseDurationFrequency_multi_start_{n_stim}_stimulation_{n_shooting}_node_shooting_force_tracking_{frequency}_HZ_and_{pulse_time_min}_min_{pulse_time_max}_max_pulse_time_bimapped{pulse_time_bimapping}.pkl",
-            f"{save_path}/DingModelPulseDurationFrequency_multi_start_{n_stim}_stimulation_{n_shooting}_node_shooting_{end_node_tracking}N_end_node_tracking_{frequency}_HZ_and_{pulse_time_min}_min_{pulse_time_max}_max_pulse_time_bimapped{pulse_time_bimapping}.pkl",
-            f"{save_path}/DingModelPulseDurationFrequency_multi_start_{n_stim}_stimulation_{n_shooting}_node_shooting_{frequency}_HZ_and_{pulse_time_min}_min_{pulse_time_max}_max_pulse_time_bimapped{pulse_time_bimapping}.pkl",
-            f"{save_path}/DingModelPulseDurationFrequency_multi_start_{n_stim}_stimulation_{n_shooting}_node_shooting_force_tracking_{time_min}_min_{time_max}_max_time_bimapped{time_bimapping}_and_{pulse_time}_pulse_time.pkl",
-            f"{save_path}/DingModelPulseDurationFrequency_multi_start_{n_stim}_stimulation_{n_shooting}_node_shooting_{end_node_tracking}N_end_node_tracking_{time_min}_min_{time_max}_max_time_bimapped{time_bimapping}_and_{pulse_time}_pulse_time.pkl",
-            f"{save_path}/DingModelPulseDurationFrequency_multi_start_{n_stim}_stimulation_{n_shooting}_node_shooting_{time_min}_min_{time_max}_max_time_bimapped{time_bimapping}_and_{pulse_time}_pulse_time.pkl",
-            f"{save_path}/DingModelPulseDurationFrequency_multi_start_{n_stim}_stimulation_{n_shooting}_node_shooting_force_tracking_{frequency}_HZ_and_{pulse_time}_pulse_time.pkl",
-            f"{save_path}/DingModelPulseDurationFrequency_multi_start_{n_stim}_stimulation_{n_shooting}_node_shooting_{end_node_tracking}N_end_node_tracking_{frequency}_HZ_and_{pulse_time}_pulse_time.pkl",
-            f"{save_path}/DingModelPulseDurationFrequency_multi_start_{n_stim}_stimulation_{n_shooting}_node_shooting_{frequency}_HZ_and_{pulse_time}_pulse_time.pkl",
+            f"{save_path}/DingModelPulseDurationFrequency_multi_start_{n_stim}_stimulation_{n_shooting}_node_shooting_force_tracking_{time_min}_min_{time_max}_max_time_bimapped{time_bimapping}_and_{pulse_duration_min}_min_{pulse_duration_max}_max_pulse_duration_bimapped{pulse_duration_bimapping}.pkl",
+            f"{save_path}/DingModelPulseDurationFrequency_multi_start_{n_stim}_stimulation_{n_shooting}_node_shooting_{end_node_tracking}N_end_node_tracking_{time_min}_min_{time_max}_max_time_bimapped{time_bimapping}_and_{pulse_duration_min}_min_{pulse_duration_max}_max_pulse_duration_bimapped{pulse_duration_bimapping}.pkl",
+            f"{save_path}/DingModelPulseDurationFrequency_multi_start_{n_stim}_stimulation_{n_shooting}_node_shooting_{time_min}_min_{time_max}_max_time_bimapped{time_bimapping}_and_{pulse_duration_min}_min_{pulse_duration_max}_max_pulse_duration_bimapped{pulse_duration_bimapping}.pkl",
+            f"{save_path}/DingModelPulseDurationFrequency_multi_start_{n_stim}_stimulation_{n_shooting}_node_shooting_force_tracking_{frequency}_HZ_and_{pulse_duration_min}_min_{pulse_duration_max}_max_pulse_duration_bimapped{pulse_duration_bimapping}.pkl",
+            f"{save_path}/DingModelPulseDurationFrequency_multi_start_{n_stim}_stimulation_{n_shooting}_node_shooting_{end_node_tracking}N_end_node_tracking_{frequency}_HZ_and_{pulse_duration_min}_min_{pulse_duration_max}_max_pulse_duration_bimapped{pulse_duration_bimapping}.pkl",
+            f"{save_path}/DingModelPulseDurationFrequency_multi_start_{n_stim}_stimulation_{n_shooting}_node_shooting_{frequency}_HZ_and_{pulse_duration_min}_min_{pulse_duration_max}_max_pulse_duration_bimapped{pulse_duration_bimapping}.pkl",
+            f"{save_path}/DingModelPulseDurationFrequency_multi_start_{n_stim}_stimulation_{n_shooting}_node_shooting_force_tracking_{time_min}_min_{time_max}_max_time_bimapped{time_bimapping}_and_{pulse_duration}_pulse_duration.pkl",
+            f"{save_path}/DingModelPulseDurationFrequency_multi_start_{n_stim}_stimulation_{n_shooting}_node_shooting_{end_node_tracking}N_end_node_tracking_{time_min}_min_{time_max}_max_time_bimapped{time_bimapping}_and_{pulse_duration}_pulse_duration.pkl",
+            f"{save_path}/DingModelPulseDurationFrequency_multi_start_{n_stim}_stimulation_{n_shooting}_node_shooting_{time_min}_min_{time_max}_max_time_bimapped{time_bimapping}_and_{pulse_duration}_pulse_duration.pkl",
+            f"{save_path}/DingModelPulseDurationFrequency_multi_start_{n_stim}_stimulation_{n_shooting}_node_shooting_force_tracking_{frequency}_HZ_and_{pulse_duration}_pulse_duration.pkl",
+            f"{save_path}/DingModelPulseDurationFrequency_multi_start_{n_stim}_stimulation_{n_shooting}_node_shooting_{end_node_tracking}N_end_node_tracking_{frequency}_HZ_and_{pulse_duration}_pulse_duration.pkl",
+            f"{save_path}/DingModelPulseDurationFrequency_multi_start_{n_stim}_stimulation_{n_shooting}_node_shooting_{frequency}_HZ_and_{pulse_duration}_pulse_duration.pkl",
             f"{save_path}/DingModelIntensityFrequency_multi_start_{n_stim}_stimulation_{n_shooting}_node_shooting_force_tracking_{time_min}_min_{time_max}_max_time_bimapped{time_bimapping}_and_{pulse_intensity_min}_min_{pulse_intensity_max}_max_pulse_intensity_bimapped{pulse_intensity_bimapping}.pkl",
             f"{save_path}/DingModelIntensityFrequency_multi_start_{n_stim}_stimulation_{n_shooting}_node_shooting_{end_node_tracking}N_end_node_tracking_{time_min}_min_{time_max}_max_time_bimapped{time_bimapping}_and_{pulse_intensity_min}_min_{pulse_intensity_max}_max_pulse_intensity_bimapped{pulse_intensity_bimapping}.pkl",
             f"{save_path}/DingModelIntensityFrequency_multi_start_{n_stim}_stimulation_{n_shooting}_node_shooting_{time_min}_min_{time_max}_max_time_bimapped{time_bimapping}_and_{pulse_intensity_min}_min_{pulse_intensity_max}_max_pulse_intensity_bimapped{pulse_intensity_bimapping}.pkl",
@@ -236,7 +236,7 @@ class FunctionalElectricStimulationMultiStart(MultiStart):
         ]
 
         if isinstance(model, DingModelPulseDurationFrequency):
-            if pulse_time_min or pulse_time_max is None:
+            if pulse_duration_min or pulse_duration_max is None:
                 pulse_duration_parameter = False
             else:
                 pulse_duration_parameter = True
@@ -272,7 +272,7 @@ class FunctionalElectricStimulationMultiStart(MultiStart):
                     else:
                         return file_list[11]
         elif isinstance(model, DingModelIntensityFrequency):
-            if pulse_time_min or pulse_time_max is None:
+            if pulse_duration_min or pulse_duration_max is None:
                 pulse_intensity_parameter = False
             else:
                 pulse_intensity_parameter = True
@@ -357,10 +357,10 @@ class FunctionalElectricStimulationMultiStart(MultiStart):
             time_min,
             time_max,
             time_bimapping,
-            pulse_time,
-            pulse_time_min,
-            pulse_time_max,
-            pulse_time_bimapping,
+            pulse_duration,
+            pulse_duration_min,
+            pulse_duration_max,
+            pulse_duration_bimapping,
             pulse_intensity,
             pulse_intensity_min,
             pulse_intensity_max,
@@ -390,10 +390,10 @@ class FunctionalElectricStimulationMultiStart(MultiStart):
         states["time_min"] = np.array([time_min])
         states["time_max"] = np.array([time_max])
         states["time_bimapping"] = np.array([time_bimapping])
-        states["pulse_time"] = np.array([pulse_time])
-        states["pulse_time_min"] = np.array([pulse_time_min])
-        states["pulse_time_max"] = np.array([pulse_time_max])
-        states["pulse_time_bimapping"] = np.array([pulse_time_bimapping])
+        states["pulse_duration"] = np.array([pulse_duration])
+        states["pulse_duration_min"] = np.array([pulse_duration_min])
+        states["pulse_duration_max"] = np.array([pulse_duration_max])
+        states["pulse_duration_bimapping"] = np.array([pulse_duration_bimapping])
         states["pulse_intensity"] = np.array([pulse_intensity])
         states["pulse_intensity_min"] = np.array([pulse_intensity_min])
         states["pulse_intensity_max"] = np.array([pulse_intensity_max])
@@ -431,17 +431,17 @@ class FunctionalElectricStimulationMultiStart(MultiStart):
         time_min: list[int] | list[float] = None,
         time_max: list[int] | list[float] = None,
         time_bimapping: bool = None,
-        pulse_time: int | float = None,
-        pulse_time_min: int | float = None,
-        pulse_time_max: int | float = None,
-        pulse_time_bimapping: bool = None,
+        pulse_duration: int | float = None,
+        pulse_duration_min: int | float = None,
+        pulse_duration_max: int | float = None,
+        pulse_duration_bimapping: bool = None,
         pulse_intensity: int | float = None,
         pulse_intensity_min: int | float = None,
         pulse_intensity_max: int | float = None,
         pulse_intensity_bimapping: bool = None,
     ):
         if self.methode is None or self.methode == "standard":
-            ocp = FunctionalElectricStimulationOptimalControlProgram(
+            ocp = OcpFes.prepare_ocp(
                 model=model,
                 n_stim=n_stim,
                 n_shooting=n_shooting,
@@ -451,24 +451,19 @@ class FunctionalElectricStimulationMultiStart(MultiStart):
                 time_min=time_min,
                 time_max=time_max,
                 time_bimapping=time_bimapping,
-                pulse_time=pulse_time,
-                pulse_time_min=pulse_time_min,
-                pulse_time_max=pulse_time_max,
-                pulse_time_bimapping=pulse_time_bimapping,
+                pulse_duration=pulse_duration,
+                pulse_duration_min=pulse_duration_min,
+                pulse_duration_max=pulse_duration_max,
+                pulse_duration_bimapping=pulse_duration_bimapping,
                 pulse_intensity=pulse_intensity,
                 pulse_intensity_min=pulse_intensity_min,
                 pulse_intensity_max=pulse_intensity_max,
                 pulse_intensity_bimapping=pulse_intensity_bimapping,
                 use_sx=True,
-                objective=None
-                if self.kwarg_fes is None
-                else None
-                if "objective" not in self.kwarg_fes
-                else self.kwarg_fes["objective"],
             )
 
         elif self.methode == "from_frequency_and_final_time":
-            ocp = FunctionalElectricStimulationOptimalControlProgram.from_frequency_and_final_time(
+            ocp = OcpFes.prepare_ocp(
                 model=model,
                 n_shooting=n_shooting,
                 final_time=final_time,
@@ -479,24 +474,19 @@ class FunctionalElectricStimulationMultiStart(MultiStart):
                 time_min=time_min,
                 time_max=time_max,
                 time_bimapping=time_bimapping,
-                pulse_time=pulse_time,
-                pulse_time_min=pulse_time_min,
-                pulse_time_max=pulse_time_max,
-                pulse_time_bimapping=pulse_time_bimapping,
+                pulse_duration=pulse_duration,
+                pulse_duration_min=pulse_duration_min,
+                pulse_duration_max=pulse_duration_max,
+                pulse_duration_bimapping=pulse_duration_bimapping,
                 pulse_intensity=pulse_intensity,
                 pulse_intensity_min=pulse_intensity_min,
                 pulse_intensity_max=pulse_intensity_max,
                 pulse_intensity_bimapping=pulse_intensity_bimapping,
                 use_sx=True,
-                objective=None
-                if self.kwarg_fes is None
-                else None
-                if "objective" not in self.kwarg_fes
-                else self.kwarg_fes["objective"],
             )
 
         elif self.methode == "from_frequency_and_n_stim":
-            ocp = FunctionalElectricStimulationOptimalControlProgram.from_frequency_and_n_stim(
+            ocp = OcpFes.prepare_ocp(
                 model=model,
                 n_shooting=n_shooting,
                 n_stim=n_stim,
@@ -506,20 +496,15 @@ class FunctionalElectricStimulationMultiStart(MultiStart):
                 time_min=time_min,
                 time_max=time_max,
                 time_bimapping=time_bimapping,
-                pulse_time=pulse_time,
-                pulse_time_min=pulse_time_min,
-                pulse_time_max=pulse_time_max,
-                pulse_time_bimapping=pulse_time_bimapping,
+                pulse_duration=pulse_duration,
+                pulse_duration_min=pulse_duration_min,
+                pulse_duration_max=pulse_duration_max,
+                pulse_duration_bimapping=pulse_duration_bimapping,
                 pulse_intensity=pulse_intensity,
                 pulse_intensity_min=pulse_intensity_min,
                 pulse_intensity_max=pulse_intensity_max,
                 pulse_intensity_bimapping=pulse_intensity_bimapping,
                 use_sx=True,
-                objective=None
-                if self.kwarg_fes is None
-                else None
-                if "objective" not in self.kwarg_fes
-                else self.kwarg_fes["objective"],
             )
 
         else:
@@ -549,10 +534,10 @@ if __name__ == "__main__":
         time_min=[0.01],
         time_max=[0.1],
         time_bimapping=[True],
-        pulse_time=[None],
-        pulse_time_min=[None],
-        pulse_time_max=[None],
-        pulse_time_bimapping=[False],
+        pulse_duration=[None],
+        pulse_duration_min=[None],
+        pulse_duration_max=[None],
+        pulse_duration_bimapping=[False],
         pulse_intensity=[None],
         pulse_intensity_min=[None],
         pulse_intensity_max=[None],

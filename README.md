@@ -1,3 +1,10 @@
+<p align="center">
+    <img
+      src="docs/cocofest_logo.png"
+      alt="logo"
+    />
+</p>
+
 # COCOFEST
 
 `Cocofest` : Custom Optimal Control Optimization for Functional Electrical Stimulation, is an optimal control program (OCP) package for functional electrical stimulation (FES).
@@ -34,7 +41,7 @@ To solve the OCP, the robust solver [Ipopt](https://github.com/coin-or/Ipopt) ha
 <summary><a href="#other-functionalities">Other functionalities</a></summary>
 
 - [With fatigue](#with-fatigue)
-- [Is optimal control](#is-optimal-control)
+- [Initial value problem](#initital-value-problem)
 - [Summation truncation](#summation-truncation)
 
 </details>
@@ -78,7 +85,7 @@ You can create your own FES OCP by following the steps below:
 2. Import the desired model from `Cocofest` (e.g. Ding2003) and the fes_ocp class
 
 ```python
-from cocofest import DingModelFrequency, FunctionalElectricStimulationOptimalControlProgram
+from cocofest import DingModelFrequency, OcpFes
 ```
 
 3. Create your own optimal control problem by adding the stimulation pulse number, the number of shooting points,
@@ -88,16 +95,10 @@ the minimum and maximum time between two stimulation pulse, the time bimapping
 (If True, will act like a frequency at constant pulse interval).
 
 ```python
-ocp = FunctionalElectricStimulationOptimalControlProgram(
-    ding_model=DingModelFrequency(),
-    n_stim=10,
-    n_shooting=20,
-    final_time=1,
-    end_node_tracking=100,
-    time_min=0.01,
-    time_max=0.1,
-    time_bimapping=True,
-)
+ocp = OcpFes.prepare_ocp(...,
+                         n_stim=10,
+                         n_shooting=20,
+                         ...,)
 ```
 
 4. Solve you OCP
@@ -118,21 +119,16 @@ If False, the fatigue equation will not be added to the model and the muscle for
 constant during the simulation regardless of the previous stimulation appearance.
 
 ```python
-ocp = FunctionalElectricStimulationOptimalControlProgram(
-    ding_model=DingModelFrequency(with_fatigue=False),
-    ...
-)
+ocp = OcpFes.prepare_ocp()
 ```
 
-## Is optimal control
-The for_optimal_control flag is a boolean parameter that can be set to True or False.
-If True, the OCP will be optimized and solved by IPOPT.
-If False, the problem will not be optimized but will be integrated based on the initial guesses.
+## Initital value problem
+You can also compute the models form initial value problem.
+For that, use the IvpFes class to build the computed problem.
 
 ```python
-ocp = FunctionalElectricStimulationOptimalControlProgram(
+ocp = IvpFes(
     ding_model=DingModelFrequency(with_fatigue=False),
-    for_optimal_control=False,
 )
 ```
 
@@ -142,10 +138,7 @@ It will truncate the stimulation apparition list used for the calcium summation.
 The integer number defines the stimulation number to keep for this summation.
 
 ```python
-ocp = FunctionalElectricStimulationOptimalControlProgram(
-    ding_model=DingModelFrequency(sum_stim_truncation=2),
-    ...
-)
+ocp = OcpFes.prepare_ocp()
 ```
 
 

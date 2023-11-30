@@ -6,7 +6,7 @@ from cocofest import (
     DingModelFrequency,
     DingModelPulseDurationFrequency,
     DingModelIntensityFrequency,
-    FunctionalElectricStimulationOptimalControlProgram,
+    OcpFes,
 )
 
 
@@ -238,15 +238,15 @@ minimum_pulse_intensity = (
 @pytest.mark.parametrize("min_pulse_duration, min_pulse_intensity", [(minimum_pulse_duration, minimum_pulse_intensity)])
 def test_ocp_output(model, force_tracking, use_sx, min_pulse_duration, min_pulse_intensity):
     if isinstance(model, DingModelPulseDurationFrequency):
-        ocp = FunctionalElectricStimulationOptimalControlProgram(
+        ocp = OcpFes().prepare_ocp(
             model=model,
             n_shooting=20,
             n_stim=10,
             final_time=1,
             force_tracking=force_tracking,
-            pulse_time_min=min_pulse_duration,
-            pulse_time_max=0.0006,
-            pulse_time_bimapping=False,
+            pulse_duration_min=min_pulse_duration,
+            pulse_duration_max=0.0006,
+            pulse_duration_bimapping=False,
             use_sx=use_sx,
         )
 
@@ -258,7 +258,7 @@ def test_ocp_output(model, force_tracking, use_sx, min_pulse_duration, min_pulse
         #     np.testing.assert_almost_equal(ocp.states[key], pickle_file.states[key])
 
     elif isinstance(model, DingModelIntensityFrequency):
-        ocp = FunctionalElectricStimulationOptimalControlProgram(
+        ocp = OcpFes().prepare_ocp(
             model=model,
             n_shooting=20,
             n_stim=10,
@@ -278,7 +278,7 @@ def test_ocp_output(model, force_tracking, use_sx, min_pulse_duration, min_pulse
         #     np.testing.assert_almost_equal(ocp.states[key], pickle_file.states[key])
 
     elif isinstance(model, DingModelFrequency):
-        ocp = FunctionalElectricStimulationOptimalControlProgram(
+        ocp = OcpFes().prepare_ocp(
             model=model,
             n_shooting=20,
             n_stim=10,

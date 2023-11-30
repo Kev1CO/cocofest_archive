@@ -4,9 +4,8 @@ import matplotlib.pyplot as plt
 
 from bioptim import Solution, Shooting, SolutionIntegrator
 from cocofest import (
-    DingModelFrequencyWithFatigue,
-    FunctionalElectricStimulationOptimalControlProgram,
-    build_initial_guess_from_ocp,
+    DingModelFrequency,
+    IvpFes,
 )
 
 # This example shows the effect of the sum_stim_truncation parameter on the force state result
@@ -16,20 +15,16 @@ results = []
 computations_time = []
 for i in range(10):
     start_time = time.time()
-    problem = FunctionalElectricStimulationOptimalControlProgram(
-        model=DingModelFrequencyWithFatigue(sum_stim_truncation=i if i != 0 else None),
+    ivp = IvpFes(
+        model=DingModelFrequency(with_fatigue=True, sum_stim_truncation=i if i != 0 else None),
         n_stim=10,
         n_shooting=100,
         final_time=1,
         use_sx=True,
-        for_optimal_control=False,
     )
 
-    # Building initial guesses for the integration
-    x, u, p, s = build_initial_guess_from_ocp(problem)
-
     # Creating the solution from the initial guess
-    sol_from_initial_guess = Solution.from_initial_guess(problem, [x, u, p, s])
+    sol_from_initial_guess = Solution.from_initial_guess(ivp, [ivp.x_init, ivp.u_init, ivp.p_init, ivp.s_init])
 
     # Integrating the solution
     result = sol_from_initial_guess.integrate(

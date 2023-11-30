@@ -7,8 +7,8 @@ from cocofest import (
     DingModelFrequency,
     DingModelPulseDurationFrequency,
     DingModelIntensityFrequency,
-    FunctionalElectricStimulationOptimalControlProgramIdentification,
 )
+from cocofest.optimization.fes_identification_ocp import OcpFesId
 
 
 class DingModelFrequencyParameterIdentification:
@@ -396,6 +396,8 @@ class DingModelFrequencyParameterIdentification:
                 temp_final_time = final_time_phase[i]
                 rest_n_shooting = int(stimulated_n_shooting * temp_final_time / stimulation_interval_average)
                 n_shooting.append(rest_n_shooting)
+            else:
+                n_shooting.append(stimulated_n_shooting)
 
         return n_shooting, final_time_phase
 
@@ -412,7 +414,7 @@ class DingModelFrequencyParameterIdentification:
         force_at_node = self.force_at_node_in_ocp(time, force, n_shooting, final_time_phase, force_curve_number)
 
         # --- Building force ocp --- #
-        self.force_ocp = FunctionalElectricStimulationOptimalControlProgramIdentification(
+        self.force_ocp = OcpFesId.prepare_ocp(
             model=self.model,
             with_fatigue=False,
             final_time_phase=final_time_phase,
@@ -477,9 +479,8 @@ class DingModelFrequencyParameterIdentification:
 
         # --- Building force ocp --- #
         start_time = time_package.time()
-        self.force_ocp = FunctionalElectricStimulationOptimalControlProgramIdentification(
-            model=self.model,
-            with_fatigue=False,
+        self.force_ocp = OcpFesId.prepare_ocp(
+            model=self.model(with_fatigue=False),
             final_time_phase=final_time_phase,
             n_shooting=n_shooting,
             force_tracking=force_at_node,
@@ -488,10 +489,10 @@ class DingModelFrequencyParameterIdentification:
             pulse_intensity=None,
             discontinuity_in_ocp=discontinuity,
             use_sx=True,
-            initial_a_rest=initial_a_rest,
-            initial_km_rest=initial_km_rest,
-            initial_tau1_rest=initial_tau1_rest,
-            initial_tau2=initial_tau2,
+            a_rest=initial_a_rest,
+            km_rest=initial_km_rest,
+            tau1_rest=initial_tau1_rest,
+            tau2=initial_tau2,
         )
 
         print(f"OCP creation time : {time_package.time() - start_time} seconds")
@@ -533,7 +534,7 @@ class DingModelFrequencyParameterIdentification:
 
         # --- Building fatigue ocp --- #
         if self.a_rest and self.km_rest and self.tau1_rest and self.tau2:
-            self.fatigue_ocp = FunctionalElectricStimulationOptimalControlProgramIdentification(
+            self.fatigue_ocp = OcpFesId.prepare_ocp(
                 model=self.model,
                 with_fatigue=True,
                 final_time_phase=final_time_phase,
