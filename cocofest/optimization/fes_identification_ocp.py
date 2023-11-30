@@ -96,7 +96,7 @@ class OcpFesId(OcpFes):
             pulse_intensity=pulse_intensity,
         )
 
-        OcpFesId._sanity_check_2(
+        OcpFesId._sanity_check_id(
             model=model,
             n_shooting=n_shooting,
             a_rest=a_rest,
@@ -156,7 +156,7 @@ class OcpFesId(OcpFes):
         )
 
     @staticmethod
-    def _sanity_check_2(
+    def _sanity_check_id(
         model=None,
         n_shooting=None,
         a_rest=None,

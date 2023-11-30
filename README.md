@@ -119,7 +119,7 @@ If False, the fatigue equation will not be added to the model and the muscle for
 constant during the simulation regardless of the previous stimulation appearance.
 
 ```python
-ocp = OcpFes().prepare_ocp()
+ocp = OcpFes.prepare_ocp()
 ```
 
 ## Initital value problem
@@ -138,7 +138,7 @@ It will truncate the stimulation apparition list used for the calcium summation.
 The integer number defines the stimulation number to keep for this summation.
 
 ```python
-ocp = OcpFes().prepare_ocp()
+ocp = OcpFes.prepare_ocp()
 ```
 
 
