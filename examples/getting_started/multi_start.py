@@ -4,7 +4,7 @@ This example is a variation of the fes frequency in examples/frequency_optimizat
 """
 import shutil
 
-from cocofest import DingModelFrequency, FunctionalElectricStimulationMultiStart
+from cocofest import DingModelFrequencyWithFatigue, FunctionalElectricStimulationMultiStart
 
 # --- Build multi start --- #
 # This multi start was build to match a force value of 270N at the end of the last node.
@@ -12,7 +12,7 @@ from cocofest import DingModelFrequency, FunctionalElectricStimulationMultiStart
 # Plus the number of stimulation will be different at each optimization 10 to 15 in this example.
 save_folder = "./temporary"
 fes_multi_start = FunctionalElectricStimulationMultiStart(
-    model=[DingModelFrequency()],
+    model=[DingModelFrequencyWithFatigue()],
     n_stim=[10, 11, 12, 13, 14, 15],
     n_shooting=[20],
     final_time=[1],

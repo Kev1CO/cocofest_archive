@@ -1,16 +1,15 @@
 import matplotlib.pyplot as plt
 from bioptim import Solution, Shooting, SolutionIntegrator
 from cocofest import (
-    DingModelFrequency,
+    DingModelFrequencyWithFatigue,
     IvpFes,
 )
 
 
 # --- Build ocp --- #
 # This problem was build to be integrated and has no objectives nor parameter to optimize.
-# Therefore, the flag for_optimal_control is set to False.
 ivp = IvpFes(
-    model=DingModelFrequency(with_fatigue=True),
+    model=DingModelFrequencyWithFatigue(),
     n_stim=10,
     n_shooting=20,
     final_time=1,

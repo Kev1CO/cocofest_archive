@@ -10,7 +10,7 @@ from bioptim import (
     OptimalControlProgram,
     ParameterList,
 )
-from cocofest import DingModelFrequency
+from .ding2003 import DingModelFrequency
 
 
 class DingModelPulseDurationFrequency(DingModelFrequency):
@@ -26,10 +26,9 @@ class DingModelPulseDurationFrequency(DingModelFrequency):
     Muscle & Nerve: Official Journal of the American Association of Electrodiagnostic Medicine, 36(2), 214-222.
     """
 
-    def __init__(self, name: str = None, with_fatigue: bool = True, sum_stim_truncation: int = None):
-        super(DingModelPulseDurationFrequency, self).__init__(
-            name=name, with_fatigue=with_fatigue, sum_stim_truncation=sum_stim_truncation
-        )
+    def __init__(self, name: str = "ding_2007", sum_stim_truncation: int = None):
+        super(DingModelPulseDurationFrequency, self).__init__(name=name, sum_stim_truncation=sum_stim_truncation)
+        self._with_fatigue = False
         self.impulse_time = None
         # ---- Custom values for the example ---- #
         # ---- Force models ---- #
@@ -41,61 +40,24 @@ class DingModelPulseDurationFrequency(DingModelFrequency):
         self.km = 0.137  # Value from Ding's 2007 article (unitless)
         self.tauc = 0.011  # Value from Ding's 2007 article (s)
 
-    # ---- Absolutely needed methods ---- #
-    @property
-    def name_dof(self) -> list[str]:
-        return ["Cn", "F", "Tau1", "Km"] if self._with_fatigue else ["Cn", "F"]
-
-    @property
-    def nb_state(self) -> int:
-        return 4 if self._with_fatigue else 2
-
-    def standard_rest_values(self) -> np.array:
-        """
-        Returns
-        -------
-        The rested values of Cn, F, Tau1, Km
-        """
-        return np.array([[0], [0], [self.tau1_rest], [self.km_rest]]) if self._with_fatigue else np.array([[0], [0]])
-
     def serialize(self) -> tuple[Callable, dict]:
         # This is where you can serialize your models
         # This is useful if you want to save your models and load it later
         return (
-            (
-                DingModelPulseDurationFrequency,
-                {
-                    "tauc": self.tauc,
-                    "a_rest": self.a_rest,
-                    "tau1_rest": self.tau1_rest,
-                    "km_rest": self.km_rest,
-                    "tau2": self.tau2,
-                    "alpha_a": self.alpha_a,
-                    "alpha_tau1": self.alpha_tau1,
-                    "alpha_km": self.alpha_km,
-                    "tau_fat": self.tau_fat,
-                    "a_scale": self.a_scale,
-                    "pd0": self.pd0,
-                    "pdt": self.pdt,
-                },
-            )
-            if self._with_fatigue
-            else (
-                DingModelPulseDurationFrequency,
-                {
-                    "tauc": self.tauc,
-                    "a_rest": self.a_rest,
-                    "tau1_rest": self.tau1_rest,
-                    "km_rest": self.km_rest,
-                    "tau2": self.tau2,
-                    "a_scale": self.a_scale,
-                    "pd0": self.pd0,
-                    "pdt": self.pdt,
-                },
-            )
+            DingModelPulseDurationFrequency,
+            {
+                "tauc": self.tauc,
+                "a_rest": self.a_rest,
+                "tau1_rest": self.tau1_rest,
+                "km_rest": self.km_rest,
+                "tau2": self.tau2,
+                "a_scale": self.a_scale,
+                "pd0": self.pd0,
+                "pdt": self.pdt,
+            },
         )
 
-    def system_dynamics_without_fatigue(
+    def system_dynamics(
         self,
         cn: MX,
         f: MX,
@@ -129,49 +91,7 @@ class DingModelPulseDurationFrequency(DingModelFrequency):
         f_dot = self.f_dot_fun(cn, f, a, self.tau1_rest, self.km_rest)  # Equation n°2 from Ding's 2003 article
         return vertcat(cn_dot, f_dot)
 
-    def system_dynamics_with_fatigue(
-        self,
-        cn: MX,
-        f: MX,
-        tau1: MX = None,
-        km: MX = None,
-        t: MX = None,
-        t_stim_prev: list[MX] | list[float] = None,
-        impulse_time: MX = None,
-    ) -> MX:
-        """
-        The system dynamics is the function that describes the models.
-
-        Parameters
-        ----------
-        cn: MX
-            The value of the ca_troponin_complex (unitless)
-        f: MX
-            The value of the force (N)
-        tau1: MX
-            The value of the time_state_force_no_cross_bridge (ms)
-        km: MX
-            The value of the cross_bridges (unitless)
-        t: MX
-            The current time at which the dynamics is evaluated (ms)
-        t_stim_prev: list[MX]
-            The time list of the previous stimulations (ms)
-        impulse_time: MX
-            The pulsation duration of the current stimulation (ms)
-
-        Returns
-        -------
-        The value of the derivative of each state dx/dt at the current time t
-        """
-        r0 = km + self.r0_km_relationship  # Simplification
-        cn_dot = self.cn_dot_fun(cn, r0, t, t_stim_prev=t_stim_prev)  # Equation n°1 from Ding's 2003 article
-        a = self.a_calculation(impulse_time=impulse_time)  # Equation n°3 from Ding's 2007 article
-        f_dot = self.f_dot_fun(cn, f, a, tau1, km)  # Equation n°2 from Ding's 2003 article
-        tau1_dot = self.tau1_dot_fun(tau1, f)  # Equation n°9 from Ding's 2003 article
-        km_dot = self.km_dot_fun(km, f)  # Equation n°11 from Ding's 2003 article
-        return vertcat(cn_dot, f_dot, tau1_dot, km_dot)
-
-    def a_calculation(self, impulse_time: MX) -> MX:
+    def a_calculation(self, impulse_time: list[MX]) -> MX:
         """
         Parameters
         ----------
@@ -255,30 +175,15 @@ class DingModelPulseDurationFrequency(DingModelFrequency):
         else:
             impulse_time = pulse_duration_parameters[nlp.phase_idx]
 
-        return (
-            DynamicsEvaluation(
-                dxdt=nlp.model.system_dynamics_with_fatigue(
-                    cn=states[0],
-                    f=states[1],
-                    tau1=states[2],
-                    km=states[3],
-                    t=time,
-                    t_stim_prev=stim_apparition,
-                    impulse_time=impulse_time,
-                ),
-                defects=None,
-            )
-            if nlp.model._with_fatigue
-            else DynamicsEvaluation(
-                dxdt=nlp.model.system_dynamics_without_fatigue(
-                    cn=states[0],
-                    f=states[1],
-                    t=time,
-                    t_stim_prev=stim_apparition,
-                    impulse_time=impulse_time,
-                ),
-                defects=None,
-            )
+        return DynamicsEvaluation(
+            dxdt=nlp.model.system_dynamics(
+                cn=states[0],
+                f=states[1],
+                t=time,
+                t_stim_prev=stim_apparition,
+                impulse_time=impulse_time,
+            ),
+            defects=None,
         )
 
     def declare_ding_variables(self, ocp: OptimalControlProgram, nlp: NonLinearProgram):
@@ -294,8 +199,5 @@ class DingModelPulseDurationFrequency(DingModelFrequency):
         """
         self.configure_ca_troponin_complex(ocp=ocp, nlp=nlp, as_states=True, as_controls=False)
         self.configure_force(ocp=ocp, nlp=nlp, as_states=True, as_controls=False)
-        if self._with_fatigue:
-            self.configure_time_state_force_no_cross_bridge(ocp=ocp, nlp=nlp, as_states=True, as_controls=False)
-            self.configure_cross_bridges(ocp=ocp, nlp=nlp, as_states=True, as_controls=False)
         stim_apparition = self.get_stim_prev(ocp, nlp)
         ConfigureProblem.configure_dynamics_function(ocp, nlp, dyn_func=self.dynamics, stim_apparition=stim_apparition)

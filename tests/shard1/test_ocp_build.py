@@ -7,8 +7,11 @@ import numpy as np
 from cocofest import (
     FunctionalElectricStimulationMultiStart,
     DingModelFrequency,
+    DingModelFrequencyWithFatigue,
     DingModelPulseDurationFrequency,
+    DingModelPulseDurationFrequencyWithFatigue,
     DingModelIntensityFrequency,
+    DingModelIntensityFrequencyWithFatigue,
     OcpFes,
 )
 
@@ -250,10 +253,23 @@ minimum_pulse_intensity = (
     " pulse_intensity_max,"
     " pulse_intensity_bimapping,",
     [
-        (DingModelFrequency(name="ding2003"), None, None, None, None, None, None, None, None),
-        (DingModelPulseDurationFrequency(name="ding2007"), 0.0002, None, None, None, None, None, None, None),
+        (DingModelFrequency(), None, None, None, None, None, None, None, None),
+        (DingModelFrequencyWithFatigue(), None, None, None, None, None, None, None, None),
+        (DingModelPulseDurationFrequency(), 0.0002, None, None, None, None, None, None, None),
+        (DingModelPulseDurationFrequencyWithFatigue(), 0.0002, None, None, None, None, None, None, None),
         (
-            DingModelPulseDurationFrequency(name="ding2007"),
+            DingModelPulseDurationFrequency(),
+            None,
+            minimum_pulse_duration,
+            0.0006,
+            False,
+            None,
+            None,
+            None,
+            None,
+        ),
+        (
+            DingModelPulseDurationFrequencyWithFatigue(),
             None,
             minimum_pulse_duration,
             0.0006,
@@ -264,9 +280,21 @@ minimum_pulse_intensity = (
             None,
         ),
         # (DingModelPulseDurationFrequency(), None, minimum_pulse_duration, 0.0006, True, None, None, None, None), parameter mapping not yet implemented
-        (DingModelIntensityFrequency(name="hmed2018"), None, None, None, None, 20, None, None, None),
+        (DingModelIntensityFrequency(), None, None, None, None, 20, None, None, None),
+        (DingModelIntensityFrequencyWithFatigue(), None, None, None, None, 20, None, None, None),
         (
-            DingModelIntensityFrequency(name="hmed2018"),
+            DingModelIntensityFrequency(),
+            None,
+            None,
+            None,
+            None,
+            None,
+            minimum_pulse_intensity,
+            130,
+            False,
+        ),
+        (
+            DingModelIntensityFrequencyWithFatigue(),
             None,
             None,
             None,
@@ -295,7 +323,6 @@ minimum_pulse_intensity = (
     "force_tracking, end_node_tracking", [(init_force_tracking, None), (None, init_end_node_tracking)]
 )
 @pytest.mark.parametrize("sum_stim_truncation", [None, 2])
-@pytest.mark.parametrize("with_fatigue", [False, True])
 def test_ocp_building(
     model,
     n_stim,
@@ -317,12 +344,10 @@ def test_ocp_building(
     pulse_intensity_bimapping,
     use_sx,
     sum_stim_truncation,
-    with_fatigue,
 ):
-    if model.name == "ding2003" and time_min is None and time_max is None:
+    if (model.name == "ding2003" or model.name == "ding2003_with_fatigue") and time_min is None and time_max is None:
         return
 
-    model._with_fatigue = with_fatigue
     model._sum_stim_truncation = sum_stim_truncation
 
     ocp_1 = OcpFes().prepare_ocp(
@@ -471,7 +496,7 @@ def test_hmed2018_build():
 def test_all_ocp_fes_errors():
     with pytest.raises(
         TypeError,
-        match="model must be a DingModelFrequency, DingModelPulseDurationFrequency or DingModelIntensityFrequency type",
+        match="model must be a DingModelFrequency, DingModelFrequencyWithFatigue, DingModelPulseDurationFrequency, DingModelPulseDurationFrequencyWithFatigue, DingModelIntensityFrequency, DingModelIntensityFrequencyWithFatigue type",
     ):
         OcpFes.prepare_ocp(model=None)
 

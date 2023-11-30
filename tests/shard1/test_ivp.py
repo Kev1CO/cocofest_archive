@@ -6,14 +6,17 @@ from bioptim import Solution, Shooting, SolutionIntegrator
 from cocofest import (
     IvpFes,
     DingModelFrequency,
+    DingModelFrequencyWithFatigue,
     DingModelPulseDurationFrequency,
+    DingModelPulseDurationFrequencyWithFatigue,
     DingModelIntensityFrequency,
+    DingModelIntensityFrequencyWithFatigue,
 )
 
 
-@pytest.mark.parametrize("fatigue", [True, False])
-def test_ding2003_ivp(fatigue):
-    ivp = IvpFes(model=DingModelFrequency(with_fatigue=fatigue), n_stim=3, n_shooting=10, final_time=0.3, use_sx=True)
+@pytest.mark.parametrize("model", [DingModelFrequency(), DingModelFrequencyWithFatigue()])
+def test_ding2003_ivp(model):
+    ivp = IvpFes(model=model, n_stim=3, n_shooting=10, final_time=0.3, use_sx=True)
 
     # Creating the solution from the initial guess
     sol_from_initial_guess = Solution.from_initial_guess(ivp, [ivp.x_init, ivp.u_init, ivp.p_init, ivp.s_init])
@@ -23,7 +26,7 @@ def test_ding2003_ivp(fatigue):
         shooting_type=Shooting.SINGLE, integrator=SolutionIntegrator.OCP, merge_phases=True
     )
 
-    if fatigue:
+    if model._with_fatigue:
         np.testing.assert_almost_equal(result.states["F"][0][0], 0)
         np.testing.assert_almost_equal(result.states["F"][0][10], 92.06532561584642)
         np.testing.assert_almost_equal(result.states["F"][0][-1], 138.94556672277545)
@@ -33,11 +36,11 @@ def test_ding2003_ivp(fatigue):
         np.testing.assert_almost_equal(result.states["F"][0][-1], 130.3736693032713)
 
 
-@pytest.mark.parametrize("fatigue", [True, False])
+@pytest.mark.parametrize("model", [DingModelPulseDurationFrequency(), DingModelPulseDurationFrequencyWithFatigue()])
 @pytest.mark.parametrize("pulse_duration", [0.0003, [0.0003, 0.0004, 0.0005]])
-def test_ding2007_ivp(fatigue, pulse_duration):
+def test_ding2007_ivp(model, pulse_duration):
     ivp = IvpFes(
-        model=DingModelPulseDurationFrequency(with_fatigue=fatigue),
+        model=model,
         n_stim=3,
         n_shooting=10,
         final_time=0.3,
@@ -53,29 +56,29 @@ def test_ding2007_ivp(fatigue, pulse_duration):
         shooting_type=Shooting.SINGLE, integrator=SolutionIntegrator.OCP, merge_phases=True
     )
 
-    if fatigue and isinstance(pulse_duration, list):
+    if model._with_fatigue and isinstance(pulse_duration, list):
         np.testing.assert_almost_equal(result.states["F"][0][0], 0)
         np.testing.assert_almost_equal(result.states["F"][0][10], 32.78053644580685)
         np.testing.assert_almost_equal(result.states["F"][0][-1], 60.936507876880086)
-    elif fatigue is False and isinstance(pulse_duration, list):
+    elif model._with_fatigue is False and isinstance(pulse_duration, list):
         np.testing.assert_almost_equal(result.states["F"][0][0], 0)
         np.testing.assert_almost_equal(result.states["F"][0][10], 32.48751154425548)
         np.testing.assert_almost_equal(result.states["F"][0][-1], 56.97819257967254)
-    elif fatigue and isinstance(pulse_duration, float):
+    elif model._with_fatigue and isinstance(pulse_duration, float):
         np.testing.assert_almost_equal(result.states["F"][0][0], 0)
         np.testing.assert_almost_equal(result.states["F"][0][10], 32.78053644580685)
         np.testing.assert_almost_equal(result.states["F"][0][-1], 42.43955858325622)
-    elif fatigue is False and isinstance(pulse_duration, float):
+    elif model._with_fatigue is False and isinstance(pulse_duration, float):
         np.testing.assert_almost_equal(result.states["F"][0][0], 0)
         np.testing.assert_almost_equal(result.states["F"][0][10], 32.48751154425548)
         np.testing.assert_almost_equal(result.states["F"][0][-1], 40.030303929246955)
 
 
-@pytest.mark.parametrize("fatigue", [True, False])
+@pytest.mark.parametrize("model", [DingModelIntensityFrequency(), DingModelIntensityFrequencyWithFatigue()])
 @pytest.mark.parametrize("pulse_intensity", [50, [50, 60, 70]])
-def test_hmed2018_ivp(fatigue, pulse_intensity):
+def test_hmed2018_ivp(model, pulse_intensity):
     ivp = IvpFes(
-        model=DingModelIntensityFrequency(with_fatigue=fatigue),
+        model=model,
         n_stim=3,
         n_shooting=10,
         final_time=0.3,
@@ -91,19 +94,19 @@ def test_hmed2018_ivp(fatigue, pulse_intensity):
         shooting_type=Shooting.SINGLE, integrator=SolutionIntegrator.OCP, merge_phases=True
     )
 
-    if fatigue and isinstance(pulse_intensity, list):
+    if model._with_fatigue and isinstance(pulse_intensity, list):
         np.testing.assert_almost_equal(result.states["F"][0][0], 0)
         np.testing.assert_almost_equal(result.states["F"][0][10], 42.18211764372109)
         np.testing.assert_almost_equal(result.states["F"][0][-1], 91.85073218888144)
-    elif fatigue is False and isinstance(pulse_intensity, list):
+    elif model._with_fatigue is False and isinstance(pulse_intensity, list):
         np.testing.assert_almost_equal(result.states["F"][0][0], 0)
         np.testing.assert_almost_equal(result.states["F"][0][10], 41.91914906078192)
         np.testing.assert_almost_equal(result.states["F"][0][-1], 87.91817144209159)
-    elif fatigue and isinstance(pulse_intensity, float):
+    elif model._with_fatigue and isinstance(pulse_intensity, float):
         np.testing.assert_almost_equal(result.states["F"][0][0], 0)
         np.testing.assert_almost_equal(result.states["F"][0][10], 42.18211764372109)
         np.testing.assert_almost_equal(result.states["F"][0][-1], 58.26448576796251)
-    elif fatigue is False and isinstance(pulse_intensity, float):
+    elif model._with_fatigue is False and isinstance(pulse_intensity, float):
         np.testing.assert_almost_equal(result.states["F"][0][0], 0)
         np.testing.assert_almost_equal(result.states["F"][0][10], 41.91914906078192)
         np.testing.assert_almost_equal(result.states["F"][0][-1], 55.57471909903151)
@@ -113,7 +116,12 @@ def test_hmed2018_ivp(fatigue, pulse_intensity):
 def test_pulse_mode_ivp(pulse_mode):
     n_stim = 3 if pulse_mode == "Single" else 6 if pulse_mode == "Double" else 9
     ivp = IvpFes(
-        model=DingModelFrequency(), n_stim=n_stim, n_shooting=10, final_time=0.3, pulse_mode=pulse_mode, use_sx=True
+        model=DingModelFrequencyWithFatigue(),
+        n_stim=n_stim,
+        n_shooting=10,
+        final_time=0.3,
+        pulse_mode=pulse_mode,
+        use_sx=True,
     )
 
     # Creating the solution from the initial guess

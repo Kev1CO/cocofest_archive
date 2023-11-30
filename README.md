@@ -113,13 +113,13 @@ You can find all the available examples in the [examples](https://github.com/Kev
 # Other functionalities
 
 ## With fatigue
-The with_fatigue flag is a boolean parameter that can be set to True or False.
-If True, the fatigue equation will be added to the model.
-If False, the fatigue equation will not be added to the model and the muscle force will remain 
+It is possible to compute the models with their fatigue equations or not.
+For example, the "ding2003" model can be use with fatigue DingModelFrequencyWithFatigue or without DingModelFrequency.
+If no fatigue is applied, the fatigue equation will not be added to the model and the muscle force will remain 
 constant during the simulation regardless of the previous stimulation appearance.
 
 ```python
-ocp = OcpFes.prepare_ocp()
+ocp = OcpFes.prepare_ocp(model=DingModelFrequencyWithFatigue())
 ```
 
 ## Initital value problem
@@ -128,7 +128,7 @@ For that, use the IvpFes class to build the computed problem.
 
 ```python
 ocp = IvpFes(
-    ding_model=DingModelFrequency(with_fatigue=False),
+    ding_model=DingModelFrequency(),
 )
 ```
 

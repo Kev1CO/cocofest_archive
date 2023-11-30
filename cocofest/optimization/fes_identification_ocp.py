@@ -17,7 +17,14 @@ from bioptim import (
 )
 
 from cocofest.custom_objectives import CustomObjective
-from cocofest import DingModelFrequency, DingModelPulseDurationFrequency, DingModelIntensityFrequency
+from cocofest import (
+    DingModelFrequency,
+    DingModelFrequencyWithFatigue,
+    DingModelPulseDurationFrequency,
+    DingModelPulseDurationFrequencyWithFatigue,
+    DingModelIntensityFrequency,
+    DingModelIntensityFrequencyWithFatigue,
+)
 from cocofest.optimization.fes_ocp import OcpFes
 
 
@@ -27,7 +34,12 @@ class OcpFesId(OcpFes):
 
     @staticmethod
     def prepare_ocp(
-        model: DingModelFrequency | DingModelPulseDurationFrequency | DingModelIntensityFrequency = None,
+        model: DingModelFrequency
+        | DingModelFrequencyWithFatigue
+        | DingModelPulseDurationFrequency
+        | DingModelPulseDurationFrequencyWithFatigue
+        | DingModelIntensityFrequency
+        | DingModelIntensityFrequencyWithFatigue = None,
         n_stim: int = None,
         n_shooting: list[int] = None,
         final_time_phase: tuple | list = None,
@@ -51,10 +63,8 @@ class OcpFesId(OcpFes):
 
         Attributes
         ----------
-        model: DingModelFrequency | DingModelPulseDurationFrequency | DingModelIntensityFrequency,
+        model: DingModelFrequency | DingModelFrequencyWithFatigue | DingModelPulseDurationFrequency | DingModelPulseDurationFrequencyWithFatigue | DingModelIntensityFrequency | DingModelIntensityFrequencyWithFatigue,
             The model used to solve the ocp
-        with_fatigue: bool,
-            If True, the fatigue model is used
         final_time_phase: tuple, list
             The final time of each phase
         n_shooting: list[int],

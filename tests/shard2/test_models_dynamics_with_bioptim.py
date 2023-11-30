@@ -225,9 +225,7 @@ init_force = force - force[0]
 init_force_tracking = [time, init_force]
 
 minimum_pulse_duration = DingModelPulseDurationFrequency().pd0
-minimum_pulse_intensity = (
-    np.arctanh(-DingModelIntensityFrequency().cr) / DingModelIntensityFrequency().bs
-) + DingModelIntensityFrequency().Is
+minimum_pulse_intensity = DingModelIntensityFrequency().min_pulse_intensity()
 
 
 @pytest.mark.parametrize("use_sx", [True])  # Later add False
