@@ -23,7 +23,14 @@ from bioptim import (
 
 from ..custom_objectives import CustomObjective
 from ..fourier_approx import FourierSeries
-from cocofest import DingModelFrequency, DingModelFrequencyWithFatigue, DingModelPulseDurationFrequency, DingModelPulseDurationFrequencyWithFatigue, DingModelIntensityFrequency, DingModelIntensityFrequencyWithFatigue
+from cocofest import (
+    DingModelFrequency,
+    DingModelFrequencyWithFatigue,
+    DingModelPulseDurationFrequency,
+    DingModelPulseDurationFrequencyWithFatigue,
+    DingModelIntensityFrequency,
+    DingModelIntensityFrequencyWithFatigue,
+)
 
 
 class OcpFes:
@@ -41,7 +48,12 @@ class OcpFes:
 
     @staticmethod
     def prepare_ocp(
-        model: DingModelFrequency | DingModelFrequencyWithFatigue | DingModelPulseDurationFrequency | DingModelPulseDurationFrequencyWithFatigue | DingModelIntensityFrequency | DingModelIntensityFrequencyWithFatigue = None,
+        model: DingModelFrequency
+        | DingModelFrequencyWithFatigue
+        | DingModelPulseDurationFrequency
+        | DingModelPulseDurationFrequencyWithFatigue
+        | DingModelIntensityFrequency
+        | DingModelIntensityFrequencyWithFatigue = None,
         n_stim: int = None,
         n_shooting: int = None,
         final_time: int | float = None,
@@ -230,7 +242,15 @@ class OcpFes:
         ode_solver=None,
         n_threads=None,
     ):
-        if not isinstance(model, DingModelFrequency | DingModelFrequencyWithFatigue | DingModelPulseDurationFrequency | DingModelPulseDurationFrequencyWithFatigue | DingModelIntensityFrequency | DingModelIntensityFrequencyWithFatigue):
+        if not isinstance(
+            model,
+            DingModelFrequency
+            | DingModelFrequencyWithFatigue
+            | DingModelPulseDurationFrequency
+            | DingModelPulseDurationFrequencyWithFatigue
+            | DingModelIntensityFrequency
+            | DingModelIntensityFrequencyWithFatigue,
+        ):
             raise TypeError(
                 "model must be a DingModelFrequency, DingModelFrequencyWithFatigue, DingModelPulseDurationFrequency, DingModelPulseDurationFrequencyWithFatigue, DingModelIntensityFrequency, DingModelIntensityFrequencyWithFatigue type"
             )

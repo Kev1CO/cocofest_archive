@@ -17,7 +17,14 @@ from bioptim import (
 )
 
 from cocofest.custom_objectives import CustomObjective
-from cocofest import DingModelFrequency, DingModelFrequencyWithFatigue, DingModelPulseDurationFrequency, DingModelPulseDurationFrequencyWithFatigue, DingModelIntensityFrequency, DingModelIntensityFrequencyWithFatigue
+from cocofest import (
+    DingModelFrequency,
+    DingModelFrequencyWithFatigue,
+    DingModelPulseDurationFrequency,
+    DingModelPulseDurationFrequencyWithFatigue,
+    DingModelIntensityFrequency,
+    DingModelIntensityFrequencyWithFatigue,
+)
 from cocofest.optimization.fes_ocp import OcpFes
 
 
@@ -27,7 +34,12 @@ class OcpFesId(OcpFes):
 
     @staticmethod
     def prepare_ocp(
-        model: DingModelFrequency | DingModelFrequencyWithFatigue | DingModelPulseDurationFrequency | DingModelPulseDurationFrequencyWithFatigue | DingModelIntensityFrequency | DingModelIntensityFrequencyWithFatigue = None,
+        model: DingModelFrequency
+        | DingModelFrequencyWithFatigue
+        | DingModelPulseDurationFrequency
+        | DingModelPulseDurationFrequencyWithFatigue
+        | DingModelIntensityFrequency
+        | DingModelIntensityFrequencyWithFatigue = None,
         n_stim: int = None,
         n_shooting: list[int] = None,
         final_time_phase: tuple | list = None,

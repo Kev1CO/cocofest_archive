@@ -116,7 +116,12 @@ def test_hmed2018_ivp(model, pulse_intensity):
 def test_pulse_mode_ivp(pulse_mode):
     n_stim = 3 if pulse_mode == "Single" else 6 if pulse_mode == "Double" else 9
     ivp = IvpFes(
-        model=DingModelFrequencyWithFatigue(), n_stim=n_stim, n_shooting=10, final_time=0.3, pulse_mode=pulse_mode, use_sx=True
+        model=DingModelFrequencyWithFatigue(),
+        n_stim=n_stim,
+        n_shooting=10,
+        final_time=0.3,
+        pulse_mode=pulse_mode,
+        use_sx=True,
     )
 
     # Creating the solution from the initial guess
