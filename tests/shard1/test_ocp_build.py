@@ -452,13 +452,9 @@ def test_ding2007_build():
 
 def test_hmed2018_build():
     objective_list = ObjectiveList()
-    objective_list.add(ObjectiveFcn.Mayer.MINIMIZE_STATE,
-                        node=Node.END,
-                        key="F",
-                        quadratic=True,
-                        weight=1,
-                        target=100,
-                        phase=0)
+    objective_list.add(
+        ObjectiveFcn.Mayer.MINIMIZE_STATE, node=Node.END, key="F", quadratic=True, weight=1, target=100, phase=0
+    )
     min_intensity = DingModelIntensityFrequency().min_pulse_intensity()
     ocp = OcpFes().prepare_ocp(
         model=DingModelIntensityFrequency(),
@@ -788,6 +784,18 @@ def test_all_ocp_fes_errors():
     with pytest.raises(TypeError, match="round_down must be bool type"):
         OcpFes.prepare_ocp(model=DingModelFrequency(), final_time=0.3, frequency=20, round_down="True")
 
-    with pytest.raises(ValueError, match=re.escape("The number of stimulation needs to be integer within the final time t, set round down"
-                    "to True or set final_time * frequency to make the result a integer.")):
-        OcpFes.prepare_ocp(model=DingModelIntensityFrequency(), final_time=0.35, frequency=25, n_shooting=10, pulse_intensity_min=20, pulse_intensity_max=100)
+    with pytest.raises(
+        ValueError,
+        match=re.escape(
+            "The number of stimulation needs to be integer within the final time t, set round down"
+            "to True or set final_time * frequency to make the result a integer."
+        ),
+    ):
+        OcpFes.prepare_ocp(
+            model=DingModelIntensityFrequency(),
+            final_time=0.35,
+            frequency=25,
+            n_shooting=10,
+            pulse_intensity_min=20,
+            pulse_intensity_max=100,
+        )

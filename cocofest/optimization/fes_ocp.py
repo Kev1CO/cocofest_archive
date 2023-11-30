@@ -509,7 +509,6 @@ class OcpFes:
                     # TODO : Fix Bimapping in Bioptim
 
         if isinstance(model, DingModelIntensityFrequency):
-
             if pulse_intensity is not None:
                 parameters_bounds.add(
                     "pulse_intensity",
