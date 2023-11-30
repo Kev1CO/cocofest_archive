@@ -51,10 +51,10 @@ class OcpFes:
         time_min: int | float = None,
         time_max: int | float = None,
         time_bimapping: bool = False,
-        pulse_time: int | float = None,
-        pulse_time_min: int | float = None,
-        pulse_time_max: int | float = None,
-        pulse_time_bimapping: bool = False,
+        pulse_duration: int | float = None,
+        pulse_duration_min: int | float = None,
+        pulse_duration_max: int | float = None,
+        pulse_duration_bimapping: bool = False,
         pulse_intensity: int | float = None,
         pulse_intensity_min: int | float = None,
         pulse_intensity_max: int | float = None,
@@ -89,13 +89,13 @@ class OcpFes:
                 Maximum time for a phase
             time_bimapping: bool
                 Set phase time constant
-            pulse_time: int | float
+            pulse_duration: int | float
                 Setting a chosen pulse time among phases
-            pulse_time_min: int | float
+            pulse_duration_min: int | float
                 Minimum pulse time for a phase
-            pulse_time_max: int | float
+            pulse_duration_max: int | float
                 Maximum pulse time for a phase
-            pulse_time_bimapping: bool
+            pulse_duration_bimapping: bool
                 Set pulse time constant among phases
             pulse_intensity: int | float
                 Setting a chosen pulse intensity among phases
@@ -125,10 +125,10 @@ class OcpFes:
             time_min=time_min,
             time_max=time_max,
             time_bimapping=time_bimapping,
-            pulse_time=pulse_time,
-            pulse_time_min=pulse_time_min,
-            pulse_time_max=pulse_time_max,
-            pulse_time_bimapping=pulse_time_bimapping,
+            pulse_duration=pulse_duration,
+            pulse_duration_min=pulse_duration_min,
+            pulse_duration_max=pulse_duration_max,
+            pulse_duration_bimapping=pulse_duration_bimapping,
             pulse_intensity=pulse_intensity,
             pulse_intensity_min=pulse_intensity_min,
             pulse_intensity_max=pulse_intensity_max,
@@ -162,10 +162,10 @@ class OcpFes:
         parameters, parameters_bounds, parameters_init, parameter_objectives = OcpFes._build_parameters(
             model=model,
             n_stim=n_stim,
-            pulse_time=pulse_time,
-            pulse_time_min=pulse_time_min,
-            pulse_time_max=pulse_time_max,
-            pulse_time_bimapping=pulse_time_bimapping,
+            pulse_duration=pulse_duration,
+            pulse_duration_min=pulse_duration_min,
+            pulse_duration_max=pulse_duration_max,
+            pulse_duration_bimapping=pulse_duration_bimapping,
             pulse_intensity=pulse_intensity,
             pulse_intensity_min=pulse_intensity_min,
             pulse_intensity_max=pulse_intensity_max,
@@ -215,10 +215,10 @@ class OcpFes:
         time_min=None,
         time_max=None,
         time_bimapping=None,
-        pulse_time=None,
-        pulse_time_min=None,
-        pulse_time_max=None,
-        pulse_time_bimapping=None,
+        pulse_duration=None,
+        pulse_duration_min=None,
+        pulse_duration_max=None,
+        pulse_duration_bimapping=None,
         pulse_intensity=None,
         pulse_intensity_min=None,
         pulse_intensity_max=None,
@@ -275,50 +275,50 @@ class OcpFes:
                 raise TypeError("time_bimapping must be bool type")
 
         if isinstance(model, DingModelPulseDurationFrequency):
-            if pulse_time is None and pulse_time_min is not None and pulse_time_max is None:
-                raise ValueError("Time pulse or Time pulse min max bounds need to be set for this model")
-            if pulse_time is not None and pulse_time_min is not None and pulse_time_max is not None:
-                raise ValueError("Either Time pulse or Time pulse min max bounds need to be set for this model")
+            if pulse_duration is None and pulse_duration_min is not None and pulse_duration_max is None:
+                raise ValueError("pulse duration or pulse duration min max bounds need to be set for this model")
+            if pulse_duration is not None and pulse_duration_min is not None and pulse_duration_max is not None:
+                raise ValueError("Either pulse duration or pulse duration min max bounds need to be set for this model")
             if (
-                pulse_time_min is not None
-                and pulse_time_max is None
-                or pulse_time_min is None
-                and pulse_time_max is not None
+                pulse_duration_min is not None
+                and pulse_duration_max is None
+                or pulse_duration_min is None
+                and pulse_duration_max is not None
             ):
-                raise ValueError("Both Time pulse min max bounds need to be set for this model")
+                raise ValueError("Both pulse duration min max bounds need to be set for this model")
 
             minimum_pulse_duration = model.pd0
 
-            if pulse_time is not None:
-                if isinstance(pulse_time, int | float):
-                    if pulse_time < minimum_pulse_duration:
+            if pulse_duration is not None:
+                if isinstance(pulse_duration, int | float):
+                    if pulse_duration < minimum_pulse_duration:
                         raise ValueError(
-                            f"The pulse duration set ({pulse_time})"
+                            f"The pulse duration set ({pulse_duration})"
                             f" is lower than minimum duration required."
                             f" Set a value above {minimum_pulse_duration} seconds "
                         )
                 else:
-                    raise TypeError("Wrong pulse_time type, only int or float accepted")
+                    raise TypeError("Wrong pulse_duration type, only int or float accepted")
 
-            elif pulse_time_min is not None and pulse_time_max is not None:
-                if not isinstance(pulse_time_min, int | float) or not isinstance(pulse_time_max, int | float):
-                    raise TypeError("pulse_time_min and pulse_time_max must be int or float type")
-                if pulse_time_max < pulse_time_min:
+            elif pulse_duration_min is not None and pulse_duration_max is not None:
+                if not isinstance(pulse_duration_min, int | float) or not isinstance(pulse_duration_max, int | float):
+                    raise TypeError("pulse_duration_min and pulse_duration_max must be int or float type")
+                if pulse_duration_max < pulse_duration_min:
                     raise ValueError("The set minimum pulse duration is higher than maximum pulse duration.")
-                if pulse_time_min < minimum_pulse_duration:
+                if pulse_duration_min < minimum_pulse_duration:
                     raise ValueError(
-                        f"The pulse duration set ({pulse_time_min})"
+                        f"The pulse duration set ({pulse_duration_min})"
                         f" is lower than minimum duration required."
                         f" Set a value above {minimum_pulse_duration} seconds "
                     )
             else:
                 raise ValueError(
-                    "Time pulse parameter has not been set, input either pulse_time or pulse_time_min and"
-                    " pulse_time_max"
+                    "pulse duration parameter has not been set, input either pulse_duration or pulse_duration_min and"
+                    " pulse_duration_max"
                 )
 
-            if pulse_time_bimapping is not None:
-                if pulse_time_bimapping is True:
+            if pulse_duration_bimapping is not None:
+                if pulse_duration_bimapping is True:
                     raise NotImplementedError("Parameter mapping in bioptim not yet implemented")
                     # parameter_bimapping.add(name="pulse_duration", to_second=[0 for _ in range(n_stim)], to_first=[0])
 
@@ -452,10 +452,10 @@ class OcpFes:
     def _build_parameters(
         model,
         n_stim,
-        pulse_time,
-        pulse_time_min,
-        pulse_time_max,
-        pulse_time_bimapping,
+        pulse_duration,
+        pulse_duration_min,
+        pulse_duration_max,
+        pulse_duration_bimapping,
         pulse_intensity,
         pulse_intensity_min,
         pulse_intensity_max,
@@ -466,25 +466,25 @@ class OcpFes:
         parameters_init = InitialGuessList()
         parameter_objectives = ParameterObjectiveList()
         if isinstance(model, DingModelPulseDurationFrequency):
-            if pulse_time is not None:
+            if pulse_duration is not None:
                 parameters_bounds.add(
                     "pulse_duration",
-                    min_bound=np.array([pulse_time] * n_stim),
-                    max_bound=np.array([pulse_time] * n_stim),
+                    min_bound=np.array([pulse_duration] * n_stim),
+                    max_bound=np.array([pulse_duration] * n_stim),
                     interpolation=InterpolationType.CONSTANT,
                 )
-                parameters_init["pulse_duration"] = np.array([pulse_time] * n_stim)
+                parameters_init["pulse_duration"] = np.array([pulse_duration] * n_stim)
                 parameters.add(
                     parameter_name="pulse_duration",
                     function=DingModelPulseDurationFrequency.set_impulse_duration,
                     size=n_stim,
                 )
 
-            elif pulse_time_min is not None and pulse_time_max is not None:
+            elif pulse_duration_min is not None and pulse_duration_max is not None:
                 parameters_bounds.add(
                     "pulse_duration",
-                    min_bound=[pulse_time_min],
-                    max_bound=[pulse_time_max],
+                    min_bound=[pulse_duration_min],
+                    max_bound=[pulse_duration_max],
                     interpolation=InterpolationType.CONSTANT,
                 )
                 parameters_init["pulse_duration"] = np.array([0] * n_stim)
@@ -502,8 +502,8 @@ class OcpFes:
                 key="pulse_duration",
             )
 
-            if pulse_time_bimapping is not None:
-                if pulse_time_bimapping is True:
+            if pulse_duration_bimapping is not None:
+                if pulse_duration_bimapping is True:
                     pass
                     # parameter_bimapping.add(name="pulse_duration", to_second=[0 for _ in range(n_stim)], to_first=[0])
                     # TODO : Fix Bimapping in Bioptim

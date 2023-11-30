@@ -30,16 +30,16 @@ class OcpFesId(OcpFes):
         model: DingModelFrequency | DingModelPulseDurationFrequency | DingModelIntensityFrequency = None,
         n_stim: int = None,
         n_shooting: list[int] = None,
-        final_time_phase: list[int] | list[float] = None,
+        final_time_phase: tuple | list = None,
         pulse_duration: int | float = None,
         pulse_intensity: int | float = None,
         force_tracking: list = None,
         custom_objective: list[Objective] = None,
-        discontinuity_in_ocp: list[int] = None,
-        a_rest: float = None,
-        km_rest: float = None,
-        tau1_rest: float = None,
-        tau2: float = None,
+        discontinuity_in_ocp: list = None,
+        a_rest: int | float = None,
+        km_rest: int | float = None,
+        tau1_rest: int | float = None,
+        tau2: int | float = None,
         use_sx: bool = True,
         ode_solver: OdeSolver = OdeSolver.RK4(n_integration_steps=1),
         n_threads: int = 1,
@@ -55,7 +55,7 @@ class OcpFesId(OcpFes):
             The model used to solve the ocp
         with_fatigue: bool,
             If True, the fatigue model is used
-        final_time_phase: list[float],
+        final_time_phase: tuple, list
             The final time of each phase
         n_shooting: list[int],
             The number of shooting points for each phase
@@ -92,6 +92,8 @@ class OcpFesId(OcpFes):
             use_sx=use_sx,
             ode_solver=ode_solver,
             n_threads=n_threads,
+            pulse_duration=pulse_duration,
+            pulse_intensity=pulse_intensity,
         )
 
         OcpFesId._sanity_check_2(
@@ -166,16 +168,18 @@ class OcpFesId(OcpFes):
         pulse_intensity=None,
     ):
         if model._with_fatigue:
-            if a_rest is None or km_rest is None or tau1_rest is None or tau2 is None:
+            if not all([a_rest, km_rest, tau1_rest, tau2]):
                 raise ValueError("a_rest, km_rest, tau1_rest and tau2 must be set for fatigue model identification")
-            elif not isinstance(a_rest, float):
-                raise TypeError(f"a_rest must be float type," f" currently a_rest is {type(a_rest)}) type.")
-            elif not isinstance(km_rest, float):
-                raise TypeError(f"km_rest must be float type," f" currently km_rest is {type(km_rest)}) type.")
-            elif not isinstance(tau1_rest, float):
-                raise TypeError(f"tau1_rest must be float type," f" currently tau1_rest is {type(tau1_rest)}) type.")
-            elif not isinstance(tau2, float):
-                raise TypeError(f"tau2 must be float type," f" currently tau2 is {type(tau2)}) type.")
+            elif not isinstance(a_rest, int | float):
+                raise TypeError(f"a_rest must be int or float type," f" currently a_rest is {type(a_rest)}) type.")
+            elif not isinstance(km_rest, int | float):
+                raise TypeError(f"km_rest must be int or float type," f" currently km_rest is {type(km_rest)}) type.")
+            elif not isinstance(tau1_rest, int | float):
+                raise TypeError(
+                    f"tau1_rest must be int or float type," f" currently tau1_rest is {type(tau1_rest)}) type."
+                )
+            elif not isinstance(tau2, int | float):
+                raise TypeError(f"tau2 must be int or float type," f" currently tau2 is {type(tau2)}) type.")
 
         if not isinstance(n_shooting, list):
             raise TypeError(f"n_shooting must be list type," f" currently n_shooting is {type(n_shooting)}) type.")

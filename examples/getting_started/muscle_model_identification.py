@@ -30,7 +30,7 @@ print("a_rest : ", a_rest, "km_rest : ", km_rest, "tau1_rest : ", tau1_rest, "ta
 ivp = IvpFes(
     model=DingModelFrequency(with_fatigue=False),
     n_stim=10,
-    n_shooting=100,
+    n_shooting=10,
     final_time=1,
     use_sx=True,
 )
@@ -63,7 +63,7 @@ ocp = DingModelFrequencyParameterIdentification(
     force_model_data_path=[pickle_file_name],
     force_model_identification_method="full",
     force_model_identification_with_average_method_initial_guess=False,
-    n_shooting=100,
+    n_shooting=10,
     use_sx=True,
 )
 
@@ -149,7 +149,7 @@ plt.show()
 # --- Simulating data --- #
 ocp = DingModelFrequencyParameterIdentification(
     model=DingModelFrequency,
-    fatigue_model_data_path=["data/simulated_fatigue_trial.pkl"],
+    fatigue_model_data_path=["../data/simulated_fatigue_trial.pkl"],
     a_rest=DingModelFrequency().a_rest,
     km_rest=DingModelFrequency().km_rest,
     tau1_rest=DingModelFrequency().tau1_rest,

@@ -241,10 +241,10 @@ minimum_pulse_intensity = (
 
 @pytest.mark.parametrize(
     "model,"
-    " pulse_time,"
-    " pulse_time_min,"
-    " pulse_time_max,"
-    " pulse_time_bimapping,"
+    " pulse_duration,"
+    " pulse_duration_min,"
+    " pulse_duration_max,"
+    " pulse_duration_bimapping,"
     " pulse_intensity,"
     " pulse_intensity_min,"
     " pulse_intensity_max,"
@@ -307,10 +307,10 @@ def test_ocp_building(
     time_min,
     time_max,
     time_bimapping,
-    pulse_time,
-    pulse_time_min,
-    pulse_time_max,
-    pulse_time_bimapping,
+    pulse_duration,
+    pulse_duration_min,
+    pulse_duration_max,
+    pulse_duration_bimapping,
     pulse_intensity,
     pulse_intensity_min,
     pulse_intensity_max,
@@ -336,10 +336,10 @@ def test_ocp_building(
         time_min=time_min,
         time_max=time_max,
         time_bimapping=time_bimapping,
-        pulse_time=pulse_time,
-        pulse_time_min=pulse_time_min,
-        pulse_time_max=pulse_time_max,
-        pulse_time_bimapping=pulse_time_bimapping,
+        pulse_duration=pulse_duration,
+        pulse_duration_min=pulse_duration_min,
+        pulse_duration_max=pulse_duration_max,
+        pulse_duration_bimapping=pulse_duration_bimapping,
         pulse_intensity=pulse_intensity,
         pulse_intensity_min=pulse_intensity_min,
         pulse_intensity_max=pulse_intensity_max,
@@ -357,10 +357,10 @@ def test_ocp_building(
         time_min=time_min,
         time_max=time_max,
         time_bimapping=time_bimapping,
-        pulse_time=pulse_time,
-        pulse_time_min=pulse_time_min,
-        pulse_time_max=pulse_time_max,
-        pulse_time_bimapping=pulse_time_bimapping,
+        pulse_duration=pulse_duration,
+        pulse_duration_min=pulse_duration_min,
+        pulse_duration_max=pulse_duration_max,
+        pulse_duration_bimapping=pulse_duration_bimapping,
         pulse_intensity=pulse_intensity,
         pulse_intensity_min=pulse_intensity_min,
         pulse_intensity_max=pulse_intensity_max,
@@ -378,10 +378,10 @@ def test_ocp_building(
         time_min=time_min,
         time_max=time_max,
         time_bimapping=time_bimapping,
-        pulse_time=pulse_time,
-        pulse_time_min=pulse_time_min,
-        pulse_time_max=pulse_time_max,
-        pulse_time_bimapping=pulse_time_bimapping,
+        pulse_duration=pulse_duration,
+        pulse_duration_min=pulse_duration_min,
+        pulse_duration_max=pulse_duration_max,
+        pulse_duration_bimapping=pulse_duration_bimapping,
         pulse_intensity=pulse_intensity,
         pulse_intensity_min=pulse_intensity_min,
         pulse_intensity_max=pulse_intensity_max,
@@ -422,10 +422,10 @@ def test_multi_start_building(force_tracking, end_node_tracking, min_pulse_durat
         time_min=[0.01],
         time_max=[0.1],
         time_bimapping=[False],
-        pulse_time=[None],
-        pulse_time_min=[minimum_pulse_duration],
-        pulse_time_max=[0.0006],
-        pulse_time_bimapping=[None],
+        pulse_duration=[None],
+        pulse_duration_min=[minimum_pulse_duration],
+        pulse_duration_max=[0.0006],
+        pulse_duration_bimapping=[None],
         pulse_intensity=[None],
         pulse_intensity_min=[minimum_pulse_intensity],
         pulse_intensity_max=[130],
@@ -444,8 +444,8 @@ def test_ding2007_build():
         n_stim=1,
         n_shooting=10,
         final_time=0.1,
-        pulse_time_min=min_duration,
-        pulse_time_max=0.005,
+        pulse_duration_min=min_duration,
+        pulse_duration_max=0.005,
         use_sx=True,
     )
 
@@ -513,65 +513,72 @@ def test_all_ocp_fes_errors():
 
     with pytest.raises(
         ValueError,
-        match="Time pulse parameter has not been set, input either pulse_time or pulse_time_min and" " pulse_time_max",
+        match="pulse duration parameter has not been set, input either pulse_duration or pulse_duration_min and"
+        " pulse_duration_max",
     ):
         OcpFes.prepare_ocp(model=DingModelPulseDurationFrequency(), n_stim=3, n_shooting=10, final_time=0.3)
 
-    with pytest.raises(ValueError, match="Time pulse or Time pulse min max bounds need to be set for this model"):
+    with pytest.raises(
+        ValueError, match="pulse duration or pulse duration min max bounds need to be set for this model"
+    ):
         OcpFes.prepare_ocp(
-            model=DingModelPulseDurationFrequency(), n_stim=3, n_shooting=10, final_time=0.3, pulse_time_min=0.001
+            model=DingModelPulseDurationFrequency(), n_stim=3, n_shooting=10, final_time=0.3, pulse_duration_min=0.001
         )
 
     with pytest.raises(
-        ValueError, match="Either Time pulse or Time pulse min max bounds need to be set for this model"
+        ValueError, match="Either pulse duration or pulse duration min max bounds need to be set for this model"
     ):
         OcpFes.prepare_ocp(
             model=DingModelPulseDurationFrequency(),
             n_stim=3,
             n_shooting=10,
             final_time=0.3,
-            pulse_time_min=0.001,
-            pulse_time_max=0.005,
-            pulse_time=0.003,
+            pulse_duration_min=0.001,
+            pulse_duration_max=0.005,
+            pulse_duration=0.003,
         )
 
-    with pytest.raises(ValueError, match="Both Time pulse min max bounds need to be set for this model"):
+    with pytest.raises(ValueError, match="Both pulse duration min max bounds need to be set for this model"):
         OcpFes.prepare_ocp(
             model=DingModelPulseDurationFrequency(),
             n_stim=3,
             n_shooting=10,
             final_time=0.3,
-            pulse_time=0.001,
-            pulse_time_min=0.001,
+            pulse_duration=0.001,
+            pulse_duration_min=0.001,
         )
 
     minimum_pulse_duration = DingModelPulseDurationFrequency().pd0
-    pulse_time = 0.0001
+    pulse_duration = 0.0001
     with pytest.raises(
         ValueError,
         match=re.escape(
-            f"The pulse duration set ({pulse_time})"
+            f"The pulse duration set ({pulse_duration})"
             f" is lower than minimum duration required."
             f" Set a value above {minimum_pulse_duration} seconds "
         ),
     ):
         OcpFes.prepare_ocp(
-            model=DingModelPulseDurationFrequency(), n_stim=3, n_shooting=10, final_time=0.3, pulse_time=pulse_time
+            model=DingModelPulseDurationFrequency(),
+            n_stim=3,
+            n_shooting=10,
+            final_time=0.3,
+            pulse_duration=pulse_duration,
         )
 
-    with pytest.raises(TypeError, match="Wrong pulse_time type, only int or float accepted"):
+    with pytest.raises(TypeError, match="Wrong pulse_duration type, only int or float accepted"):
         OcpFes.prepare_ocp(
-            model=DingModelPulseDurationFrequency(), n_stim=3, n_shooting=10, final_time=0.3, pulse_time="0.001"
+            model=DingModelPulseDurationFrequency(), n_stim=3, n_shooting=10, final_time=0.3, pulse_duration="0.001"
         )
 
-    with pytest.raises(TypeError, match="pulse_time_min and pulse_time_max must be int or float type"):
+    with pytest.raises(TypeError, match="pulse_duration_min and pulse_duration_max must be int or float type"):
         OcpFes.prepare_ocp(
             model=DingModelPulseDurationFrequency(),
             n_stim=3,
             n_shooting=10,
             final_time=0.3,
-            pulse_time_min="0.001",
-            pulse_time_max=0.005,
+            pulse_duration_min="0.001",
+            pulse_duration_max=0.005,
         )
 
     with pytest.raises(ValueError, match="The set minimum pulse duration is higher than maximum pulse duration."):
@@ -580,15 +587,15 @@ def test_all_ocp_fes_errors():
             n_stim=3,
             n_shooting=10,
             final_time=0.3,
-            pulse_time_min=0.005,
-            pulse_time_max=0.001,
+            pulse_duration_min=0.005,
+            pulse_duration_max=0.001,
         )
 
-    pulse_time_min = pulse_time
+    pulse_duration_min = pulse_duration
     with pytest.raises(
         ValueError,
         match=re.escape(
-            f"The pulse duration set ({pulse_time_min})"
+            f"The pulse duration set ({pulse_duration_min})"
             f" is lower than minimum duration required."
             f" Set a value above {minimum_pulse_duration} seconds "
         ),
@@ -598,13 +605,14 @@ def test_all_ocp_fes_errors():
             n_stim=3,
             n_shooting=10,
             final_time=0.3,
-            pulse_time_min=pulse_time_min,
-            pulse_time_max=0.005,
+            pulse_duration_min=pulse_duration_min,
+            pulse_duration_max=0.005,
         )
 
     with pytest.raises(
         ValueError,
-        match="Time pulse parameter has not been set, input either pulse_time or pulse_time_min and" " pulse_time_max",
+        match="pulse duration parameter has not been set, input either pulse_duration or pulse_duration_min and"
+        " pulse_duration_max",
     ):
         OcpFes.prepare_ocp(model=DingModelPulseDurationFrequency(), n_stim=3, n_shooting=10, final_time=0.3)
 
@@ -614,9 +622,9 @@ def test_all_ocp_fes_errors():
             n_stim=3,
             n_shooting=10,
             final_time=0.3,
-            pulse_time_min=0.001,
-            pulse_time_max=0.005,
-            pulse_time_bimapping=True,
+            pulse_duration_min=0.001,
+            pulse_duration_max=0.005,
+            pulse_duration_bimapping=True,
         )
 
     with pytest.raises(
