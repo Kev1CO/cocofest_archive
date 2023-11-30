@@ -512,13 +512,6 @@ def test_all_ocp_fes_errors():
         )
 
     with pytest.raises(
-        ValueError,
-        match="pulse duration parameter has not been set, input either pulse_duration or pulse_duration_min and"
-        " pulse_duration_max",
-    ):
-        OcpFes.prepare_ocp(model=DingModelPulseDurationFrequency(), n_stim=3, n_shooting=10, final_time=0.3)
-
-    with pytest.raises(
         ValueError, match="pulse duration or pulse duration min max bounds need to be set for this model"
     ):
         OcpFes.prepare_ocp(
@@ -536,16 +529,6 @@ def test_all_ocp_fes_errors():
             pulse_duration_min=0.001,
             pulse_duration_max=0.005,
             pulse_duration=0.003,
-        )
-
-    with pytest.raises(ValueError, match="Both pulse duration min max bounds need to be set for this model"):
-        OcpFes.prepare_ocp(
-            model=DingModelPulseDurationFrequency(),
-            n_stim=3,
-            n_shooting=10,
-            final_time=0.3,
-            pulse_duration=0.001,
-            pulse_duration_min=0.001,
         )
 
     minimum_pulse_duration = DingModelPulseDurationFrequency().pd0
@@ -609,13 +592,6 @@ def test_all_ocp_fes_errors():
             pulse_duration_max=0.005,
         )
 
-    with pytest.raises(
-        ValueError,
-        match="pulse duration parameter has not been set, input either pulse_duration or pulse_duration_min and"
-        " pulse_duration_max",
-    ):
-        OcpFes.prepare_ocp(model=DingModelPulseDurationFrequency(), n_stim=3, n_shooting=10, final_time=0.3)
-
     with pytest.raises(NotImplementedError, match="Parameter mapping in bioptim not yet implemented"):
         OcpFes.prepare_ocp(
             model=DingModelPulseDurationFrequency(),
@@ -628,12 +604,12 @@ def test_all_ocp_fes_errors():
         )
 
     with pytest.raises(
-        ValueError, match="Intensity pulse or Intensity pulse min max bounds need to be set for this model"
+        ValueError, match="Pulse intensity or pulse intensity min max bounds need to be set for this model"
     ):
         OcpFes.prepare_ocp(model=DingModelIntensityFrequency(), n_stim=3, n_shooting=10, final_time=0.3)
 
     with pytest.raises(
-        ValueError, match="Either Intensity pulse or Intensity pulse min max bounds need to be set for this model"
+        ValueError, match="Either pulse intensity or pulse intensity min max bounds need to be set for this model"
     ):
         OcpFes.prepare_ocp(
             model=DingModelIntensityFrequency(),
@@ -645,7 +621,9 @@ def test_all_ocp_fes_errors():
             pulse_intensity=50,
         )
 
-    with pytest.raises(ValueError, match="Both Intensity pulse min max bounds need to be set for this model"):
+    with pytest.raises(
+        ValueError, match="Pulse intensity or pulse intensity min max bounds need to be set for this model"
+    ):
         OcpFes.prepare_ocp(
             model=DingModelIntensityFrequency(), n_stim=3, n_shooting=10, final_time=0.3, pulse_intensity_min=20
         )

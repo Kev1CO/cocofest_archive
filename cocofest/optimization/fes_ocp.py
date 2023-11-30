@@ -141,7 +141,7 @@ class OcpFes:
             n_threads=n_threads,
         )
 
-        OcpFes._sanity_check_2(n_stim=n_stim, final_time=final_time, frequency=frequency, round_down=round_down)
+        OcpFes._sanity_check_frequency(n_stim=n_stim, final_time=final_time, frequency=frequency, round_down=round_down)
 
         n_stim, final_time = OcpFes._build_phase_parameter(
             n_stim=n_stim, final_time=final_time, frequency=frequency, pulse_mode=pulse_mode, round_down=round_down
@@ -267,7 +267,7 @@ class OcpFes:
             else:
                 raise TypeError("frequency must be int or float type")
 
-        if time_min is not None and time_max is None or time_min is None and time_max is not None:
+        if [time_min, time_max].count(None) == 1:
             raise ValueError("time_min and time_max must be both entered or none of them in order to work")
 
         if time_bimapping:
@@ -275,17 +275,10 @@ class OcpFes:
                 raise TypeError("time_bimapping must be bool type")
 
         if isinstance(model, DingModelPulseDurationFrequency):
-            if pulse_duration is None and pulse_duration_min is not None and pulse_duration_max is None:
+            if pulse_duration is None and [pulse_duration_min, pulse_duration_max].count(None) != 0:
                 raise ValueError("pulse duration or pulse duration min max bounds need to be set for this model")
-            if pulse_duration is not None and pulse_duration_min is not None and pulse_duration_max is not None:
+            if all([pulse_duration, pulse_duration_min, pulse_duration_max]):
                 raise ValueError("Either pulse duration or pulse duration min max bounds need to be set for this model")
-            if (
-                pulse_duration_min is not None
-                and pulse_duration_max is None
-                or pulse_duration_min is None
-                and pulse_duration_max is not None
-            ):
-                raise ValueError("Both pulse duration min max bounds need to be set for this model")
 
             minimum_pulse_duration = model.pd0
 
@@ -311,11 +304,6 @@ class OcpFes:
                         f" is lower than minimum duration required."
                         f" Set a value above {minimum_pulse_duration} seconds "
                     )
-            else:
-                raise ValueError(
-                    "pulse duration parameter has not been set, input either pulse_duration or pulse_duration_min and"
-                    " pulse_duration_max"
-                )
 
             if pulse_duration_bimapping is not None:
                 if pulse_duration_bimapping is True:
@@ -323,19 +311,12 @@ class OcpFes:
                     # parameter_bimapping.add(name="pulse_duration", to_second=[0 for _ in range(n_stim)], to_first=[0])
 
         if isinstance(model, DingModelIntensityFrequency):
-            if pulse_intensity is None and pulse_intensity_min is None and pulse_intensity_max is None:
-                raise ValueError("Intensity pulse or Intensity pulse min max bounds need to be set for this model")
-            if pulse_intensity is not None and pulse_intensity_min is not None and pulse_intensity_max is not None:
+            if pulse_intensity is None and [pulse_intensity_min, pulse_intensity_max].count(None) != 0:
+                raise ValueError("Pulse intensity or pulse intensity min max bounds need to be set for this model")
+            if all([pulse_intensity, pulse_intensity_min, pulse_intensity_max]):
                 raise ValueError(
-                    "Either Intensity pulse or Intensity pulse min max bounds need to be set for this model"
+                    "Either pulse intensity or pulse intensity min max bounds need to be set for this model"
                 )
-            if (
-                pulse_intensity_min is not None
-                and pulse_intensity_max is None
-                or pulse_intensity_min is None
-                and pulse_intensity_max is not None
-            ):
-                raise ValueError("Both Intensity pulse min max bounds need to be set for this model")
 
             minimum_pulse_intensity = model.min_pulse_intensity()
 
@@ -398,7 +379,7 @@ class OcpFes:
             raise TypeError("n_thread must be a int type")
 
     @staticmethod
-    def _sanity_check_2(n_stim, final_time, frequency, round_down):
+    def _sanity_check_frequency(n_stim, final_time, frequency, round_down):
         if [n_stim, final_time, frequency].count(None) == 2:
             raise ValueError("At least two variable must be set from n_stim, final_time or frequency")
 
