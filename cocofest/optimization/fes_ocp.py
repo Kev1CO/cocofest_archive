@@ -431,27 +431,6 @@ class OcpFes:
                 for i in range(n_stim - 1):
                     final_time_phase = final_time_phase + (step,)
 
-            elif pulse_mode == "Doublet":
-                doublet_step = 0.005
-                step = final_time / (n_stim / 2) - doublet_step
-                final_time_phase = (doublet_step,)
-                for i in range(int(n_stim / 2)):
-                    final_time_phase = final_time_phase + (step,)
-                    final_time_phase = final_time_phase + (doublet_step,)
-
-            elif pulse_mode == "Triplet":
-                doublet_step = 0.005
-                triplet_step = 0.005
-                step = final_time / (n_stim / 3) - doublet_step - triplet_step
-                final_time_phase = (
-                    doublet_step,
-                    triplet_step,
-                )
-                for i in range(int(n_stim / 3)):
-                    final_time_phase = final_time_phase + (step,)
-                    final_time_phase = final_time_phase + (doublet_step,)
-                    final_time_phase = final_time_phase + (triplet_step,)
-
         else:
             for i in range(n_stim):
                 constraints.add(
@@ -530,7 +509,6 @@ class OcpFes:
                     # TODO : Fix Bimapping in Bioptim
 
         if isinstance(model, DingModelIntensityFrequency):
-            minimum_pulse_intensity = DingModelIntensityFrequency().min_pulse_intensity()
 
             if pulse_intensity is not None:
                 parameters_bounds.add(
@@ -658,7 +636,7 @@ class OcpFes:
         objective_functions = ObjectiveList()
         if custom_objective:
             for i in range(len(custom_objective)):
-                objective_functions.add(custom_objective[i])
+                objective_functions.add(custom_objective[0][i])
 
         if force_fourier_coef is not None:
             for phase in range(n_stim):
