@@ -91,7 +91,7 @@ class DingModelPulseDurationFrequency(DingModelFrequency):
         f_dot = self.f_dot_fun(cn, f, a, self.tau1_rest, self.km_rest)  # Equation n°2 from Ding's 2003 article
         return vertcat(cn_dot, f_dot)
 
-    def a_calculation(self, impulse_time: list[MX]) -> MX:
+    def a_calculation(self, impulse_time: MX) -> MX:
         """
         Parameters
         ----------
