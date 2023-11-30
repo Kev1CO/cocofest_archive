@@ -4,7 +4,7 @@ import numpy as np
 import pytest
 
 from bioptim import Solver
-from cocofest import OcpFesId, DingModelFrequency, DingModelPulseDurationFrequency, DingModelIntensityFrequency
+from cocofest import OcpFesId, DingModelFrequency, DingModelPulseDurationFrequency, DingModelIntensityFrequency, DingModelFrequencyWithFatigue
 
 model = DingModelFrequency
 stim = [0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9]
@@ -107,7 +107,7 @@ force_at_node = [
 
 def test_ocp_id():
     ocp = OcpFesId.prepare_ocp(
-        model=model(with_fatigue=False),
+        model=model(),
         final_time_phase=final_time_phase,
         n_shooting=n_shooting,
         force_tracking=force_at_node,
@@ -130,33 +130,33 @@ def test_all_ocp_id_errors():
     with pytest.raises(
         ValueError, match="a_rest, km_rest, tau1_rest and tau2 must be set for fatigue model identification"
     ):
-        OcpFesId.prepare_ocp(model=DingModelFrequency(), a_rest=3009, km_rest=0.103, tau1_rest=0.050957)
+        OcpFesId.prepare_ocp(model=DingModelFrequencyWithFatigue(), a_rest=3009, km_rest=0.103, tau1_rest=0.050957)
 
     a_rest = "3009"
     with pytest.raises(
         TypeError, match=re.escape(f"a_rest must be int or float type," f" currently a_rest is {type(a_rest)}) type.")
     ):
-        OcpFesId.prepare_ocp(model=DingModelFrequency(), a_rest=a_rest, km_rest=0.103, tau1_rest=0.050957, tau2=0.06)
+        OcpFesId.prepare_ocp(model=DingModelFrequencyWithFatigue(), a_rest=a_rest, km_rest=0.103, tau1_rest=0.050957, tau2=0.06)
 
     km_rest = "0.103"
     with pytest.raises(
         TypeError,
         match=re.escape(f"km_rest must be int or float type," f" currently km_rest is {type(km_rest)}) type."),
     ):
-        OcpFesId.prepare_ocp(model=DingModelFrequency(), a_rest=3009, km_rest=km_rest, tau1_rest=0.050957, tau2=0.06)
+        OcpFesId.prepare_ocp(model=DingModelFrequencyWithFatigue(), a_rest=3009, km_rest=km_rest, tau1_rest=0.050957, tau2=0.06)
 
     tau1_rest = "0.050957"
     with pytest.raises(
         TypeError,
         match=re.escape(f"tau1_rest must be int or float type," f" currently tau1_rest is {type(tau1_rest)}) type."),
     ):
-        OcpFesId.prepare_ocp(model=DingModelFrequency(), a_rest=3009, km_rest=0.103, tau1_rest=tau1_rest, tau2=0.06)
+        OcpFesId.prepare_ocp(model=DingModelFrequencyWithFatigue(), a_rest=3009, km_rest=0.103, tau1_rest=tau1_rest, tau2=0.06)
 
     tau2 = "0.06"
     with pytest.raises(
         TypeError, match=re.escape(f"tau2 must be int or float type," f" currently tau2 is {type(tau2)}) type.")
     ):
-        OcpFesId.prepare_ocp(model=DingModelFrequency(), a_rest=3009, km_rest=0.103, tau1_rest=0.050957, tau2=tau2)
+        OcpFesId.prepare_ocp(model=DingModelFrequencyWithFatigue(), a_rest=3009, km_rest=0.103, tau1_rest=0.050957, tau2=tau2)
 
     n_shooting = "10"
     with pytest.raises(

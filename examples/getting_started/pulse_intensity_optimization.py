@@ -12,7 +12,7 @@ from cocofest import DingModelIntensityFrequency, OcpFes
 # Plus the pulsation intensity will be optimized between 0 and 130 mA and are not the same across the problem.
 minimum_pulse_intensity = DingModelIntensityFrequency.min_pulse_intensity(DingModelIntensityFrequency())
 ocp = OcpFes().prepare_ocp(
-    model=DingModelIntensityFrequency(with_fatigue=False),
+    model=DingModelIntensityFrequency(),
     n_stim=10,
     n_shooting=20,
     final_time=1,

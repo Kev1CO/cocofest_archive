@@ -26,10 +26,11 @@ class DingModelPulseDurationFrequencyWithFatigue(DingModelPulseDurationFrequency
     Muscle & Nerve: Official Journal of the American Association of Electrodiagnostic Medicine, 36(2), 214-222.
     """
 
-    def __init__(self, name: str = None, sum_stim_truncation: int = None):
+    def __init__(self, name: str = "ding_2007_with_fatigue", sum_stim_truncation: int = None):
         super(DingModelPulseDurationFrequencyWithFatigue, self).__init__(
             name=name, sum_stim_truncation=sum_stim_truncation
         )
+        self._with_fatigue = True
 
         # ---- Fatigue models ---- #
         self.alpha_a = -4.0 * 10e-7  # Value from Ding's experimentation [1] (s^-2)

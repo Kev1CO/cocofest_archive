@@ -9,7 +9,7 @@ from bioptim import (
     PhaseDynamics,
 )
 
-from cocofest import DingModelFrequency, DingModelPulseDurationFrequency, DingModelIntensityFrequency
+from cocofest import DingModelFrequency, DingModelFrequencyWithFatigue, DingModelPulseDurationFrequency, DingModelPulseDurationFrequencyWithFatigue, DingModelIntensityFrequency, DingModelIntensityFrequencyWithFatigue
 
 
 class IvpFes(OptimalControlProgram):
@@ -19,7 +19,7 @@ class IvpFes(OptimalControlProgram):
 
     Attributes
     ----------
-    model: DingModelFrequency | DingModelPulseDurationFrequency| DingModelIntensityFrequency
+    model: DingModelFrequency | DingModelFrequencyWithFatigue | DingModelPulseDurationFrequency | DingModelPulseDurationFrequencyWithFatigue | DingModelIntensityFrequency | DingModelIntensityFrequencyWithFatigue
         The model type used for the ocp
     n_stim: int
         Number of stimulation that will occur during the ocp, it is as well refer as phases
@@ -48,7 +48,7 @@ class IvpFes(OptimalControlProgram):
 
     def __init__(
         self,
-        model: DingModelFrequency | DingModelPulseDurationFrequency | DingModelIntensityFrequency,
+        model: DingModelFrequency | DingModelFrequencyWithFatigue | DingModelPulseDurationFrequency | DingModelPulseDurationFrequencyWithFatigue | DingModelIntensityFrequency | DingModelIntensityFrequencyWithFatigue,
         n_stim: int = None,
         n_shooting: int = None,
         final_time: float = None,
@@ -102,7 +102,7 @@ class IvpFes(OptimalControlProgram):
 
         parameters = ParameterList()
         parameters_init = InitialGuessList()
-        if isinstance(model, DingModelPulseDurationFrequency):
+        if isinstance(model, DingModelPulseDurationFrequency | DingModelPulseDurationFrequencyWithFatigue):
             minimum_pulse_duration = model.pd0
             if isinstance(pulse_duration, bool) or not isinstance(pulse_duration, int | float | list):
                 raise TypeError("pulse_duration must be int, float or list type")
@@ -133,7 +133,7 @@ class IvpFes(OptimalControlProgram):
                 size=n_stim,
             )
 
-        if isinstance(model, DingModelIntensityFrequency):
+        if isinstance(model, DingModelIntensityFrequency | DingModelIntensityFrequencyWithFatigue):
             minimum_pulse_intensity = model.min_pulse_intensity()
             if isinstance(pulse_intensity, bool) or not isinstance(pulse_intensity, int | float | list):
                 raise TypeError("pulse_intensity must be int, float or list type")
@@ -224,7 +224,7 @@ class IvpFes(OptimalControlProgram):
     @classmethod
     def from_frequency_and_final_time(
         cls,
-        model: DingModelFrequency | DingModelPulseDurationFrequency | DingModelIntensityFrequency,
+        model: DingModelFrequency | DingModelFrequencyWithFatigue | DingModelPulseDurationFrequency | DingModelPulseDurationFrequencyWithFatigue | DingModelIntensityFrequency | DingModelIntensityFrequencyWithFatigue,
         n_shooting: int,
         final_time: float,
         frequency: int | float = None,
@@ -260,7 +260,7 @@ class IvpFes(OptimalControlProgram):
     @classmethod
     def from_frequency_and_n_stim(
         cls,
-        model: DingModelFrequency | DingModelPulseDurationFrequency | DingModelIntensityFrequency,
+        model: DingModelFrequency | DingModelFrequencyWithFatigue | DingModelPulseDurationFrequency | DingModelPulseDurationFrequencyWithFatigue | DingModelIntensityFrequency | DingModelIntensityFrequencyWithFatigue,
         n_stim: int,
         n_shooting: int,
         frequency: int | float = None,

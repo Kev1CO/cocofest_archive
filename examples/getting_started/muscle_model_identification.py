@@ -28,7 +28,7 @@ print("a_rest : ", a_rest, "km_rest : ", km_rest, "tau1_rest : ", tau1_rest, "ta
 # This problem was build to be integrated and has no objectives nor parameter to optimize.
 # Therefore, the flag for_optimal_control is set to False.
 ivp = IvpFes(
-    model=DingModelFrequency(with_fatigue=False),
+    model=DingModelFrequency(),
     n_stim=10,
     n_shooting=10,
     final_time=1,
@@ -59,11 +59,11 @@ with open(pickle_file_name, "wb") as file:
     pickle.dump(dictionary, file)
 
 ocp = DingModelFrequencyParameterIdentification(
-    model=DingModelFrequency,
+    model=DingModelFrequency(),
     force_model_data_path=[pickle_file_name],
     force_model_identification_method="full",
     force_model_identification_with_average_method_initial_guess=False,
-    n_shooting=10,
+    n_shooting=100,
     use_sx=True,
 )
 

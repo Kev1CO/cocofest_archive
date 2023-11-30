@@ -28,11 +28,12 @@ class DingModelFrequency:
 
     def __init__(
         self,
-        name: str = None,
+        name: str = "ding2003",
         sum_stim_truncation: int = None,
     ):
         self._name = name
         self._sum_stim_truncation = sum_stim_truncation
+        self._with_fatigue = False
         # ---- Custom values for the example ---- #
         self.tauc = 0.020  # Value from Ding's experimentation [1] (s)
         self.r0_km_relationship = 1.04  # (unitless)

@@ -26,9 +26,9 @@ class DingModelPulseDurationFrequency(DingModelFrequency):
     Muscle & Nerve: Official Journal of the American Association of Electrodiagnostic Medicine, 36(2), 214-222.
     """
 
-    def __init__(self, name: str = None, sum_stim_truncation: int = None):
+    def __init__(self, name: str = "ding_2007", sum_stim_truncation: int = None):
         super(DingModelPulseDurationFrequency, self).__init__(name=name, sum_stim_truncation=sum_stim_truncation)
-
+        self._with_fatigue = False
         self.impulse_time = None
         # ---- Custom values for the example ---- #
         # ---- Force models ---- #

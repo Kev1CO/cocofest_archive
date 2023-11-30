@@ -101,7 +101,7 @@ def test_ding2007_dynamics():
     )
     np.testing.assert_almost_equal(
         np.array(
-            model.system_dynamics_with_fatigue(
+            model.system_dynamics(
                 cn=5, f=100, tau1=0.050957, km=0.103, t=0.11, t_stim_prev=[0, 0.1], impulse_time=0.0002
             )
         ).squeeze(),
@@ -175,7 +175,7 @@ def test_hmed2018_dynamics():
     )
     np.testing.assert_almost_equal(
         np.array(
-            model.system_dynamics_with_fatigue(
+            model.system_dynamics(
                 cn=5, f=100, a=3009, tau1=0.050957, km=0.103, t=0.11, t_stim_prev=[0, 0.1], intensity_stim=[30, 50]
             )
         ).squeeze(),

@@ -26,8 +26,9 @@ class DingModelIntensityFrequency(DingModelFrequency):
     Computers in Biology and Medicine, 101, 218-228.
     """
 
-    def __init__(self, name: str = None, sum_stim_truncation: int = None):
+    def __init__(self, name: str = "hmed2018", sum_stim_truncation: int = None):
         super(DingModelIntensityFrequency, self).__init__(name=name, sum_stim_truncation=sum_stim_truncation)
+        self._with_fatigue = False
         # ---- Custom values for the example ---- #
         # ---- Force models ---- #
         self.ar = 0.586  # (-) Translation of axis coordinates.

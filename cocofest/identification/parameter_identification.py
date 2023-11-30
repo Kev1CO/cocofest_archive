@@ -5,8 +5,11 @@ import numpy as np
 from bioptim import Solver
 from cocofest import (
     DingModelFrequency,
+    DingModelFrequencyWithFatigue,
     DingModelPulseDurationFrequency,
+    DingModelPulseDurationFrequencyWithFatigue,
     DingModelIntensityFrequency,
+    DingModelIntensityFrequencyWithFatigue,
 )
 from cocofest.optimization.fes_identification_ocp import OcpFesId
 
@@ -45,7 +48,7 @@ class DingModelFrequencyParameterIdentification:
 
     def __init__(
         self,
-        model: DingModelFrequency | DingModelPulseDurationFrequency | DingModelIntensityFrequency,
+        model: DingModelFrequency | DingModelFrequencyWithFatigue | DingModelPulseDurationFrequency | DingModelPulseDurationFrequencyWithFatigue | DingModelIntensityFrequency | DingModelIntensityFrequencyWithFatigue,
         force_model_data_path: str | list[str] = None,
         force_model_identification_method: str = "full",
         force_model_identification_with_average_method_initial_guess: bool = False,
@@ -416,7 +419,6 @@ class DingModelFrequencyParameterIdentification:
         # --- Building force ocp --- #
         self.force_ocp = OcpFesId.prepare_ocp(
             model=self.model,
-            with_fatigue=False,
             final_time_phase=final_time_phase,
             n_shooting=n_shooting,
             force_tracking=force_at_node,
@@ -480,7 +482,7 @@ class DingModelFrequencyParameterIdentification:
         # --- Building force ocp --- #
         start_time = time_package.time()
         self.force_ocp = OcpFesId.prepare_ocp(
-            model=self.model(with_fatigue=False),
+            model=self.model,
             final_time_phase=final_time_phase,
             n_shooting=n_shooting,
             force_tracking=force_at_node,
@@ -536,7 +538,6 @@ class DingModelFrequencyParameterIdentification:
         if self.a_rest and self.km_rest and self.tau1_rest and self.tau2:
             self.fatigue_ocp = OcpFesId.prepare_ocp(
                 model=self.model,
-                with_fatigue=True,
                 final_time_phase=final_time_phase,
                 n_shooting=n_shooting,
                 force_tracking=force_at_node,
