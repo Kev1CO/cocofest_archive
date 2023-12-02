@@ -40,7 +40,6 @@ class OcpFesId(OcpFes):
         | DingModelPulseDurationFrequencyWithFatigue
         | DingModelIntensityFrequency
         | DingModelIntensityFrequencyWithFatigue = None,
-        n_stim: int = None,
         n_shooting: list[int] = None,
         final_time_phase: tuple | list = None,
         pulse_duration: int | float = None,
@@ -66,13 +65,11 @@ class OcpFesId(OcpFes):
         model: DingModelFrequency | DingModelFrequencyWithFatigue | DingModelPulseDurationFrequency | DingModelPulseDurationFrequencyWithFatigue | DingModelIntensityFrequency | DingModelIntensityFrequencyWithFatigue,
             The model used to solve the ocp
         final_time_phase: tuple, list
-            The final time of each phase
+            The final time of each phase, it corresponds to the stimulation apparition time
         n_shooting: list[int],
             The number of shooting points for each phase
         force_tracking: list[np.ndarray, np.ndarray],
             The force tracking to follow
-        pulse_apparition_time: list[int] | list[float],
-            The time when the stimulation is applied
         pulse_duration: list[int] | list[float],
             The duration of the stimulation
         pulse_intensity: list[int] | list[float],
@@ -97,7 +94,6 @@ class OcpFesId(OcpFes):
 
         OcpFesId._sanity_check(
             model=model,
-            n_stim=n_stim,
             custom_objective=custom_objective,
             use_sx=use_sx,
             ode_solver=ode_solver,
@@ -109,6 +105,7 @@ class OcpFesId(OcpFes):
         OcpFesId._sanity_check_id(
             model=model,
             n_shooting=n_shooting,
+            final_time_phase=final_time_phase,
             a_rest=a_rest,
             km_rest=km_rest,
             tau1_rest=tau1_rest,
@@ -118,10 +115,13 @@ class OcpFesId(OcpFes):
             pulse_intensity=pulse_intensity,
         )
 
-        if model._with_fatigue:
+        if a_rest:
             model.set_a_rest(model=None, a_rest=a_rest)
+        if km_rest:
             model.set_km_rest(model=None, km_rest=km_rest)
+        if tau1_rest:
             model.set_tau1_rest(model=None, tau1_rest=tau1_rest)
+        if tau2:
             model.set_tau2(model=None, tau2=tau2)
 
         n_stim = len(final_time_phase)
@@ -169,6 +169,7 @@ class OcpFesId(OcpFes):
     def _sanity_check_id(
         model=None,
         n_shooting=None,
+        final_time_phase=None,
         a_rest=None,
         km_rest=None,
         tau1_rest=None,
@@ -196,6 +197,16 @@ class OcpFesId(OcpFes):
         else:
             if not all(isinstance(val, int) for val in n_shooting):
                 raise TypeError(f"n_shooting must be list of int type.")
+
+        if isinstance(final_time_phase, tuple):
+            if not all(isinstance(val, int | float) for val in final_time_phase):
+                raise TypeError(f"final_time_phase must be tuple of int or float type.")
+            if len(final_time_phase) != len(n_shooting):
+                raise ValueError(
+                    f"final_time_phase must have same length as n_shooting, currently final_time_phase is {len(final_time_phase)} and n_shooting is {len(n_shooting)}."
+                )
+        else:
+            raise TypeError(f"final_time_phase must be tuple type," f" currently final_time_phase is {type(final_time_phase)}) type.")
 
         if not isinstance(force_tracking, list):
             raise TypeError(

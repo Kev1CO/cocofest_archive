@@ -380,3 +380,7 @@ class DingModelFrequency:
         if not isinstance(t_stim_prev[0], (MX, float)):
             t_stim_prev = [ocp.node_time(phase_idx=i, node_idx=0, type="mx") for i in range(nlp.phase_idx + 1)]
         return t_stim_prev
+
+    @property
+    def with_fatigue(self):
+        return self._with_fatigue
