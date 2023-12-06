@@ -454,11 +454,7 @@ class OcpFes:
         else:
             for i in range(n_stim):
                 constraints.add(
-                    ConstraintFcn.TIME_CONSTRAINT,
-                    node=Node.END,
-                    min_bound=time_min,
-                    max_bound=time_max,
-                    phase=i,
+                    ConstraintFcn.TIME_CONSTRAINT, node=Node.END, min_bound=time_min, max_bound=time_max, phase=i,
                 )
 
             if time_bimapping is True:
@@ -498,7 +494,6 @@ class OcpFes:
                         min_bound=np.array(pulse_duration),
                         max_bound=np.array(pulse_duration),
                         interpolation=InterpolationType.CONSTANT,
-
                     )
                     parameters_init.add(key="pulse_duration", initial_guess=np.array(pulse_duration))
                 else:
@@ -551,7 +546,6 @@ class OcpFes:
                         min_bound=np.array(pulse_intensity),
                         max_bound=np.array(pulse_intensity),
                         interpolation=InterpolationType.CONSTANT,
-
                     )
                     parameters_init.add(key="pulse_intensity", initial_guess=np.array(pulse_intensity))
                 else:

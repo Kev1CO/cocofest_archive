@@ -12,5 +12,9 @@ from .integration.ivp_fes import IvpFes
 from .fourier_approx import FourierSeries
 from .read_data import ExtractData
 from .identification.ding2003_force_parameter_identification import DingModelFrequencyForceParameterIdentification
-from .identification.ding2007_force_parameter_identification import DingModelPulseDurationFrequencyForceParameterIdentification
-from .identification.hmed2018_force_parameter_identification import DingModelPulseIntensityFrequencyForceParameterIdentification
+from .identification.ding2007_force_parameter_identification import (
+    DingModelPulseDurationFrequencyForceParameterIdentification,
+)
+from .identification.hmed2018_force_parameter_identification import (
+    DingModelPulseIntensityFrequencyForceParameterIdentification,
+)

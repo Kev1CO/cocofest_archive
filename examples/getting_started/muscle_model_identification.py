@@ -374,14 +374,37 @@ ocp = DingModelPulseIntensityFrequencyForceParameterIdentification(
 
 identified_parameters = ocp.force_model_identification()
 a_rest = identified_parameters["a_rest"] if "a_rest" in identified_parameters else DingModelIntensityFrequency().a_rest
-km_rest = identified_parameters["km_rest"] if "km_rest" in identified_parameters else DingModelIntensityFrequency().km_rest
-tau1_rest = identified_parameters["tau1_rest"] if "tau1_rest" in identified_parameters else DingModelIntensityFrequency().tau1_rest
+km_rest = (
+    identified_parameters["km_rest"] if "km_rest" in identified_parameters else DingModelIntensityFrequency().km_rest
+)
+tau1_rest = (
+    identified_parameters["tau1_rest"]
+    if "tau1_rest" in identified_parameters
+    else DingModelIntensityFrequency().tau1_rest
+)
 tau2 = identified_parameters["tau2"] if "tau2" in identified_parameters else DingModelIntensityFrequency().tau2
 ar = identified_parameters["ar"] if "ar" in identified_parameters else DingModelIntensityFrequency().ar
 bs = identified_parameters["bs"] if "bs" in identified_parameters else DingModelIntensityFrequency().bs
 Is = identified_parameters["Is"] if "Is" in identified_parameters else DingModelIntensityFrequency().Is
 cr = identified_parameters["cr"] if "cr" in identified_parameters else DingModelIntensityFrequency().cr
-print("a_rest : ", a_rest, "km_rest : ", km_rest, "tau1_rest : ", tau1_rest, "tau2 : ", tau2, "ar : ", ar, "bs : ", bs, "Is : ", Is, "cr : ", cr)
+print(
+    "a_rest : ",
+    a_rest,
+    "km_rest : ",
+    km_rest,
+    "tau1_rest : ",
+    tau1_rest,
+    "tau2 : ",
+    tau2,
+    "ar : ",
+    ar,
+    "bs : ",
+    bs,
+    "Is : ",
+    Is,
+    "cr : ",
+    cr,
+)
 
 identified_model = DingModelIntensityFrequency()
 identified_model.a_rest = a_rest
@@ -397,12 +420,7 @@ identified_force_list = []
 identified_time_list = []
 
 ivp_from_identification = IvpFes(
-    model=identified_model,
-    n_stim=10,
-    n_shooting=10,
-    final_time=1,
-    use_sx=True,
-    pulse_intensity=pulse_intensity_values,
+    model=identified_model, n_stim=10, n_shooting=10, final_time=1, use_sx=True, pulse_intensity=pulse_intensity_values,
 )
 
 # Creating the solution from the initial guess
@@ -470,5 +488,3 @@ os.remove(f"../data/temp_identification_simulation.pkl")
 
 plt.legend()
 plt.show()
-
-

@@ -67,12 +67,7 @@ class DingModelPulseDurationFrequency(DingModelFrequency):
         )
 
     def system_dynamics(
-        self,
-        cn: MX,
-        f: MX,
-        t: MX = None,
-        t_stim_prev: list[MX] | list[float] = None,
-        impulse_time: MX = None,
+        self, cn: MX, f: MX, t: MX = None, t_stim_prev: list[MX] | list[float] = None, impulse_time: MX = None,
     ) -> MX:
         """
         The system dynamics is the function that describes the models.
@@ -186,11 +181,7 @@ class DingModelPulseDurationFrequency(DingModelFrequency):
 
         return DynamicsEvaluation(
             dxdt=nlp.model.system_dynamics(
-                cn=states[0],
-                f=states[1],
-                t=time,
-                t_stim_prev=stim_apparition,
-                impulse_time=impulse_time,
+                cn=states[0], f=states[1], t=time, t_stim_prev=stim_apparition, impulse_time=impulse_time,
             ),
             defects=None,
         )

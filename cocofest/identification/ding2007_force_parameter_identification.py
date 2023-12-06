@@ -62,30 +62,68 @@ class DingModelPulseDurationFrequencyForceParameterIdentification(DingModelFrequ
         self.pd0 = pd0
         self.pdt = pdt
 
-        super(DingModelPulseDurationFrequencyForceParameterIdentification, self).__init__(model=model,
-        data_path=data_path,
-        identification_method=identification_method,
-        identification_with_average_method_initial_guess=identification_with_average_method_initial_guess,
-        key_parameter_to_identify=key_parameter_to_identify,
-        additional_key_settings=additional_key_settings,
-        n_shooting=n_shooting,
-        km_rest = km_rest,
-        tau1_rest = tau1_rest,
-        tau2 = tau2,
-        custom_objective=custom_objective,
-        use_sx=use_sx,
-        ode_solver=ode_solver,
-        n_threads=n_threads)
+        super(DingModelPulseDurationFrequencyForceParameterIdentification, self).__init__(
+            model=model,
+            data_path=data_path,
+            identification_method=identification_method,
+            identification_with_average_method_initial_guess=identification_with_average_method_initial_guess,
+            key_parameter_to_identify=key_parameter_to_identify,
+            additional_key_settings=additional_key_settings,
+            n_shooting=n_shooting,
+            km_rest=km_rest,
+            tau1_rest=tau1_rest,
+            tau2=tau2,
+            custom_objective=custom_objective,
+            use_sx=use_sx,
+            ode_solver=ode_solver,
+            n_threads=n_threads,
+        )
 
     def _set_default_values(self, model):
         return {
-                "tau1_rest": {"initial_guess": 0.5, "min_bound": 0.0001, "max_bound": 1, "function": model.set_tau1_rest, "scaling": 10000},
-                "tau2": {"initial_guess": 0.5, "min_bound": 0.0001, "max_bound": 1, "function": model.set_tau2, "scaling": 10000},
-                "km_rest": {"initial_guess": 0.5, "min_bound": 0.001, "max_bound": 1, "function": model.set_km_rest, "scaling": 10000},
-                "a_scale": {"initial_guess": 5000, "min_bound": 1, "max_bound": 10000, "function": model.set_a_scale, "scaling": 1},
-                "pd0": {"initial_guess": 1e-4, "min_bound": 1e-4, "max_bound": 6e-4, "function": model.set_pd0, "scaling": 1e3},
-                "pdt": {"initial_guess": 1e-4, "min_bound": 1e-4, "max_bound": 6e-4, "function": model.set_pdt, "scaling": 1e3}, # TODO : work on scaling, decreases time optimization
-            }
+            "tau1_rest": {
+                "initial_guess": 0.5,
+                "min_bound": 0.0001,
+                "max_bound": 1,
+                "function": model.set_tau1_rest,
+                "scaling": 10000,
+            },
+            "tau2": {
+                "initial_guess": 0.5,
+                "min_bound": 0.0001,
+                "max_bound": 1,
+                "function": model.set_tau2,
+                "scaling": 10000,
+            },
+            "km_rest": {
+                "initial_guess": 0.5,
+                "min_bound": 0.001,
+                "max_bound": 1,
+                "function": model.set_km_rest,
+                "scaling": 10000,
+            },
+            "a_scale": {
+                "initial_guess": 5000,
+                "min_bound": 1,
+                "max_bound": 10000,
+                "function": model.set_a_scale,
+                "scaling": 1,
+            },
+            "pd0": {
+                "initial_guess": 1e-4,
+                "min_bound": 1e-4,
+                "max_bound": 6e-4,
+                "function": model.set_pd0,
+                "scaling": 1e3,
+            },
+            "pdt": {
+                "initial_guess": 1e-4,
+                "min_bound": 1e-4,
+                "max_bound": 6e-4,
+                "function": model.set_pdt,
+                "scaling": 1e3,
+            },  # TODO : work on scaling, decreases time optimization
+        }
 
     def _set_default_parameters_list(self):
         self.model_parameter_list = [self.tau1_rest, self.tau2, self.km_rest, self.a_scale, self.pd0, self.pdt]
@@ -109,6 +147,7 @@ class DingModelPulseDurationFrequencyForceParameterIdentification(DingModelFrequ
     @staticmethod
     def pulse_duration_extraction(data_path: str) -> list[float]:
         import pickle
+
         pulse_duration = []
         for i in range(len(data_path)):
             with open(data_path[i], "rb") as f:
@@ -118,7 +157,15 @@ class DingModelPulseDurationFrequencyForceParameterIdentification(DingModelFrequ
         return pulse_duration
 
     def _force_model_identification_for_initial_guess(self):
-        self.input_sanity(self.model, self.data_path, self.force_model_identification_method, self.identification_with_average_method_initial_guess, self.key_parameter_to_identify, self.additional_key_settings, self.n_shooting)
+        self.input_sanity(
+            self.model,
+            self.data_path,
+            self.force_model_identification_method,
+            self.identification_with_average_method_initial_guess,
+            self.key_parameter_to_identify,
+            self.additional_key_settings,
+            self.n_shooting,
+        )
         self.data_sanity(self.data_path)
         # --- Data extraction --- #
         # --- Force model --- #
@@ -159,9 +206,15 @@ class DingModelPulseDurationFrequencyForceParameterIdentification(DingModelFrequ
 
     def force_model_identification(self):
         if not self.identification_with_average_method_initial_guess:
-            self.input_sanity(self.model, self.data_path, self.force_model_identification_method,
-                              self.identification_with_average_method_initial_guess, self.key_parameter_to_identify,
-                              self.additional_key_settings, self.n_shooting)
+            self.input_sanity(
+                self.model,
+                self.data_path,
+                self.force_model_identification_method,
+                self.identification_with_average_method_initial_guess,
+                self.key_parameter_to_identify,
+                self.additional_key_settings,
+                self.n_shooting,
+            )
             self.data_sanity(self.data_path)
 
         # --- Data extraction --- #
@@ -179,9 +232,7 @@ class DingModelPulseDurationFrequencyForceParameterIdentification(DingModelFrequ
 
         elif self.force_model_identification_method == "sparse":
             force_curve_number = self.kwargs["force_curve_number"] if "force_curve_number" in self.kwargs else 5
-            time, stim, force, discontinuity = self.sparse_data_extraction(
-                self.data_path, force_curve_number
-            )
+            time, stim, force, discontinuity = self.sparse_data_extraction(self.data_path, force_curve_number)
             pulse_duration = self.pulse_duration_extraction(self.data_path)  # TODO : adapt this for sparse data
         else:
             raise ValueError(

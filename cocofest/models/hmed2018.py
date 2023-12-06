@@ -50,7 +50,6 @@ class DingModelIntensityFrequency(DingModelFrequency):
     def set_cr(self, model, cr: MX | float):
         self.cr = cr
 
-
     # ---- Absolutely needed methods ---- #
     def serialize(self) -> tuple[Callable, dict]:
         # This is where you can serialize your models
@@ -258,11 +257,7 @@ class DingModelIntensityFrequency(DingModelFrequency):
 
         return DynamicsEvaluation(
             dxdt=nlp.model.system_dynamics(
-                cn=states[0],
-                f=states[1],
-                t=time,
-                t_stim_prev=stim_apparition,
-                intensity_stim=intensity_stim_prev,
+                cn=states[0], f=states[1], t=time, t_stim_prev=stim_apparition, intensity_stim=intensity_stim_prev,
             ),
             defects=None,
         )

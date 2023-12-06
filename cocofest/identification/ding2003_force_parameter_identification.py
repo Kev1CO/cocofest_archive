@@ -1,5 +1,6 @@
 import time as time_package
 import numpy as np
+import pickle
 
 from bioptim import Solver, Objective, OdeSolver
 from cocofest import DingModelFrequency
@@ -79,9 +80,7 @@ class DingModelFrequencyForceParameterIdentification:
 
         self.data_path = data_path
         self.force_model_identification_method = identification_method
-        self.identification_with_average_method_initial_guess = (
-            identification_with_average_method_initial_guess
-        )
+        self.identification_with_average_method_initial_guess = identification_with_average_method_initial_guess
 
         self.force_ocp = None
         self.force_identification_result = None
@@ -94,17 +93,50 @@ class DingModelFrequencyForceParameterIdentification:
 
     def _set_default_values(self, model):
         return {
-            "a_rest": {"initial_guess": 1000, "min_bound": 1, "max_bound": 10000, "function": model.set_a_rest, "scaling": 1},
-            "km_rest": {"initial_guess": 0.5, "min_bound": 0.001, "max_bound": 1, "function": model.set_km_rest, "scaling": 1000},
-            "tau1_rest": {"initial_guess": 0.5, "min_bound": 0.0001, "max_bound": 1, "function": model.set_tau1_rest, "scaling": 1000},
-            "tau2": {"initial_guess": 0.5, "min_bound": 0.0001, "max_bound": 1, "function": model.set_tau2, "scaling": 1000},
+            "a_rest": {
+                "initial_guess": 1000,
+                "min_bound": 1,
+                "max_bound": 10000,
+                "function": model.set_a_rest,
+                "scaling": 1,
+            },
+            "km_rest": {
+                "initial_guess": 0.5,
+                "min_bound": 0.001,
+                "max_bound": 1,
+                "function": model.set_km_rest,
+                "scaling": 1000,
+            },
+            "tau1_rest": {
+                "initial_guess": 0.5,
+                "min_bound": 0.0001,
+                "max_bound": 1,
+                "function": model.set_tau1_rest,
+                "scaling": 1000,
+            },
+            "tau2": {
+                "initial_guess": 0.5,
+                "min_bound": 0.0001,
+                "max_bound": 1,
+                "function": model.set_tau2,
+                "scaling": 1000,
+            },
         }
 
     def _set_default_parameters_list(self):
         self.model_parameter_list = [self.a_rest, self.km_rest, self.tau1_rest, self.tau2]
         self.model_key_parameter_list = ["a_rest", "km_rest", "tau1_rest", "tau2"]
 
-    def input_sanity(self, model, data_path, identification_method, identification_with_average_method_initial_guess, key_parameter_to_identify, additional_key_settings, n_shooting):
+    def input_sanity(
+        self,
+        model,
+        data_path,
+        identification_method,
+        identification_with_average_method_initial_guess,
+        key_parameter_to_identify,
+        additional_key_settings,
+        n_shooting,
+    ):
         if model._with_fatigue:
             raise ValueError(
                 f"The given model is not valid and should not be including the fatigue equation in the model"
@@ -153,7 +185,9 @@ class DingModelFrequencyForceParameterIdentification:
                             f" the given value is {setting_name},"
                             f" the available values are {list(self.default_values[key].keys())}"
                         )
-                    if not isinstance(additional_key_settings[key][setting_name], type(self.default_values[key][setting_name])):
+                    if not isinstance(
+                        additional_key_settings[key][setting_name], type(self.default_values[key][setting_name])
+                    ):
                         raise TypeError(
                             f"The given additional_key_settings value is not valid,"
                             f" the given value is {type(additional_key_settings[key][setting_name])},"
@@ -166,16 +200,11 @@ class DingModelFrequencyForceParameterIdentification:
             )
 
         if not isinstance(n_shooting, int):
-            raise TypeError(
-                f"The given n_shooting must be int type,"
-                f" the given value is {type(n_shooting)} type"
-            )
+            raise TypeError(f"The given n_shooting must be int type," f" the given value is {type(n_shooting)} type")
 
         self._set_default_parameters_list()
         if not all(isinstance(param, None | int | float) for param in self.model_parameter_list):
-            raise ValueError(
-                f"The given model parameters are not valid, only None, int and float are accepted"
-            )
+            raise ValueError(f"The given model parameters are not valid, only None, int and float are accepted")
 
         for i in range(len(self.model_parameter_list)):
             if self.model_parameter_list[i] and self.model_key_parameter_list[i] in key_parameter_to_identify:
@@ -194,7 +223,11 @@ class DingModelFrequencyForceParameterIdentification:
         for key in self.key_parameter_to_identify:
             settings_dict[key] = {}
             for setting_name in self.default_values[key]:
-                settings_dict[key][setting_name] = key_settings[key][setting_name] if (key in key_settings and setting_name in key_settings[key]) else self.default_values[key][setting_name]
+                settings_dict[key][setting_name] = (
+                    key_settings[key][setting_name]
+                    if (key in key_settings and setting_name in key_settings[key])
+                    else self.default_values[key][setting_name]
+                )
         return settings_dict
 
     @staticmethod
@@ -203,8 +236,7 @@ class DingModelFrequencyForceParameterIdentification:
             for i in range(len(data_path)):
                 if not isinstance(data_path[i], str):
                     raise TypeError(
-                        f"In the given list, all model_data_path must be str type,"
-                        f" path index n°{i} is not str type"
+                        f"In the given list, all model_data_path must be str type," f" path index n°{i} is not str type"
                     )
                 if not data_path[i].endswith(".pkl"):
                     raise TypeError(
@@ -236,7 +268,6 @@ class DingModelFrequencyForceParameterIdentification:
 
     @staticmethod
     def full_data_extraction(model_data_path):
-        import pickle
 
         global_model_muscle_data = []
         global_model_stim_apparition_time = []
@@ -298,7 +329,6 @@ class DingModelFrequencyForceParameterIdentification:
 
     @staticmethod
     def average_data_extraction(model_data_path):
-        import pickle
 
         global_model_muscle_data = []
         global_model_stim_apparition_time = []
@@ -378,8 +408,6 @@ class DingModelFrequencyForceParameterIdentification:
     def sparse_data_extraction(model_data_path, force_curve_number=5):
         raise NotImplementedError("This method has not been tested yet")
 
-        # import pickle
-        #
         # global_model_muscle_data = []
         # global_model_stim_apparition_time = []
         # global_model_time_data = []
@@ -479,7 +507,15 @@ class DingModelFrequencyForceParameterIdentification:
         return n_shooting, final_time_phase
 
     def _force_model_identification_for_initial_guess(self):
-        self.input_sanity(self.model, self.data_path, self.force_model_identification_method, self.identification_with_average_method_initial_guess, self.key_parameter_to_identify, self.additional_key_settings, self.n_shooting)
+        self.input_sanity(
+            self.model,
+            self.data_path,
+            self.force_model_identification_method,
+            self.identification_with_average_method_initial_guess,
+            self.key_parameter_to_identify,
+            self.additional_key_settings,
+            self.n_shooting,
+        )
         self.data_sanity(self.data_path)
         # --- Data extraction --- #
         # --- Force model --- #
@@ -519,9 +555,15 @@ class DingModelFrequencyForceParameterIdentification:
 
     def force_model_identification(self):
         if not self.identification_with_average_method_initial_guess:
-            self.input_sanity(self.model, self.data_path, self.force_model_identification_method,
-                              self.identification_with_average_method_initial_guess, self.key_parameter_to_identify,
-                              self.additional_key_settings, self.n_shooting)
+            self.input_sanity(
+                self.model,
+                self.data_path,
+                self.force_model_identification_method,
+                self.identification_with_average_method_initial_guess,
+                self.key_parameter_to_identify,
+                self.additional_key_settings,
+                self.n_shooting,
+            )
             self.data_sanity(self.data_path)
 
         # --- Data extraction --- #
@@ -537,9 +579,7 @@ class DingModelFrequencyForceParameterIdentification:
 
         elif self.force_model_identification_method == "sparse":
             force_curve_number = self.kwargs["force_curve_number"] if "force_curve_number" in self.kwargs else 5
-            time, stim, force, discontinuity = self.sparse_data_extraction(
-                self.data_path, force_curve_number
-            )
+            time, stim, force, discontinuity = self.sparse_data_extraction(self.data_path, force_curve_number)
         else:
             raise ValueError(
                 f"The given force_model_identification_method is not valid,"

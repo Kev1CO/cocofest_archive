@@ -12,12 +12,7 @@ from cocofest import DingModelFrequencyWithFatigue, IvpFes
 # This example shows how to create a problem with doublet pulses.
 # The stimulation won't be optimized.
 ivp = IvpFes(
-    model=DingModelFrequencyWithFatigue(),
-    n_stim=20,
-    n_shooting=10,
-    final_time=1,
-    pulse_mode="Doublet",
-    use_sx=True,
+    model=DingModelFrequencyWithFatigue(), n_stim=20, n_shooting=10, final_time=1, pulse_mode="Doublet", use_sx=True,
 )
 
 # Creating the solution from the initial guess
@@ -44,12 +39,7 @@ plt.show()
 # --- Build ocp --- #
 # This example shows how to create a problem with triplet pulses.
 ivp = IvpFes(
-    model=DingModelFrequencyWithFatigue(),
-    n_stim=30,
-    n_shooting=10,
-    final_time=1,
-    pulse_mode="Triplet",
-    use_sx=True,
+    model=DingModelFrequencyWithFatigue(), n_stim=30, n_shooting=10, final_time=1, pulse_mode="Triplet", use_sx=True,
 )
 
 # Creating the solution from the initial guess
