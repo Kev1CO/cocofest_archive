@@ -350,14 +350,24 @@ class OcpFes:
             minimum_pulse_intensity = model.min_pulse_intensity()
 
             if pulse_intensity is not None:
-                if not isinstance(pulse_intensity, int | float):
+                if isinstance(pulse_intensity, int | float):
+                    if pulse_intensity < minimum_pulse_intensity:
+                        raise ValueError(
+                            f"The pulse intensity set ({pulse_intensity})"
+                            f" is lower than minimum intensity required."
+                            f" Set a value above {minimum_pulse_intensity} mA "
+                        )
+                elif isinstance(pulse_intensity, list):
+                    if not all(isinstance(x, int | float) for x in pulse_intensity):
+                        raise TypeError("pulse_intensity must be int or float type")
+                    if not all(x >= minimum_pulse_intensity for x in pulse_intensity):
+                        raise ValueError(
+                            f"The pulse intensity set ({pulse_intensity})"
+                            f" is lower than minimum intensity required."
+                            f" Set a value above {minimum_pulse_intensity} seconds "
+                        )
+                else:
                     raise TypeError("pulse_intensity must be int or float type")
-                if pulse_intensity < minimum_pulse_intensity:
-                    raise ValueError(
-                        f"The pulse intensity set ({pulse_intensity})"
-                        f" is lower than minimum intensity required."
-                        f" Set a value above {minimum_pulse_intensity} mA "
-                    )
 
             elif pulse_intensity_min is not None and pulse_intensity_max is not None:
                 if not isinstance(pulse_intensity_min, int | float) or not isinstance(pulse_intensity_max, int | float):
@@ -529,19 +539,29 @@ class OcpFes:
                     # TODO : Fix Bimapping in Bioptim
 
         if isinstance(model, DingModelIntensityFrequency):
-            if pulse_intensity is not None:
-                parameters_bounds.add(
-                    "pulse_intensity",
-                    min_bound=np.array([pulse_intensity] * n_stim),
-                    max_bound=np.array([pulse_intensity] * n_stim),
-                    interpolation=InterpolationType.CONSTANT,
-                )
-                parameters_init["pulse_intensity"] = np.array([pulse_intensity] * n_stim)
+            if pulse_intensity:
                 parameters.add(
                     parameter_name="pulse_intensity",
                     function=DingModelIntensityFrequency.set_impulse_intensity,
                     size=n_stim,
                 )
+                if isinstance(pulse_intensity, list):
+                    parameters_bounds.add(
+                        "pulse_intensity",
+                        min_bound=np.array(pulse_intensity),
+                        max_bound=np.array(pulse_intensity),
+                        interpolation=InterpolationType.CONSTANT,
+
+                    )
+                    parameters_init.add(key="pulse_intensity", initial_guess=np.array(pulse_intensity))
+                else:
+                    parameters_bounds.add(
+                        "pulse_intensity",
+                        min_bound=np.array([pulse_intensity] * n_stim),
+                        max_bound=np.array([pulse_intensity] * n_stim),
+                        interpolation=InterpolationType.CONSTANT,
+                    )
+                    parameters_init["pulse_intensity"] = np.array([pulse_intensity] * n_stim)
 
             elif pulse_intensity_min is not None and pulse_intensity_max is not None:
                 parameters_bounds.add(

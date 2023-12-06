@@ -43,7 +43,7 @@ class OcpFesId(OcpFes):
         n_shooting: list[int] = None,
         final_time_phase: tuple | list = None,
         pulse_duration: int | float | list = None,
-        pulse_intensity: int | float = None,
+        pulse_intensity: int | float | list = None,
         force_tracking: list = None,
         key_parameter_to_identify: list = None,
         additional_key_settings: dict = None,
@@ -68,9 +68,9 @@ class OcpFesId(OcpFes):
             The number of shooting points for each phase
         force_tracking: list[np.ndarray, np.ndarray],
             The force tracking to follow
-        pulse_duration: list[int] | list[float],
+        pulse_duration: int | float | list[int] | list[float],
             The duration of the stimulation
-        pulse_intensity: list[int] | list[float],
+        pulse_intensity: int | float | list[int] | list[float],
             The intensity of the stimulation
         discontinuity_in_ocp: list[int],
             The phases where the continuity is not respected
@@ -105,7 +105,7 @@ class OcpFesId(OcpFes):
         models = [model for i in range(n_stim)]
 
         constraints = ConstraintList()
-        parameters, parameters_bounds, parameters_init = OcpFesId._set_parameters(n_stim=n_stim, parameter_to_identify=key_parameter_to_identify, parameter_setting=additional_key_settings, pulse_duration=pulse_duration)
+        parameters, parameters_bounds, parameters_init = OcpFesId._set_parameters(n_stim=n_stim, parameter_to_identify=key_parameter_to_identify, parameter_setting=additional_key_settings, pulse_duration=pulse_duration, pulse_intensity=pulse_intensity)
         dynamics = OcpFesId._declare_dynamics(models=models, n_stim=n_stim)
         x_bounds, x_init = OcpFesId._set_bounds(
             model=model,
@@ -336,6 +336,30 @@ class OcpFesId(OcpFes):
                     interpolation=InterpolationType.CONSTANT,
                 )
                 parameters_init.add(key="pulse_duration", initial_guess=np.array([pulse_duration]*(n_stim+1)))
+
+        if pulse_intensity:
+            parameters.add(
+                parameter_name="pulse_intensity",
+                list_index=len(parameter_to_identify),
+                function=DingModelIntensityFrequency.set_impulse_intensity,
+                size=n_stim+1,
+            )
+            if isinstance(pulse_intensity, list):
+                parameters_bounds.add(
+                    "pulse_intensity",
+                    min_bound=np.array(pulse_intensity),
+                    max_bound=np.array(pulse_intensity),
+                    interpolation=InterpolationType.CONSTANT,
+                )
+                parameters_init.add(key="pulse_intensity", initial_guess=np.array(pulse_intensity))
+            else:
+                parameters_bounds.add(
+                    "pulse_intensity",
+                    min_bound=np.array([pulse_intensity]*(n_stim+1)),
+                    max_bound=np.array([pulse_intensity]*(n_stim+1)),
+                    interpolation=InterpolationType.CONSTANT,
+                )
+                parameters_init.add(key="pulse_intensity", initial_guess=np.array([pulse_intensity]*(n_stim+1)))
 
         return parameters, parameters_bounds, parameters_init
 

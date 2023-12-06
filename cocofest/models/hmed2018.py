@@ -37,6 +37,20 @@ class DingModelIntensityFrequency(DingModelFrequency):
         self.cr = 0.833  # (-) Translation of axis coordinates.
         self.impulse_intensity = None
 
+    def set_ar(self, model, ar: MX | float):
+        # models is required for bioptim compatibility
+        self.ar = ar
+
+    def set_bs(self, model, bs: MX | float):
+        self.bs = bs
+
+    def set_Is(self, model, Is: MX | float):
+        self.Is = Is
+
+    def set_cr(self, model, cr: MX | float):
+        self.cr = cr
+
+
     # ---- Absolutely needed methods ---- #
     def serialize(self) -> tuple[Callable, dict]:
         # This is where you can serialize your models
