@@ -42,15 +42,13 @@ class OcpFesId(OcpFes):
         | DingModelIntensityFrequencyWithFatigue = None,
         n_shooting: list[int] = None,
         final_time_phase: tuple | list = None,
-        pulse_duration: int | float = None,
+        pulse_duration: int | float | list = None,
         pulse_intensity: int | float = None,
         force_tracking: list = None,
+        key_parameter_to_identify: list = None,
+        additional_key_settings: dict = None,
         custom_objective: list[Objective] = None,
         discontinuity_in_ocp: list = None,
-        a_rest: int | float = None,
-        km_rest: int | float = None,
-        tau1_rest: int | float = None,
-        tau2: int | float = None,
         use_sx: bool = True,
         ode_solver: OdeSolver = OdeSolver.RK4(n_integration_steps=1),
         n_threads: int = 1,
@@ -76,14 +74,6 @@ class OcpFesId(OcpFes):
             The intensity of the stimulation
         discontinuity_in_ocp: list[int],
             The phases where the continuity is not respected
-        a_rest: float,
-            a_rest parameter of the model
-        km_rest: float,
-            km_rest parameter of the model
-        tau1_rest: float,
-            tau1_rest parameter of the model
-        tau2: float,
-            tau2 parameter of the model
         ode_solver: OdeSolver
             The ode solver to use
         use_sx: bool
@@ -106,29 +96,16 @@ class OcpFesId(OcpFes):
             model=model,
             n_shooting=n_shooting,
             final_time_phase=final_time_phase,
-            a_rest=a_rest,
-            km_rest=km_rest,
-            tau1_rest=tau1_rest,
-            tau2=tau2,
             force_tracking=force_tracking,
             pulse_duration=pulse_duration,
             pulse_intensity=pulse_intensity,
         )
 
-        if a_rest:
-            model.set_a_rest(model=None, a_rest=a_rest)
-        if km_rest:
-            model.set_km_rest(model=None, km_rest=km_rest)
-        if tau1_rest:
-            model.set_tau1_rest(model=None, tau1_rest=tau1_rest)
-        if tau2:
-            model.set_tau2(model=None, tau2=tau2)
-
         n_stim = len(final_time_phase)
         models = [model for i in range(n_stim)]
 
         constraints = ConstraintList()
-        parameters, parameters_bounds, parameters_init = OcpFesId._set_parameters(model=model)
+        parameters, parameters_bounds, parameters_init = OcpFesId._set_parameters(n_stim=n_stim, parameter_to_identify=key_parameter_to_identify, parameter_setting=additional_key_settings, pulse_duration=pulse_duration)
         dynamics = OcpFesId._declare_dynamics(models=models, n_stim=n_stim)
         x_bounds, x_init = OcpFesId._set_bounds(
             model=model,
@@ -170,28 +147,10 @@ class OcpFesId(OcpFes):
         model=None,
         n_shooting=None,
         final_time_phase=None,
-        a_rest=None,
-        km_rest=None,
-        tau1_rest=None,
-        tau2=None,
         force_tracking=None,
         pulse_duration=None,
         pulse_intensity=None,
     ):
-        if model._with_fatigue:
-            if not all([a_rest, km_rest, tau1_rest, tau2]):
-                raise ValueError("a_rest, km_rest, tau1_rest and tau2 must be set for fatigue model identification")
-            elif not isinstance(a_rest, int | float):
-                raise TypeError(f"a_rest must be int or float type," f" currently a_rest is {type(a_rest)}) type.")
-            elif not isinstance(km_rest, int | float):
-                raise TypeError(f"km_rest must be int or float type," f" currently km_rest is {type(km_rest)}) type.")
-            elif not isinstance(tau1_rest, int | float):
-                raise TypeError(
-                    f"tau1_rest must be int or float type," f" currently tau1_rest is {type(tau1_rest)}) type."
-                )
-            elif not isinstance(tau2, int | float):
-                raise TypeError(f"tau2 must be int or float type," f" currently tau2 is {type(tau2)}) type.")
-
         if not isinstance(n_shooting, list):
             raise TypeError(f"n_shooting must be list type," f" currently n_shooting is {type(n_shooting)}) type.")
         else:
@@ -332,131 +291,51 @@ class OcpFesId(OcpFes):
         return objective_functions
 
     @staticmethod
-    def _set_parameters(model):
+    def _set_parameters(n_stim, parameter_to_identify, parameter_setting, pulse_duration=None, pulse_intensity=None):
         parameters = ParameterList()
         parameters_bounds = BoundsList()
         parameters_init = InitialGuessList()
 
-        if model._with_fatigue:
+        for i in range(len(parameter_to_identify)):
             parameters.add(
-                parameter_name="alpha_a",
-                list_index=0,
-                function=model.set_alpha_a,
+                parameter_name=parameter_to_identify[i],
+                list_index=i,
+                function=parameter_setting[parameter_to_identify[i]]["function"],
                 size=1,
-                scaling=np.array([10e8]),
-            )
-            parameters.add(
-                parameter_name="alpha_km",
-                list_index=1,
-                function=model.set_alpha_km,
-                size=1,
-                scaling=np.array([10e9]),
-            )
-            parameters.add(
-                parameter_name="alpha_tau1",
-                list_index=2,
-                function=model.set_alpha_tau1,
-                size=1,
-                scaling=np.array([10e6]),
-            )
-            parameters.add(
-                parameter_name="tau_fat",
-                list_index=3,
-                function=model.set_tau_fat,
-                size=1,
+                scaling=np.array([parameter_setting[parameter_to_identify[i]]["scaling"]]),
             )
 
-            # --- Adding bound parameters --- #
             parameters_bounds.add(
-                "alpha_a",
-                min_bound=np.array([10e-6]),  # TODO : fine tune bounds
-                max_bound=np.array([10e-8]),
+                parameter_to_identify[i],
+                min_bound=np.array([parameter_setting[parameter_to_identify[i]]["min_bound"]]),
+                max_bound=np.array([parameter_setting[parameter_to_identify[i]]["max_bound"]]),
                 interpolation=InterpolationType.CONSTANT,
             )
-            parameters_bounds.add(
-                "alpha_km",
-                min_bound=np.array([10e-9]),  # TODO : fine tune bounds
-                max_bound=np.array([10e-7]),
-                interpolation=InterpolationType.CONSTANT,
-            )
-            parameters_bounds.add(
-                "alpha_tau1",
-                min_bound=np.array([10e-6]),  # TODO : fine tune bounds
-                max_bound=np.array([10e-4]),
-                interpolation=InterpolationType.CONSTANT,
-            )
-            parameters_bounds.add(
-                "tau_fat",
-                min_bound=np.array([10]),  # TODO : fine tune bounds
-                max_bound=np.array([1000]),
-                interpolation=InterpolationType.CONSTANT,
-            )
+            parameters_init.add(key=parameter_to_identify[i], initial_guess=np.array([parameter_setting[parameter_to_identify[i]]["initial_guess"]]))
 
-            # --- Initial guess parameters --- #
-            parameters_init["alpha_a"] = np.array([10e-7])  # TODO : fine tune initial guess
-            parameters_init["alpha_km"] = np.array([10e-8])  # TODO : fine tune initial guess
-            parameters_init["alpha_tau1"] = np.array([10 - 5])  # TODO : fine tune initial guess
-            parameters_init["tau_fat"] = np.array([100])  # TODO : fine tune initial guess
-        else:
+        if pulse_duration:
             parameters.add(
-                parameter_name="a_rest",
-                list_index=0,
-                function=model.set_a_rest,
-                size=1,
+                parameter_name="pulse_duration",
+                list_index=len(parameter_to_identify),
+                function=DingModelPulseDurationFrequency.set_impulse_duration,
+                size=n_stim+1,
             )
-            parameters.add(
-                parameter_name="km_rest",
-                list_index=1,
-                function=model.set_km_rest,
-                size=1,
-                scaling=np.array([1000]),
-            )
-            parameters.add(
-                parameter_name="tau1_rest",
-                list_index=2,
-                function=model.set_tau1_rest,
-                size=1,
-                scaling=np.array([1000]),
-            )
-            parameters.add(
-                parameter_name="tau2",
-                list_index=3,
-                function=model.set_tau2,
-                size=1,
-                scaling=np.array([1000]),
-            )
-
-            # --- Adding bound parameters --- #
-            parameters_bounds.add(
-                "a_rest",
-                min_bound=np.array([1]),  # TODO : fine tune bounds
-                max_bound=np.array([10000]),
-                interpolation=InterpolationType.CONSTANT,
-            )
-            parameters_bounds.add(
-                "km_rest",
-                min_bound=np.array([0.001]),  # TODO : fine tune bounds
-                max_bound=np.array([1]),
-                interpolation=InterpolationType.CONSTANT,
-            )
-            parameters_bounds.add(
-                "tau1_rest",
-                min_bound=np.array([0.0001]),  # TODO : fine tune bounds
-                max_bound=np.array([2]),
-                interpolation=InterpolationType.CONSTANT,
-            )
-            parameters_bounds.add(
-                "tau2",
-                min_bound=np.array([0.0001]),  # TODO : fine tune bounds
-                max_bound=np.array([2]),
-                interpolation=InterpolationType.CONSTANT,
-            )
-
-            # --- Initial guess parameters --- #
-            parameters_init["a_rest"] = np.array([model.a_rest if model._with_fatigue else 1000])
-            parameters_init["km_rest"] = np.array([model.km_rest if model._with_fatigue else 0.5])
-            parameters_init["tau1_rest"] = np.array([model.tau1_rest if model._with_fatigue else 0.5])
-            parameters_init["tau2"] = np.array([model.tau2 if model._with_fatigue else 0.5])
+            if isinstance(pulse_duration, list):
+                parameters_bounds.add(
+                    "pulse_duration",
+                    min_bound=np.array(pulse_duration),
+                    max_bound=np.array(pulse_duration),
+                    interpolation=InterpolationType.CONSTANT,
+                )
+                parameters_init.add(key="pulse_duration", initial_guess=np.array(pulse_duration))
+            else:
+                parameters_bounds.add(
+                    "pulse_duration",
+                    min_bound=np.array([pulse_duration]*(n_stim+1)),
+                    max_bound=np.array([pulse_duration]*(n_stim+1)),
+                    interpolation=InterpolationType.CONSTANT,
+                )
+                parameters_init.add(key="pulse_duration", initial_guess=np.array([pulse_duration]*(n_stim+1)))
 
         return parameters, parameters_bounds, parameters_init
 

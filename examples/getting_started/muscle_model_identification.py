@@ -1,8 +1,10 @@
 import pickle
 import os
 from cocofest import (
-    DingModelFrequencyParameterIdentification,
     DingModelFrequency,
+    DingModelFrequencyForceParameterIdentification,
+    DingModelPulseDurationFrequency,
+    DingModelPulseDurationFrequencyForceParameterIdentification,
     IvpFes,
 )
 
@@ -23,10 +25,10 @@ a_rest, km_rest, tau1_rest, tau2 = ocp.force_model_identification()
 print("a_rest : ", a_rest, "km_rest : ", km_rest, "tau1_rest : ", tau1_rest, "tau2 : ", tau2)
 """
 
-# Example n°2 : Identification of the parameters of the Ding model with the frequency method for simulated data
-# --- Simulating data --- #
-# This problem was build to be integrated and has no objectives nor parameter to optimize.
-# Therefore, the flag for_optimal_control is set to False.
+# # Example n°2 : Identification of the parameters of the Ding model with the frequency method for simulated data
+# # --- Simulating data --- #
+# # This problem was build to be integrated and has no objectives nor parameter to optimize.
+
 ivp = IvpFes(
     model=DingModelFrequency(),
     n_stim=10,
@@ -58,16 +60,32 @@ pickle_file_name = "../data/temp_identification_simulation.pkl"
 with open(pickle_file_name, "wb") as file:
     pickle.dump(dictionary, file)
 
-ocp = DingModelFrequencyParameterIdentification(
+# ocp = DingModelFrequencyParameterIdentification(
+#     model=DingModelFrequency(),
+#     force_model_data_path=[pickle_file_name],
+#     force_model_identification_method="full",
+#     force_model_identification_with_average_method_initial_guess=False,
+#     n_shooting=100,
+#     use_sx=True,
+# )
+
+ocp = DingModelFrequencyForceParameterIdentification(
     model=DingModelFrequency(),
-    force_model_data_path=[pickle_file_name],
-    force_model_identification_method="full",
-    force_model_identification_with_average_method_initial_guess=False,
-    n_shooting=100,
+    data_path=[pickle_file_name],
+    identification_method="full",
+    identification_with_average_method_initial_guess=False,
+    key_parameter_to_identify=["km_rest", "tau1_rest", "tau2"],
+    additional_key_settings={},
+    n_shooting=10,
+    a_rest=2500,
     use_sx=True,
 )
 
-a_rest, km_rest, tau1_rest, tau2 = ocp.force_model_identification()
+identified_parameters = ocp.force_model_identification()
+a_rest = identified_parameters["a_rest"] if "a_rest" in identified_parameters else 2500  #TODO : correct this
+km_rest = identified_parameters["km_rest"] if "km_rest" in identified_parameters else DingModelFrequency().km_rest
+tau1_rest = identified_parameters["tau1_rest"] if "tau1_rest" in identified_parameters else DingModelFrequency().tau1_rest
+tau2 = identified_parameters["tau2"] if "tau2" in identified_parameters else DingModelFrequency().tau2
 print("a_rest : ", a_rest, "km_rest : ", km_rest, "tau1_rest : ", tau1_rest, "tau2 : ", tau2)
 
 identified_model = DingModelFrequency()
@@ -111,7 +129,7 @@ identified_force = identified_result.states["F"][0]
     pickle_stim_apparition_time,
     pickle_muscle_data,
     pickle_discontinuity_phase_list,
-) = DingModelFrequencyParameterIdentification.full_data_extraction([pickle_file_name])
+) = DingModelFrequencyForceParameterIdentification.full_data_extraction([pickle_file_name])
 
 # Plotting the identification result
 plt.title("Force state result")
@@ -161,3 +179,145 @@ ocp = DingModelFrequencyParameterIdentification(
 alpha_a, alpha_km, alpha_tau1, tau_fat = ocp.fatigue_model_identification()
 print("alpha_a : ", alpha_a, "alpha_km : ", alpha_km, "alpha_tau1 : ", alpha_tau1, "tau_fat : ", tau_fat)
 """
+
+
+# Example n°4 : Identification of the parameters of the Ding model with the pulse duration method for simulated data
+# --- Simulating data --- #
+# This problem was build to be integrated and has no objectives nor parameter to optimize.
+pulse_duration_values = [0.000180, 0.0002, 0.000250, 0.0003, 0.000350, 0.0004, 0.000450, 0.0005, 0.000550, 0.0006]
+ivp = IvpFes(
+    model=DingModelPulseDurationFrequency(),
+    n_stim=10,
+    n_shooting=10,
+    final_time=1,
+    use_sx=True,
+    pulse_duration=pulse_duration_values,
+)
+
+# Creating the solution from the initial guess
+sol_from_initial_guess = Solution.from_initial_guess(ivp, [ivp.x_init, ivp.u_init, ivp.p_init, ivp.s_init])
+
+# Integrating the solution
+result = sol_from_initial_guess.integrate(
+    shooting_type=Shooting.SINGLE, integrator=SolutionIntegrator.OCP, merge_phases=True
+)
+
+force = result.states["F"].tolist()
+time = [result.time.tolist()]
+stim_temp = [0 if i == 0 else result.ocp.nlp[i].tf for i in range(len(result.ocp.nlp))]
+stim = [sum(stim_temp[: i + 1]) for i in range(len(stim_temp))]
+pulse_duration = pulse_duration_values
+
+dictionary = {
+    "time": time,
+    "biceps": force,
+    "stim_time": stim,
+    "pulse_duration": pulse_duration,
+}
+
+pickle_file_name = "../data/temp_identification_simulation.pkl"
+with open(pickle_file_name, "wb") as file:
+    pickle.dump(dictionary, file)
+
+ocp = DingModelPulseDurationFrequencyForceParameterIdentification(
+    model=DingModelPulseDurationFrequency(),
+    data_path=[pickle_file_name],
+    identification_method="full",
+    identification_with_average_method_initial_guess=False,
+    key_parameter_to_identify=["tau1_rest", "tau2", "km_rest", "a_scale", "pd0", "pdt"],
+    additional_key_settings={},
+    n_shooting=10,
+    use_sx=True,
+)
+
+identified_parameters = ocp.force_model_identification()
+a_scale = identified_parameters["a_scale"] if "a_scale" in identified_parameters else DingModelPulseDurationFrequency().a_scale
+pd0 = identified_parameters["pd0"] if "pd0" in identified_parameters else DingModelPulseDurationFrequency().pd0
+pdt = identified_parameters["pdt"] if "pdt" in identified_parameters else DingModelPulseDurationFrequency().pdt
+km_rest = identified_parameters["km_rest"] if "km_rest" in identified_parameters else DingModelPulseDurationFrequency().km_rest
+tau1_rest = identified_parameters["tau1_rest"] if "tau1_rest" in identified_parameters else DingModelPulseDurationFrequency().tau1_rest
+tau2 = identified_parameters["tau2"] if "tau2" in identified_parameters else DingModelPulseDurationFrequency().tau2
+print("a_scale : ", a_scale, "pd0 : ", pd0, "pdt : ", pdt,  "km_rest : ", km_rest, "tau1_rest : ", tau1_rest, "tau2 : ", tau2)
+
+identified_model = DingModelPulseDurationFrequency()
+identified_model.a_scale = a_scale
+identified_model.km_rest = km_rest
+identified_model.tau1_rest = tau1_rest
+identified_model.tau2 = tau2
+identified_model.pd0 = pd0
+identified_model.pdt = pdt
+
+identified_force_list = []
+identified_time_list = []
+
+ivp_from_identification = IvpFes(
+    model=identified_model,
+    n_stim=10,
+    n_shooting=10,
+    final_time=1,
+    use_sx=True,
+    pulse_duration=[0.000184, 0.0002, 0.000250, 0.0003, 0.000350, 0.0004, 0.000450, 0.0005, 0.000550, 0.0006],
+)
+
+# Creating the solution from the initial guess
+identified_sol_from_initial_guess = Solution.from_initial_guess(
+    ivp_from_identification,
+    [
+        ivp_from_identification.x_init,
+        ivp_from_identification.u_init,
+        ivp_from_identification.p_init,
+        ivp_from_identification.s_init,
+    ],
+)
+
+# Integrating the solution
+identified_result = identified_sol_from_initial_guess.integrate(
+    shooting_type=Shooting.SINGLE, integrator=SolutionIntegrator.OCP, merge_phases=True
+)
+
+identified_time = identified_result.time.tolist()
+identified_force = identified_result.states["F"][0]
+
+(
+    pickle_time_data,
+    pickle_stim_apparition_time,
+    pickle_muscle_data,
+    pickle_discontinuity_phase_list,
+) = DingModelPulseDurationFrequencyForceParameterIdentification.full_data_extraction([pickle_file_name])
+
+# Plotting the identification result
+plt.title("Force state result")
+plt.plot(pickle_time_data, pickle_muscle_data, color="blue", label="simulated")
+plt.plot(identified_time, identified_force, color="red", label="identified")
+plt.xlabel("time (s)")
+plt.ylabel("force (N)")
+
+plt.annotate("a_scale : ", xy=(0.7, 0.25), xycoords="axes fraction", color="black")
+plt.annotate("km_rest : ", xy=(0.7, 0.20), xycoords="axes fraction", color="black")
+plt.annotate("tau1_rest : ", xy=(0.7, 0.15), xycoords="axes fraction", color="black")
+plt.annotate("tau2 : ", xy=(0.7, 0.10), xycoords="axes fraction", color="black")
+plt.annotate("pd0 : ", xy=(0.7, 0.05), xycoords="axes fraction", color="black")
+plt.annotate("pdt : ", xy=(0.7, 0.0), xycoords="axes fraction", color="black")
+
+
+plt.annotate(str(round(a_scale, 5)), xy=(0.78, 0.25), xycoords="axes fraction", color="red")
+plt.annotate(str(round(km_rest, 5)), xy=(0.78, 0.20), xycoords="axes fraction", color="red")
+plt.annotate(str(round(tau1_rest, 5)), xy=(0.78, 0.15), xycoords="axes fraction", color="red")
+plt.annotate(str(round(tau2, 5)), xy=(0.78, 0.10), xycoords="axes fraction", color="red")
+plt.annotate(str(round(pd0, 9)), xy=(0.78, 0.05), xycoords="axes fraction", color="red")
+plt.annotate(str(round(pdt, 9)), xy=(0.78, 0.0), xycoords="axes fraction", color="red")
+
+plt.annotate(str(4920), xy=(0.85, 0.25), xycoords="axes fraction", color="blue")
+plt.annotate(str(0.137), xy=(0.85, 0.20), xycoords="axes fraction", color="blue")
+plt.annotate(str(0.060601), xy=(0.85, 0.15), xycoords="axes fraction", color="blue")
+plt.annotate(str(0.001), xy=(0.85, 0.10), xycoords="axes fraction", color="blue")
+plt.annotate(str(0.000131405), xy=(0.85, 0.05), xycoords="axes fraction", color="blue")
+plt.annotate(str(0.000194138), xy=(0.85, 0.0), xycoords="axes fraction", color="blue")
+
+# --- Delete the temp file ---#
+os.remove(f"../data/temp_identification_simulation.pkl")
+
+plt.legend()
+plt.show()
+
+

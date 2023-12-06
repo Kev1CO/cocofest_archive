@@ -1,7 +1,6 @@
 from typing import Callable
 
 from casadi import MX, vertcat, exp
-import numpy as np
 
 from bioptim import (
     ConfigureProblem,
@@ -39,6 +38,16 @@ class DingModelPulseDurationFrequency(DingModelFrequency):
         self.tau2 = 0.001  # Value from Ding's 2007 article (s)
         self.km = 0.137  # Value from Ding's 2007 article (unitless)
         self.tauc = 0.011  # Value from Ding's 2007 article (s)
+
+    def set_a_scale(self, model, a_scale: MX | float):
+        # models is required for bioptim compatibility
+        self.a_scale = a_scale
+
+    def set_pd0(self, model, pd0: MX | float):
+        self.pd0 = pd0
+
+    def set_pdt(self, model, pdt: MX | float):
+        self.pdt = pdt
 
     def serialize(self) -> tuple[Callable, dict]:
         # This is where you can serialize your models

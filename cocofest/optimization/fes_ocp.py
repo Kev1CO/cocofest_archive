@@ -310,6 +310,15 @@ class OcpFes:
                             f" is lower than minimum duration required."
                             f" Set a value above {minimum_pulse_duration} seconds "
                         )
+                elif isinstance(pulse_duration, list):
+                    if not all(isinstance(x, int | float) for x in pulse_duration):
+                        raise TypeError("pulse_duration must be int or float type")
+                    if not all(x >= minimum_pulse_duration for x in pulse_duration):
+                        raise ValueError(
+                            f"The pulse duration set ({pulse_duration})"
+                            f" is lower than minimum duration required."
+                            f" Set a value above {minimum_pulse_duration} seconds "
+                        )
                 else:
                     raise TypeError("Wrong pulse_duration type, only int or float accepted")
 
@@ -467,19 +476,29 @@ class OcpFes:
         parameters_init = InitialGuessList()
         parameter_objectives = ParameterObjectiveList()
         if isinstance(model, DingModelPulseDurationFrequency):
-            if pulse_duration is not None:
-                parameters_bounds.add(
-                    "pulse_duration",
-                    min_bound=np.array([pulse_duration] * n_stim),
-                    max_bound=np.array([pulse_duration] * n_stim),
-                    interpolation=InterpolationType.CONSTANT,
-                )
-                parameters_init["pulse_duration"] = np.array([pulse_duration] * n_stim)
+            if pulse_duration:
                 parameters.add(
                     parameter_name="pulse_duration",
                     function=DingModelPulseDurationFrequency.set_impulse_duration,
                     size=n_stim,
                 )
+                if isinstance(pulse_duration, list):
+                    parameters_bounds.add(
+                        "pulse_duration",
+                        min_bound=np.array(pulse_duration),
+                        max_bound=np.array(pulse_duration),
+                        interpolation=InterpolationType.CONSTANT,
+
+                    )
+                    parameters_init.add(key="pulse_duration", initial_guess=np.array(pulse_duration))
+                else:
+                    parameters_bounds.add(
+                        "pulse_duration",
+                        min_bound=np.array([pulse_duration] * n_stim),
+                        max_bound=np.array([pulse_duration] * n_stim),
+                        interpolation=InterpolationType.CONSTANT,
+                    )
+                    parameters_init["pulse_duration"] = np.array([pulse_duration] * n_stim)
 
             elif pulse_duration_min is not None and pulse_duration_max is not None:
                 parameters_bounds.add(

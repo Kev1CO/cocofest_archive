@@ -1,20 +1,12 @@
 import time as time_package
-
 import numpy as np
 
-from bioptim import Solver
-from cocofest import (
-    DingModelFrequency,
-    DingModelFrequencyWithFatigue,
-    DingModelPulseDurationFrequency,
-    DingModelPulseDurationFrequencyWithFatigue,
-    DingModelIntensityFrequency,
-    DingModelIntensityFrequencyWithFatigue,
-)
+from bioptim import Solver, Objective, OdeSolver
+from cocofest import DingModelFrequency
 from cocofest.optimization.fes_identification_ocp import OcpFesId
 
 
-class DingModelFrequencyParameterIdentification:
+class DingModelFrequencyForceParameterIdentification:
     """
     The main class to define an ocp. This class prepares the full program and gives all
     the needed parameters to solve a functional electrical stimulation ocp
@@ -23,15 +15,13 @@ class DingModelFrequencyParameterIdentification:
     ----------
     model: DingModelFrequency,
         The model to use for the ocp
-    force_model_data_path: str | list[str],
+    data_path: str | list[str],
         The path to the force model data
     force_model_identification_method: str,
         The method to use for the force model identification,
          "full" for objective function on all data,
          "average" for objective function on average data,
          "sparse" for objective function at the beginning and end of the data
-    fatigue_model_data_path: str | list[str],
-        The path to the fatigue model data
     a_rest: float,
         The a_rest parameter for the fatigue model, mandatory if not identified from force model
     km_rest: float,
@@ -48,122 +38,201 @@ class DingModelFrequencyParameterIdentification:
 
     def __init__(
         self,
-        model: DingModelFrequency
-        | DingModelFrequencyWithFatigue
-        | DingModelPulseDurationFrequency
-        | DingModelPulseDurationFrequencyWithFatigue
-        | DingModelIntensityFrequency
-        | DingModelIntensityFrequencyWithFatigue,
-        force_model_data_path: str | list[str] = None,
-        force_model_identification_method: str = "full",
-        force_model_identification_with_average_method_initial_guess: bool = False,
-        fatigue_model_data_path: str | list[str] = None,
-        fatigue_model_identification_method: str = "full",
+        model: DingModelFrequency,
+        data_path: str | list[str] = None,
+        identification_method: str = "full",
+        identification_with_average_method_initial_guess: bool = False,
+        key_parameter_to_identify: list = None,
+        additional_key_settings: dict = None,
         a_rest: float = None,
         km_rest: float = None,
         tau1_rest: float = None,
         tau2: float = None,
         n_shooting: int = 5,
+        custom_objective: list[Objective] = None,
+        use_sx: bool = True,
+        ode_solver: OdeSolver = OdeSolver.RK4(n_integration_steps=1),
+        n_threads: int = 1,
         **kwargs,
     ):
-        self.model = model
-        self.force_model_data_path = force_model_data_path
-        self.force_model_identification_method = force_model_identification_method
-        self.force_model_identification_with_average_method_initial_guess = (
-            force_model_identification_with_average_method_initial_guess
-        )
-        self.fatigue_model_data_path = fatigue_model_data_path
-        self.fatigue_model_identification_method = fatigue_model_identification_method
+        self.default_values = self._set_default_values(model=model)
         self.a_rest = a_rest
         self.km_rest = km_rest
         self.tau1_rest = tau1_rest
         self.tau2 = tau2
+
+        self.input_sanity(
+            model,
+            data_path,
+            identification_method,
+            identification_with_average_method_initial_guess,
+            key_parameter_to_identify,
+            additional_key_settings,
+            n_shooting,
+        )
+
+        self.model = model
+        self.model = self._set_model_parameters()
+
+        self.key_parameter_to_identify = key_parameter_to_identify
+        self.additional_key_settings = self.key_setting_to_dictionary(key_settings=additional_key_settings)
+
+        self.data_path = data_path
+        self.force_model_identification_method = identification_method
+        self.identification_with_average_method_initial_guess = (
+            identification_with_average_method_initial_guess
+        )
+
         self.force_ocp = None
         self.force_identification_result = None
-        self.alpha_a = None
-        self.alpha_km = None
-        self.alpha_tau1 = None
-        self.tau_fat = None
-        self.fatigue_identification_result = None
-        self.fatigue_ocp = None
         self.n_shooting = n_shooting
+        self.custom_objective = custom_objective
+        self.use_sx = use_sx
+        self.ode_solver = ode_solver
+        self.n_threads = n_threads
         self.kwargs = kwargs
 
-        # --- Force model --- #
-        if force_model_data_path:
-            self.data_sanity(force_model_data_path, "force")
+    def _set_default_values(self, model):
+        return {
+            "a_rest": {"initial_guess": 1000, "min_bound": 1, "max_bound": 10000, "function": model.set_a_rest, "scaling": 1},
+            "km_rest": {"initial_guess": 0.5, "min_bound": 0.001, "max_bound": 1, "function": model.set_km_rest, "scaling": 1000},
+            "tau1_rest": {"initial_guess": 0.5, "min_bound": 0.0001, "max_bound": 1, "function": model.set_tau1_rest, "scaling": 1000},
+            "tau2": {"initial_guess": 0.5, "min_bound": 0.0001, "max_bound": 1, "function": model.set_tau2, "scaling": 1000},
+        }
 
-        # --- Fatigue model --- #
-        if fatigue_model_data_path:
-            self.data_sanity(fatigue_model_data_path, "fatigue")
+    def _set_default_parameters_list(self):
+        self.model_parameter_list = [self.a_rest, self.km_rest, self.tau1_rest, self.tau2]
+        self.model_key_parameter_list = ["a_rest", "km_rest", "tau1_rest", "tau2"]
 
-        # --- Check model parameters --- #
-        if not isinstance(self.a_rest, None | int | float):
-            raise TypeError(f"a_rest must be None, int or float type, the given type is {type(self.a_rest)}")
+    def input_sanity(self, model, data_path, identification_method, identification_with_average_method_initial_guess, key_parameter_to_identify, additional_key_settings, n_shooting):
+        if model._with_fatigue:
+            raise ValueError(
+                f"The given model is not valid and should not be including the fatigue equation in the model"
+            )
+        self.data_sanity(data_path)
 
-        if not isinstance(self.km_rest, None | int | float):
-            raise TypeError(f"km_rest must be None, int or float type, the given type is {type(self.km_rest)}")
+        if identification_method not in ["full", "average", "sparse"]:
+            raise ValueError(
+                f"The given model identification method is not valid,"
+                f"only 'full', 'average' and 'sparse' are available,"
+                f" the given value is {identification_method}"
+            )
 
-        if not isinstance(self.tau1_rest, None | int | float):
-            raise TypeError(f"tau1_rest must be None, int or float type, the given type is {type(self.tau1_rest)}")
+        if not isinstance(identification_with_average_method_initial_guess, bool):
+            raise TypeError(
+                f"The given identification_with_average_method_initial_guess must be bool type,"
+                f" the given value is {type(identification_with_average_method_initial_guess)} type"
+            )
 
-        if not isinstance(self.tau2, None | int | float):
-            raise TypeError(f"tau2 must be None, int or float type, the given type is {type(self.tau2)}")
+        if isinstance(key_parameter_to_identify, list):
+            for key in key_parameter_to_identify:
+                if key not in self.default_values:
+                    raise ValueError(
+                        f"The given key_parameter_to_identify is not valid,"
+                        f" the given value is {key},"
+                        f" the available values are {list(self.default_values.keys())}"
+                    )
+        else:
+            raise TypeError(
+                f"The given key_parameter_to_identify must be list type,"
+                f" the given value is {type(key_parameter_to_identify)} type"
+            )
+
+        if isinstance(additional_key_settings, dict):
+            for key in additional_key_settings:
+                if key not in self.default_values:
+                    raise ValueError(
+                        f"The given additional_key_settings is not valid,"
+                        f" the given value is {key},"
+                        f" the available values are {list(self.default_values.keys())}"
+                    )
+                for setting_name in additional_key_settings[key]:
+                    if setting_name not in self.default_values[key]:
+                        raise ValueError(
+                            f"The given additional_key_settings is not valid,"
+                            f" the given value is {setting_name},"
+                            f" the available values are {list(self.default_values[key].keys())}"
+                        )
+                    if not isinstance(additional_key_settings[key][setting_name], type(self.default_values[key][setting_name])):
+                        raise TypeError(
+                            f"The given additional_key_settings value is not valid,"
+                            f" the given value is {type(additional_key_settings[key][setting_name])},"
+                            f" the available values are {self.default_values[key][setting_name]}"
+                        )
+        else:
+            raise TypeError(
+                f"The given additional_key_settings must be dict type,"
+                f" the given value is {type(additional_key_settings)} type"
+            )
+
+        if not isinstance(n_shooting, int):
+            raise TypeError(
+                f"The given n_shooting must be int type,"
+                f" the given value is {type(n_shooting)} type"
+            )
+
+        self._set_default_parameters_list()
+        if not all(isinstance(param, None | int | float) for param in self.model_parameter_list):
+            raise ValueError(
+                f"The given model parameters are not valid, only None, int and float are accepted"
+            )
+
+        for i in range(len(self.model_parameter_list)):
+            if self.model_parameter_list[i] and self.model_key_parameter_list[i] in key_parameter_to_identify:
+                raise ValueError(
+                    f"The given {self.model_key_parameter_list[i]} parameter can not be given and identified at the same time."
+                    f"Consider either giving {self.model_key_parameter_list[i]} and removing it from the key_parameter_to_identify list"
+                    f" or the other way around"
+                )
+            elif not self.model_parameter_list[i] and self.model_key_parameter_list[i] not in key_parameter_to_identify:
+                raise ValueError(
+                    f"The given {self.model_key_parameter_list[i]} parameter is not valid, it must be given or identified"
+                )
+
+    def key_setting_to_dictionary(self, key_settings):
+        settings_dict = {}
+        for key in self.key_parameter_to_identify:
+            settings_dict[key] = {}
+            for setting_name in self.default_values[key]:
+                settings_dict[key][setting_name] = key_settings[key][setting_name] if (key in key_settings and setting_name in key_settings[key]) else self.default_values[key][setting_name]
+        return settings_dict
 
     @staticmethod
-    def data_sanity(data_path, model_type):
-        if model_type == "force":
-            if isinstance(data_path, list):
-                for i in range(len(data_path)):
-                    if not isinstance(data_path[i], str):
-                        raise TypeError(
-                            f"In the given list, all f_muscle_force_model_data_path must be str type,"
-                            f" path index n°{i} is not str type"
-                        )
-                    if not data_path[i].endswith(".pkl"):
-                        raise TypeError(
-                            f"In the given list, all f_muscle_force_model_data_path must be pickle type and end with .pkl,"
-                            f" path index n°{i} is not ending with .pkl"
-                        )
-            elif isinstance(data_path, str):
-                force_model_data_path = [data_path]
-                if not force_model_data_path[0].endswith(".pkl"):
+    def data_sanity(data_path):
+        if isinstance(data_path, list):
+            for i in range(len(data_path)):
+                if not isinstance(data_path[i], str):
                     raise TypeError(
-                        f"In the given list, all f_muscle_force_model_data_path must be pickle type and end with .pkl,"
-                        f" path index is not ending with .pkl"
+                        f"In the given list, all model_data_path must be str type,"
+                        f" path index n°{i} is not str type"
                     )
-            else:
+                if not data_path[i].endswith(".pkl"):
+                    raise TypeError(
+                        f"In the given list, all model_data_path must be pickle type and end with .pkl,"
+                        f" path index n°{i} is not ending with .pkl"
+                    )
+        elif isinstance(data_path, str):
+            data_path = [data_path]
+            if not data_path[0].endswith(".pkl"):
                 raise TypeError(
-                    f"In the given path, all f_muscle_force_model_data_path must be str type,"
-                    f" the input is {type(data_path)} type and not str type"
+                    f"In the given list, all model_data_path must be pickle type and end with .pkl,"
+                    f" path index is not ending with .pkl"
                 )
+        else:
+            raise TypeError(
+                f"In the given path, model_data_path must be str or list[str] type, the input is {type(data_path)} type"
+            )
 
-        # --- Fatigue model --- #
-        if model_type == "fatigue":
-            if isinstance(data_path, list):
-                for i in range(len(data_path)):
-                    if not isinstance(data_path[i], str):
-                        raise TypeError(
-                            f"In the given list, all f_muscle_fatigue_model_data_path must be str type,"
-                            f" path index n°{i} is not str type"
-                        )
-                    if not data_path[i].endswith(".pkl"):
-                        raise TypeError(
-                            f"In the given list, all f_muscle_force_model_data_path must be pickle type and end with .pkl,"
-                            f" path index n°{i} is not ending with .pkl"
-                        )
-            elif isinstance(data_path, str):
-                fatigue_model_data_path = [data_path]
-                if not fatigue_model_data_path[0].endswith(".pkl"):
-                    raise TypeError(
-                        f"In the given list, all f_muscle_force_model_data_path must be pickle type and end with .pkl,"
-                        f" path index is not ending with .pkl"
-                    )
-            else:
-                raise TypeError(
-                    f"In the given path, all f_muscle_fatigue_model_data_path must be str type,"
-                    f" the input is {type(data_path)} type and not str type"
-                )
+    def _set_model_parameters(self):
+        if self.a_rest:
+            self.model.set_a_rest(self.model, self.a_rest)
+        if self.km_rest:
+            self.model.set_km_rest(self.model, self.km_rest)
+        if self.tau1_rest:
+            self.model.set_tau1_rest(self.model, self.tau1_rest)
+        if self.tau2:
+            self.model.set_tau2(self.model, self.tau2)
+        return self.model
 
     @staticmethod
     def full_data_extraction(model_data_path):
@@ -410,58 +479,66 @@ class DingModelFrequencyParameterIdentification:
         return n_shooting, final_time_phase
 
     def _force_model_identification_for_initial_guess(self):
-        self.data_sanity(self.force_model_data_path, "force")
+        self.input_sanity(self.model, self.data_path, self.force_model_identification_method, self.identification_with_average_method_initial_guess, self.key_parameter_to_identify, self.additional_key_settings, self.n_shooting)
+        self.data_sanity(self.data_path)
         # --- Data extraction --- #
         # --- Force model --- #
         stimulated_n_shooting = self.n_shooting
         force_curve_number = None
 
-        time, stim, force, discontinuity = self.average_data_extraction(self.force_model_data_path)
-
+        time, stim, force, discontinuity = self.average_data_extraction(self.data_path)
         n_shooting, final_time_phase = self.node_shooting_list_creation(stim, stimulated_n_shooting)
         force_at_node = self.force_at_node_in_ocp(time, force, n_shooting, final_time_phase, force_curve_number)
 
         # --- Building force ocp --- #
         self.force_ocp = OcpFesId.prepare_ocp(
             model=self.model,
-            final_time_phase=final_time_phase,
             n_shooting=n_shooting,
+            final_time_phase=final_time_phase,
             force_tracking=force_at_node,
-            pulse_apparition_time=stim,
-            pulse_duration=None,
-            pulse_intensity=None,
+            custom_objective=self.custom_objective,
             discontinuity_in_ocp=discontinuity,
-            use_sx=True,
+            a_rest=self.a_rest,
+            km_rest=self.km_rest,
+            tau1_rest=self.tau1_rest,
+            tau2=self.tau2,
+            use_sx=self.use_sx,
+            ode_solver=self.ode_solver,
+            n_threads=self.n_threads,
         )
 
         self.force_identification_result = self.force_ocp.solve(
             Solver.IPOPT()
         )  # _hessian_approximation="limited-memory"
 
-        initial_a_rest = self.force_identification_result.parameters["a_rest"][0][0]
-        initial_km_rest = self.force_identification_result.parameters["km_rest"][0][0]
-        initial_tau1_rest = self.force_identification_result.parameters["tau1_rest"][0][0]
-        initial_tau2 = self.force_identification_result.parameters["tau2"][0][0]
+        initial_guess = {}
+        for key in self.key_parameter_to_identify:
+            initial_guess[key] = self.force_identification_result.parameters[key][0][0]
 
-        return initial_a_rest, initial_km_rest, initial_tau1_rest, initial_tau2
+        return initial_guess
 
     def force_model_identification(self):
-        self.data_sanity(self.force_model_data_path, "force")
+        if not self.identification_with_average_method_initial_guess:
+            self.input_sanity(self.model, self.data_path, self.force_model_identification_method,
+                              self.identification_with_average_method_initial_guess, self.key_parameter_to_identify,
+                              self.additional_key_settings, self.n_shooting)
+            self.data_sanity(self.data_path)
+
         # --- Data extraction --- #
         # --- Force model --- #
         stimulated_n_shooting = self.n_shooting
         force_curve_number = None
 
         if self.force_model_identification_method == "full":
-            time, stim, force, discontinuity = self.full_data_extraction(self.force_model_data_path)
+            time, stim, force, discontinuity = self.full_data_extraction(self.data_path)
 
         elif self.force_model_identification_method == "average":
-            time, stim, force, discontinuity = self.average_data_extraction(self.force_model_data_path)
+            time, stim, force, discontinuity = self.average_data_extraction(self.data_path)
 
         elif self.force_model_identification_method == "sparse":
             force_curve_number = self.kwargs["force_curve_number"] if "force_curve_number" in self.kwargs else 5
             time, stim, force, discontinuity = self.sparse_data_extraction(
-                self.force_model_data_path, force_curve_number
+                self.data_path, force_curve_number
             )
         else:
             raise ValueError(
@@ -473,100 +550,38 @@ class DingModelFrequencyParameterIdentification:
         n_shooting, final_time_phase = self.node_shooting_list_creation(stim, stimulated_n_shooting)
         force_at_node = self.force_at_node_in_ocp(time, force, n_shooting, final_time_phase, force_curve_number)
 
-        if self.force_model_identification_with_average_method_initial_guess:
-            (
-                initial_a_rest,
-                initial_km_rest,
-                initial_tau1_rest,
-                initial_tau2,
-            ) = self._force_model_identification_for_initial_guess()
+        if self.identification_with_average_method_initial_guess:
+            initial_guess = self._force_model_identification_for_initial_guess()
 
-        else:
-            initial_a_rest, initial_km_rest, initial_tau1_rest, initial_tau2 = None, None, None, None
+            for key in self.key_parameter_to_identify:
+                self.additional_key_settings[key]["initial_guess"] = initial_guess[key]
 
         # --- Building force ocp --- #
         start_time = time_package.time()
         self.force_ocp = OcpFesId.prepare_ocp(
             model=self.model,
-            final_time_phase=final_time_phase,
             n_shooting=n_shooting,
+            final_time_phase=final_time_phase,
             force_tracking=force_at_node,
-            pulse_apparition_time=stim,
-            pulse_duration=None,
-            pulse_intensity=None,
+            key_parameter_to_identify=self.key_parameter_to_identify,
+            additional_key_settings=self.additional_key_settings,
+            custom_objective=self.custom_objective,
             discontinuity_in_ocp=discontinuity,
-            use_sx=True,
-            a_rest=initial_a_rest,
-            km_rest=initial_km_rest,
-            tau1_rest=initial_tau1_rest,
-            tau2=initial_tau2,
+            a_rest=self.a_rest,
+            km_rest=self.km_rest,
+            tau1_rest=self.tau1_rest,
+            tau2=self.tau2,
+            use_sx=self.use_sx,
+            ode_solver=self.ode_solver,
+            n_threads=self.n_threads,
         )
 
         print(f"OCP creation time : {time_package.time() - start_time} seconds")
 
         self.force_identification_result = self.force_ocp.solve(Solver.IPOPT(_hessian_approximation="limited-memory"))
 
-        self.a_rest = self.force_identification_result.parameters["a_rest"][0][0]
-        self.km_rest = self.force_identification_result.parameters["km_rest"][0][0]
-        self.tau1_rest = self.force_identification_result.parameters["tau1_rest"][0][0]
-        self.tau2 = self.force_identification_result.parameters["tau2"][0][0]
+        identified_parameters = {}
+        for key in self.key_parameter_to_identify:
+            identified_parameters[key] = self.force_identification_result.parameters[key][0][0]
 
-        return self.a_rest, self.km_rest, self.tau1_rest, self.tau2
-
-    def fatigue_model_identification(self):
-        self.data_sanity(self.fatigue_model_data_path, "fatigue")
-        # --- Data extraction --- #
-        # --- Fatigue model --- #
-        stimulated_n_shooting = self.n_shooting
-        force_curve_number = None
-
-        if self.fatigue_model_identification_method == "full":
-            time, stim, force, discontinuity = self.full_data_extraction(self.fatigue_model_data_path)
-        elif self.fatigue_model_identification_method == "average":
-            time, stim, force, discontinuity = self.average_data_extraction(self.fatigue_model_data_path)
-        elif self.fatigue_model_identification_method == "sparse":
-            force_curve_number = self.kwargs["force_curve_number"] if "force_curve_number" in self.kwargs else 5
-            time, stim, force, discontinuity = self.sparse_data_extraction(
-                self.fatigue_model_data_path, force_curve_number
-            )
-        else:
-            raise ValueError(
-                f"The given fatigue_model_identification_method is not valid,"
-                f"only 'full', 'average' and 'sparse' are available,"
-                f" the given value is {self.fatigue_model_identification_method}"
-            )
-
-        n_shooting, final_time_phase = self.node_shooting_list_creation(stim, stimulated_n_shooting)
-        force_at_node = self.force_at_node_in_ocp(time, force, n_shooting, final_time_phase, force_curve_number)
-
-        # --- Building fatigue ocp --- #
-        if self.a_rest and self.km_rest and self.tau1_rest and self.tau2:
-            self.fatigue_ocp = OcpFesId.prepare_ocp(
-                model=self.model,
-                final_time_phase=final_time_phase,
-                n_shooting=n_shooting,
-                force_tracking=force_at_node,
-                pulse_apparition_time=stim,
-                pulse_duration=None,
-                pulse_intensity=None,
-                a_rest=self.a_rest,
-                km_rest=self.km_rest,
-                tau1_rest=self.tau1_rest,
-                tau2=self.tau2,
-                discontinuity_in_ocp=discontinuity,
-                use_sx=True,
-            )
-        else:
-            raise ValueError(
-                "If no force identification is done before fatigue identification, a_rest, km_rest,"
-                " tau1_rest and tau2 must be given in class arguments"
-            )
-
-        self.fatigue_identification_result = self.fatigue_ocp.solve(Solver.IPOPT())
-
-        self.alpha_a = self.fatigue_identification_result.parameters["alpha_a"][0][0]
-        self.alpha_km = self.fatigue_identification_result.parameters["alpha_km"][0][0]
-        self.alpha_tau1 = self.fatigue_identification_result.parameters["alpha_tau1"][0][0]
-        self.tau_fat = self.fatigue_identification_result.parameters["tau_fat"][0][0]
-
-        return self.alpha_a, self.alpha_km, self.alpha_tau1, self.tau_fat
+        return identified_parameters

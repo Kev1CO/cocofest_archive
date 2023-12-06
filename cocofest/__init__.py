@@ -11,4 +11,5 @@ from .optimization.fes_identification_ocp import OcpFesId
 from .integration.ivp_fes import IvpFes
 from .fourier_approx import FourierSeries
 from .read_data import ExtractData
-from .identification.parameter_identification import DingModelFrequencyParameterIdentification
+from .identification.ding2003_force_parameter_identification import DingModelFrequencyForceParameterIdentification
+from .identification.ding2007_force_parameter_identification import DingModelPulseDurationFrequencyForceParameterIdentification
