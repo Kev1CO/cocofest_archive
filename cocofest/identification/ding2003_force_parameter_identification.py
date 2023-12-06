@@ -491,15 +491,18 @@ class DingModelFrequencyForceParameterIdentification:
     def node_shooting_list_creation(stim, stimulated_n_shooting):
         final_time_phase = ()
         for i in range(len(stim)):
-            final_time_phase = () if i == 0 else final_time_phase + (stim[i] - stim[i - 1],)
+            final_time_phase = (0,) if i == 0 else final_time_phase + (stim[i] - stim[i - 1],)
 
-        stimulation_interval_average = np.mean(final_time_phase)
+        threshold_stimulation_interval = np.mean(final_time_phase)
+        stimulation_interval_average_without_rest_time = np.delete(np.array(final_time_phase), np.where(np.logical_or(
+            final_time_phase > threshold_stimulation_interval, np.array(final_time_phase) == 0)))
+        stimulation_interval_average = np.mean(stimulation_interval_average_without_rest_time)
         n_shooting = []
 
         for i in range(len(final_time_phase)):
-            if final_time_phase[i] > stimulation_interval_average:
+            if final_time_phase[i] > threshold_stimulation_interval:
                 temp_final_time = final_time_phase[i]
-                rest_n_shooting = int(stimulated_n_shooting * temp_final_time / stimulation_interval_average)
+                rest_n_shooting = int((temp_final_time / stimulation_interval_average) * stimulated_n_shooting)
                 n_shooting.append(rest_n_shooting)
             else:
                 n_shooting.append(stimulated_n_shooting)
