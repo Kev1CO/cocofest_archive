@@ -330,7 +330,7 @@ class OcpFesId(OcpFes):
                 parameter_name="pulse_duration",
                 list_index=len(parameter_to_identify),
                 function=DingModelPulseDurationFrequency.set_impulse_duration,
-                size=n_stim + 1,
+                size=n_stim,
             )
             if isinstance(pulse_duration, list):
                 parameters_bounds.add(
@@ -343,18 +343,18 @@ class OcpFesId(OcpFes):
             else:
                 parameters_bounds.add(
                     "pulse_duration",
-                    min_bound=np.array([pulse_duration] * (n_stim + 1)),
-                    max_bound=np.array([pulse_duration] * (n_stim + 1)),
+                    min_bound=np.array([pulse_duration] * n_stim),
+                    max_bound=np.array([pulse_duration] * n_stim),
                     interpolation=InterpolationType.CONSTANT,
                 )
-                parameters_init.add(key="pulse_duration", initial_guess=np.array([pulse_duration] * (n_stim + 1)))
+                parameters_init.add(key="pulse_duration", initial_guess=np.array([pulse_duration] * n_stim))
 
         if pulse_intensity:
             parameters.add(
                 parameter_name="pulse_intensity",
                 list_index=len(parameter_to_identify),
                 function=DingModelIntensityFrequency.set_impulse_intensity,
-                size=n_stim + 1,
+                size=n_stim,
             )
             if isinstance(pulse_intensity, list):
                 parameters_bounds.add(
@@ -367,11 +367,11 @@ class OcpFesId(OcpFes):
             else:
                 parameters_bounds.add(
                     "pulse_intensity",
-                    min_bound=np.array([pulse_intensity] * (n_stim + 1)),
-                    max_bound=np.array([pulse_intensity] * (n_stim + 1)),
+                    min_bound=np.array([pulse_intensity] * n_stim),
+                    max_bound=np.array([pulse_intensity] * n_stim),
                     interpolation=InterpolationType.CONSTANT,
                 )
-                parameters_init.add(key="pulse_intensity", initial_guess=np.array([pulse_intensity] * (n_stim + 1)))
+                parameters_init.add(key="pulse_intensity", initial_guess=np.array([pulse_intensity] * n_stim))
 
         return parameters, parameters_bounds, parameters_init
 

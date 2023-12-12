@@ -275,4 +275,21 @@ class DingModelPulseDurationFrequencyForceParameterIdentification(DingModelFrequ
         for key in self.key_parameter_to_identify:
             identified_parameters[key] = self.force_identification_result.parameters[key][0][0]
 
+        self.attributing_values_to_parameters(identified_parameters)
+
         return identified_parameters
+
+    def attributing_values_to_parameters(self, identified_parameters):
+        for key in identified_parameters:
+            if key == "tau1_rest":
+                self.model.set_tau1_rest(self.model, identified_parameters[key])
+            elif key == "tau2":
+                self.model.set_tau2(self.model, identified_parameters[key])
+            elif key == "km_rest":
+                self.model.set_km_rest(self.model, identified_parameters[key])
+            elif key == "a_scale":
+                self.model.set_a_scale(self.model, identified_parameters[key])
+            elif key == "pd0":
+                self.model.set_pd0(self.model, identified_parameters[key])
+            elif key == "pdt":
+                self.model.set_pdt(self.model, identified_parameters[key])

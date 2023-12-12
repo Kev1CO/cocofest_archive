@@ -277,7 +277,7 @@ class DingModelFrequencyForceParameterIdentification:
         for i in range(len(model_data_path)):
             with open(model_data_path[i], "rb") as f:
                 data = pickle.load(f)
-            model_data = data["biceps"]
+            model_data = data["force"]
 
             # Arranging the data to have the beginning time starting at 0 second for all data
             model_stim_apparition_time = (
@@ -338,7 +338,7 @@ class DingModelFrequencyForceParameterIdentification:
         for i in range(len(model_data_path)):
             with open(model_data_path[i], "rb") as f:
                 data = pickle.load(f)
-            model_data = data["biceps"]
+            model_data = data["force"]
 
             temp_stimulation_instant = []
             stim_threshold = data["stim_time"][1] - data["stim_time"][0]
@@ -416,7 +416,7 @@ class DingModelFrequencyForceParameterIdentification:
         # for i in range(len(model_data_path)):
         #     with open(model_data_path[i], "rb") as f:
         #         data = pickle.load(f)
-        #     model_data = data["biceps"]
+        #     model_data = data["force"]
         #
         #     # Arranging the data to have the beginning time starting at 0 second for all data
         #     model_stim_apparition_time = (
@@ -627,4 +627,17 @@ class DingModelFrequencyForceParameterIdentification:
         for key in self.key_parameter_to_identify:
             identified_parameters[key] = self.force_identification_result.parameters[key][0][0]
 
+        self.attributing_values_to_parameters(identified_parameters)
+
         return identified_parameters
+
+    def attributing_values_to_parameters(self, identified_parameters):
+        for key in identified_parameters:
+            if key == "a_rest":
+                self.model.set_a_rest(self.model, identified_parameters[key])
+            elif key == "km_rest":
+                self.model.set_km_rest(self.model, identified_parameters[key])
+            elif key == "tau1_rest":
+                self.model.set_tau1_rest(self.model, identified_parameters[key])
+            elif key == "tau2":
+                self.model.set_tau2(self.model, identified_parameters[key])
