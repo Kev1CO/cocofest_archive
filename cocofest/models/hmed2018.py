@@ -152,9 +152,6 @@ class DingModelIntensityFrequency(DingModelFrequency):
         for i in range(len(t_stim_prev)):  # Eq from [1]
             if i == 0 and len(t_stim_prev) == 1:  # Eq from Bakir et al.
                 ri = 1
-            elif i == 0 and len(t_stim_prev) != 1:
-                previous_phase_time = t_stim_prev[i + 1] - t_stim_prev[i]
-                ri = self.ri_fun(r0, previous_phase_time)
             else:
                 previous_phase_time = t_stim_prev[i] - t_stim_prev[i - 1]
                 ri = self.ri_fun(r0, previous_phase_time)
