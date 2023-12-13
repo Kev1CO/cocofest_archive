@@ -5,7 +5,7 @@ import os
 import numpy as np
 import pytest
 
-from bioptim import Solver, Shooting, SolutionIntegrator, Solution
+from bioptim import Shooting, SolutionIntegrator, Solution
 from cocofest import (
     OcpFesId,
     IvpFes,
@@ -147,21 +147,15 @@ additional_key_settings = {
 
 
 def test_ocp_id():
-    # --- Setting simulation parameters --- #
-    n_stim = 10
-    n_shooting = 10
-    final_time = 1
-    extra_phase_time = 1
-
     # --- Creating the simulated data to identify on --- #
     # Building the Initial Value Problem
     ivp = IvpFes(
         model=DingModelFrequency(),
-        n_stim=n_stim,
-        n_shooting=n_shooting,
-        final_time=final_time,
+        n_stim=10,
+        n_shooting=10,
+        final_time=1,
         use_sx=True,
-        extend_last_phase=extra_phase_time,
+        extend_last_phase=1,
     )
 
     # Creating the solution from the initial guess
@@ -197,7 +191,7 @@ def test_ocp_id():
         identification_with_average_method_initial_guess=False,
         key_parameter_to_identify=["a_rest", "km_rest", "tau1_rest", "tau2"],
         additional_key_settings={},
-        n_shooting=n_shooting,
+        n_shooting=10,
         use_sx=True,
     )
 
@@ -213,45 +207,6 @@ def test_ocp_id():
 
 
 def test_all_ocp_id_errors():
-    # with pytest.raises(
-    #     ValueError, match="a_rest, km_rest, tau1_rest and tau2 must be set for fatigue model identification"
-    # ):
-    #     OcpFesId.prepare_ocp(model=DingModelFrequencyWithFatigue(), a_rest=3009, km_rest=0.103, tau1_rest=0.050957)
-
-    # a_rest = "3009"
-    # with pytest.raises(
-    #     TypeError, match=re.escape(f"a_rest must be int or float type," f" currently a_rest is {type(a_rest)}) type.")
-    # ):
-    #     OcpFesId.prepare_ocp(
-    #         model=DingModelFrequencyWithFatigue(), a_rest=a_rest, km_rest=0.103, tau1_rest=0.050957, tau2=0.06
-    #     )
-    #
-    # km_rest = "0.103"
-    # with pytest.raises(
-    #     TypeError,
-    #     match=re.escape(f"km_rest must be int or float type," f" currently km_rest is {type(km_rest)}) type."),
-    # ):
-    #     OcpFesId.prepare_ocp(
-    #         model=DingModelFrequencyWithFatigue(), a_rest=3009, km_rest=km_rest, tau1_rest=0.050957, tau2=0.06
-    #     )
-    #
-    # tau1_rest = "0.050957"
-    # with pytest.raises(
-    #     TypeError,
-    #     match=re.escape(f"tau1_rest must be int or float type," f" currently tau1_rest is {type(tau1_rest)}) type."),
-    # ):
-    #     OcpFesId.prepare_ocp(
-    #         model=DingModelFrequencyWithFatigue(), a_rest=3009, km_rest=0.103, tau1_rest=tau1_rest, tau2=0.06
-    #     )
-    #
-    # tau2 = "0.06"
-    # with pytest.raises(
-    #     TypeError, match=re.escape(f"tau2 must be int or float type," f" currently tau2 is {type(tau2)}) type.")
-    # ):
-    #     OcpFesId.prepare_ocp(
-    #         model=DingModelFrequencyWithFatigue(), a_rest=3009, km_rest=0.103, tau1_rest=0.050957, tau2=tau2
-    #     )
-
     n_shooting = "10"
     with pytest.raises(
         TypeError,
@@ -325,4 +280,204 @@ def test_all_ocp_id_errors():
             final_time_phase=(0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1),
             force_tracking=[10, 10, 10, 10, 10, 10, 10, 10, 10],
             pulse_intensity=pulse_intensity,
+        )
+
+
+def test_all_id_program_errors():
+    with pytest.raises(
+        ValueError,
+        match="The given model is not valid and should not be including the fatigue equation in the model",
+    ):
+        DingModelFrequencyForceParameterIdentification(model=DingModelFrequencyWithFatigue())
+
+    with pytest.raises(
+        TypeError,
+        match=re.escape(
+            f"In the given list, all model_data_path must be str type," f" path index n°{0} is not str type"
+        ),
+    ):
+        DingModelFrequencyForceParameterIdentification(model=DingModelFrequency(), data_path=[5])
+
+    with pytest.raises(
+        TypeError,
+        match=re.escape(
+            f"In the given list, all model_data_path must be pickle type and end with .pkl,"
+            f" path index n°{0} is not ending with .pkl"
+        ),
+    ):
+        DingModelFrequencyForceParameterIdentification(model=DingModelFrequency(), data_path=["test"])
+
+    with pytest.raises(
+        TypeError,
+        match=re.escape(
+            f"In the given list, all model_data_path must be pickle type and end with .pkl,"
+            f" path index is not ending with .pkl"
+        ),
+    ):
+        DingModelFrequencyForceParameterIdentification(model=DingModelFrequency(), data_path="test")
+
+    data_path = 5
+    with pytest.raises(
+        TypeError,
+        match=re.escape(
+            f"In the given path, model_data_path must be str or list[str] type, the input is {type(data_path)} type"
+        ),
+    ):
+        DingModelFrequencyForceParameterIdentification(model=DingModelFrequency(), data_path=data_path)
+
+    data_path = ["test.pkl"]
+    identification_method = "empty"
+    with pytest.raises(
+        ValueError,
+        match=re.escape(
+            f"The given model identification method is not valid,"
+            f"only 'full', 'average' and 'sparse' are available,"
+            f" the given value is {identification_method}"
+        ),
+    ):
+        DingModelFrequencyForceParameterIdentification(
+            model=DingModelFrequency(), identification_method=identification_method, data_path=data_path
+        )
+
+    identification_method = "full"
+    identification_with_average_method_initial_guess = "True"
+    with pytest.raises(
+        TypeError,
+        match=re.escape(
+            f"The given identification_with_average_method_initial_guess must be bool type,"
+            f" the given value is {type(identification_with_average_method_initial_guess)} type"
+        ),
+    ):
+        DingModelFrequencyForceParameterIdentification(
+            model=DingModelFrequency(),
+            identification_method=identification_method,
+            data_path=data_path,
+            identification_with_average_method_initial_guess=identification_with_average_method_initial_guess,
+        )
+
+    key_parameter_to_identify = ["a_rest", "test"]
+    default_keys = ["a_rest", "km_rest", "tau1_rest", "tau2"]
+    with pytest.raises(
+        ValueError,
+        match=re.escape(
+            f"The given key_parameter_to_identify is not valid,"
+            f" the given value is {key_parameter_to_identify[1]},"
+            f" the available values are {default_keys}"
+        ),
+    ):
+        DingModelFrequencyForceParameterIdentification(
+            model=DingModelFrequency(),
+            identification_method=identification_method,
+            data_path=data_path,
+            key_parameter_to_identify=key_parameter_to_identify,
+        )
+
+    key_parameter_to_identify = "a_rest"
+    with pytest.raises(
+        TypeError,
+        match=re.escape(
+            f"The given key_parameter_to_identify must be list type,"
+            f" the given value is {type(key_parameter_to_identify)} type"
+        ),
+    ):
+        DingModelFrequencyForceParameterIdentification(
+            model=DingModelFrequency(),
+            identification_method=identification_method,
+            data_path=data_path,
+            key_parameter_to_identify=key_parameter_to_identify,
+        )
+
+    key_parameter_to_identify = ["a_rest", "km_rest", "tau1_rest", "tau2"]
+    additional_key_settings = {
+        "test": {"initial_guess": 1000, "min_bound": 1, "max_bound": 10000, "function": model.set_a_rest, "scaling": 1}
+    }
+    with pytest.raises(
+        ValueError,
+        match=re.escape(
+            f"The given additional_key_settings is not valid,"
+            f" the given value is {'test'},"
+            f" the available values are {default_keys}"
+        ),
+    ):
+        DingModelFrequencyForceParameterIdentification(
+            model=DingModelFrequency(),
+            identification_method=identification_method,
+            data_path=data_path,
+            key_parameter_to_identify=key_parameter_to_identify,
+            additional_key_settings=additional_key_settings,
+        )
+
+    additional_key_settings = {
+        "a_rest": {"test": 1000, "min_bound": 1, "max_bound": 10000, "function": model.set_a_rest, "scaling": 1}
+    }
+    with pytest.raises(
+        ValueError,
+        match=re.escape(
+            f"The given additional_key_settings is not valid,"
+            f" the given value is {'test'},"
+            f" the available values are ['initial_guess', 'min_bound', 'max_bound', 'function', 'scaling']"
+        ),
+    ):
+        DingModelFrequencyForceParameterIdentification(
+            model=DingModelFrequency(),
+            identification_method=identification_method,
+            data_path=data_path,
+            key_parameter_to_identify=key_parameter_to_identify,
+            additional_key_settings=additional_key_settings,
+        )
+
+    additional_key_settings = {
+        "a_rest": {
+            "initial_guess": "test",
+            "min_bound": 1,
+            "max_bound": 10000,
+            "function": model.set_a_rest,
+            "scaling": 1,
+        }
+    }
+    with pytest.raises(
+        TypeError,
+        match=re.escape(
+            f"The given additional_key_settings value is not valid,"
+            f" the given value is <class 'str'>,"
+            f" the available type is <class 'int'>"
+        ),
+    ):
+        DingModelFrequencyForceParameterIdentification(
+            model=DingModelFrequency(),
+            identification_method=identification_method,
+            data_path=data_path,
+            key_parameter_to_identify=key_parameter_to_identify,
+            additional_key_settings=additional_key_settings,
+        )
+
+    additional_key_settings = "test"
+    with pytest.raises(
+        TypeError,
+        match=re.escape(
+            f"The given additional_key_settings must be dict type,"
+            f" the given value is {type(additional_key_settings)} type"
+        ),
+    ):
+        DingModelFrequencyForceParameterIdentification(
+            model=DingModelFrequency(),
+            identification_method=identification_method,
+            data_path=data_path,
+            key_parameter_to_identify=key_parameter_to_identify,
+            additional_key_settings=additional_key_settings,
+        )
+
+    additional_key_settings = {}
+    n_shooting = "10"
+    with pytest.raises(
+        TypeError,
+        match=re.escape(f"The given n_shooting must be int type," f" the given value is {type(n_shooting)} type"),
+    ):
+        DingModelFrequencyForceParameterIdentification(
+            model=DingModelFrequency(),
+            identification_method=identification_method,
+            data_path=data_path,
+            key_parameter_to_identify=key_parameter_to_identify,
+            additional_key_settings=additional_key_settings,
+            n_shooting=n_shooting,
         )

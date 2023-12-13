@@ -191,7 +191,7 @@ class DingModelFrequencyForceParameterIdentification:
                         raise TypeError(
                             f"The given additional_key_settings value is not valid,"
                             f" the given value is {type(additional_key_settings[key][setting_name])},"
-                            f" the available values are {self.default_values[key][setting_name]}"
+                            f" the available type is {type(self.default_values[key][setting_name])}"
                         )
         else:
             raise TypeError(
