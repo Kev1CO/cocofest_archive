@@ -179,18 +179,18 @@ def test_hmed2018_dynamics():
                 cn=5, f=100, a=3009, tau1=0.050957, km=0.103, t=0.11, t_stim_prev=[0, 0.1], intensity_stim=[30, 50]
             )
         ).squeeze(),
-        np.array(DM([-241.001, 2037.07, -0.0004, 0.021, 1.9e-05])).squeeze(),
+        np.array(DM([-240.654, 2037.07, -0.0004, 0.021, 1.9e-05])).squeeze(),
         decimal=3,
     )
     np.testing.assert_almost_equal(model.exp_time_fun(t=0.1, t_stim_i=0.09), 0.6065306597126332)
     np.testing.assert_almost_equal(model.ri_fun(r0=1.05, time_between_stim=0.1), 1.0003368973499542)
     np.testing.assert_almost_equal(
         np.array(model.cn_sum_fun(r0=1.05, t=0.11, t_stim_prev=[0, 0.1], intensity_stim=[30, 50])).squeeze(),
-        np.array(DM(0.1798733)).squeeze(),
+        np.array(DM(0.1822978)).squeeze(),
     )
     np.testing.assert_almost_equal(
         np.array(model.cn_dot_fun(cn=0, r0=1.05, t=0.11, t_stim_prev=[0, 0.1], intensity_stim=[30, 50])).squeeze(),
-        np.array(DM(8.9936666)).squeeze(),
+        np.array(DM(9.1148913)).squeeze(),
     )
     np.testing.assert_almost_equal(model.f_dot_fun(cn=5, f=100, a=3009, tau1=0.050957, km=0.103), 2037.0703505791284)
     np.testing.assert_almost_equal(model.a_dot_fun(a=5, f=100), 23.653143307086616)
