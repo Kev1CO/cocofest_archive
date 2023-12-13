@@ -122,6 +122,11 @@ identified_force = identified_result.states["F"][0]
     pickle_discontinuity_phase_list,
 ) = DingModelFrequencyForceParameterIdentification.full_data_extraction([pickle_file_name])
 
+result_dict = {"a_rest": [identified_model.a_rest, DingModelFrequency().a_rest],
+               "km_rest": [identified_model.km_rest, DingModelFrequency().km_rest],
+               "tau1_rest": [identified_model.tau1_rest, DingModelFrequency().tau1_rest],
+               "tau2": [identified_model.tau2, DingModelFrequency().tau2]}
+
 # Plotting the identification result
 plt.title("Force state result")
 plt.plot(pickle_time_data, pickle_muscle_data, color="blue", label="simulated")
@@ -129,20 +134,12 @@ plt.plot(identified_time, identified_force, color="red", label="identified")
 plt.xlabel("time (s)")
 plt.ylabel("force (N)")
 
-plt.annotate("a_rest : ", xy=(0.7, 0.85), xycoords="axes fraction", color="black")
-plt.annotate("km_rest : ", xy=(0.7, 0.80), xycoords="axes fraction", color="black")
-plt.annotate("tau1_rest : ", xy=(0.7, 0.75), xycoords="axes fraction", color="black")
-plt.annotate("tau2 : ", xy=(0.7, 0.70), xycoords="axes fraction", color="black")
-
-plt.annotate(str(round(identified_model.a_rest, 5)), xy=(0.78, 0.85), xycoords="axes fraction", color="red")
-plt.annotate(str(round(identified_model.km_rest, 5)), xy=(0.78, 0.80), xycoords="axes fraction", color="red")
-plt.annotate(str(round(identified_model.tau1_rest, 5)), xy=(0.78, 0.75), xycoords="axes fraction", color="red")
-plt.annotate(str(round(identified_model.tau2, 5)), xy=(0.78, 0.70), xycoords="axes fraction", color="red")
-
-plt.annotate(str(DingModelFrequency().a_rest), xy=(0.85, 0.85), xycoords="axes fraction", color="blue")
-plt.annotate(str(DingModelFrequency().km_rest), xy=(0.85, 0.80), xycoords="axes fraction", color="blue")
-plt.annotate(str(DingModelFrequency().tau1_rest), xy=(0.85, 0.75), xycoords="axes fraction", color="blue")
-plt.annotate(str(DingModelFrequency().tau2), xy=(0.85, 0.70), xycoords="axes fraction", color="blue")
+y_pos = 0.85
+for key, value in result_dict.items():
+    plt.annotate(f"{key} : ", xy=(0.7, y_pos), xycoords="axes fraction", color="black")
+    plt.annotate(str(round(value[0], 5)), xy=(0.78, y_pos), xycoords="axes fraction", color="red")
+    plt.annotate(str(round(value[1], 5)), xy=(0.85, y_pos), xycoords="axes fraction", color="blue")
+    y_pos -= 0.05
 
 # --- Delete the temp file ---#
 os.remove(f"../data/temp_identification_simulation.pkl")

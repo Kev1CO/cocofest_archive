@@ -49,6 +49,7 @@ result = sol_from_initial_guess.integrate(
 
 # Adding noise to the force
 noise = np.random.normal(0, 5, len(result.states["F"][0]))
+force_n = result.states["F"]
 force1 = result.states["F"] + noise
 force = force1.tolist()
 time = [result.time.tolist()]
@@ -125,33 +126,27 @@ identified_force = identified_result.states["F"][0]
     pickle_discontinuity_phase_list,
 ) = DingModelPulseDurationFrequencyForceParameterIdentification.full_data_extraction([pickle_file_name])
 
+result_dict = {"tau1_rest": [identified_model.tau1_rest, DingModelPulseDurationFrequency().tau1_rest],
+               "tau2": [identified_model.tau2, DingModelPulseDurationFrequency().tau2],
+               "km_rest": [identified_model.km_rest, DingModelPulseDurationFrequency().km_rest],
+               "a_scale": [identified_model.a_scale, DingModelPulseDurationFrequency().a_scale],
+               "pd0": [identified_model.pd0, DingModelPulseDurationFrequency().pd0],
+               "pdt": [identified_model.pdt, DingModelPulseDurationFrequency().pdt]}
+
 # Plotting the identification result
 plt.title("Force state result")
-plt.plot(pickle_time_data, pickle_muscle_data, color="blue", label="simulated")
+plt.plot(pickle_time_data, force_n[0], color="black", label="no noise")
+plt.plot(pickle_time_data, pickle_muscle_data, "o",  color="blue", label="simulated")
 plt.plot(identified_time, identified_force, color="red", label="identified")
 plt.xlabel("time (s)")
 plt.ylabel("force (N)")
 
-plt.annotate("tau1_rest : ", xy=(0.7, 0.85), xycoords="axes fraction", color="black")
-plt.annotate("tau2 : ", xy=(0.7, 0.80), xycoords="axes fraction", color="black")
-plt.annotate("km_rest : ", xy=(0.7, 0.75), xycoords="axes fraction", color="black")
-plt.annotate("a_scale : ", xy=(0.7, 0.70), xycoords="axes fraction", color="black")
-plt.annotate("pd0 : ", xy=(0.7, 0.65), xycoords="axes fraction", color="black")
-plt.annotate("pdt : ", xy=(0.7, 0.60), xycoords="axes fraction", color="black")
-
-plt.annotate(str(round(identified_model.tau1_rest, 5)), xy=(0.78, 0.85), xycoords="axes fraction", color="red")
-plt.annotate(str(round(identified_model.tau2, 5)), xy=(0.78, 0.80), xycoords="axes fraction", color="red")
-plt.annotate(str(round(identified_model.km_rest, 5)), xy=(0.78, 0.75), xycoords="axes fraction", color="red")
-plt.annotate(str(round(identified_model.a_scale, 5)), xy=(0.78, 0.70), xycoords="axes fraction", color="red")
-plt.annotate(str(round(identified_model.pd0, 5)), xy=(0.78, 0.65), xycoords="axes fraction", color="red")
-plt.annotate(str(round(identified_model.pdt, 5)), xy=(0.78, 0.60), xycoords="axes fraction", color="red")
-
-plt.annotate(str(DingModelPulseDurationFrequency().tau1_rest), xy=(0.85, 0.85), xycoords="axes fraction", color="blue")
-plt.annotate(str(DingModelPulseDurationFrequency().tau2), xy=(0.85, 0.80), xycoords="axes fraction", color="blue")
-plt.annotate(str(DingModelPulseDurationFrequency().km_rest), xy=(0.85, 0.75), xycoords="axes fraction", color="blue")
-plt.annotate(str(DingModelPulseDurationFrequency().a_scale), xy=(0.85, 0.70), xycoords="axes fraction", color="blue")
-plt.annotate(str(DingModelPulseDurationFrequency().pd0), xy=(0.85, 0.65), xycoords="axes fraction", color="blue")
-plt.annotate(str(DingModelPulseDurationFrequency().pdt), xy=(0.85, 0.60), xycoords="axes fraction", color="blue")
+y_pos = 0.85
+for key, value in result_dict.items():
+    plt.annotate(f"{key} : ", xy=(0.7, y_pos), xycoords="axes fraction", color="black")
+    plt.annotate(str(round(value[0], 5)), xy=(0.78, y_pos), xycoords="axes fraction", color="red")
+    plt.annotate(str(round(value[1], 5)), xy=(0.85, y_pos), xycoords="axes fraction", color="blue")
+    y_pos -= 0.05
 
 # --- Delete the temp file ---#
 os.remove(f"../data/temp_identification_simulation.pkl")
