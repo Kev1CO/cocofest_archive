@@ -126,17 +126,19 @@ identified_force = identified_result.states["F"][0]
     pickle_discontinuity_phase_list,
 ) = DingModelPulseDurationFrequencyForceParameterIdentification.full_data_extraction([pickle_file_name])
 
-result_dict = {"tau1_rest": [identified_model.tau1_rest, DingModelPulseDurationFrequency().tau1_rest],
-               "tau2": [identified_model.tau2, DingModelPulseDurationFrequency().tau2],
-               "km_rest": [identified_model.km_rest, DingModelPulseDurationFrequency().km_rest],
-               "a_scale": [identified_model.a_scale, DingModelPulseDurationFrequency().a_scale],
-               "pd0": [identified_model.pd0, DingModelPulseDurationFrequency().pd0],
-               "pdt": [identified_model.pdt, DingModelPulseDurationFrequency().pdt]}
+result_dict = {
+    "tau1_rest": [identified_model.tau1_rest, DingModelPulseDurationFrequency().tau1_rest],
+    "tau2": [identified_model.tau2, DingModelPulseDurationFrequency().tau2],
+    "km_rest": [identified_model.km_rest, DingModelPulseDurationFrequency().km_rest],
+    "a_scale": [identified_model.a_scale, DingModelPulseDurationFrequency().a_scale],
+    "pd0": [identified_model.pd0, DingModelPulseDurationFrequency().pd0],
+    "pdt": [identified_model.pdt, DingModelPulseDurationFrequency().pdt],
+}
 
 # Plotting the identification result
 plt.title("Force state result")
 plt.plot(pickle_time_data, force_n[0], color="black", label="no noise")
-plt.plot(pickle_time_data, pickle_muscle_data, "o",  color="blue", label="simulated")
+plt.plot(pickle_time_data, pickle_muscle_data, "o", color="blue", label="simulated")
 plt.plot(identified_time, identified_force, color="red", label="identified")
 plt.xlabel("time (s)")
 plt.ylabel("force (N)")

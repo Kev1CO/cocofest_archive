@@ -122,10 +122,12 @@ identified_force = identified_result.states["F"][0]
     pickle_discontinuity_phase_list,
 ) = DingModelFrequencyForceParameterIdentification.full_data_extraction([pickle_file_name])
 
-result_dict = {"a_rest": [identified_model.a_rest, DingModelFrequency().a_rest],
-               "km_rest": [identified_model.km_rest, DingModelFrequency().km_rest],
-               "tau1_rest": [identified_model.tau1_rest, DingModelFrequency().tau1_rest],
-               "tau2": [identified_model.tau2, DingModelFrequency().tau2]}
+result_dict = {
+    "a_rest": [identified_model.a_rest, DingModelFrequency().a_rest],
+    "km_rest": [identified_model.km_rest, DingModelFrequency().km_rest],
+    "tau1_rest": [identified_model.tau1_rest, DingModelFrequency().tau1_rest],
+    "tau2": [identified_model.tau2, DingModelFrequency().tau2],
+}
 
 # Plotting the identification result
 plt.title("Force state result")

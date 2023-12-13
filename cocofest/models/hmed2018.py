@@ -254,7 +254,11 @@ class DingModelIntensityFrequency(DingModelFrequency):
 
         return DynamicsEvaluation(
             dxdt=nlp.model.system_dynamics(
-                cn=states[0], f=states[1], t=time, t_stim_prev=stim_apparition, intensity_stim=intensity_stim_prev,
+                cn=states[0],
+                f=states[1],
+                t=time,
+                t_stim_prev=stim_apparition,
+                intensity_stim=intensity_stim_prev,
             ),
             defects=None,
         )

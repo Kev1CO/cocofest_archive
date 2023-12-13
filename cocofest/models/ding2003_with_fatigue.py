@@ -27,7 +27,9 @@ class DingModelFrequencyWithFatigue(DingModelFrequency):
     """
 
     def __init__(
-        self, name: str = "ding2003_with_fatigue", sum_stim_truncation: int = None,
+        self,
+        name: str = "ding2003_with_fatigue",
+        sum_stim_truncation: int = None,
     ):
         super().__init__(name=name, sum_stim_truncation=sum_stim_truncation)
         self._with_fatigue = True
@@ -270,7 +272,13 @@ class DingModelFrequencyWithFatigue(DingModelFrequency):
         name = "A"
         name_a = [name]
         ConfigureProblem.configure_new_variable(
-            name, name_a, ocp, nlp, as_states, as_controls, as_states_dot,
+            name,
+            name_a,
+            ocp,
+            nlp,
+            as_states,
+            as_controls,
+            as_states_dot,
         )
 
     @staticmethod
@@ -300,7 +308,13 @@ class DingModelFrequencyWithFatigue(DingModelFrequency):
         name = "Tau1"
         name_tau1 = [name]
         ConfigureProblem.configure_new_variable(
-            name, name_tau1, ocp, nlp, as_states, as_controls, as_states_dot,
+            name,
+            name_tau1,
+            ocp,
+            nlp,
+            as_states,
+            as_controls,
+            as_states_dot,
         )
 
     @staticmethod
@@ -330,5 +344,11 @@ class DingModelFrequencyWithFatigue(DingModelFrequency):
         name = "Km"
         name_km = [name]
         ConfigureProblem.configure_new_variable(
-            name, name_km, ocp, nlp, as_states, as_controls, as_states_dot,
+            name,
+            name_km,
+            ocp,
+            nlp,
+            as_states,
+            as_controls,
+            as_states_dot,
         )

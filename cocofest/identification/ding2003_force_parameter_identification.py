@@ -268,7 +268,6 @@ class DingModelFrequencyForceParameterIdentification:
 
     @staticmethod
     def full_data_extraction(model_data_path):
-
         global_model_muscle_data = []
         global_model_stim_apparition_time = []
         global_model_time_data = []
@@ -329,7 +328,6 @@ class DingModelFrequencyForceParameterIdentification:
 
     @staticmethod
     def average_data_extraction(model_data_path):
-
         global_model_muscle_data = []
         global_model_stim_apparition_time = []
         global_model_time_data = []
@@ -495,8 +493,10 @@ class DingModelFrequencyForceParameterIdentification:
             final_time_phase = final_time_phase + (stim[i] - stim[i - 1],)
 
         threshold_stimulation_interval = np.mean(final_time_phase)
-        stimulation_interval_average_without_rest_time = np.delete(np.array(final_time_phase), np.where(np.logical_or(
-            final_time_phase > threshold_stimulation_interval, np.array(final_time_phase) == 0)))
+        stimulation_interval_average_without_rest_time = np.delete(
+            np.array(final_time_phase),
+            np.where(np.logical_or(final_time_phase > threshold_stimulation_interval, np.array(final_time_phase) == 0)),
+        )
         stimulation_interval_average = np.mean(stimulation_interval_average_without_rest_time)
         n_shooting = []
 
@@ -536,6 +536,8 @@ class DingModelFrequencyForceParameterIdentification:
             n_shooting=n_shooting,
             final_time_phase=final_time_phase,
             force_tracking=force_at_node,
+            key_parameter_to_identify=self.key_parameter_to_identify,
+            additional_key_settings=self.additional_key_settings,
             custom_objective=self.custom_objective,
             discontinuity_in_ocp=discontinuity,
             a_rest=self.a_rest,

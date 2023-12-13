@@ -88,7 +88,7 @@ class IvpFes(OptimalControlProgram):
         if pulse_mode == "Single":
             step = final_time / n_stim
             self.final_time_phase = (step,)
-            for i in range(n_stim-1):
+            for i in range(n_stim - 1):
                 self.final_time_phase = self.final_time_phase + (step,)
 
         elif pulse_mode == "Doublet":
@@ -117,7 +117,7 @@ class IvpFes(OptimalControlProgram):
 
         if extend_last_phase:
             self.final_time_phase = self.final_time_phase[:-1] + (self.final_time_phase[-1] + extend_last_phase,)
-            self.n_shooting[-1] = int((extend_last_phase/step) * n_shooting) + self.n_shooting[-1]
+            self.n_shooting[-1] = int((extend_last_phase / step) * n_shooting) + self.n_shooting[-1]
 
         parameters = ParameterList()
         parameters_init = InitialGuessList()

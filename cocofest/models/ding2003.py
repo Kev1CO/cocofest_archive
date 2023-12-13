@@ -27,7 +27,9 @@ class DingModelFrequency:
     """
 
     def __init__(
-        self, name: str = "ding2003", sum_stim_truncation: int = None,
+        self,
+        name: str = "ding2003",
+        sum_stim_truncation: int = None,
     ):
         self._name = name
         self._sum_stim_truncation = sum_stim_truncation
@@ -92,7 +94,13 @@ class DingModelFrequency:
         return self._name
 
     # ---- Model's dynamics ---- #
-    def system_dynamics(self, cn: MX, f: MX, t: MX = None, t_stim_prev: list[MX] | list[float] = None,) -> MX:
+    def system_dynamics(
+        self,
+        cn: MX,
+        f: MX,
+        t: MX = None,
+        t_stim_prev: list[MX] | list[float] = None,
+    ) -> MX:
         """
         The system dynamics is the function that describes the models.
 
@@ -254,7 +262,12 @@ class DingModelFrequency:
         """
 
         return DynamicsEvaluation(
-            dxdt=nlp.model.system_dynamics(cn=states[0], f=states[1], t=time, t_stim_prev=stim_apparition,),
+            dxdt=nlp.model.system_dynamics(
+                cn=states[0],
+                f=states[1],
+                t=time,
+                t_stim_prev=stim_apparition,
+            ),
             defects=None,
         )
 
@@ -301,7 +314,13 @@ class DingModelFrequency:
         name = "Cn"
         name_cn = [name]
         ConfigureProblem.configure_new_variable(
-            name, name_cn, ocp, nlp, as_states, as_controls, as_states_dot,
+            name,
+            name_cn,
+            ocp,
+            nlp,
+            as_states,
+            as_controls,
+            as_states_dot,
         )
 
     @staticmethod
@@ -331,7 +350,13 @@ class DingModelFrequency:
         name = "F"
         name_f = [name]
         ConfigureProblem.configure_new_variable(
-            name, name_f, ocp, nlp, as_states, as_controls, as_states_dot,
+            name,
+            name_f,
+            ocp,
+            nlp,
+            as_states,
+            as_controls,
+            as_states_dot,
         )
 
     @staticmethod

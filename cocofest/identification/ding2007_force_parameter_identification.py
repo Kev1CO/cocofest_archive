@@ -57,7 +57,6 @@ class DingModelPulseDurationFrequencyForceParameterIdentification(DingModelFrequ
         n_threads: int = 1,
         **kwargs,
     ):
-
         self.a_scale = a_scale
         self.pd0 = pd0
         self.pdt = pdt

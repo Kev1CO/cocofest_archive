@@ -124,14 +124,16 @@ identified_force = identified_result.states["F"][0]
     pickle_discontinuity_phase_list,
 ) = DingModelPulseIntensityFrequencyForceParameterIdentification.full_data_extraction([pickle_file_name])
 
-result_dict = {"a_rest": [identified_model.a_rest, DingModelIntensityFrequency().a_rest],
-               "km_rest": [identified_model.km_rest, DingModelIntensityFrequency().km_rest],
-               "tau1_rest": [identified_model.tau1_rest, DingModelIntensityFrequency().tau1_rest],
-               "tau2": [identified_model.tau2, DingModelIntensityFrequency().tau2],
-               "ar": [identified_model.ar, DingModelIntensityFrequency().ar],
-               "bs": [identified_model.bs, DingModelIntensityFrequency().bs],
-               "Is": [identified_model.Is, DingModelIntensityFrequency().Is],
-               "cr": [identified_model.cr, DingModelIntensityFrequency().cr]}
+result_dict = {
+    "a_rest": [identified_model.a_rest, DingModelIntensityFrequency().a_rest],
+    "km_rest": [identified_model.km_rest, DingModelIntensityFrequency().km_rest],
+    "tau1_rest": [identified_model.tau1_rest, DingModelIntensityFrequency().tau1_rest],
+    "tau2": [identified_model.tau2, DingModelIntensityFrequency().tau2],
+    "ar": [identified_model.ar, DingModelIntensityFrequency().ar],
+    "bs": [identified_model.bs, DingModelIntensityFrequency().bs],
+    "Is": [identified_model.Is, DingModelIntensityFrequency().Is],
+    "cr": [identified_model.cr, DingModelIntensityFrequency().cr],
+}
 
 # Plotting the identification result
 plt.title("Force state result")

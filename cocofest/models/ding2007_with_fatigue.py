@@ -246,7 +246,13 @@ class DingModelPulseDurationFrequencyWithFatigue(DingModelPulseDurationFrequency
         name = "Tau1"
         name_tau1 = [name]
         ConfigureProblem.configure_new_variable(
-            name, name_tau1, ocp, nlp, as_states, as_controls, as_states_dot,
+            name,
+            name_tau1,
+            ocp,
+            nlp,
+            as_states,
+            as_controls,
+            as_states_dot,
         )
 
     @staticmethod
@@ -276,5 +282,11 @@ class DingModelPulseDurationFrequencyWithFatigue(DingModelPulseDurationFrequency
         name = "Km"
         name_km = [name]
         ConfigureProblem.configure_new_variable(
-            name, name_km, ocp, nlp, as_states, as_controls, as_states_dot,
+            name,
+            name_km,
+            ocp,
+            nlp,
+            as_states,
+            as_controls,
+            as_states_dot,
         )
