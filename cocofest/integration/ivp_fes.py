@@ -87,30 +87,30 @@ class IvpFes(OptimalControlProgram):
 
         if pulse_mode == "Single":
             step = final_time / n_stim
-            self.final_time_phase = (0,)
+            self.final_time_phase = (step,)
             for i in range(n_stim-1):
                 self.final_time_phase = self.final_time_phase + (step,)
 
         elif pulse_mode == "Doublet":
             doublet_step = 0.005
             step = final_time / (n_stim / 2) - doublet_step
-            self.final_time_phase = (0,)
+            self.final_time_phase = (doublet_step,)
             for i in range(int(n_stim / 2)):
-                self.final_time_phase = self.final_time_phase + (doublet_step,)
                 self.final_time_phase = self.final_time_phase + (step,)
+                self.final_time_phase = self.final_time_phase + (doublet_step,)
 
         elif pulse_mode == "Triplet":
             doublet_step = 0.005
             triplet_step = 0.005
             step = final_time / (n_stim / 3) - doublet_step - triplet_step
             self.final_time_phase = (
-                0,
                 doublet_step,
+                triplet_step,
             )
             for i in range(int(n_stim / 3)):
-                self.final_time_phase = self.final_time_phase + (triplet_step,)
                 self.final_time_phase = self.final_time_phase + (step,)
                 self.final_time_phase = self.final_time_phase + (doublet_step,)
+                self.final_time_phase = self.final_time_phase + (triplet_step,)
 
         else:
             raise ValueError("Pulse mode not yet implemented")
