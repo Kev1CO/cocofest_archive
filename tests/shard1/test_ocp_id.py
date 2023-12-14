@@ -14,6 +14,8 @@ from cocofest import (
     DingModelIntensityFrequency,
     DingModelFrequencyWithFatigue,
     DingModelFrequencyForceParameterIdentification,
+    DingModelPulseDurationFrequencyForceParameterIdentification,
+    DingModelPulseIntensityFrequencyForceParameterIdentification,
 )
 
 model = DingModelFrequency
@@ -146,7 +148,7 @@ additional_key_settings = {
 }
 
 
-def test_ocp_id():
+def test_ocp_id_ding2003():
     # --- Creating the simulated data to identify on --- #
     # Building the Initial Value Problem
     ivp = IvpFes(
@@ -200,10 +202,144 @@ def test_ocp_id():
     # --- Delete the temp file ---#
     os.remove(f"temp_identification_simulation.pkl")
 
-    np.testing.assert_almost_equal(identification_result["a_rest"], model().a_rest, decimal=0)
-    np.testing.assert_almost_equal(identification_result["km_rest"], model().km_rest, decimal=3)
-    np.testing.assert_almost_equal(identification_result["tau1_rest"], model().tau1_rest, decimal=3)
-    np.testing.assert_almost_equal(identification_result["tau2"], model().tau2, decimal=3)
+    model = DingModelFrequency()
+    np.testing.assert_almost_equal(identification_result["a_rest"], model.a_rest, decimal=0)
+    np.testing.assert_almost_equal(identification_result["km_rest"], model.km_rest, decimal=3)
+    np.testing.assert_almost_equal(identification_result["tau1_rest"], model.tau1_rest, decimal=3)
+    np.testing.assert_almost_equal(identification_result["tau2"], model.tau2, decimal=3)
+
+
+def test_ocp_id_ding2007():
+    # --- Creating the simulated data to identify on --- #
+    # Building the Initial Value Problem
+    ivp = IvpFes(
+        model=DingModelPulseDurationFrequency(),
+        n_stim=10,
+        pulse_duration=[0.003] * 10,
+        n_shooting=10,
+        final_time=1,
+        use_sx=True,
+        extend_last_phase=1,
+    )
+
+    # Creating the solution from the initial guess
+    sol_from_initial_guess = Solution.from_initial_guess(ivp, [ivp.x_init, ivp.u_init, ivp.p_init, ivp.s_init])
+
+    # Integrating the solution
+    result = sol_from_initial_guess.integrate(
+        shooting_type=Shooting.SINGLE, integrator=SolutionIntegrator.OCP, merge_phases=True
+    )
+
+    force = result.states["F"]
+    force = force.tolist()
+    time = [result.time.tolist()]
+    stim_temp = [0 if i == 0 else result.ocp.nlp[i].tf for i in range(len(result.ocp.nlp))]
+    stim = [sum(stim_temp[: i + 1]) for i in range(len(stim_temp))]
+
+    # Saving the data in a pickle file
+    dictionary = {
+        "time": time,
+        "force": force,
+        "stim_time": stim,
+        "pulse_duration": [0.003] * 10,
+    }
+
+    pickle_file_name = "temp_identification_simulation.pkl"
+    with open(pickle_file_name, "wb") as file:
+        pickle.dump(dictionary, file)
+
+    # --- Identifying the model parameters --- #
+    ocp = DingModelPulseDurationFrequencyForceParameterIdentification(
+        model=DingModelPulseDurationFrequency(),
+        data_path=[pickle_file_name],
+        identification_method="full",
+        identification_with_average_method_initial_guess=False,
+        key_parameter_to_identify=["tau1_rest", "tau2", "km_rest", "a_scale", "pd0", "pdt"],
+        additional_key_settings={},
+        n_shooting=10,
+        use_sx=True,
+    )
+
+    identification_result = ocp.force_model_identification()
+
+    # --- Delete the temp file ---#
+    os.remove(f"temp_identification_simulation.pkl")
+
+    model = DingModelPulseDurationFrequency()
+    np.testing.assert_almost_equal(identification_result["tau1_rest"], model.tau1_rest, decimal=3)
+    np.testing.assert_almost_equal(identification_result["tau2"], model.tau2, decimal=3)
+    np.testing.assert_almost_equal(identification_result["km_rest"], model.km_rest, decimal=3)
+    np.testing.assert_almost_equal(identification_result["a_scale"], model.a_scale, decimal=-2)
+    np.testing.assert_almost_equal(identification_result["pd0"], model.pd0, decimal=3)
+    np.testing.assert_almost_equal(identification_result["pdt"], model.pdt, decimal=3)
+
+
+def test_ocp_id_hmed2018():
+    # --- Creating the simulated data to identify on --- #
+    # Building the Initial Value Problem
+    ivp = IvpFes(
+        model=DingModelIntensityFrequency(),
+        n_stim=10,
+        pulse_intensity=[50] * 10,
+        n_shooting=10,
+        final_time=1,
+        use_sx=True,
+        extend_last_phase=1,
+    )
+
+    # Creating the solution from the initial guess
+    sol_from_initial_guess = Solution.from_initial_guess(ivp, [ivp.x_init, ivp.u_init, ivp.p_init, ivp.s_init])
+
+    # Integrating the solution
+    result = sol_from_initial_guess.integrate(
+        shooting_type=Shooting.SINGLE, integrator=SolutionIntegrator.OCP, merge_phases=True
+    )
+
+    force = result.states["F"]
+    force = force.tolist()
+    time = [result.time.tolist()]
+    stim_temp = [0 if i == 0 else result.ocp.nlp[i].tf for i in range(len(result.ocp.nlp))]
+    stim = [sum(stim_temp[: i + 1]) for i in range(len(stim_temp))]
+
+    # Saving the data in a pickle file
+    dictionary = {
+        "time": time,
+        "force": force,
+        "stim_time": stim,
+        "pulse_intensity": [50] * 10,
+    }
+
+    pickle_file_name = "temp_identification_simulation.pkl"
+    with open(pickle_file_name, "wb") as file:
+        pickle.dump(dictionary, file)
+
+    # --- Identifying the model parameters --- #
+    ocp = DingModelPulseIntensityFrequencyForceParameterIdentification(
+        model=DingModelIntensityFrequency(),
+        data_path=[pickle_file_name],
+        identification_method="full",
+        identification_with_average_method_initial_guess=False,
+        key_parameter_to_identify=["a_rest", "km_rest", "tau1_rest", "tau2", "ar", "bs", "Is", "cr"],
+        additional_key_settings={},
+        n_shooting=10,
+        use_sx=True,
+    )
+
+    identification_result = ocp.force_model_identification()
+
+    # --- Delete the temp file ---#
+    os.remove(f"temp_identification_simulation.pkl")
+
+    model = DingModelIntensityFrequency()
+    np.testing.assert_almost_equal(identification_result["a_rest"], model.a_rest, decimal=0)
+    np.testing.assert_almost_equal(identification_result["km_rest"], model.km_rest, decimal=3)
+    np.testing.assert_almost_equal(identification_result["tau1_rest"], model.tau1_rest, decimal=3)
+    np.testing.assert_almost_equal(identification_result["tau2"], model.tau2, decimal=3)
+    np.testing.assert_almost_equal(ocp.force_identification_result.cost, 3.01386e-17)
+    # np.testing.assert_almost_equal(identification_result["ar"], model.ar, decimal=3)
+    # np.testing.assert_almost_equal(identification_result["bs"], model.bs, decimal=3)
+    # np.testing.assert_almost_equal(identification_result["Is"], model.Is, decimal=1)
+    # np.testing.assert_almost_equal(identification_result["cr"], model.cr, decimal=3)
 
 
 def test_all_ocp_id_errors():
@@ -484,8 +620,8 @@ def test_all_id_program_errors():
         )
 
     with pytest.raises(
-            ValueError,
-            match=re.escape(f"The given model parameters are not valid, only None, int and float are accepted"),
+        ValueError,
+        match=re.escape(f"The given model parameters are not valid, only None, int and float are accepted"),
     ):
         DingModelFrequencyForceParameterIdentification(
             model=DingModelFrequency(),
@@ -498,10 +634,12 @@ def test_all_id_program_errors():
         )
 
     with pytest.raises(
-            ValueError,
-            match=re.escape(f"The given {'a_rest'} parameter can not be given and identified at the same time."
-                    f"Consider either giving {'a_rest'} and removing it from the key_parameter_to_identify list"
-                    f" or the other way around"),
+        ValueError,
+        match=re.escape(
+            f"The given {'a_rest'} parameter can not be given and identified at the same time."
+            f"Consider either giving {'a_rest'} and removing it from the key_parameter_to_identify list"
+            f" or the other way around"
+        ),
     ):
         DingModelFrequencyForceParameterIdentification(
             model=DingModelFrequency(),
@@ -514,8 +652,8 @@ def test_all_id_program_errors():
         )
 
     with pytest.raises(
-            ValueError,
-            match=re.escape(f"The given {'a_rest'} parameter is not valid, it must be given or identified"),
+        ValueError,
+        match=re.escape(f"The given {'a_rest'} parameter is not valid, it must be given or identified"),
     ):
         DingModelFrequencyForceParameterIdentification(
             model=DingModelFrequency(),
@@ -526,5 +664,3 @@ def test_all_id_program_errors():
             n_shooting=10,
             a_rest=None,
         )
-
-
