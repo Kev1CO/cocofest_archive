@@ -387,6 +387,7 @@ def test_all_id_program_errors():
             key_parameter_to_identify=key_parameter_to_identify,
         )
 
+    model = DingModelFrequency()
     key_parameter_to_identify = ["a_rest", "km_rest", "tau1_rest", "tau2"]
     additional_key_settings = {
         "test": {"initial_guess": 1000, "min_bound": 1, "max_bound": 10000, "function": model.set_a_rest, "scaling": 1}
@@ -481,3 +482,49 @@ def test_all_id_program_errors():
             additional_key_settings=additional_key_settings,
             n_shooting=n_shooting,
         )
+
+    with pytest.raises(
+            ValueError,
+            match=re.escape(f"The given model parameters are not valid, only None, int and float are accepted"),
+    ):
+        DingModelFrequencyForceParameterIdentification(
+            model=DingModelFrequency(),
+            identification_method=identification_method,
+            data_path=data_path,
+            key_parameter_to_identify=key_parameter_to_identify,
+            additional_key_settings=additional_key_settings,
+            n_shooting=10,
+            a_rest="test",
+        )
+
+    with pytest.raises(
+            ValueError,
+            match=re.escape(f"The given {'a_rest'} parameter can not be given and identified at the same time."
+                    f"Consider either giving {'a_rest'} and removing it from the key_parameter_to_identify list"
+                    f" or the other way around"),
+    ):
+        DingModelFrequencyForceParameterIdentification(
+            model=DingModelFrequency(),
+            identification_method=identification_method,
+            data_path=data_path,
+            key_parameter_to_identify=key_parameter_to_identify,
+            additional_key_settings=additional_key_settings,
+            n_shooting=10,
+            a_rest=3000,
+        )
+
+    with pytest.raises(
+            ValueError,
+            match=re.escape(f"The given {'a_rest'} parameter is not valid, it must be given or identified"),
+    ):
+        DingModelFrequencyForceParameterIdentification(
+            model=DingModelFrequency(),
+            identification_method=identification_method,
+            data_path=data_path,
+            key_parameter_to_identify=["km_rest", "tau1_rest", "tau2"],
+            additional_key_settings=additional_key_settings,
+            n_shooting=10,
+            a_rest=None,
+        )
+
+

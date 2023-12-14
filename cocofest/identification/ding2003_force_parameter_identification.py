@@ -576,6 +576,7 @@ class DingModelFrequencyForceParameterIdentification:
         # --- Force model --- #
         stimulated_n_shooting = self.n_shooting
         force_curve_number = None
+        time, stim, force, discontinuity = None, None, None, None
 
         if self.force_model_identification_method == "full":
             time, stim, force, discontinuity = self.full_data_extraction(self.data_path)
@@ -586,12 +587,6 @@ class DingModelFrequencyForceParameterIdentification:
         elif self.force_model_identification_method == "sparse":
             force_curve_number = self.kwargs["force_curve_number"] if "force_curve_number" in self.kwargs else 5
             time, stim, force, discontinuity = self.sparse_data_extraction(self.data_path, force_curve_number)
-        else:
-            raise ValueError(
-                f"The given force_model_identification_method is not valid,"
-                f"only 'full', 'average' and 'sparse' are available,"
-                f" the given value is {self.force_model_identification_method}"
-            )
 
         n_shooting, final_time_phase = self.node_shooting_list_creation(stim, stimulated_n_shooting)
         force_at_node = self.force_at_node_in_ocp(time, force, n_shooting, final_time_phase, force_curve_number)
