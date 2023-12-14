@@ -281,7 +281,7 @@ def test_ocp_id_hmed2018():
         model=DingModelIntensityFrequency(),
         n_stim=10,
         pulse_intensity=[50] * 10,
-        n_shooting=10,
+        n_shooting=100,
         final_time=1,
         use_sx=True,
         extend_last_phase=1,
@@ -321,7 +321,7 @@ def test_ocp_id_hmed2018():
         identification_with_average_method_initial_guess=False,
         key_parameter_to_identify=["a_rest", "km_rest", "tau1_rest", "tau2", "ar", "bs", "Is", "cr"],
         additional_key_settings={},
-        n_shooting=10,
+        n_shooting=100,
         use_sx=True,
     )
 
@@ -335,7 +335,7 @@ def test_ocp_id_hmed2018():
     np.testing.assert_almost_equal(identification_result["km_rest"], model.km_rest, decimal=3)
     np.testing.assert_almost_equal(identification_result["tau1_rest"], model.tau1_rest, decimal=3)
     np.testing.assert_almost_equal(identification_result["tau2"], model.tau2, decimal=3)
-    np.testing.assert_almost_equal(ocp.force_identification_result.cost, 3.01386e-17)
+    np.testing.assert_almost_equal(ocp.force_identification_result.cost, 2.99324e-12)
     # np.testing.assert_almost_equal(identification_result["ar"], model.ar, decimal=3)
     # np.testing.assert_almost_equal(identification_result["bs"], model.bs, decimal=3)
     # np.testing.assert_almost_equal(identification_result["Is"], model.Is, decimal=1)
