@@ -7,6 +7,8 @@ from bioptim import (
     OptimalControlProgram,
     ParameterList,
     PhaseDynamics,
+    BoundsList,
+    InterpolationType,
 )
 
 from cocofest import (
@@ -67,6 +69,7 @@ class IvpFes(OptimalControlProgram):
         pulse_duration: int | float | list[int] | list[float] = None,
         pulse_intensity: int | float | list[int] | list[float] = None,
         pulse_mode: str = "Single",
+        extend_last_phase: int | float = None,
         ode_solver: OdeSolver = OdeSolver.RK4(n_integration_steps=1),
         use_sx: bool = True,
         n_threads: int = 1,
@@ -112,8 +115,13 @@ class IvpFes(OptimalControlProgram):
         else:
             raise ValueError("Pulse mode not yet implemented")
 
+        if extend_last_phase:
+            self.final_time_phase = self.final_time_phase[:-1] + (self.final_time_phase[-1] + extend_last_phase,)
+            self.n_shooting[-1] = int((extend_last_phase / step) * n_shooting) + self.n_shooting[-1]
+
         parameters = ParameterList()
         parameters_init = InitialGuessList()
+        parameters_bounds = BoundsList()
         if isinstance(model, DingModelPulseDurationFrequency | DingModelPulseDurationFrequencyWithFatigue):
             minimum_pulse_duration = model.pd0
             if isinstance(pulse_duration, bool) or not isinstance(pulse_duration, int | float | list):
@@ -126,6 +134,12 @@ class IvpFes(OptimalControlProgram):
                         f" Set a value above {minimum_pulse_duration} seconds"
                     )
                 parameters_init["pulse_duration"] = np.array([pulse_duration] * n_stim)
+                parameters_bounds.add(
+                    "pulse_duration",
+                    min_bound=np.array([pulse_duration] * (n_stim + 1)),
+                    max_bound=np.array([pulse_duration] * (n_stim + 1)),
+                    interpolation=InterpolationType.CONSTANT,
+                )
 
             elif isinstance(pulse_duration, list):
                 if len(pulse_duration) != n_stim:
@@ -138,6 +152,12 @@ class IvpFes(OptimalControlProgram):
                             f" Set a value above {minimum_pulse_duration} seconds"
                         )
                 parameters_init["pulse_duration"] = np.array(pulse_duration)
+                parameters_bounds.add(
+                    "pulse_duration",
+                    min_bound=np.array(pulse_duration),
+                    max_bound=np.array(pulse_duration),
+                    interpolation=InterpolationType.CONSTANT,
+                )
 
             parameters.add(
                 parameter_name="pulse_duration",
@@ -201,6 +221,7 @@ class IvpFes(OptimalControlProgram):
             use_sx=use_sx,
             parameters=parameters,
             parameter_init=parameters_init,
+            parameter_bounds=parameters_bounds,
             n_threads=n_threads,
         )
 
