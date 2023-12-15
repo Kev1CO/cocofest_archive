@@ -53,18 +53,20 @@ list_min_computation_time = []
 all_mode_list_error = []
 all_model_list_ground_truth_parameter = []
 all_mode_list_error_beneath_1e_8 = []
-all_model_list_ground_truth_computation_time = []
+all_time_beneath_1e_8 = []
+
 for i in range(len(name_error_list)):
     counter = 0
     list_error = []
     ground_truth_parameter = []
-    ground_truth_computation_time = []
+    computation_time_beneath_1e_8 = []
     list_error_beneath_1e_8 = []
     for j in range(len(name_error_list[i])):
         ground_truth_f = name_error_list[i][j][-1]
         ground_truth_cn = name_error_list_cn[i][j][-1]
-        ground_truth_computation_time.append(computations_time_list[i][counter])
+        ground_truth_computation_time = computations_time_list[i][counter]
         counter_beneath_1e_8 = 0
+        computation_time_beneath_1e_8_counter = 0
         for k, result in enumerate(name_error_list[i][j]):
             error_val = abs(ground_truth_f - result)
             cn_error_val = abs(ground_truth_cn - name_error_list_cn[i][j][k])
@@ -72,14 +74,22 @@ for i in range(len(name_error_list)):
                 ground_truth_parameter.append(parameter_list[i][counter])
             if cn_error_val < 1e-8 and counter_beneath_1e_8 == 0:
                 list_error_beneath_1e_8.append(counter)
+                computation_time_beneath_1e_8_counter = counter
+                # time_diff = ground_truth_computation_time - computations_time_list[i][counter]
+                # time_diff = 0 if time_diff < 0 else time_diff
+                # computation_time_beneath_1e_8.append(time_diff)
                 counter_beneath_1e_8 += 1
             list_error.append(error_val)
             counter += 1
+        ground_truth_computation_time = computations_time_list[i][counter-1]
+        time_diff = ground_truth_computation_time - computations_time_list[i][computation_time_beneath_1e_8_counter]
+        time_diff = 0 if time_diff < 0 else time_diff
+        computation_time_beneath_1e_8.append(time_diff)
 
     all_mode_list_error.append(list_error)
     all_mode_list_error_beneath_1e_8.append(list_error_beneath_1e_8)
     all_model_list_ground_truth_parameter.append(ground_truth_parameter)
-    all_model_list_ground_truth_computation_time.append(ground_truth_computation_time)
+    all_time_beneath_1e_8.append(computation_time_beneath_1e_8)
     list_max_error.append(max(list_error))
     list_min_error.append(min(list_error))
     list_max_computation_time.append(max(computations_time_list[i]))
@@ -221,14 +231,11 @@ cbar1.ax.set_yticklabels(
 #     )
 
 x_beneath_1e_8 = np.arange(1, 101, 1).tolist()
-all_time_beneath_1e_8 = []
 for i in range(len(all_mode_list_error_beneath_1e_8)):
     time_beneath_1e_8 = []
     y_beneath_1e_8 = []
     for j in range(len((all_mode_list_error_beneath_1e_8[i]))):
         y_beneath_1e_8.append(parameter_list[i][all_mode_list_error_beneath_1e_8[i][j]][1])
-        time_beneath_1e_8.append(abs(all_model_list_ground_truth_computation_time[i][j]-computations_time_list[i][all_mode_list_error_beneath_1e_8[i][j]]))
-    all_time_beneath_1e_8.append(time_beneath_1e_8)
     axs[i].plot(x_beneath_1e_8, y_beneath_1e_8, color="red", label="Calcium error < 1e-8")
 
 axs[0].set_title("Single pulse train")
