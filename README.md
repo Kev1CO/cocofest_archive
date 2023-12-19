@@ -2,6 +2,7 @@
     <img
       src="docs/cocofest_logo.png"
       alt="logo"
+      width="200"
     />
 </p>
 
