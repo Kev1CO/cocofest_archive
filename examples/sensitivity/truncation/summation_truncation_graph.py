@@ -88,6 +88,18 @@ for i in range(len(name_error_list)):
                 # computation_time_beneath_1e_8.append(time_diff)
                 counter_beneath_1e_8 += 1
             list_error.append(error_val)
+            if parameter_list[i][counter] == [1, 1]:
+                print("[1, 1]", computations_time_list[i][counter])
+                a_time = computations_time_list[i][counter]
+
+            if parameter_list[i][counter] == [100, 1]:
+                print("[100, 1]", computations_time_list[i][counter])
+                b_time = computations_time_list[i][counter]
+
+            if parameter_list[i][counter] == [100, 39]:
+                print("[100, 39]", computations_time_list[i][counter])
+                c_time = computations_time_list[i][counter]
+
             counter += 1
         ground_truth_computation_time = computations_time_list[i][counter-1]
         time_diff = ground_truth_computation_time - computations_time_list[i][computation_time_beneath_1e_8_counter]
@@ -206,7 +218,7 @@ cbar1 = fig.colorbar(
     ticks=[1e-12, 1e-10, 1e-8, 1e-6, 1e-4, 1e-2, 1, max_error],
     cmap=cmap,
 )
-cbar1.set_label(label="Absolute error (N)", size=25)
+cbar1.set_label(label="Absolute error (N)", size=25, fontname="Times New Roman")
 
 cbar1.ax.set_yticklabels(
     [
@@ -221,6 +233,7 @@ cbar1.ax.set_yticklabels(
     ],
     style="italic",
     size=25,
+    fontname="Times New Roman"
 )
 
 # computation_time_color_bar_scale = "same"  # "same" or "different"
@@ -272,18 +285,26 @@ cbar1.ax.set_yticklabels(
 #         style="italic",
 #     )
 
+axs.plot(np.arange(1, 101, 1).tolist(), np.arange(1, 101, 1).tolist(), color="red", ls="-.", label="Ground truth", linewidth=5)
+
 x_beneath_1e_8 = np.arange(1, 101, 1).tolist()
 for i in range(1):
     time_beneath_1e_8 = []
     y_beneath_1e_8 = []
     for j in range(len((all_mode_list_error_beneath_1e_8[i]))):
         y_beneath_1e_8.append(parameter_list[i][all_mode_list_error_beneath_1e_8[i][j]][1])
-    axs.plot(x_beneath_1e_8, y_beneath_1e_8, color="red", label="Calcium error < 1e-8")
+    axs.plot(x_beneath_1e_8, y_beneath_1e_8, color="darkred", label="Calcium error < 1e-8", linewidth=3)
+
+axs.scatter(1, 1, color="black", label="A = " + str(round(a_time, 3)) + " sec", marker="+", s=500, lw=5)
+axs.scatter(100, 1, color="black", label="B = " + str(round(b_time, 3)) + " sec", marker="+", s=500, lw=5)
+axs.scatter(100, 39, color="black", label="C = " + str(round(c_time, 3)) + " sec", marker="+", s=500, lw=5)
+
+
 
 # axs.set_title("Single pulse train", fontsize=16)
-axs.set_xlabel("Frequency (Hz)", fontsize=25)
+axs.set_xlabel("Frequency (Hz)", fontsize=25, fontname="Times New Roman")
 axs.xaxis.set_major_locator(MaxNLocator(integer=True))
-axs.set_ylabel("Previous stimulation kept for computation (n)", fontsize=25)
+axs.set_ylabel("Previous stimulation kept for computation (n)", fontsize=25, fontname="Times New Roman")
 axs.yaxis.set_major_locator(MaxNLocator(integer=True))
 # axs[1].set_title("Doublet pulse train")
 # axs[1].set_xlabel("Frequency (Hz)")
@@ -300,11 +321,11 @@ ticks = np.arange(1, 101, 1).tolist()
 ticks_label = np.arange(1, 101, 1)
 ticks_label = np.where(np.logical_or((ticks_label % 10 == 0), (ticks_label == 1)), ticks_label, "").tolist()
 axs.set_xticks(ticks)
-axs.set_xticklabels(ticks_label)
+axs.set_xticklabels(ticks_label, fontname="Times New Roman")
 axs.xaxis.set_minor_locator(IndexLocator(base=1, offset=0))
 axs.xaxis.set_major_locator(FixedLocator([1, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100]))
 axs.set_yticks(ticks)
-axs.set_yticklabels(ticks_label)
+axs.set_yticklabels(ticks_label, fontname="Times New Roman")
 axs.yaxis.set_minor_locator(IndexLocator(base=1, offset=0))
 axs.yaxis.set_major_locator(FixedLocator([1, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100]))
 axs.tick_params(axis="both", which="major", labelsize=25)
@@ -332,10 +353,13 @@ axs.grid()
 # axs[2].set_axisbelow(True)
 # axs[2].grid()  # which="both"
 
-axs.legend(loc="upper left", fontsize=25)
+axs.legend(loc="upper left", prop={'family':'Times New Roman', 'size': 20})
+axs.text(-0.5, 5, "A", fontsize=20, fontname="Times New Roman")
+axs.text(101, 2.5, "B", fontsize=20, fontname="Times New Roman")
+axs.text(101, 41.5, "C", fontsize=20, fontname="Times New Roman")
+
 # axs[1].legend(loc="upper left")
 # axs[2].legend(loc="upper left")
-
 plt.show()
 
 #
@@ -346,8 +370,8 @@ for i in range(1, 101):
     counter += i
 
 plt.plot(np.arange(1, 101, 1), list_error[-100:], color="red")
-plt.xlabel("pulse kept for summation", fontsize=10)
-plt.ylabel("absolute error (N)", fontsize=10)
+plt.xlabel("pulse kept for summation", fontsize=10, fontname="Times New Roman")
+plt.ylabel("absolute error (N)", fontsize=10, fontname="Times New Roman")
 plt.show()
 
 
