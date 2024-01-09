@@ -19,6 +19,10 @@ for desired_mode in mode:
             single_km_total_results = data["km_total_results"]
             single_tau1_total_results = data["tau1_total_results"]
             single_computations_time = data["computations_time"]
+            single_computations_time_avg = data["computations_time_avg"]
+            single_repetition = data["repetition"]
+            single_ocp_time = data["creation_ocp_time"]
+
     elif desired_mode == "doublet":
         with open(r"../../data/truncation_doublet.pkl", "rb") as f:
             data = pickle.load(f)
@@ -29,6 +33,11 @@ for desired_mode in mode:
             doublet_km_total_results = data["km_total_results"]
             doublet_tau1_total_results = data["tau1_total_results"]
             doublet_computations_time = data["computations_time"]
+            doublet_computations_time_avg = data["computations_time_avg"]
+            doublet_repetition = data["repetition"]
+            doublet_ocp_time = data["creation_ocp_time"]
+
+
     elif desired_mode == "triplet":
         with open(r"../../data/truncation_triplet.pkl", "rb") as f:
             data = pickle.load(f)
@@ -39,6 +48,9 @@ for desired_mode in mode:
             triplet_km_total_results = data["km_total_results"]
             triplet_tau1_total_results = data["tau1_total_results"]
             triplet_computations_time = data["computations_time"]
+            triplet_computations_time_avg = data["computations_time_avg"]
+            triplet_repetition = data["repetition"]
+            triplet_ocp_time = data["creation_ocp_time"]
     else:
         raise ValueError("Not available pulse mode")
 

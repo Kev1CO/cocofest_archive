@@ -14,7 +14,7 @@ from cocofest import (
 counter = 0
 min_stim = 1
 max_stim = 101
-repetition = 5
+repetition = 100
 modes = ["Single", "Doublet", "Triplet"]
 nb = int((max_stim - min_stim) ** 2 / 2 + (max_stim - min_stim) / 2) * len(modes) * repetition
 node_shooting = 1000
@@ -26,6 +26,8 @@ for mode in modes:
     km_total_results = []
     tau1_total_results = []
     computations_time = []
+    computations_time_avg = []
+    creation_ocp_time = []
     parameter_list = []
     if mode == "Single":
         coefficient = 1
@@ -50,17 +52,21 @@ for mode in modes:
             a = 0
             km = 0
             tau1 = 0
+            temp_node_shooting = int(node_shooting / n_stim)
+
+            ocp_start_time = time.time()
+            ivp = IvpFes(
+                model=DingModelFrequencyWithFatigue(sum_stim_truncation=j),
+                n_stim=n_stim,
+                n_shooting=temp_node_shooting,
+                final_time=1,
+                pulse_mode=mode,
+                use_sx=True,
+            )
+            ocp_end_time = time.time()
+
             for k in range(repetition):
-                temp_node_shooting = int(node_shooting / n_stim)
                 start_time = time.time()
-                ivp = IvpFes(
-                    model=DingModelFrequencyWithFatigue(sum_stim_truncation=j),
-                    n_stim=n_stim,
-                    n_shooting=temp_node_shooting,
-                    final_time=1,
-                    pulse_mode=mode,
-                    use_sx=True,
-                )
 
                 # Creating the solution from the initial guess
                 sol_from_initial_guess = Solution.from_initial_guess(ivp, [ivp.x_init, ivp.u_init, ivp.p_init, ivp.s_init])
@@ -71,6 +77,7 @@ for mode in modes:
                 )
 
                 time_computation.append(time.time() - start_time)
+
                 if k == 0:
                     force = result.states["F"][0][-1]
                     calcium = result.states["Cn"][0][-1]
@@ -81,9 +88,13 @@ for mode in modes:
                 counter += 1
                 print("currently : " + str(counter) + "/" + str(nb) + " in " + str(round(time_computation[-1], 4)) + "s")
 
+            time_computation_for_n_rep = sum(time_computation)
             time_computation_mean = sum(time_computation) / len(time_computation)
+            time_ocp_creation = ocp_end_time - ocp_start_time
 
-            computations_time.append(time_computation_mean)
+            computations_time.append(time_computation_for_n_rep)
+            computations_time_avg.append(time_computation_mean)
+            creation_ocp_time.append(time_ocp_creation)
             force_results_per_frequency.append(force)
             calcium_results_per_frequency.append(calcium)
             a_results_per_frequency.append(a)
@@ -105,6 +116,9 @@ for mode in modes:
         "km_total_results": km_total_results,
         "tau1_total_results": tau1_total_results,
         "computations_time": computations_time,
+        "computations_time_avg": computations_time_avg,
+        "creation_ocp_time": creation_ocp_time,
+        "repetition": repetition,
     }
 
     if mode == "Single":
