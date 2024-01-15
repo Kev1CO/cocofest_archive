@@ -12,6 +12,7 @@ from bioptim import (
     InitialGuessList,
     InterpolationType,
     ObjectiveFcn,
+    PhaseDynamics,
     ObjectiveList,
     OdeSolver,
     OptimalControlProgram,
@@ -30,7 +31,7 @@ class FESActuatedBiorbdModelOCP(OptimalControlProgram):
                        time_min: float = None,
                        time_max: float = None,
                        time_bimapping: bool = False,
-                       ode_solver: OdeSolverBase = OdeSolver.RK4(),
+                       ode_solver: OdeSolverBase = OdeSolver.RK4(n_integration_steps=1),
                        control_type: ControlType = ControlType.CONSTANT,):
 
         """
@@ -97,11 +98,19 @@ class FESActuatedBiorbdModelOCP(OptimalControlProgram):
         # Add objective functions
         objective_functions = ObjectiveList()
         for i in range(n_stim):
-            objective_functions.add(ObjectiveFcn.Lagrange.MINIMIZE_CONTROL, key="tau", weight=10000, quadratic=True, phase=i)
-        # objective_functions.add(ObjectiveFcn.Lagrange.MINIMIZE_STATE, key="q", target=target[:nq, :], weight=10000, phase=n_stim-1)
+            objective_functions.add(ObjectiveFcn.Lagrange.MINIMIZE_CONTROL, key="tau", weight=10, quadratic=True, phase=i)
+        # objective_functions.add(ObjectiveFcn.Lagrange.MINIMIZE_STATE, key="q", target=np.array([[0, 1.6]]).T, weight=10000,
+        #                         phase=n_stim - 1)
 
-        objective_functions.add(ObjectiveFcn.Lagrange.MINIMIZE_STATE, key="q", target=np.array([[0, 1.6]]).T, weight=10000,
-                                phase=n_stim - 1)
+        objective_functions.add(
+            ObjectiveFcn.Mayer.MINIMIZE_STATE, key="q", index=0, node=Node.END, weight=10000, phase=n_stim - 1, quadratic=True, target=1.6
+        )
+
+        # objective_functions.add(ObjectiveFcn.Lagrange.MINIMIZE_STATE, key="q", target=np.array([[1.6]*5]).T,
+        #                         weight=10000,
+        #                         phase=n_stim - 1,
+        #                         node=Node.ALL,)
+
 
         # constraints.add(ConstraintFcn.TRACK_STATE, node=Node.END, index=1, target=1.6, phase=n_stim - 1)
         # constraints.add(ConstraintFcn.TRACK_STATE, key="q", index=1, node=Node.END, phase=n_stim - 1, target=1.6)
@@ -113,7 +122,10 @@ class FESActuatedBiorbdModelOCP(OptimalControlProgram):
             dynamics.add(
                 bio_models[i].declare_model_variables,
                 dynamic_function=bio_models[i].muscle_dynamic,
+                expand_dynamics=True,
+                expand_continuity=False,
                 phase=i,
+                phase_dynamics=PhaseDynamics.ONE_PER_NODE,
             )
 
         # TODO : for n muscles
@@ -171,7 +183,9 @@ class FESActuatedBiorbdModelOCP(OptimalControlProgram):
         )
 
         for j in range(len(muscle_state_list)):
-            if muscle_state_list[j] == "Cn" or muscle_state_list[j] == "F":
+            if muscle_state_list[j] == "Cn":
+                max_bounds[j] = 10
+            elif muscle_state_list[j] == "F":
                 max_bounds[j] = 1000
             elif muscle_state_list[j] == "Tau1" or muscle_state_list[j] == "Km":
                 max_bounds[j] = 1
@@ -202,46 +216,57 @@ class FESActuatedBiorbdModelOCP(OptimalControlProgram):
                         interpolation=InterpolationType.CONSTANT_WITH_FIRST_AND_LAST_DIFFERENT,
                     )
 
-        starting_min_q_bounds = np.array([[0, 0, 0], [0, 0, 0]])
-        starting_max_q_bounds = np.array([[0, 0, 0], [0, 3.14159265, 3.14159265]])
-        middle_min_q_bounds = np.array([[0, 0, 0], [0, 0, 0]])
-        middle_max_q_bounds = np.array([[0, 0, 0], [3.14159265, 3.14159265, 3.14159265]])
+        # starting_min_q_bounds = np.array([[0, 0, 0], [0, 0, 0]])
+        # starting_max_q_bounds = np.array([[0, 0, 0], [0, 3.14159265, 3.14159265]])
+        # middle_min_q_bounds = np.array([[0, 0, 0], [0, 0, 0]])
+        # middle_max_q_bounds = np.array([[0, 0, 0], [3.14159265, 3.14159265, 3.14159265]])
+        #
+        # starting_min_qdot_bounds = np.array([[0, 0, 0], [0, -31.41592654, -31.41592654]])
+        # starting_max_qdot_bounds = np.array([[0, 0, 0], [0, 31.41592654, 31.41592654]])
+        # middle_min_qdot_bounds = np.array([[0, 0, 0], [-31.41592654, -31.41592654, -31.41592654]])
+        # middle_max_qdot_bounds = np.array([[0, 0, 0], [31.41592654, 31.41592654, 31.41592654]])
 
-        starting_min_qdot_bounds = np.array([[0, 0, 0], [0, -31.41592654, -31.41592654]])
-        starting_max_qdot_bounds = np.array([[0, 0, 0], [0, 31.41592654, 31.41592654]])
-        middle_min_qdot_bounds = np.array([[0, 0, 0], [-31.41592654, -31.41592654, -31.41592654]])
-        middle_max_qdot_bounds = np.array([[0, 0, 0], [31.41592654, 31.41592654, 31.41592654]])
+
+        # starting_min_q_bounds = np.array([[0, 0, 0]])
+        # starting_max_q_bounds = np.array([[0, 3.14159265, 3.14159265]])
+        # middle_min_q_bounds = np.array([[0, 0, 0]])
+        # middle_max_q_bounds = np.array([[3.14159265, 3.14159265, 3.14159265]])
+        #
+        # starting_min_qdot_bounds = np.array([[0, -31.41592654, -31.41592654]])
+        # starting_max_qdot_bounds = np.array([[0, 31.41592654, 31.41592654]])
+        # middle_min_qdot_bounds = np.array([[-31.41592654, -31.41592654, -31.41592654]])
+        # middle_max_qdot_bounds = np.array([[31.41592654, 31.41592654, 31.41592654]])
 
         for i in range(n_stim):
-            # q_bounds = bio_models[i].bounds_from_ranges_q
-            # qdot_bounds = bio_models[i].bounds_from_ranges_qdot
-            # q_bounds[0, :] = (0, 0, 0)
-            # qdot_bounds[0, :] = (0, 0, 0)
-            # q_bounds[1, :] = (0, 0, 2.5)
+            q_x_bounds = bio_models[i].bounds_from_ranges("q")
+            qdot_x_bounds = bio_models[i].bounds_from_ranges("qdot")
 
-            min_bounds = middle_min_q_bounds
-            max_bounds = middle_max_q_bounds
-
-            qdot_min_bounds = middle_min_qdot_bounds
-            qdot_max_bounds = middle_max_qdot_bounds
+            # min_bounds = middle_min_q_bounds
+            # max_bounds = middle_max_q_bounds
+            # #
+            # qdot_min_bounds = middle_min_qdot_bounds
+            # qdot_max_bounds = middle_max_qdot_bounds
 
             if i == 0:
-                # q_bounds[1, :] = (0, 0, 2.5)
+                # q_bounds[0, :] = (0, 0, 2.5)
                 # qdot_bounds[:, 0] = 0
 
-                min_bounds = starting_min_q_bounds
-                max_bounds = starting_max_q_bounds
+                # min_bounds = starting_min_q_bounds
+                # max_bounds = starting_max_q_bounds
+                #
+                # qdot_min_bounds = starting_min_qdot_bounds
+                # qdot_max_bounds = starting_max_qdot_bounds
 
-                qdot_min_bounds = starting_min_qdot_bounds
-                qdot_max_bounds = starting_max_qdot_bounds
+                q_x_bounds[:, [0, -1]] = 0  # Start at 0...
+                qdot_x_bounds[:, [0, -1]] = 0  # Start and end without any velocity
 
-            # x_bounds.add(key="q", bounds=q_bounds, phase=i)
+            x_bounds.add(key="q", bounds=q_x_bounds, phase=i)
 
-            x_bounds.add(key="q", min_bound=min_bounds, max_bound=max_bounds, phase=i, interpolation=InterpolationType.CONSTANT_WITH_FIRST_AND_LAST_DIFFERENT)
+            # x_bounds.add(key="q", min_bound=min_bounds, max_bound=max_bounds, phase=i, interpolation=InterpolationType.CONSTANT_WITH_FIRST_AND_LAST_DIFFERENT)
 
-            # x_bounds.add(key="qdot", bounds=qdot_bounds, phase=i)
+            x_bounds.add(key="qdot", bounds=qdot_x_bounds, phase=i)
 
-            x_bounds.add(key="qdot", min_bound=qdot_min_bounds, max_bound=qdot_max_bounds, phase=i, interpolation=InterpolationType.CONSTANT_WITH_FIRST_AND_LAST_DIFFERENT)
+            # x_bounds.add(key="qdot", min_bound=qdot_min_bounds, max_bound=qdot_max_bounds, phase=i, interpolation=InterpolationType.CONSTANT_WITH_FIRST_AND_LAST_DIFFERENT)
 
         # TODO : for n muscles
         # States initial guess
@@ -262,8 +287,8 @@ class FESActuatedBiorbdModelOCP(OptimalControlProgram):
             x_init.add(key="q", initial_guess=[0] * bio_models[i].nb_q, phase=i)
 
         # Controls bounds
-        tau_min, tau_max, tau_init = [0, -1], [0, 1], [0, 0]
-        # tau_min, tau_max, tau_init = [0, 0], [0, 0], [0, 0]
+        # tau_min, tau_max, tau_init = [0, -1], [0, 1], [0, 0]
+        tau_min, tau_max, tau_init = [-1], [1], [0]
 
         u_bounds = BoundsList()
         for i in range(n_stim):
@@ -292,11 +317,11 @@ class FESActuatedBiorbdModelOCP(OptimalControlProgram):
         )
 
 if __name__ == "__main__":
-    ocp = FESActuatedBiorbdModelOCP("/arm26_biceps.bioMod",
+    ocp = FESActuatedBiorbdModelOCP("/arm26_biceps_1ddl.bioMod",
                                     muscles_model=DingModelFrequency(),
                                     # muscles_name_list=["biceps"],
                                     final_time=1,
-                                    n_shooting=5,
+                                    n_shooting=10,
                                     n_stim=10,
                                     time_min=0.01,
                                     time_max=0.1,

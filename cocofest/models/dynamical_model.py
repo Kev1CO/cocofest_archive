@@ -1,7 +1,6 @@
 from typing import Callable
-from copy import deepcopy
 
-from casadi import vertcat, MX, SX, Function
+from casadi import vertcat, MX, SX
 from bioptim import (
     BiorbdModel,
     OptimalControlProgram,
@@ -131,9 +130,10 @@ class FESActuatedBiorbdModel(BiorbdModel):
         # muscle_nlp = nlp
         # muscle_nlp.model = nlp.model.muscles_dynamics_model
 
-        muscle_dxdt = muscle_model.dynamics(time, states, controls, parameters, stochastic_variables, nlp, stim_apparition, optional_nlp=nlp.model.muscles_dynamics_model).dxdt
+        muscle_dxdt = muscle_model.dynamics(time, states, controls, parameters, stochastic_variables, nlp, stim_apparition,
+                                            optional_nlp=nlp.model.muscles_dynamics_model).dxdt
         muscle_forces = muscle_dxdt[1]
-        muscles_tau += nlp.model.bio_model.model.muscularJointTorque(muscle_forces, q, qdot).to_mx()  #TODO find a way to make it work in sx
+        muscles_tau += nlp.model.bio_model.model.muscularJointTorque(muscle_forces, q, qdot).to_mx()
         dxdt_muscle_list = vertcat(dxdt_muscle_list, muscle_dxdt)
 
         # You can directly call biorbd function (as for ddq) or call bioptim accessor (as for dq)
