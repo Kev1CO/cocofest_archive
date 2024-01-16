@@ -123,91 +123,25 @@ class FESActuatedBiorbdModel(BiorbdModel):
 
         # for muscle_model in muscle_model_list:  #TODO : for different muscles
         #     muscle_dxdt = muscle_model.dynamics(time, states, controls, parameters, stochastic_variables, nlp, nb_phases).dxdt
-        #     muscle_forces = muscle_dxdt[1]
+        #     muscle_forces = DynamicsFunctions.get(nlp.states["F"], states)
         #     muscles_tau += nlp.model.bio_model.model.muscularJointTorque(muscle_forces, q, qdot).to_mx()
         #     dxdt_muscle_list = vertcat(dxdt_muscle_list, muscle_dxdt)
 
-        # muscle_nlp = nlp
-        # muscle_nlp.model = nlp.model.muscles_dynamics_model
-
         muscle_dxdt = muscle_model.dynamics(time, states, controls, parameters, stochastic_variables, nlp, stim_apparition,
                                             optional_nlp=nlp.model.muscles_dynamics_model).dxdt
-        muscle_forces = muscle_dxdt[1]
-        muscles_tau += nlp.model.bio_model.model.muscularJointTorque(muscle_forces, q, qdot).to_mx()
+        muscle_forces = DynamicsFunctions.get(nlp.states["F"], states)
+
+        muscles_tau += - nlp.model.bio_model.model.musclesLengthJacobian(q).to_mx().T @ muscle_forces
+        # muscles_tau += nlp.model.bio_model.model.muscularJointTorque(muscle_forces, q, qdot).to_mx()
         dxdt_muscle_list = vertcat(dxdt_muscle_list, muscle_dxdt)
 
         # You can directly call biorbd function (as for ddq) or call bioptim accessor (as for dq)
         dq = DynamicsFunctions.compute_qdot(nlp, q, qdot)
         ddq = nlp.model.forward_dynamics(q, qdot, muscles_tau + tau)
-        # ddq = nlp.model.forward_dynamics(q, qdot, muscles_tau)
 
         dxdt = vertcat(dxdt_muscle_list, dq, ddq)
 
         return DynamicsEvaluation(dxdt=dxdt, defects=None)
-
-    #TODO : disociate the force and fatigue model in ding model with a flag
-
-    #TODO : Remove FES_driven and all other similar fun in dingmodel
-
-    # MAYBE LATER FOR N MUSCLE
-    # def fes_driven(
-    #         self,
-    #         ocp,
-    #         nlp,
-    #         **extra_params,
-    # ):
-    #     """
-    #     Configure the dynamics for a muscle driven program.
-    #     If with_excitations is set to True, then the muscle activations are computed from the muscle dynamics.
-    #     The tau from muscle is computed using the muscle activations.
-    #     If with_residual_torque is set to True, then tau are used as supplementary force in the
-    #     case muscles are too weak.
-    #
-    #     Parameters
-    #     ----------
-    #     ocp: OptimalControlProgram
-    #         A reference to the ocp
-    #     nlp: NonLinearProgram
-    #         A reference to the phase
-    #
-    #     """
-    #     nlp.parameters = ocp.parameters
-    #     DynamicsFunctions.apply_parameters(nlp.parameters.cx_start, nlp)
-    #     extra_params["nb_phases"] = ocp.n_phases
-    #
-    #     if not isinstance(FESActuatedBiorbdModel.muscle_dynamic, (tuple, list)):
-    #         FESActuatedBiorbdModel.muscle_dynamic = (FESActuatedBiorbdModel.muscle_dynamic,)
-    #
-    #
-    #     for func in FESActuatedBiorbdModel.muscle_dynamic:
-    #         muscle_dynamics_eval = func(
-    #             nlp.time_cx,
-    #             nlp.states.scaled.cx_start,
-    #             nlp.controls.scaled.cx_start,
-    #             nlp.parameters.cx,
-    #             nlp.stochastic_variables.scaled.cx,
-    #             nlp,
-    #             self.muscles_dynamics_model,
-    #             extra_params["nb_phases"],
-    #         )
-    #         #
-    #         # dynamics_dxdt = vertcat(dynamics_dxdt, muscle_dynamics_eval.dxdt)
-    #
-    #         nlp.dynamics_func.append(
-    #             Function(
-    #                 "ForwardDyn",
-    #                 [
-    #                     nlp.time_cx,
-    #                     nlp.states.scaled.cx_start,
-    #                     nlp.controls.scaled.cx_start,
-    #                     nlp.parameters.cx,
-    #                     nlp.stochastic_variables.scaled.cx,
-    #                 ],
-    #                 [muscle_dynamics_eval.dxdt],
-    #                 ["t", "x", "u", "p", "s"],
-    #                 ["xdot"],
-    #             ),
-    #         )
 
     def declare_model_variables(self, ocp: OptimalControlProgram, nlp: NonLinearProgram):
         """

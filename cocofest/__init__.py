@@ -5,6 +5,7 @@ from .models.ding2007 import DingModelPulseDurationFrequency
 from .models.ding2007_with_fatigue import DingModelPulseDurationFrequencyWithFatigue
 from .models.hmed2018 import DingModelIntensityFrequency
 from .models.hmed2018_with_fatigue import DingModelIntensityFrequencyWithFatigue
+from .models.dynamical_model import FESActuatedBiorbdModel
 from .optimization.fes_multi_start import FunctionalElectricStimulationMultiStart
 from .optimization.fes_ocp import OcpFes
 from .optimization.fes_identification_ocp import OcpFesId

@@ -24,7 +24,6 @@ from cocofest import DingModelFrequency, FESActuatedBiorbdModel
 class FESActuatedBiorbdModelOCP(OptimalControlProgram):
     def __init__(self, biorbd_model_path: str,
                        muscles_model: DingModelFrequency(),
-                       # muscles_name_list: list[str],
                        n_stim: int,
                        final_time: float,
                        n_shooting: int,
@@ -90,31 +89,12 @@ class FESActuatedBiorbdModelOCP(OptimalControlProgram):
 
             final_time_phase = [time_min] * n_stim
 
-        # step = final_time / n_stim
-        # final_time_phase = (step,)
-        # for i in range(n_stim - 1):
-        #     final_time_phase = final_time_phase + (step,)
-
         # Add objective functions
         objective_functions = ObjectiveList()
         for i in range(n_stim):
-            objective_functions.add(ObjectiveFcn.Lagrange.MINIMIZE_CONTROL, key="tau", weight=10, quadratic=True, phase=i)
-        # objective_functions.add(ObjectiveFcn.Lagrange.MINIMIZE_STATE, key="q", target=np.array([[0, 1.6]]).T, weight=10000,
-        #                         phase=n_stim - 1)
+            objective_functions.add(ObjectiveFcn.Lagrange.MINIMIZE_CONTROL, key="tau", weight=1, quadratic=True, phase=i)
 
-        objective_functions.add(
-            ObjectiveFcn.Mayer.MINIMIZE_STATE, key="q", index=0, node=Node.END, weight=10000, phase=n_stim - 1, quadratic=True, target=1.6
-        )
-
-        # objective_functions.add(ObjectiveFcn.Lagrange.MINIMIZE_STATE, key="q", target=np.array([[1.6]*5]).T,
-        #                         weight=10000,
-        #                         phase=n_stim - 1,
-        #                         node=Node.ALL,)
-
-
-        # constraints.add(ConstraintFcn.TRACK_STATE, node=Node.END, index=1, target=1.6, phase=n_stim - 1)
-        # constraints.add(ConstraintFcn.TRACK_STATE, key="q", index=1, node=Node.END, phase=n_stim - 1, target=1.6)
-
+        # objective_functions.add(ObjectiveFcn.Lagrange.MINIMIZE_STATE, key="qdot", weight=1, quadratic=True, phase=n_stim - 1)
 
         # Dynamics
         dynamics = DynamicsList()
@@ -128,52 +108,8 @@ class FESActuatedBiorbdModelOCP(OptimalControlProgram):
                 phase_dynamics=PhaseDynamics.ONE_PER_NODE,
             )
 
-        # TODO : for n muscles
-        # # States bounds
-        # x_bounds = BoundsList()
-        # for i in range(len(muscles_model_list)):
-        #     muscle_state_list = muscles_model_list[i].name_dof
-        #     starting_bounds, min_bounds, max_bounds = (
-        #         muscles_model_list[i].standard_rest_values(),
-        #         muscles_model_list[i].standard_rest_values(),
-        #         muscles_model_list[i].standard_rest_values(),
-        #     )
-        #
-        #     for j in range(len(muscle_state_list)):
-        #         if muscle_state_list[j] == "Cn" or muscle_state_list[j] == "F":
-        #             max_bounds[j] = 1000
-        #         elif muscle_state_list[j] == "Tau1" or muscle_state_list[j] == "Km":
-        #             max_bounds[j] = 1
-        #         elif muscle_state_list[j] == "A":
-        #             min_bounds[j] = 0
-        #
-        #     starting_bounds_min = np.concatenate((starting_bounds, min_bounds, min_bounds), axis=1)
-        #     starting_bounds_max = np.concatenate((starting_bounds, max_bounds, max_bounds), axis=1)
-        #     middle_bound_min = np.concatenate((min_bounds, min_bounds, min_bounds), axis=1)
-        #     middle_bound_max = np.concatenate((max_bounds, max_bounds, max_bounds), axis=1)
-        #
-        #     for k in range(n_stim):
-        #         for l in range(len(muscle_state_list)):
-        #             if k == 0:
-        #                 x_bounds.add(
-        #                     key=muscle_state_list[l] + "_" + muscles_name_list[i],
-        #                     min_bound=np.array([starting_bounds_min[l]]),
-        #                     max_bound=np.array([starting_bounds_max[l]]),
-        #                     phase=k,
-        #                     interpolation=InterpolationType.CONSTANT_WITH_FIRST_AND_LAST_DIFFERENT,
-        #                 )
-        #             else:
-        #                 x_bounds.add(
-        #                     key=muscle_state_list[l] + "_" + muscles_name_list[i],
-        #                     min_bound=np.array([middle_bound_min[l]]),
-        #                     max_bound=np.array([middle_bound_max[l]]),
-        #                     phase=k,
-        #                     interpolation=InterpolationType.CONSTANT_WITH_FIRST_AND_LAST_DIFFERENT,
-        #                 )
-
         # States bounds
         x_bounds = BoundsList()
-        # for i in range(len(muscles_model_list)):
 
         muscle_state_list = muscles_model.name_dof
         starting_bounds, min_bounds, max_bounds = (
@@ -201,7 +137,7 @@ class FESActuatedBiorbdModelOCP(OptimalControlProgram):
             for l in range(len(muscle_state_list)):
                 if k == 0:
                     x_bounds.add(
-                        key=muscle_state_list[l],  # + "_" + muscles_name_list[i],
+                        key=muscle_state_list[l],
                         min_bound=np.array([starting_bounds_min[l]]),
                         max_bound=np.array([starting_bounds_max[l]]),
                         phase=k,
@@ -209,74 +145,30 @@ class FESActuatedBiorbdModelOCP(OptimalControlProgram):
                     )
                 else:
                     x_bounds.add(
-                        key=muscle_state_list[l],  # + "_" + muscles_name_list[i],
+                        key=muscle_state_list[l],
                         min_bound=np.array([middle_bound_min[l]]),
                         max_bound=np.array([middle_bound_max[l]]),
                         phase=k,
                         interpolation=InterpolationType.CONSTANT_WITH_FIRST_AND_LAST_DIFFERENT,
                     )
 
-        # starting_min_q_bounds = np.array([[0, 0, 0], [0, 0, 0]])
-        # starting_max_q_bounds = np.array([[0, 0, 0], [0, 3.14159265, 3.14159265]])
-        # middle_min_q_bounds = np.array([[0, 0, 0], [0, 0, 0]])
-        # middle_max_q_bounds = np.array([[0, 0, 0], [3.14159265, 3.14159265, 3.14159265]])
-        #
-        # starting_min_qdot_bounds = np.array([[0, 0, 0], [0, -31.41592654, -31.41592654]])
-        # starting_max_qdot_bounds = np.array([[0, 0, 0], [0, 31.41592654, 31.41592654]])
-        # middle_min_qdot_bounds = np.array([[0, 0, 0], [-31.41592654, -31.41592654, -31.41592654]])
-        # middle_max_qdot_bounds = np.array([[0, 0, 0], [31.41592654, 31.41592654, 31.41592654]])
-
-
-        # starting_min_q_bounds = np.array([[0, 0, 0]])
-        # starting_max_q_bounds = np.array([[0, 3.14159265, 3.14159265]])
-        # middle_min_q_bounds = np.array([[0, 0, 0]])
-        # middle_max_q_bounds = np.array([[3.14159265, 3.14159265, 3.14159265]])
-        #
-        # starting_min_qdot_bounds = np.array([[0, -31.41592654, -31.41592654]])
-        # starting_max_qdot_bounds = np.array([[0, 31.41592654, 31.41592654]])
-        # middle_min_qdot_bounds = np.array([[-31.41592654, -31.41592654, -31.41592654]])
-        # middle_max_qdot_bounds = np.array([[31.41592654, 31.41592654, 31.41592654]])
-
         for i in range(n_stim):
             q_x_bounds = bio_models[i].bounds_from_ranges("q")
             qdot_x_bounds = bio_models[i].bounds_from_ranges("qdot")
 
-            # min_bounds = middle_min_q_bounds
-            # max_bounds = middle_max_q_bounds
-            # #
-            # qdot_min_bounds = middle_min_qdot_bounds
-            # qdot_max_bounds = middle_max_qdot_bounds
-
             if i == 0:
-                # q_bounds[0, :] = (0, 0, 2.5)
-                # qdot_bounds[:, 0] = 0
+                q_x_bounds[:, [0]] = 3.14/(180/5)  # Start at 5°
+                qdot_x_bounds[:, [0]] = 0  # Start without any velocity
 
-                # min_bounds = starting_min_q_bounds
-                # max_bounds = starting_max_q_bounds
-                #
-                # qdot_min_bounds = starting_min_qdot_bounds
-                # qdot_max_bounds = starting_max_qdot_bounds
+            if i == n_stim-1:
+                q_x_bounds[:, [-1]] = 3.14/2  # End at 90°
 
-                q_x_bounds[:, [0, -1]] = 0  # Start at 0...
-                qdot_x_bounds[:, [0, -1]] = 0  # Start and end without any velocity
+            # if i > n_stim-5:
+            #     q_x_bounds.min[0, [0, 1, 2]] = 3.14 / 2 - 0.2
+            #     q_x_bounds.max[0, [0, 1, 2]] = 3.14 / 2 + 0.2
 
             x_bounds.add(key="q", bounds=q_x_bounds, phase=i)
-
-            # x_bounds.add(key="q", min_bound=min_bounds, max_bound=max_bounds, phase=i, interpolation=InterpolationType.CONSTANT_WITH_FIRST_AND_LAST_DIFFERENT)
-
             x_bounds.add(key="qdot", bounds=qdot_x_bounds, phase=i)
-
-            # x_bounds.add(key="qdot", min_bound=qdot_min_bounds, max_bound=qdot_max_bounds, phase=i, interpolation=InterpolationType.CONSTANT_WITH_FIRST_AND_LAST_DIFFERENT)
-
-        # TODO : for n muscles
-        # States initial guess
-        # x_init = InitialGuessList()
-        # for i in range(n_stim):
-        #     for j in range(len(muscles_model_list)):
-        #         muscle_state_list = muscles_model_list[j].name_dof
-        #         for k in range(len(muscle_state_list)):
-        #             x_init.add(key=muscle_state_list[k] + "_" + muscles_name_list[j], initial_guess=muscles_model_list[j].standard_rest_values()[k], phase=i)
-        #     x_init.add(key="q", initial_guess=[1.57] * bio_models[i].nb_q, phase=i)
 
         x_init = InitialGuessList()
         for i in range(n_stim):
@@ -287,8 +179,7 @@ class FESActuatedBiorbdModelOCP(OptimalControlProgram):
             x_init.add(key="q", initial_guess=[0] * bio_models[i].nb_q, phase=i)
 
         # Controls bounds
-        # tau_min, tau_max, tau_init = [0, -1], [0, 1], [0, 0]
-        tau_min, tau_max, tau_init = [-1], [1], [0]
+        tau_min, tau_max, tau_init = [-20], [20], [0]
 
         u_bounds = BoundsList()
         for i in range(n_stim):
@@ -316,10 +207,10 @@ class FESActuatedBiorbdModelOCP(OptimalControlProgram):
             use_sx=True,
         )
 
+
 if __name__ == "__main__":
     ocp = FESActuatedBiorbdModelOCP("/arm26_biceps_1ddl.bioMod",
                                     muscles_model=DingModelFrequency(),
-                                    # muscles_name_list=["biceps"],
                                     final_time=1,
                                     n_shooting=10,
                                     n_stim=10,
@@ -332,4 +223,4 @@ if __name__ == "__main__":
     # Solver.IPOPT(show_online_optim=True)
     # sol.graphs(show_bounds=True)
     sol.animate()
-    sol.graphs(show_bounds=True)
+    sol.graphs(show_bounds=False)
