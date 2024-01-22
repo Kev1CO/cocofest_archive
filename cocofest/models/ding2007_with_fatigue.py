@@ -182,8 +182,11 @@ class DingModelPulseDurationFrequencyWithFatigue(DingModelPulseDurationFrequency
         -------
         The derivative of the states in the tuple[MX] format
         """
-        pulse_duration_parameters = nlp.model.get_pulse_duration_parameters(
-            nlp.parameters) if nlp_dynamics is None else nlp_dynamics.get_pulse_duration_parameters(nlp.parameters)
+        pulse_duration_parameters = (
+            nlp.model.get_pulse_duration_parameters(nlp.parameters)
+            if nlp_dynamics is None
+            else nlp_dynamics.get_pulse_duration_parameters(nlp.parameters)
+        )
 
         if pulse_duration_parameters.shape[0] == 1:  # check if pulse duration is mapped
             impulse_time = pulse_duration_parameters[0]
@@ -250,13 +253,7 @@ class DingModelPulseDurationFrequencyWithFatigue(DingModelPulseDurationFrequency
         name = "Tau1"
         name_tau1 = [name]
         ConfigureProblem.configure_new_variable(
-            name,
-            name_tau1,
-            ocp,
-            nlp,
-            as_states,
-            as_controls,
-            as_states_dot,
+            name, name_tau1, ocp, nlp, as_states, as_controls, as_states_dot,
         )
 
     @staticmethod
@@ -286,11 +283,5 @@ class DingModelPulseDurationFrequencyWithFatigue(DingModelPulseDurationFrequency
         name = "Km"
         name_km = [name]
         ConfigureProblem.configure_new_variable(
-            name,
-            name_km,
-            ocp,
-            nlp,
-            as_states,
-            as_controls,
-            as_states_dot,
+            name, name_km, ocp, nlp, as_states, as_controls, as_states_dot,
         )

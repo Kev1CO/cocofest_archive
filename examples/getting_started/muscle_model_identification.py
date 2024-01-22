@@ -420,12 +420,7 @@ identified_force_list = []
 identified_time_list = []
 
 ivp_from_identification = IvpFes(
-    model=identified_model,
-    n_stim=10,
-    n_shooting=10,
-    final_time=1,
-    use_sx=True,
-    pulse_intensity=pulse_intensity_values,
+    model=identified_model, n_stim=10, n_shooting=10, final_time=1, use_sx=True, pulse_intensity=pulse_intensity_values,
 )
 
 # Creating the solution from the initial guess

@@ -15,11 +15,13 @@ from cocofest import DingModelFrequency, DingModelIntensityFrequency, DingModelP
 
 
 class FESActuatedBiorbdModel(BiorbdModel):
-    def __init__(self, name: str = None,
-                 biorbd_path: str = None,
-                 muscles_model: DingModelFrequency() = None,
-                 # muscles_name: list = None # TODO : for loop to create different muscles
-                 ):
+    def __init__(
+        self,
+        name: str = None,
+        biorbd_path: str = None,
+        muscles_model: DingModelFrequency() = None,
+        # muscles_name: list = None # TODO : for loop to create different muscles
+    ):
         super().__init__(biorbd_path)
         self._name = name
         self.bio_model = BiorbdModel(biorbd_path)
@@ -60,8 +62,8 @@ class FESActuatedBiorbdModel(BiorbdModel):
     @property
     def name_dof(self) -> list[str]:
         return self.bio_stim_model[0].name_dof
-            # self.bio_model[0].name_dof
-            # ["Cn", "F", "A", "Tau1", "Km", "q", "qdot", "tau"]
+        # self.bio_model[0].name_dof
+        # ["Cn", "F", "A", "Tau1", "Km", "q", "qdot", "tau"]
 
     def muscle_name_dof(self) -> list[str]:
         return self.muscles_dynamics_model.name_dof
@@ -127,11 +129,19 @@ class FESActuatedBiorbdModel(BiorbdModel):
         #     muscles_tau += nlp.model.bio_model.model.muscularJointTorque(muscle_forces, q, qdot).to_mx()
         #     dxdt_muscle_list = vertcat(dxdt_muscle_list, muscle_dxdt)
 
-        muscle_dxdt = muscle_model.dynamics(time, states, controls, parameters, stochastic_variables, nlp, stim_apparition,
-                                            nlp_dynamics=nlp.model.muscles_dynamics_model).dxdt
+        muscle_dxdt = muscle_model.dynamics(
+            time,
+            states,
+            controls,
+            parameters,
+            stochastic_variables,
+            nlp,
+            stim_apparition,
+            nlp_dynamics=nlp.model.muscles_dynamics_model,
+        ).dxdt
         muscle_forces = DynamicsFunctions.get(nlp.states["F"], states)
 
-        muscles_tau += - nlp.model.bio_model.model.musclesLengthJacobian(q).to_mx().T @ muscle_forces
+        muscles_tau += -nlp.model.bio_model.model.musclesLengthJacobian(q).to_mx().T @ muscle_forces
         # muscles_tau += nlp.model.bio_model.model.muscularJointTorque(muscle_forces, q, qdot).to_mx()
         dxdt_muscle_list = vertcat(dxdt_muscle_list, muscle_dxdt)
 
@@ -156,18 +166,19 @@ class FESActuatedBiorbdModel(BiorbdModel):
         """
         # for i in range(len(self.muscles_dynamics_model)):
 
-            # self.muscles_dynamics_model[i].configure_ca_troponin_complex(ocp=ocp, nlp=nlp, as_states=True, as_controls=False, muscle_name=self.muscles_name[i])
-            # TODO : make different muscle for biceps and triceps... such as DingModelFrequency has different parameters value
+        # self.muscles_dynamics_model[i].configure_ca_troponin_complex(ocp=ocp, nlp=nlp, as_states=True, as_controls=False, muscle_name=self.muscles_name[i])
+        # TODO : make different muscle for biceps and triceps... such as DingModelFrequency has different parameters value
 
         self.muscles_dynamics_model.configure_ca_troponin_complex(ocp=ocp, nlp=nlp, as_states=True, as_controls=False)
         self.muscles_dynamics_model.configure_force(ocp=ocp, nlp=nlp, as_states=True, as_controls=False)
 
-        if 'A' in self.muscles_dynamics_model.name_dof:
+        if "A" in self.muscles_dynamics_model.name_dof:
             self.muscles_dynamics_model.configure_scaling_factor(ocp=ocp, nlp=nlp, as_states=True, as_controls=False)
-        if 'Tau1' in self.muscles_dynamics_model.name_dof:
+        if "Tau1" in self.muscles_dynamics_model.name_dof:
             self.muscles_dynamics_model.configure_time_state_force_no_cross_bridge(
-                ocp=ocp, nlp=nlp, as_states=True, as_controls=False)
-        if 'Km' in self.muscles_dynamics_model.name_dof:
+                ocp=ocp, nlp=nlp, as_states=True, as_controls=False
+            )
+        if "Km" in self.muscles_dynamics_model.name_dof:
             self.muscles_dynamics_model.configure_cross_bridges(ocp=ocp, nlp=nlp, as_states=True, as_controls=False)
 
         # TODO : for fatigue model
@@ -183,8 +194,13 @@ class FESActuatedBiorbdModel(BiorbdModel):
 
         time_type = "mx" if "time" in ocp.parameters.keys() else None
         stim_apparition = [ocp.node_time(phase_idx=i, node_idx=0, type=time_type) for i in range(nlp.phase_idx + 1)]
-        ConfigureProblem.configure_dynamics_function(ocp, nlp, dyn_func=self.muscle_dynamic, muscle_model=self.muscles_dynamics_model, stim_apparition=stim_apparition)
-
+        ConfigureProblem.configure_dynamics_function(
+            ocp,
+            nlp,
+            dyn_func=self.muscle_dynamic,
+            muscle_model=self.muscles_dynamics_model,
+            stim_apparition=stim_apparition,
+        )
 
     @staticmethod
     def configure_q(ocp, nlp, as_states: bool, as_controls: bool, as_states_dot: bool = False):
@@ -204,9 +220,7 @@ class FESActuatedBiorbdModel(BiorbdModel):
         """
         name = "q"
         name_q = [name]
-        ConfigureProblem.configure_new_variable(
-            name, name_q, ocp, nlp, as_states, as_controls, as_states_dot
-        )
+        ConfigureProblem.configure_new_variable(name, name_q, ocp, nlp, as_states, as_controls, as_states_dot)
 
     @staticmethod
     def configure_qdot(ocp, nlp, as_states: bool, as_controls: bool, as_states_dot: bool = False):
@@ -227,9 +241,7 @@ class FESActuatedBiorbdModel(BiorbdModel):
 
         name = "qdot"
         name_qdot = [name]
-        ConfigureProblem.configure_new_variable(
-            name, name_qdot, ocp, nlp, as_states, as_controls, as_states_dot
-        )
+        ConfigureProblem.configure_new_variable(name, name_qdot, ocp, nlp, as_states, as_controls, as_states_dot)
 
     @staticmethod
     def configure_tau(ocp, nlp, as_states: bool, as_controls: bool, fatigue: FatigueList = None):
@@ -250,10 +262,8 @@ class FESActuatedBiorbdModel(BiorbdModel):
 
         name = "tau"
         name_tau = ["tau"]
-        ConfigureProblem.configure_new_variable(
-            name, name_tau, ocp, nlp, as_states, as_controls, fatigue=fatigue
-        )
+        ConfigureProblem.configure_new_variable(name, name_tau, ocp, nlp, as_states, as_controls, fatigue=fatigue)
+
 
 if __name__ == "__main__":
-    FESActuatedBiorbdModel(biorbd_path="msk_model/arm26_unmesh.bioMod",
-                           muscles_model=DingModelFrequency())
+    FESActuatedBiorbdModel(biorbd_path="msk_model/arm26_unmesh.bioMod", muscles_model=DingModelFrequency())

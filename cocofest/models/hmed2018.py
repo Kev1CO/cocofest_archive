@@ -244,8 +244,11 @@ class DingModelIntensityFrequency(DingModelFrequency):
         intensity_stim_prev = (
             []
         )  # Every stimulation intensity before the current phase, i.e.: the intensity of each phase
-        intensity_parameters = nlp.model.get_intensity_parameters(
-            nlp.parameters) if nlp_dynamics is None else nlp_dynamics.get_intensity_parameters(nlp.parameters)
+        intensity_parameters = (
+            nlp.model.get_intensity_parameters(nlp.parameters)
+            if nlp_dynamics is None
+            else nlp_dynamics.get_intensity_parameters(nlp.parameters)
+        )
 
         if intensity_parameters.shape[0] == 1:  # check if pulse duration is mapped
             for i in range(nlp.phase_idx + 1):
@@ -258,11 +261,7 @@ class DingModelIntensityFrequency(DingModelFrequency):
 
         return DynamicsEvaluation(
             dxdt=dxdt_fun(
-                cn=states[0],
-                f=states[1],
-                t=time,
-                t_stim_prev=stim_apparition,
-                intensity_stim=intensity_stim_prev,
+                cn=states[0], f=states[1], t=time, t_stim_prev=stim_apparition, intensity_stim=intensity_stim_prev,
             ),
             defects=None,
         )

@@ -201,8 +201,11 @@ class DingModelIntensityFrequencyWithFatigue(DingModelIntensityFrequency):
         intensity_stim_prev = (
             []
         )  # Every stimulation intensity before the current phase, i.e.: the intensity of each phase
-        intensity_parameters = nlp.model.get_intensity_parameters(
-            nlp.parameters) if nlp_dynamics is None else nlp_dynamics.get_intensity_parameters(nlp.parameters)
+        intensity_parameters = (
+            nlp.model.get_intensity_parameters(nlp.parameters)
+            if nlp_dynamics is None
+            else nlp_dynamics.get_intensity_parameters(nlp.parameters)
+        )
 
         if intensity_parameters.shape[0] == 1:  # check if pulse duration is mapped
             for i in range(nlp.phase_idx + 1):
@@ -273,13 +276,7 @@ class DingModelIntensityFrequencyWithFatigue(DingModelIntensityFrequency):
         name = "A"
         name_a = [name]
         ConfigureProblem.configure_new_variable(
-            name,
-            name_a,
-            ocp,
-            nlp,
-            as_states,
-            as_controls,
-            as_states_dot,
+            name, name_a, ocp, nlp, as_states, as_controls, as_states_dot,
         )
 
     @staticmethod
@@ -309,13 +306,7 @@ class DingModelIntensityFrequencyWithFatigue(DingModelIntensityFrequency):
         name = "Tau1"
         name_tau1 = [name]
         ConfigureProblem.configure_new_variable(
-            name,
-            name_tau1,
-            ocp,
-            nlp,
-            as_states,
-            as_controls,
-            as_states_dot,
+            name, name_tau1, ocp, nlp, as_states, as_controls, as_states_dot,
         )
 
     @staticmethod
@@ -345,11 +336,5 @@ class DingModelIntensityFrequencyWithFatigue(DingModelIntensityFrequency):
         name = "Km"
         name_km = [name]
         ConfigureProblem.configure_new_variable(
-            name,
-            name_km,
-            ocp,
-            nlp,
-            as_states,
-            as_controls,
-            as_states_dot,
+            name, name_km, ocp, nlp, as_states, as_controls, as_states_dot,
         )

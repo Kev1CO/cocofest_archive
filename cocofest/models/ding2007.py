@@ -67,12 +67,7 @@ class DingModelPulseDurationFrequency(DingModelFrequency):
         )
 
     def system_dynamics(
-        self,
-        cn: MX,
-        f: MX,
-        t: MX = None,
-        t_stim_prev: list[MX] | list[float] = None,
-        impulse_time: MX = None,
+        self, cn: MX, f: MX, t: MX = None, t_stim_prev: list[MX] | list[float] = None, impulse_time: MX = None,
     ) -> MX:
         """
         The system dynamics is the function that describes the models.
@@ -178,7 +173,11 @@ class DingModelPulseDurationFrequency(DingModelFrequency):
         -------
         The derivative of the states in the tuple[MX] format
         """
-        pulse_duration_parameters = nlp.model.get_pulse_duration_parameters(nlp.parameters) if nlp_dynamics is None else nlp_dynamics.get_pulse_duration_parameters(nlp.parameters)
+        pulse_duration_parameters = (
+            nlp.model.get_pulse_duration_parameters(nlp.parameters)
+            if nlp_dynamics is None
+            else nlp_dynamics.get_pulse_duration_parameters(nlp.parameters)
+        )
 
         if pulse_duration_parameters.shape[0] == 1:  # check if pulse duration is mapped
             impulse_time = pulse_duration_parameters[0]
@@ -188,13 +187,7 @@ class DingModelPulseDurationFrequency(DingModelFrequency):
         dxdt_fun = nlp_dynamics.system_dynamics if nlp_dynamics else nlp.model.system_dynamics
 
         return DynamicsEvaluation(
-            dxdt=dxdt_fun(
-                cn=states[0],
-                f=states[1],
-                t=time,
-                t_stim_prev=stim_apparition,
-                impulse_time=impulse_time,
-            ),
+            dxdt=dxdt_fun(cn=states[0], f=states[1], t=time, t_stim_prev=stim_apparition, impulse_time=impulse_time,),
             defects=None,
         )
 

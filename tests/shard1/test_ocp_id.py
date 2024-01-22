@@ -117,13 +117,7 @@ force_at_node = [
 ]
 
 additional_key_settings = {
-    "a_rest": {
-        "initial_guess": 1000,
-        "min_bound": 1,
-        "max_bound": 10000,
-        "function": model.set_a_rest,
-        "scaling": 1,
-    },
+    "a_rest": {"initial_guess": 1000, "min_bound": 1, "max_bound": 10000, "function": model.set_a_rest, "scaling": 1,},
     "km_rest": {
         "initial_guess": 0.5,
         "min_bound": 0.001,
@@ -138,27 +132,14 @@ additional_key_settings = {
         "function": model.set_tau1_rest,
         "scaling": 1000,
     },
-    "tau2": {
-        "initial_guess": 0.5,
-        "min_bound": 0.0001,
-        "max_bound": 1,
-        "function": model.set_tau2,
-        "scaling": 1000,
-    },
+    "tau2": {"initial_guess": 0.5, "min_bound": 0.0001, "max_bound": 1, "function": model.set_tau2, "scaling": 1000,},
 }
 
 
 def test_ocp_id_ding2003():
     # --- Creating the simulated data to identify on --- #
     # Building the Initial Value Problem
-    ivp = IvpFes(
-        model=DingModelFrequency(),
-        n_stim=10,
-        n_shooting=10,
-        final_time=1,
-        use_sx=True,
-        extend_last_phase=1,
-    )
+    ivp = IvpFes(model=DingModelFrequency(), n_stim=10, n_shooting=10, final_time=1, use_sx=True, extend_last_phase=1,)
 
     # Creating the solution from the initial guess
     sol_from_initial_guess = Solution.from_initial_guess(ivp, [ivp.x_init, ivp.u_init, ivp.p_init, ivp.s_init])
@@ -421,8 +402,7 @@ def test_all_ocp_id_errors():
 
 def test_all_id_program_errors():
     with pytest.raises(
-        ValueError,
-        match="The given model is not valid and should not be including the fatigue equation in the model",
+        ValueError, match="The given model is not valid and should not be including the fatigue equation in the model",
     ):
         DingModelFrequencyForceParameterIdentification(model=DingModelFrequencyWithFatigue())
 
@@ -620,8 +600,7 @@ def test_all_id_program_errors():
         )
 
     with pytest.raises(
-        ValueError,
-        match=re.escape(f"The given model parameters are not valid, only None, int and float are accepted"),
+        ValueError, match=re.escape(f"The given model parameters are not valid, only None, int and float are accepted"),
     ):
         DingModelFrequencyForceParameterIdentification(
             model=DingModelFrequency(),
@@ -652,8 +631,7 @@ def test_all_id_program_errors():
         )
 
     with pytest.raises(
-        ValueError,
-        match=re.escape(f"The given {'a_rest'} parameter is not valid, it must be given or identified"),
+        ValueError, match=re.escape(f"The given {'a_rest'} parameter is not valid, it must be given or identified"),
     ):
         DingModelFrequencyForceParameterIdentification(
             model=DingModelFrequency(),

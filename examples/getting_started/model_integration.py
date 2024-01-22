@@ -8,13 +8,7 @@ from cocofest import (
 
 # --- Build ocp --- #
 # This problem was build to be integrated and has no objectives nor parameter to optimize.
-ivp = IvpFes(
-    model=DingModelFrequencyWithFatigue(),
-    n_stim=10,
-    n_shooting=20,
-    final_time=1,
-    use_sx=True,
-)
+ivp = IvpFes(model=DingModelFrequencyWithFatigue(), n_stim=10, n_shooting=20, final_time=1, use_sx=True,)
 
 # Creating the solution from the initial guess
 sol_from_initial_guess = Solution.from_initial_guess(ivp, [ivp.x_init, ivp.u_init, ivp.p_init, ivp.s_init])
