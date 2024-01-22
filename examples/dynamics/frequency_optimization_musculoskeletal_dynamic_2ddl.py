@@ -1,6 +1,6 @@
 """
 This example will do a 10 stimulation example with Ding's 2003 frequency model.
-This ocp was build to produce a elbow motion from 5 to 120 degrees.
+This ocp was build to produce an elbow motion from 5 to 120 degrees starting and ending with the arm at the vertical.
 The stimulation frequency will be optimized between 10 and 100 Hz to satisfy the flexion and minimizing required
 elbow torque control.
 """
@@ -20,9 +20,9 @@ for i in range(n_stim):
     objective_functions.add(ObjectiveFcn.Lagrange.MINIMIZE_CONTROL, key="tau", weight=1, quadratic=True, phase=i)
 
 ocp = FESActuatedBiorbdModelOCP.prepare_ocp(
-    biorbd_model_path="/arm26_biceps_1ddl.bioMod",
+    biorbd_model_path="/arm26_biceps.bioMod",
     motion_type="start_end",
-    motion_data=[[5], [120]],
+    motion_data=[[0, 5], [0, 120]],
     fes_muscle_model=DingModelFrequencyWithFatigue(),
     n_stim=n_stim,
     n_shooting=10,
