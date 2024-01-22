@@ -673,7 +673,7 @@ class OcpFes:
         objective_functions = ObjectiveList()
         if custom_objective:
             for i in range(len(custom_objective)):
-                objective_functions.add(custom_objective[0][i])
+                objective_functions.add(custom_objective[i][0])
 
         if force_fourier_coef is not None:
             for phase in range(n_stim):

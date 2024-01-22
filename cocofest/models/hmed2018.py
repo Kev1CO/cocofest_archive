@@ -216,6 +216,7 @@ class DingModelIntensityFrequency(DingModelFrequency):
         stochastic_variables: MX,
         nlp: NonLinearProgram,
         stim_apparition: list[float] = None,
+        nlp_dynamics: NonLinearProgram = None,
     ) -> DynamicsEvaluation:
         """
         Functional electrical stimulation dynamic
@@ -243,7 +244,8 @@ class DingModelIntensityFrequency(DingModelFrequency):
         intensity_stim_prev = (
             []
         )  # Every stimulation intensity before the current phase, i.e.: the intensity of each phase
-        intensity_parameters = nlp.model.get_intensity_parameters(nlp.parameters)
+        intensity_parameters = nlp.model.get_intensity_parameters(
+            nlp.parameters) if nlp_dynamics is None else nlp_dynamics.get_intensity_parameters(nlp.parameters)
 
         if intensity_parameters.shape[0] == 1:  # check if pulse duration is mapped
             for i in range(nlp.phase_idx + 1):
@@ -252,8 +254,10 @@ class DingModelIntensityFrequency(DingModelFrequency):
             for i in range(nlp.phase_idx + 1):
                 intensity_stim_prev.append(intensity_parameters[i])
 
+        dxdt_fun = nlp_dynamics.system_dynamics if nlp_dynamics else nlp.model.system_dynamics
+
         return DynamicsEvaluation(
-            dxdt=nlp.model.system_dynamics(
+            dxdt=dxdt_fun(
                 cn=states[0],
                 f=states[1],
                 t=time,

@@ -153,6 +153,7 @@ class DingModelPulseDurationFrequency(DingModelFrequency):
         stochastic_variables: MX,
         nlp: NonLinearProgram,
         stim_apparition: list[float] = None,
+        nlp_dynamics=None,
     ) -> DynamicsEvaluation:
         """
         Functional electrical stimulation dynamic
@@ -177,15 +178,17 @@ class DingModelPulseDurationFrequency(DingModelFrequency):
         -------
         The derivative of the states in the tuple[MX] format
         """
-        pulse_duration_parameters = nlp.model.get_pulse_duration_parameters(nlp.parameters)
+        pulse_duration_parameters = nlp.model.get_pulse_duration_parameters(nlp.parameters) if nlp_dynamics is None else nlp_dynamics.get_pulse_duration_parameters(nlp.parameters)
 
         if pulse_duration_parameters.shape[0] == 1:  # check if pulse duration is mapped
             impulse_time = pulse_duration_parameters[0]
         else:
             impulse_time = pulse_duration_parameters[nlp.phase_idx]
 
+        dxdt_fun = nlp_dynamics.system_dynamics if nlp_dynamics else nlp.model.system_dynamics
+
         return DynamicsEvaluation(
-            dxdt=nlp.model.system_dynamics(
+            dxdt=dxdt_fun(
                 cn=states[0],
                 f=states[1],
                 t=time,

@@ -128,7 +128,7 @@ class FESActuatedBiorbdModel(BiorbdModel):
         #     dxdt_muscle_list = vertcat(dxdt_muscle_list, muscle_dxdt)
 
         muscle_dxdt = muscle_model.dynamics(time, states, controls, parameters, stochastic_variables, nlp, stim_apparition,
-                                            optional_nlp=nlp.model.muscles_dynamics_model).dxdt
+                                            nlp_dynamics=nlp.model.muscles_dynamics_model).dxdt
         muscle_forces = DynamicsFunctions.get(nlp.states["F"], states)
 
         muscles_tau += - nlp.model.bio_model.model.musclesLengthJacobian(q).to_mx().T @ muscle_forces
@@ -161,6 +161,14 @@ class FESActuatedBiorbdModel(BiorbdModel):
 
         self.muscles_dynamics_model.configure_ca_troponin_complex(ocp=ocp, nlp=nlp, as_states=True, as_controls=False)
         self.muscles_dynamics_model.configure_force(ocp=ocp, nlp=nlp, as_states=True, as_controls=False)
+
+        if 'A' in self.muscles_dynamics_model.name_dof:
+            self.muscles_dynamics_model.configure_scaling_factor(ocp=ocp, nlp=nlp, as_states=True, as_controls=False)
+        if 'Tau1' in self.muscles_dynamics_model.name_dof:
+            self.muscles_dynamics_model.configure_time_state_force_no_cross_bridge(
+                ocp=ocp, nlp=nlp, as_states=True, as_controls=False)
+        if 'Km' in self.muscles_dynamics_model.name_dof:
+            self.muscles_dynamics_model.configure_cross_bridges(ocp=ocp, nlp=nlp, as_states=True, as_controls=False)
 
         # TODO : for fatigue model
         # self.muscles_dynamics_model.configure_scaling_factor(ocp=ocp, nlp=nlp, as_states=True, as_controls=False)

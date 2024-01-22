@@ -188,6 +188,7 @@ class DingModelFrequencyWithFatigue(DingModelFrequency):
         stochastic_variables: MX,
         nlp: NonLinearProgram,
         stim_apparition=None,
+        nlp_dynamics=None,
     ) -> DynamicsEvaluation:
         """
         Functional electrical stimulation dynamic
@@ -213,8 +214,10 @@ class DingModelFrequencyWithFatigue(DingModelFrequency):
         The derivative of the states in the tuple[MX] format
         """
 
+        dxdt_fun = nlp_dynamics.system_dynamics if nlp_dynamics else nlp.model.system_dynamics
+
         return DynamicsEvaluation(
-            dxdt=nlp.model.system_dynamics(
+            dxdt=dxdt_fun(
                 cn=states[0],
                 f=states[1],
                 a=states[2],

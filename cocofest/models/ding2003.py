@@ -236,7 +236,7 @@ class DingModelFrequency:
         stochastic_variables: MX,
         nlp: NonLinearProgram,
         stim_apparition=None,
-        optional_nlp=None,
+        nlp_dynamics=None,
     ) -> DynamicsEvaluation:
         """
         Functional electrical stimulation dynamic
@@ -262,19 +262,15 @@ class DingModelFrequency:
         The derivative of the states in the tuple[MX] format
         """
 
+        dxdt_fun = nlp_dynamics.system_dynamics if nlp_dynamics else nlp.model.system_dynamics
+
         return DynamicsEvaluation(
-            dxdt=nlp.model.system_dynamics(
-                cn=states[0],
-                f=states[1],
-                t=time,
-                t_stim_prev=stim_apparition,
-            ) if optional_nlp is None else optional_nlp.system_dynamics(
+            dxdt=dxdt_fun(
                 cn=states[0],
                 f=states[1],
                 t=time,
                 t_stim_prev=stim_apparition,
             ),
-            defects=None,
         )
 
     def declare_ding_variables(self, ocp: OptimalControlProgram, nlp: NonLinearProgram):
