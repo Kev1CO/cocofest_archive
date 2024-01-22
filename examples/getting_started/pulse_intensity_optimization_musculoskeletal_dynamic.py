@@ -24,7 +24,7 @@ minimum_pulse_intensity = DingModelIntensityFrequencyWithFatigue.min_pulse_inten
 )
 
 ocp = FESActuatedBiorbdModelOCP.prepare_ocp(
-    biorbd_model_path="/arm26_biceps_1ddl.bioMod",
+    biorbd_model_path="/arm26_biceps_1dof.bioMod",
     motion_type="start_end",
     motion_data=[[5], [120]],
     fes_muscle_model=DingModelIntensityFrequencyWithFatigue(),
