@@ -27,9 +27,9 @@ class DingModelFrequencyWithFatigue(DingModelFrequency):
     """
 
     def __init__(
-        self, name: str = "ding2003_with_fatigue", sum_stim_truncation: int = None,
+        self, model_name: str = "ding2003_with_fatigue", muscle_name: str = None, sum_stim_truncation: int = None,
     ):
-        super().__init__(name=name, sum_stim_truncation=sum_stim_truncation)
+        super().__init__(model_name=model_name, muscle_name=muscle_name, sum_stim_truncation=sum_stim_truncation)
         self._with_fatigue = True
         # ---- Fatigue models ---- #
         self.alpha_a = -4.0 * 10e-7  # Value from Ding's experimentation [1] (s^-2)
@@ -86,8 +86,12 @@ class DingModelFrequencyWithFatigue(DingModelFrequency):
         return 5
 
     @property
-    def name(self) -> None | str:
-        return self._name
+    def model_name(self) -> None | str:
+        return self._model_name
+
+    @property
+    def muscle_name(self) -> None | str:
+        return self._muscle_name
 
     # ---- Model's dynamics ---- #
     def system_dynamics(

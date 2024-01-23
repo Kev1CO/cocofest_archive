@@ -141,8 +141,9 @@ class FESActuatedBiorbdModel(BiorbdModel):
         ).dxdt
         muscle_forces = DynamicsFunctions.get(nlp.states["F"], states)
 
-        muscles_tau += -nlp.model.bio_model.model.musclesLengthJacobian(q).to_mx().T @ muscle_forces
-        # muscles_tau += nlp.model.bio_model.model.muscularJointTorque(muscle_forces, q, qdot).to_mx()
+        moment_arm_matrix = -nlp.model.bio_model.model.musclesLengthJacobian(q).to_mx().T
+
+        muscles_tau += moment_arm_matrix @ muscle_forces
         dxdt_muscle_list = vertcat(dxdt_muscle_list, muscle_dxdt)
 
         # You can directly call biorbd function (as for ddq) or call bioptim accessor (as for dq)

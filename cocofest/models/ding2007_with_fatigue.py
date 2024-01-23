@@ -26,9 +26,9 @@ class DingModelPulseDurationFrequencyWithFatigue(DingModelPulseDurationFrequency
     Muscle & Nerve: Official Journal of the American Association of Electrodiagnostic Medicine, 36(2), 214-222.
     """
 
-    def __init__(self, name: str = "ding_2007_with_fatigue", sum_stim_truncation: int = None):
+    def __init__(self, model_name: str = "ding_2007_with_fatigue", muscle_name: str = None, sum_stim_truncation: int = None):
         super(DingModelPulseDurationFrequencyWithFatigue, self).__init__(
-            name=name, sum_stim_truncation=sum_stim_truncation
+            model_name=model_name, muscle_name=muscle_name, sum_stim_truncation=sum_stim_truncation
         )
         self._with_fatigue = True
 

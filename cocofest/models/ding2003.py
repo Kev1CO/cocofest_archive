@@ -27,9 +27,10 @@ class DingModelFrequency:
     """
 
     def __init__(
-        self, name: str = "ding2003", sum_stim_truncation: int = None,
+        self, model_name: str = "ding2003", muscle_name: str = None, sum_stim_truncation: int = None,
     ):
-        self._name = name
+        self._model_name = model_name
+        self._muscle_name = muscle_name
         self._sum_stim_truncation = sum_stim_truncation
         self._with_fatigue = False
         # ---- Custom values for the example ---- #
@@ -88,8 +89,12 @@ class DingModelFrequency:
         return 2
 
     @property
-    def name(self) -> None | str:
-        return self._name
+    def model_name(self) -> None | str:
+        return self._model_name
+
+    @property
+    def muscle_name(self) -> None | str:
+        return self._muscle_name
 
     # ---- Model's dynamics ---- #
     def system_dynamics(self, cn: MX, f: MX, t: MX = None, t_stim_prev: list[MX] | list[float] = None,) -> MX:

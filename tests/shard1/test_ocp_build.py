@@ -310,7 +310,7 @@ def test_ocp_building(
     use_sx,
     sum_stim_truncation,
 ):
-    if (model.name == "ding2003" or model.name == "ding2003_with_fatigue") and time_min is None and time_max is None:
+    if (model.model_name == "ding2003" or model.model_name == "ding2003_with_fatigue") and time_min is None and time_max is None:
         return
 
     model._sum_stim_truncation = sum_stim_truncation

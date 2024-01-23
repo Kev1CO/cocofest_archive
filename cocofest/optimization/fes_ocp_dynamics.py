@@ -29,14 +29,14 @@ class FESActuatedBiorbdModelOCP:
     @staticmethod
     def prepare_ocp(
         biorbd_model_path: str,
-        motion_type: str = None,
-        motion_data: list = None,
-        fes_muscle_model: DingModelFrequency
-        | DingModelFrequencyWithFatigue
-        | DingModelPulseDurationFrequency
-        | DingModelPulseDurationFrequencyWithFatigue
-        | DingModelIntensityFrequency
-        | DingModelIntensityFrequencyWithFatigue = None,
+        bound_type: str = None,
+        bound_data: list = None,
+        fes_muscle_model: list[DingModelFrequency]
+        | list[DingModelFrequencyWithFatigue]
+        | list[DingModelPulseDurationFrequency]
+        | list[DingModelPulseDurationFrequencyWithFatigue]
+        | list[DingModelIntensityFrequency]
+        | list[DingModelIntensityFrequencyWithFatigue] = None,
         n_stim: int = None,
         n_shooting: int = None,
         final_time: int | float = None,
@@ -57,6 +57,7 @@ class FESActuatedBiorbdModelOCP:
         force_tracking: list = None,
         end_node_tracking: int | float = None,
         custom_objective: ObjectiveList = None,
+        with_residual_torque: bool = False,
         use_sx: bool = True,
         ode_solver: OdeSolverBase = OdeSolver.RK4(n_integration_steps=1),
         control_type: ControlType = ControlType.CONSTANT,
@@ -113,7 +114,7 @@ class FESActuatedBiorbdModelOCP:
         """
 
         OcpFes._sanity_check(
-            model=fes_muscle_model,
+            model=fes_muscle_model[0],
             n_stim=n_stim,
             n_shooting=n_shooting,
             final_time=final_time,
@@ -138,7 +139,11 @@ class FESActuatedBiorbdModelOCP:
             n_threads=n_threads,
         )
 
+        FESActuatedBiorbdModelOCP._sanity_check_fes_models(fes_muscle_model)
+
         OcpFes._sanity_check_frequency(n_stim=n_stim, final_time=final_time, frequency=frequency, round_down=round_down)
+
+        FESActuatedBiorbdModelOCP._sanity_check_muscle_model(biorbd_model_path=biorbd_model_path, fes_muscle_model=fes_muscle_model)
 
         n_stim, final_time = OcpFes._build_phase_parameter(
             n_stim=n_stim, final_time=final_time, frequency=frequency, pulse_mode=pulse_mode, round_down=round_down
@@ -181,15 +186,15 @@ class FESActuatedBiorbdModelOCP:
         ]
 
         FESActuatedBiorbdModelOCP._sanity_check_bounds(
-            bio_models=bio_models, motion_type=motion_type, motion_data=motion_data
+            bio_models=bio_models, bound_type=bound_type, bound_data=bound_data
         )
 
         dynamics = FESActuatedBiorbdModelOCP._declare_dynamics(bio_models, n_stim)
         x_bounds, x_init = OcpFes._set_bounds(fes_muscle_model, n_stim)
         x_bounds, x_init = FESActuatedBiorbdModelOCP._set_bounds(
-            bio_models, motion_type, motion_data, n_stim, x_bounds, x_init
+            bio_models, bound_type, bound_data, n_stim, x_bounds, x_init
         )
-        u_bounds, u_init = FESActuatedBiorbdModelOCP._set_controls(bio_models, n_stim)
+        u_bounds, u_init = FESActuatedBiorbdModelOCP._set_controls(bio_models, n_stim, with_residual_torque)
         objective_functions = OcpFes._set_objective(
             n_stim, n_shooting, force_fourier_coef, end_node_tracking, custom_objective
         )
@@ -231,27 +236,35 @@ class FESActuatedBiorbdModelOCP:
         return dynamics
 
     @staticmethod
-    def _set_bounds(bio_models, motion_type, motion_data, n_stim, x_bounds, x_init):
+    def _set_bounds(bio_models, bound_type, bound_data, n_stim, x_bounds, x_init):
 
-        if motion_type == "start_end":
+        if bound_type == "start_end":
             start_bounds = []
             end_bounds = []
             for i in range(bio_models[0].nb_q):
-                start_bounds.append(3.14 / (180 / motion_data[0][i]) if motion_data[0][i] != 0 else 0)
-                end_bounds.append(3.14 / (180 / motion_data[1][i]) if motion_data[1][i] != 0 else 0)
+                start_bounds.append(3.14 / (180 / bound_data[0][i]) if bound_data[0][i] != 0 else 0)
+                end_bounds.append(3.14 / (180 / bound_data[1][i]) if bound_data[1][i] != 0 else 0)
+
+        elif bound_type == "start":
+            start_bounds = []
+            for i in range(bio_models[0].nb_q):
+                start_bounds.append(3.14 / (180 / bound_data[i]) if bound_data[i] != 0 else 0)
 
         for i in range(n_stim):
             q_x_bounds = bio_models[i].bounds_from_ranges("q")
             qdot_x_bounds = bio_models[i].bounds_from_ranges("qdot")
 
             if i == 0:
-                if motion_type == "start_end":
+                if bound_type == "start_end":
+                    for j in range(bio_models[i].nb_q):
+                        q_x_bounds[j, [0]] = start_bounds[j]
+                elif bound_type == "start":
                     for j in range(bio_models[i].nb_q):
                         q_x_bounds[j, [0]] = start_bounds[j]
                 qdot_x_bounds[:, [0]] = 0  # Start without any velocity
 
             if i == n_stim - 1:
-                if motion_type == "start_end":
+                if bound_type == "start_end":
                     for j in range(bio_models[i].nb_q):
                         q_x_bounds[j, [-1]] = end_bounds[j]
 
@@ -264,11 +277,13 @@ class FESActuatedBiorbdModelOCP:
         return x_bounds, x_init
 
     @staticmethod
-    def _set_controls(bio_models, n_stim):
-
+    def _set_controls(bio_models, n_stim, with_residual_torque):
         # Controls bounds
         nb_tau = bio_models[0].nb_tau
-        tau_min, tau_max, tau_init = [-20] * nb_tau, [20] * nb_tau, [0] * nb_tau
+        if with_residual_torque:
+            tau_min, tau_max, tau_init = [20] * nb_tau, [20] * nb_tau, [0] * nb_tau
+        else:
+            tau_min, tau_max, tau_init = [0] * nb_tau, [0] * nb_tau, [0] * nb_tau
 
         u_bounds = BoundsList()
         for i in range(n_stim):
@@ -282,14 +297,38 @@ class FESActuatedBiorbdModelOCP:
         return u_bounds, u_init
 
     @staticmethod
-    def _sanity_check_bounds(bio_models, motion_type, motion_data):
+    def _sanity_check_bounds(bio_models, bound_type, bound_data):
         for i in range(bio_models[0].nb_q):
-            if motion_type == "start_end":
-                if not isinstance(motion_data, list):
-                    raise TypeError("The motion data should be a list of two elements")
-                if len(motion_data) != 2:
-                    raise ValueError("The motion data should be a list of two elements, start and end position")
-                if not isinstance(motion_data[0], list) or not isinstance(motion_data[1], list):
+            if bound_type == "start_end":
+                if not isinstance(bound_data, list):
+                    raise TypeError("The bound data should be a list of two elements")
+                if len(bound_data) != 2:
+                    raise ValueError("The bound data should be a list of two elements, start and end position")
+                if not isinstance(bound_data[0], list) or not isinstance(bound_data[1], list):
                     raise TypeError("The start and end position should be a list")
-                if len(motion_data[0]) != bio_models[0].nb_q or len(motion_data[1]) != bio_models[0].nb_q:
+                if len(bound_data[0]) != bio_models[0].nb_q or len(bound_data[1]) != bio_models[0].nb_q:
                     raise ValueError("The start and end position should be a list of size nb_q")
+
+    @staticmethod
+    def _sanity_check_muscle_model(biorbd_model_path, fes_muscle_model):
+        tested_bio_model = FESActuatedBiorbdModel(name=None, biorbd_path=biorbd_model_path, muscles_model=fes_muscle_model)
+        fes_muscle_model_name_list = [fes_muscle_model[x].muscle_name for x in range(len(fes_muscle_model))]
+        for biorbd_muscle in tested_bio_model.muscle_names:
+            if biorbd_muscle not in fes_muscle_model_name_list:
+                raise ValueError(f"The muscle {biorbd_muscle} is not in the fes muscle model")
+
+    @staticmethod
+    def _sanity_check_fes_models(fes_muscle_model):
+        for i in range(len(fes_muscle_model)):
+            if not isinstance(
+                    fes_muscle_model[i],
+                    DingModelFrequency
+                    | DingModelFrequencyWithFatigue
+                    | DingModelPulseDurationFrequency
+                    | DingModelPulseDurationFrequencyWithFatigue
+                    | DingModelIntensityFrequency
+                    | DingModelIntensityFrequencyWithFatigue,
+            ):
+                raise TypeError(
+                    "model must be a DingModelFrequency, DingModelFrequencyWithFatigue, DingModelPulseDurationFrequency, DingModelPulseDurationFrequencyWithFatigue, DingModelIntensityFrequency, DingModelIntensityFrequencyWithFatigue type"
+                )
