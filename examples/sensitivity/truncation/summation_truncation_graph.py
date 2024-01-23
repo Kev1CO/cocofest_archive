@@ -5,8 +5,7 @@ from matplotlib.ticker import MaxNLocator, FixedLocator, IndexLocator
 from matplotlib import colors
 
 
-# --- Extracting the results from the files --- #
-# mode = ["single", "doublet", "triplet"]
+# --- Extracting the data from the files --- #
 mode = ["single"]
 for desired_mode in mode:
     if desired_mode == "single":
@@ -37,7 +36,6 @@ for desired_mode in mode:
             doublet_repetition = data["repetition"]
             doublet_ocp_time = data["creation_ocp_time"]
 
-
     elif desired_mode == "triplet":
         with open(r"../../data/truncation_triplet.pkl", "rb") as f:
             data = pickle.load(f)
@@ -54,11 +52,8 @@ for desired_mode in mode:
     else:
         raise ValueError("Not available pulse mode")
 
-# --- Plotting the results --- #
-# name_error_list = [single_force_total_results, doublet_force_total_results, triplet_force_total_results]
-# name_error_list_cn = [single_calcium_total_results, doublet_calcium_total_results, triplet_calcium_total_results]
-# computations_time_list = [single_computations_time, doublet_computations_time, triplet_computations_time]
-# parameter_list = [single_parameter_list, doublet_parameter_list, triplet_parameter_list]
+
+# --- Getting the results --- #
 
 name_error_list = [single_force_total_results]
 name_error_list_cn = [single_calcium_total_results]
@@ -95,22 +90,22 @@ for i in range(len(name_error_list)):
             if cn_error_val < 1e-8 and counter_beneath_1e_8 == 0:
                 list_error_beneath_1e_8.append(counter)
                 computation_time_beneath_1e_8_counter = counter
-                # time_diff = ground_truth_computation_time - computations_time_list[i][counter]
-                # time_diff = 0 if time_diff < 0 else time_diff
-                # computation_time_beneath_1e_8.append(time_diff)
                 counter_beneath_1e_8 += 1
             list_error.append(error_val)
             if parameter_list[i][counter] == [1, 1]:
                 print("[1, 1]", computations_time_list[i][counter])
-                a_time = computations_time_list[i][counter]
-
-            if parameter_list[i][counter] == [100, 1]:
-                print("[100, 1]", computations_time_list[i][counter])
-                b_time = computations_time_list[i][counter]
+                a_ocp_time = [single_ocp_time][i][counter]
+                a_integration_time = [single_computations_time][i][counter]
 
             if parameter_list[i][counter] == [100, 39]:
                 print("[100, 39]", computations_time_list[i][counter])
-                c_time = computations_time_list[i][counter]
+                b_ocp_time = [single_ocp_time][i][counter]
+                b_integration_time = [single_computations_time][i][counter]
+
+            if parameter_list[i][counter] == [100, 100]:
+                print("[100, 100]", computations_time_list[i][counter])
+                c_ocp_time = [single_ocp_time][i][counter]
+                c_integration_time = [single_computations_time][i][counter]
 
             counter += 1
         ground_truth_computation_time = computations_time_list[i][counter-1]
@@ -133,9 +128,10 @@ max_computation_time = max(list_max_computation_time)
 min_computation_time = min(list_min_computation_time)
 
 
+# --- Plotting the results --- #
+
 fig, axs = plt.subplots(1, 1)
 plt.rcParams['figure.figsize'] = [10, 10]
-# fig, axs = plt.subplots(1, 3)
 cmap = plt.get_cmap().copy()
 cmap = cmap.with_extremes(under="black")
 
@@ -157,80 +153,14 @@ im2 = axs.scatter(
     color="black",
 )
 
-
-
-# im1 = axs[0].scatter(
-#     np.array(parameter_list[0])[:, 0],
-#     np.array(parameter_list[0])[:, 1],
-#     edgecolors="none",
-#     s=20,
-#     c=all_mode_list_error[0],
-#     norm=colors.LogNorm(vmin=1e-8, vmax=max_error),
-#     cmap=cmap,
-# )
-#
-# im2 = axs[0].scatter(
-#     np.array(all_model_list_ground_truth_parameter[0])[:, 0],
-#     np.array(all_model_list_ground_truth_parameter[0])[:, 1],
-#     edgecolors="none",
-#     s=20,
-#     color="black",
-# )
-
-# im3 = axs[1].scatter(
-#     np.array(parameter_list[1])[:, 0],
-#     np.array(parameter_list[1])[:, 1],
-#     edgecolors="none",
-#     s=20,
-#     c=all_mode_list_error[1],
-#     norm=colors.LogNorm(vmin=1e-8, vmax=max_error),
-#     cmap=cmap,
-# )
-#
-# im4 = axs[1].scatter(
-#     np.array(all_model_list_ground_truth_parameter[1])[:, 0],
-#     np.array(all_model_list_ground_truth_parameter[1])[:, 1],
-#     edgecolors="none",
-#     s=20,
-#     color="black",
-# )
-#
-# im5 = axs[2].scatter(
-#     np.array(parameter_list[2])[:, 0],
-#     np.array(parameter_list[2])[:, 1],
-#     edgecolors="none",
-#     s=20,
-#     c=all_mode_list_error[2],
-#     norm=colors.LogNorm(vmin=1e-8, vmax=max_error),
-#     cmap=cmap,
-# )
-#
-# im6 = axs[2].scatter(
-#     np.array(all_model_list_ground_truth_parameter[2])[:, 0],
-#     np.array(all_model_list_ground_truth_parameter[2])[:, 1],
-#     edgecolors="none",
-#     s=20,
-#     color="black",
-# )
-#
-# cbar1 = fig.colorbar(
-#     im1,
-#     ax=axs[0],
-#     label="Absolute error (N)",
-#     extend="min",
-#     ticks=[1e-8, 1e-6, 1e-4, 1e-2, 1, max_error],
-#     cmap=cmap,
-# )
-
 cbar1 = fig.colorbar(
     im1,
     ax=axs,
-    # label="Absolute error (N)",
     extend="min",
     ticks=[1e-12, 1e-10, 1e-8, 1e-6, 1e-4, 1e-2, 1, max_error],
     cmap=cmap,
 )
-cbar1.set_label(label="Absolute error (N)", size=25, fontname="Times New Roman")
+cbar1.set_label(label="Force absolute error (N)", size=25, fontname="Times New Roman")
 
 cbar1.ax.set_yticklabels(
     [
@@ -243,61 +173,11 @@ cbar1.ax.set_yticklabels(
         "{:.0e}".format(float(1)),
         "{:.1e}".format(float(round(max_error))),
     ],
-    style="italic",
     size=25,
     fontname="Times New Roman"
 )
 
-# computation_time_color_bar_scale = "same"  # "same" or "different"
-# if computation_time_color_bar_scale == "different":
-#     if desired_mode == "single":
-#         cbar2 = fig.colorbar(
-#             im3,
-#             ax=axs[1],
-#             label="Computation time (s)",
-#             ticks=[round(min_computation_time + 0.001, 3), 3.5, 4, 4.5, 5, round(max_computation_time - 0.001, 3)],
-#         )
-#         cbar2.ax.set_yticklabels(
-#             [round(min_computation_time + 0.001, 3), 3.5, 4, 4.5, 5, round(max_computation_time - 0.001, 3)],
-#             style="italic",
-#         )
-#
-#     elif desired_mode == "doublet":
-#         cbar2 = fig.colorbar(
-#             im3,
-#             ax=axs[1],
-#             label="Computation time (s)",
-#             ticks=[round(min_computation_time + 0.001, 3), 4, 5, 6, 7, round(max_computation_time - 0.001, 3)],
-#         )
-#         cbar2.ax.set_yticklabels(
-#             [round(min_computation_time + 0.001, 3), 4, 5, 6, 7, round(max_computation_time - 0.001, 3)], style="italic"
-#         )
-#
-#     elif desired_mode == "triplet":
-#         cbar2 = fig.colorbar(
-#             im3,
-#             ax=axs[1],
-#             label="Computation time (s)",
-#             ticks=[round(min_computation_time + 0.001, 3), 4, 5, 6, 7, 8, 9, round(max_computation_time - 0.001, 3)],
-#         )
-#         cbar2.ax.set_yticklabels(
-#             [round(min_computation_time + 0.001, 3), 4, 5, 6, 7, 8, 9, round(max_computation_time - 0.001, 3)],
-#             style="italic",
-#         )
-#
-# elif computation_time_color_bar_scale == "same":
-#     cbar2 = fig.colorbar(
-#         im3,
-#         ax=axs[1],
-#         label="Computation time (s)",
-#         ticks=[3.033, 4, 5, 6, 7, 8, 9, 10.038],
-#     )
-#     cbar2.ax.set_yticklabels(
-#         [3.033, 4, 5, 6, 7, 8, 9, 10.038],
-#         style="italic",
-#     )
-
-axs.plot(np.arange(1, 101, 1).tolist(), np.arange(1, 101, 1).tolist(), color="red", ls="-.", label="Ground truth", linewidth=5)
+axs.plot(np.arange(1, 101, 1).tolist(), np.arange(1, 101, 1).tolist(), color="red", ls="-", label="Ground truth", linewidth=4)
 
 x_beneath_1e_8 = np.arange(1, 101, 1).tolist()
 for i in range(1):
@@ -305,29 +185,17 @@ for i in range(1):
     y_beneath_1e_8 = []
     for j in range(len((all_mode_list_error_beneath_1e_8[i]))):
         y_beneath_1e_8.append(parameter_list[i][all_mode_list_error_beneath_1e_8[i][j]][1])
-    axs.plot(x_beneath_1e_8, y_beneath_1e_8, color="darkred", label="Calcium error < 1e-8", linewidth=3)
+    axs.plot(x_beneath_1e_8, y_beneath_1e_8, color="darkred", label="Calcium absolute error < 1e-8", linewidth=3)
 
-axs.scatter(1, 1, color="black", label="A = " + str(round(a_time, 3)) + " sec", marker="+", s=500, lw=5)
-axs.scatter(100, 1, color="black", label="B = " + str(round(b_time, 3)) + " sec", marker="+", s=500, lw=5)
-axs.scatter(100, 39, color="black", label="C = " + str(round(c_time, 3)) + " sec", marker="+", s=500, lw=5)
+axs.scatter(0, 0, color="white", label="OCP (s) | 100 Integrations (s)", marker="+", s=0, lw=0)
+axs.scatter(1, 1, color="blue", label="  "+ str(round(a_ocp_time, 3)) + "              " + str(round(a_integration_time, 3)), marker="^", s=200, lw=5)
+axs.scatter(100, 39, color="black", label="  "+ str(round(b_ocp_time, 3)) + "              " + str(round(b_integration_time, 3)), marker="+", s=500, lw=5)
+axs.scatter(100, 100, color="green", label="  "+ str(round(c_ocp_time, 3)) + "              " + str(round(c_integration_time, 3)), marker=",", s=200, lw=5)
 
-
-
-# axs.set_title("Single pulse train", fontsize=16)
 axs.set_xlabel("Frequency (Hz)", fontsize=25, fontname="Times New Roman")
 axs.xaxis.set_major_locator(MaxNLocator(integer=True))
-axs.set_ylabel("Previous stimulation kept for computation (n)", fontsize=25, fontname="Times New Roman")
+axs.set_ylabel("Past stimulation kept for computation (n)", fontsize=25, fontname="Times New Roman")
 axs.yaxis.set_major_locator(MaxNLocator(integer=True))
-# axs[1].set_title("Doublet pulse train")
-# axs[1].set_xlabel("Frequency (Hz)")
-# axs[1].xaxis.set_major_locator(MaxNLocator(integer=True))
-# axs[1].set_ylabel("Previous stimulation kept for computation (n)")
-# axs[1].yaxis.set_major_locator(MaxNLocator(integer=True))
-# axs[2].set_title("Triplet pulse train")
-# axs[2].set_xlabel("Frequency (Hz)")
-# axs[2].xaxis.set_major_locator(MaxNLocator(integer=True))
-# axs[2].set_ylabel("Previous stimulation kept for computation (n)")
-# axs[2].yaxis.set_major_locator(MaxNLocator(integer=True))
 
 ticks = np.arange(1, 101, 1).tolist()
 ticks_label = np.arange(1, 101, 1)
@@ -341,55 +209,9 @@ axs.set_yticklabels(ticks_label, fontname="Times New Roman")
 axs.yaxis.set_minor_locator(IndexLocator(base=1, offset=0))
 axs.yaxis.set_major_locator(FixedLocator([1, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100]))
 axs.tick_params(axis="both", which="major", labelsize=25)
-# axs[1].set_xticks(ticks)
-# axs[1].set_xticklabels(ticks_label)
-# axs[1].xaxis.set_minor_locator(IndexLocator(base=1, offset=0))
-# axs[1].xaxis.set_major_locator(FixedLocator([1, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100]))
-# axs[1].set_yticks(ticks)
-# axs[1].set_yticklabels(ticks_label)
-# axs[1].yaxis.set_minor_locator(IndexLocator(base=1, offset=0))
-# axs[1].yaxis.set_major_locator(FixedLocator([1, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100]))
-# axs[2].set_xticks(ticks)
-# axs[2].set_xticklabels(ticks_label)
-# axs[2].xaxis.set_minor_locator(IndexLocator(base=1, offset=0))
-# axs[2].xaxis.set_major_locator(FixedLocator([1, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100]))
-# axs[2].set_yticks(ticks)
-# axs[2].set_yticklabels(ticks_label)
-# axs[2].yaxis.set_minor_locator(IndexLocator(base=1, offset=0))
-# axs[2].yaxis.set_major_locator(FixedLocator([1, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100]))
 
 axs.set_axisbelow(True)
 axs.grid()
-# axs[1].set_axisbelow(True)
-# axs[1].grid()
-# axs[2].set_axisbelow(True)
-# axs[2].grid()  # which="both"
 
 axs.legend(loc="upper left", prop={'family':'Times New Roman', 'size': 20})
-axs.text(-0.5, 5, "A", fontsize=20, fontname="Times New Roman")
-axs.text(101, 2.5, "B", fontsize=20, fontname="Times New Roman")
-axs.text(101, 41.5, "C", fontsize=20, fontname="Times New Roman")
-
-# axs[1].legend(loc="upper left")
-# axs[2].legend(loc="upper left")
 plt.show()
-
-#
-counter = 0
-new_list = []
-for i in range(1, 101):
-    new_list.append(all_mode_list_error[0][counter])
-    counter += i
-
-plt.plot(np.arange(1, 101, 1), list_error[-100:], color="red")
-plt.xlabel("pulse kept for summation", fontsize=10, fontname="Times New Roman")
-plt.ylabel("absolute error (N)", fontsize=10, fontname="Times New Roman")
-plt.show()
-
-
-plt.plot(np.arange(1, 101, 1), new_list, color="red")
-plt.xlabel("frequency", fontsize=10)
-plt.ylabel("absolute error (N)", fontsize=10)
-plt.show()
-
-
