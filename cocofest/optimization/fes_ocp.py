@@ -481,6 +481,7 @@ class OcpFes:
         parameters_bounds = BoundsList()
         parameters_init = InitialGuessList()
         parameter_objectives = ParameterObjectiveList()
+
         if isinstance(model, DingModelPulseDurationFrequency):
             if pulse_duration:
                 parameters.add(
@@ -673,7 +674,7 @@ class OcpFes:
                     for j in range(len(custom_objective[i])):
                         objective_functions.add(custom_objective[i][j])
 
-        if force_fourier_coef is not None:
+        if force_fourier_coef is not None:  # TODO : Enable multiple force tracking for multiple muscles
             for phase in range(n_stim):
                 for i in range(n_shooting[phase]):
                     objective_functions.add(

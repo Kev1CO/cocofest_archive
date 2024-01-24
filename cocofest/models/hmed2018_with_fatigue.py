@@ -38,7 +38,8 @@ class DingModelIntensityFrequencyWithFatigue(DingModelIntensityFrequency):
     # ---- Absolutely needed methods ---- #
     @property
     def name_dof(self) -> list[str]:
-        return ["Cn", "F", "A", "Tau1", "Km"]
+        muscle_name = "_" + self.muscle_name if self.muscle_name else ""
+        return ["Cn"+muscle_name, "F"+muscle_name, "A"+muscle_name, "Tau1"+muscle_name, "Km"+muscle_name]
 
     @property
     def nb_state(self) -> int:
@@ -204,7 +205,7 @@ class DingModelIntensityFrequencyWithFatigue(DingModelIntensityFrequency):
         intensity_parameters = (
             nlp.model.get_intensity_parameters(nlp.parameters)
             if nlp_dynamics is None
-            else nlp_dynamics.get_intensity_parameters(nlp.parameters)
+            else nlp_dynamics.get_intensity_parameters(nlp.parameters, muscle_name=nlp_dynamics.muscle_name)
         )
 
         if intensity_parameters.shape[0] == 1:  # check if pulse duration is mapped
@@ -241,11 +242,11 @@ class DingModelIntensityFrequencyWithFatigue(DingModelIntensityFrequency):
         nlp: NonLinearProgram
             A reference to the phase
         """
-        self.configure_ca_troponin_complex(ocp=ocp, nlp=nlp, as_states=True, as_controls=False)
-        self.configure_force(ocp=ocp, nlp=nlp, as_states=True, as_controls=False)
-        self.configure_scaling_factor(ocp=ocp, nlp=nlp, as_states=True, as_controls=False)
-        self.configure_time_state_force_no_cross_bridge(ocp=ocp, nlp=nlp, as_states=True, as_controls=False)
-        self.configure_cross_bridges(ocp=ocp, nlp=nlp, as_states=True, as_controls=False)
+        self.configure_ca_troponin_complex(ocp=ocp, nlp=nlp, as_states=True, as_controls=False, muscle_name=self.muscle_name)
+        self.configure_force(ocp=ocp, nlp=nlp, as_states=True, as_controls=False, muscle_name=self.muscle_name)
+        self.configure_scaling_factor(ocp=ocp, nlp=nlp, as_states=True, as_controls=False, muscle_name=self.muscle_name)
+        self.configure_time_state_force_no_cross_bridge(ocp=ocp, nlp=nlp, as_states=True, as_controls=False, muscle_name=self.muscle_name)
+        self.configure_cross_bridges(ocp=ocp, nlp=nlp, as_states=True, as_controls=False, muscle_name=self.muscle_name)
         stim_apparition = self.get_stim_prev(ocp, nlp)
         ConfigureProblem.configure_dynamics_function(ocp, nlp, dyn_func=self.dynamics, stim_apparition=stim_apparition)
 
@@ -256,6 +257,7 @@ class DingModelIntensityFrequencyWithFatigue(DingModelIntensityFrequency):
         as_states: bool,
         as_controls: bool,
         as_states_dot: bool = False,
+        muscle_name: str = None,
     ):
         """
         Configure a new variable of the scaling factor (N/ms)
@@ -273,7 +275,8 @@ class DingModelIntensityFrequencyWithFatigue(DingModelIntensityFrequency):
         as_states_dot: bool
             If the generalized velocities should be a state_dot
         """
-        name = "A"
+        muscle_name = "_" + muscle_name if muscle_name else ""
+        name = "A"+muscle_name
         name_a = [name]
         ConfigureProblem.configure_new_variable(
             name, name_a, ocp, nlp, as_states, as_controls, as_states_dot,
@@ -286,6 +289,7 @@ class DingModelIntensityFrequencyWithFatigue(DingModelIntensityFrequency):
         as_states: bool,
         as_controls: bool,
         as_states_dot: bool = False,
+        muscle_name: str = None,
     ):
         """
         Configure a new variable for time constant of force decline at the absence of strongly bound cross-bridges (ms)
@@ -303,7 +307,8 @@ class DingModelIntensityFrequencyWithFatigue(DingModelIntensityFrequency):
         as_states_dot: bool
             If the generalized velocities should be a state_dot
         """
-        name = "Tau1"
+        muscle_name = "_" + muscle_name if muscle_name else ""
+        name = "Tau1"+muscle_name
         name_tau1 = [name]
         ConfigureProblem.configure_new_variable(
             name, name_tau1, ocp, nlp, as_states, as_controls, as_states_dot,
@@ -316,6 +321,7 @@ class DingModelIntensityFrequencyWithFatigue(DingModelIntensityFrequency):
         as_states: bool,
         as_controls: bool,
         as_states_dot: bool = False,
+        muscle_name: str = None,
     ):
         """
         Configure a new variable for sensitivity of strongly bound cross-bridges to Cn (unitless)
@@ -333,7 +339,8 @@ class DingModelIntensityFrequencyWithFatigue(DingModelIntensityFrequency):
         as_states_dot: bool
             If the generalized velocities should be a state_dot
         """
-        name = "Km"
+        muscle_name = "_" + muscle_name if muscle_name else ""
+        name = "Km"+muscle_name
         name_km = [name]
         ConfigureProblem.configure_new_variable(
             name, name_km, ocp, nlp, as_states, as_controls, as_states_dot,

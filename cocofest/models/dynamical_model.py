@@ -20,62 +20,34 @@ class FESActuatedBiorbdModel(BiorbdModel):
         name: str = None,
         biorbd_path: str = None,
         muscles_model: DingModelFrequency() = None,
-        # muscles_name: list = None # TODO : for loop to create different muscles
     ):
         super().__init__(biorbd_path)
         self._name = name
         self.bio_model = BiorbdModel(biorbd_path)
         self.bounds_from_ranges_q = self.bio_model.bounds_from_ranges("q")
         self.bounds_from_ranges_qdot = self.bio_model.bounds_from_ranges("qdot")
-        # self.muscles_dynamics_model = muscles_model_list   # * self.nb_muscles  # TODO : for loop to create different muscles
-        # self.muscles_name_list = muscles_name_list
 
         self.muscles_dynamics_model = muscles_model
-        self.bio_stim_model = [self.bio_model] + [self.muscles_dynamics_model]
-
-        # TODO : make different muscle for biceps and triceps... such as DingModelFrequency has different parameters value
-        # TODO : find a way to compare names and remove the muscle that is not in the model
+        self.bio_stim_model = [self.bio_model] + self.muscles_dynamics_model
 
     # ---- Absolutely needed methods ---- #
-    def serialize(self) -> tuple[Callable, dict]:
-        # TODO : make different serialize for biceps and triceps... different parameters value
-        # This is where you can serialize your model
-        # This is useful if you want to save your model and load it later
-        # return (
-        #     FESActuatedBiorbdModel,
-        #     {
-        #         "tauc": self.muscles_dynamics_model[0].tauc,
-        #         "a_rest": self.muscles_dynamics_model[0].a_rest,
-        #         "tau1_rest": self.muscles_dynamics_model[0].tau1_rest,
-        #         "km_rest": self.muscles_dynamics_model[0].km_rest,
-        #         "tau2": self.muscles_dynamics_model[0].tau2,
-        #         "alpha_a": self.muscles_dynamics_model[0].alpha_a,
-        #         "alpha_tau1": self.muscles_dynamics_model[0].alpha_tau1,
-        #         "alpha_km": self.muscles_dynamics_model[0].alpha_km,
-        #         "tau_fat": self.muscles_dynamics_model[0].tau_fat,
-        #     },
-        # )
-        return self.muscles_dynamics_model.serialize()
+    def serialize(self, index: int = 0) -> tuple[Callable, dict]:
+        return self.muscles_dynamics_model[index].serialize()
 
     # ---- Needed for the example ---- #
-    # TODO update for 3 models
     @property
-    def name_dof(self) -> list[str]:
-        return self.bio_stim_model[0].name_dof
-        # self.bio_model[0].name_dof
-        # ["Cn", "F", "A", "Tau1", "Km", "q", "qdot", "tau"]
+    def name_dof(self) -> tuple[str]:
+        return self.bio_model.name_dof
 
-    def muscle_name_dof(self) -> list[str]:
-        return self.muscles_dynamics_model.name_dof
+    def muscle_name_dof(self, index: int = 0) -> list[str]:
+        return self.muscles_dynamics_model[index].name_dof
 
     @property
     def nb_state(self) -> int:
         nb_state = 0
-        # for muscle_model in self.muscles_dynamics_model: # TODO : for loop to create different muscles
-        #     nb_state += muscle_model.nb_state
-
-        nb_state += self.muscles_dynamics_model.nb_state
-        nb_state += self.bio_model[0].name_dof
+        for muscle_model in self.muscles_dynamics_model:
+            nb_state += muscle_model.nb_state
+        nb_state += self.bio_model.nb_q
         return nb_state
 
     @property
@@ -90,8 +62,9 @@ class FESActuatedBiorbdModel(BiorbdModel):
         parameters: MX | SX,
         stochastic_variables: MX | SX,
         nlp: NonLinearProgram,
-        muscle_model: DingModelFrequency | DingModelIntensityFrequency | DingModelPulseDurationFrequency,
+        muscle_models: list[DingModelFrequency] | list[DingModelIntensityFrequency] | list[DingModelPulseDurationFrequency],
         stim_apparition=None,
+        state_name_list=None,
     ) -> DynamicsEvaluation:
         """
         The custom dynamics function that provides the derivative of the states: dxdt = f(t, x, u, p, s)
@@ -123,28 +96,33 @@ class FESActuatedBiorbdModel(BiorbdModel):
         muscles_tau = 0
         dxdt_muscle_list = vertcat()
 
-        # for muscle_model in muscle_model_list:  #TODO : for different muscles
-        #     muscle_dxdt = muscle_model.dynamics(time, states, controls, parameters, stochastic_variables, nlp, nb_phases).dxdt
-        #     muscle_forces = DynamicsFunctions.get(nlp.states["F"], states)
-        #     muscles_tau += nlp.model.bio_model.model.muscularJointTorque(muscle_forces, q, qdot).to_mx()
-        #     dxdt_muscle_list = vertcat(dxdt_muscle_list, muscle_dxdt)
+        bio_muscle_names_at_index = []
+        for i in range(len(nlp.model.bio_model.model.muscles())):
+            bio_muscle_names_at_index.append(nlp.model.bio_model.model.muscle(i).name().to_string())
 
-        muscle_dxdt = muscle_model.dynamics(
-            time,
-            states,
-            controls,
-            parameters,
-            stochastic_variables,
-            nlp,
-            stim_apparition,
-            nlp_dynamics=nlp.model.muscles_dynamics_model,
-        ).dxdt
-        muscle_forces = DynamicsFunctions.get(nlp.states["F"], states)
+        for muscle_model in muscle_models:
+            muscle_states_idx = [i for i in range(len(state_name_list)) if muscle_model.muscle_name in state_name_list[i]]
+            muscle_states = vertcat()
+            for i in range(len(muscle_states_idx)):
+                muscle_states = vertcat(muscle_states, states[muscle_states_idx[i]])
 
-        moment_arm_matrix = -nlp.model.bio_model.model.musclesLengthJacobian(q).to_mx().T
+            muscle_dxdt = muscle_model.dynamics(
+                                                time,
+                                                muscle_states,
+                                                controls,
+                                                parameters,
+                                                stochastic_variables,
+                                                nlp,
+                                                stim_apparition,
+                                                nlp_dynamics=muscle_model,
+                                            ).dxdt
 
-        muscles_tau += moment_arm_matrix @ muscle_forces
-        dxdt_muscle_list = vertcat(dxdt_muscle_list, muscle_dxdt)
+            muscle_forces = DynamicsFunctions.get(nlp.states["F_"+muscle_model.muscle_name], states)
+            muscle_idx = bio_muscle_names_at_index.index(muscle_model.muscle_name)
+            moment_arm_matrix_for_the_muscle_and_joint = -nlp.model.bio_model.model.musclesLengthJacobian(q).to_mx()[muscle_idx, :].T
+            muscles_tau += moment_arm_matrix_for_the_muscle_and_joint @ muscle_forces
+
+            dxdt_muscle_list = vertcat(dxdt_muscle_list, muscle_dxdt)
 
         # You can directly call biorbd function (as for ddq) or call bioptim accessor (as for dq)
         dq = DynamicsFunctions.compute_qdot(nlp, q, qdot)
@@ -165,33 +143,29 @@ class FESActuatedBiorbdModel(BiorbdModel):
         nlp: NonLinearProgram
             A reference to the phase
         """
-        # for i in range(len(self.muscles_dynamics_model)):
-
-        # self.muscles_dynamics_model[i].configure_ca_troponin_complex(ocp=ocp, nlp=nlp, as_states=True, as_controls=False, muscle_name=self.muscles_name[i])
-        # TODO : make different muscle for biceps and triceps... such as DingModelFrequency has different parameters value
-
-        self.muscles_dynamics_model.configure_ca_troponin_complex(ocp=ocp, nlp=nlp, as_states=True, as_controls=False)
-        self.muscles_dynamics_model.configure_force(ocp=ocp, nlp=nlp, as_states=True, as_controls=False)
-
-        if "A" in self.muscles_dynamics_model.name_dof:
-            self.muscles_dynamics_model.configure_scaling_factor(ocp=ocp, nlp=nlp, as_states=True, as_controls=False)
-        if "Tau1" in self.muscles_dynamics_model.name_dof:
-            self.muscles_dynamics_model.configure_time_state_force_no_cross_bridge(
-                ocp=ocp, nlp=nlp, as_states=True, as_controls=False
-            )
-        if "Km" in self.muscles_dynamics_model.name_dof:
-            self.muscles_dynamics_model.configure_cross_bridges(ocp=ocp, nlp=nlp, as_states=True, as_controls=False)
-
-        # TODO : for fatigue model
-        # self.muscles_dynamics_model.configure_scaling_factor(ocp=ocp, nlp=nlp, as_states=True, as_controls=False)
-        # self.muscles_dynamics_model.configure_time_state_force_no_cross_bridge(
-        #     ocp=ocp, nlp=nlp, as_states=True, as_controls=False)
-        # self.muscles_dynamics_model.configure_cross_bridges(ocp=ocp, nlp=nlp, as_states=True, as_controls=False)
+        state_name_list = []
+        for muscle_dynamics_model in self.muscles_dynamics_model:
+            muscle_dynamics_model.configure_ca_troponin_complex(ocp=ocp, nlp=nlp, as_states=True, as_controls=False, muscle_name=muscle_dynamics_model.muscle_name)
+            state_name_list.append("CN_"+muscle_dynamics_model.muscle_name)
+            muscle_dynamics_model.configure_force(ocp=ocp, nlp=nlp, as_states=True, as_controls=False, muscle_name=muscle_dynamics_model.muscle_name)
+            state_name_list.append("F_" + muscle_dynamics_model.muscle_name)
+            if "A_"+muscle_dynamics_model.muscle_name in muscle_dynamics_model.name_dof:
+                muscle_dynamics_model.configure_scaling_factor(ocp=ocp, nlp=nlp, as_states=True, as_controls=False, muscle_name=muscle_dynamics_model.muscle_name)
+                state_name_list.append("A_" + muscle_dynamics_model.muscle_name)
+            if "Tau1_"+muscle_dynamics_model.muscle_name in muscle_dynamics_model.name_dof:
+                muscle_dynamics_model.configure_time_state_force_no_cross_bridge(
+                    ocp=ocp, nlp=nlp, as_states=True, as_controls=False, muscle_name=muscle_dynamics_model.muscle_name
+                )
+                state_name_list.append("Tau1_" + muscle_dynamics_model.muscle_name)
+            if "Km_"+muscle_dynamics_model.muscle_name in muscle_dynamics_model.name_dof:
+                muscle_dynamics_model.configure_cross_bridges(ocp=ocp, nlp=nlp, as_states=True, as_controls=False, muscle_name=muscle_dynamics_model.muscle_name)
+                state_name_list.append("Km_" + muscle_dynamics_model.muscle_name)
 
         ConfigureProblem.configure_q(ocp, nlp, as_states=True, as_controls=False)
+        state_name_list.append("q")
         ConfigureProblem.configure_qdot(ocp, nlp, as_states=True, as_controls=False)
+        state_name_list.append("qdot")
         ConfigureProblem.configure_tau(ocp, nlp, as_states=False, as_controls=True)
-        # stim_apparition = self.muscles_dynamics_model.get_stim_prev(ocp, nlp)
 
         time_type = "mx" if "time" in ocp.parameters.keys() else None
         stim_apparition = [ocp.node_time(phase_idx=i, node_idx=0, type=time_type) for i in range(nlp.phase_idx + 1)]
@@ -199,8 +173,9 @@ class FESActuatedBiorbdModel(BiorbdModel):
             ocp,
             nlp,
             dyn_func=self.muscle_dynamic,
-            muscle_model=self.muscles_dynamics_model,
+            muscle_models=self.muscles_dynamics_model,
             stim_apparition=stim_apparition,
+            state_name_list=state_name_list,
         )
 
     @staticmethod
@@ -264,7 +239,3 @@ class FESActuatedBiorbdModel(BiorbdModel):
         name = "tau"
         name_tau = ["tau"]
         ConfigureProblem.configure_new_variable(name, name_tau, ocp, nlp, as_states, as_controls, fatigue=fatigue)
-
-
-if __name__ == "__main__":
-    FESActuatedBiorbdModel(biorbd_path="msk_model/arm26_unmesh.bioMod", muscles_model=DingModelFrequency())

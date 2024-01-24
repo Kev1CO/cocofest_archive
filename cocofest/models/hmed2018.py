@@ -188,7 +188,7 @@ class DingModelIntensityFrequency(DingModelFrequency):
             self.impulse_intensity.append(value[i])
 
     @staticmethod
-    def get_intensity_parameters(nlp_parameters: ParameterList) -> MX:
+    def get_intensity_parameters(nlp_parameters: ParameterList, muscle_name: str = None) -> MX:
         """
         Get the nlp list of intensity parameters
 
@@ -203,7 +203,10 @@ class DingModelIntensityFrequency(DingModelFrequency):
         """
         intensity_parameters = vertcat()
         for j in range(nlp_parameters.mx.shape[0]):
-            if "pulse_intensity" in str(nlp_parameters.mx[j]):
+            if muscle_name:
+                if "pulse_intensity_"+ muscle_name in str(nlp_parameters.mx[j]):
+                    intensity_parameters = vertcat(intensity_parameters, nlp_parameters.mx[j])
+            elif "pulse_intensity" in str(nlp_parameters.mx[j]):
                 intensity_parameters = vertcat(intensity_parameters, nlp_parameters.mx[j])
         return intensity_parameters
 
@@ -247,7 +250,7 @@ class DingModelIntensityFrequency(DingModelFrequency):
         intensity_parameters = (
             nlp.model.get_intensity_parameters(nlp.parameters)
             if nlp_dynamics is None
-            else nlp_dynamics.get_intensity_parameters(nlp.parameters)
+            else nlp_dynamics.get_intensity_parameters(nlp.parameters, muscle_name=nlp_dynamics.muscle_name)
         )
 
         if intensity_parameters.shape[0] == 1:  # check if pulse duration is mapped
@@ -277,8 +280,8 @@ class DingModelIntensityFrequency(DingModelFrequency):
         nlp: NonLinearProgram
             A reference to the phase
         """
-        self.configure_ca_troponin_complex(ocp=ocp, nlp=nlp, as_states=True, as_controls=False)
-        self.configure_force(ocp=ocp, nlp=nlp, as_states=True, as_controls=False)
+        self.configure_ca_troponin_complex(ocp=ocp, nlp=nlp, as_states=True, as_controls=False, muscle_name=self.muscle_name)
+        self.configure_force(ocp=ocp, nlp=nlp, as_states=True, as_controls=False, muscle_name=self.muscle_name)
         stim_apparition = self.get_stim_prev(ocp, nlp)
         ConfigureProblem.configure_dynamics_function(ocp, nlp, dyn_func=self.dynamics, stim_apparition=stim_apparition)
 

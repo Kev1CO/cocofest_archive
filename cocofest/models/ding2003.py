@@ -82,7 +82,8 @@ class DingModelFrequency:
     # ---- Needed for the example ---- #
     @property
     def name_dof(self) -> list[str]:
-        return ["Cn", "F"]
+        muscle_name = "_" + self.muscle_name if self.muscle_name else ""
+        return ["Cn"+muscle_name, "F"+muscle_name]
 
     @property
     def nb_state(self) -> int:
@@ -274,8 +275,8 @@ class DingModelFrequency:
         nlp: NonLinearProgram
             A reference to the phase
         """
-        self.configure_ca_troponin_complex(ocp=ocp, nlp=nlp, as_states=True, as_controls=False)
-        self.configure_force(ocp=ocp, nlp=nlp, as_states=True, as_controls=False)
+        self.configure_ca_troponin_complex(ocp=ocp, nlp=nlp, as_states=True, as_controls=False, muscle_name=self.muscle_name)
+        self.configure_force(ocp=ocp, nlp=nlp, as_states=True, as_controls=False, muscle_name=self.muscle_name)
         stim_apparition = self.get_stim_prev(ocp, nlp)
         ConfigureProblem.configure_dynamics_function(ocp, nlp, dyn_func=self.dynamics, stim_apparition=stim_apparition)
 
@@ -286,6 +287,7 @@ class DingModelFrequency:
         as_states: bool,
         as_controls: bool,
         as_states_dot: bool = False,
+        muscle_name: str = None,
     ):
         """
         Configure a new variable of the Ca+ troponin complex (unitless)
@@ -303,7 +305,8 @@ class DingModelFrequency:
         as_states_dot: bool
             If the generalized velocities should be a state_dot
         """
-        name = "Cn"
+        muscle_name = "_" + muscle_name if muscle_name else ""
+        name = "Cn"+muscle_name
         name_cn = [name]
         ConfigureProblem.configure_new_variable(
             name, name_cn, ocp, nlp, as_states, as_controls, as_states_dot,
@@ -316,6 +319,7 @@ class DingModelFrequency:
         as_states: bool,
         as_controls: bool,
         as_states_dot: bool = False,
+        muscle_name: str = None,
     ):
         """
         Configure a new variable of the force (N)
@@ -333,7 +337,8 @@ class DingModelFrequency:
         as_states_dot: bool
             If the generalized velocities should be a state_dot
         """
-        name = "F"
+        muscle_name = "_" + muscle_name if muscle_name else ""
+        name = "F"+muscle_name
         name_f = [name]
         ConfigureProblem.configure_new_variable(
             name, name_f, ocp, nlp, as_states, as_controls, as_states_dot,

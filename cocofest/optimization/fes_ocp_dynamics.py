@@ -10,6 +10,10 @@ from bioptim import (
     OdeSolver,
     OptimalControlProgram,
     PhaseDynamics,
+    ParameterList,
+    ParameterObjectiveList,
+    InterpolationType,
+    ObjectiveFcn,
     OdeSolverBase,
 )
 
@@ -31,7 +35,7 @@ class FESActuatedBiorbdModelOCP:
         biorbd_model_path: str,
         bound_type: str = None,
         bound_data: list = None,
-        fes_muscle_model: list[DingModelFrequency]
+        fes_muscle_models: list[DingModelFrequency]
         | list[DingModelFrequencyWithFatigue]
         | list[DingModelPulseDurationFrequency]
         | list[DingModelPulseDurationFrequencyWithFatigue]
@@ -50,10 +54,12 @@ class FESActuatedBiorbdModelOCP:
         pulse_duration_min: int | float = None,
         pulse_duration_max: int | float = None,
         pulse_duration_bimapping: bool = False,
+        pulse_duration_similar_for_all_muscles: bool = False,
         pulse_intensity: int | float = None,
         pulse_intensity_min: int | float = None,
         pulse_intensity_max: int | float = None,
         pulse_intensity_bimapping: bool = False,
+        pulse_intensity_similar_for_all_muscles: bool = False,
         force_tracking: list = None,
         end_node_tracking: int | float = None,
         custom_objective: ObjectiveList = None,
@@ -69,7 +75,7 @@ class FESActuatedBiorbdModelOCP:
         .
         Attributes
         ----------
-            fes_muscle_model: DingModelFrequency | DingModelFrequencyWithFatigue | DingModelPulseDurationFrequency | DingModelPulseDurationFrequencyWithFatigue | DingModelIntensityFrequency | DingModelIntensityFrequencyWithFatigue
+            fes_muscle_models: DingModelFrequency | DingModelFrequencyWithFatigue | DingModelPulseDurationFrequency | DingModelPulseDurationFrequencyWithFatigue | DingModelIntensityFrequency | DingModelIntensityFrequencyWithFatigue
                 The fes model type used for the ocp
             n_stim: int
                 Number of stimulation that will occur during the ocp, it is as well refer as phases
@@ -112,9 +118,9 @@ class FESActuatedBiorbdModelOCP:
             n_threads: int
                 The number of thread to use while solving (multi-threading if > 1)
         """
-
+        # TODO : MAKE A NEW SANITY CHECK FOR THE FES MUSCLE MODEL
         OcpFes._sanity_check(
-            model=fes_muscle_model[0],
+            model=fes_muscle_models[0],
             n_stim=n_stim,
             n_shooting=n_shooting,
             final_time=final_time,
@@ -139,16 +145,17 @@ class FESActuatedBiorbdModelOCP:
             n_threads=n_threads,
         )
 
-        FESActuatedBiorbdModelOCP._sanity_check_fes_models(fes_muscle_model)
+        FESActuatedBiorbdModelOCP._sanity_check_fes_models(fes_muscle_models)
 
         OcpFes._sanity_check_frequency(n_stim=n_stim, final_time=final_time, frequency=frequency, round_down=round_down)
 
-        FESActuatedBiorbdModelOCP._sanity_check_muscle_model(biorbd_model_path=biorbd_model_path, fes_muscle_model=fes_muscle_model)
+        FESActuatedBiorbdModelOCP._sanity_check_muscle_model(biorbd_model_path=biorbd_model_path, fes_muscle_models=fes_muscle_models)
 
         n_stim, final_time = OcpFes._build_phase_parameter(
             n_stim=n_stim, final_time=final_time, frequency=frequency, pulse_mode=pulse_mode, round_down=round_down
         )
 
+        # NOT AVAILABLE FOR MULTI MUSCLE
         force_fourier_coef = None if force_tracking is None else OcpFes._build_fourrier_coeff(force_tracking)
         end_node_tracking = end_node_tracking
 
@@ -161,17 +168,19 @@ class FESActuatedBiorbdModelOCP:
             time_max=time_max,
             time_bimapping=time_bimapping,
         )
-        parameters, parameters_bounds, parameters_init, parameter_objectives = OcpFes._build_parameters(
-            model=fes_muscle_model,
+        parameters, parameters_bounds, parameters_init, parameter_objectives = FESActuatedBiorbdModelOCP._build_parameters(
+            model=fes_muscle_models,
             n_stim=n_stim,
             pulse_duration=pulse_duration,
             pulse_duration_min=pulse_duration_min,
             pulse_duration_max=pulse_duration_max,
             pulse_duration_bimapping=pulse_duration_bimapping,
+            pulse_duration_similar_for_all_muscles=pulse_duration_similar_for_all_muscles,
             pulse_intensity=pulse_intensity,
             pulse_intensity_min=pulse_intensity_min,
             pulse_intensity_max=pulse_intensity_max,
             pulse_intensity_bimapping=pulse_intensity_bimapping,
+            pulse_intensity_similar_for_all_muscles=pulse_intensity_similar_for_all_muscles,
         )
 
         if len(constraints) == 0 and len(parameters) == 0:
@@ -181,7 +190,7 @@ class FESActuatedBiorbdModelOCP:
             )
 
         bio_models = [
-            FESActuatedBiorbdModel(name=None, biorbd_path=biorbd_model_path, muscles_model=fes_muscle_model)
+            FESActuatedBiorbdModel(name=None, biorbd_path=biorbd_model_path, muscles_model=fes_muscle_models)
             for i in range(n_stim)
         ]
 
@@ -190,9 +199,8 @@ class FESActuatedBiorbdModelOCP:
         )
 
         dynamics = FESActuatedBiorbdModelOCP._declare_dynamics(bio_models, n_stim)
-        x_bounds, x_init = OcpFes._set_bounds(fes_muscle_model, n_stim)
         x_bounds, x_init = FESActuatedBiorbdModelOCP._set_bounds(
-            bio_models, bound_type, bound_data, n_stim, x_bounds, x_init
+            bio_models, fes_muscle_models, bound_type, bound_data, n_stim,
         )
         u_bounds, u_init = FESActuatedBiorbdModelOCP._set_controls(bio_models, n_stim, with_residual_torque)
         objective_functions = OcpFes._set_objective(
@@ -236,7 +244,200 @@ class FESActuatedBiorbdModelOCP:
         return dynamics
 
     @staticmethod
-    def _set_bounds(bio_models, bound_type, bound_data, n_stim, x_bounds, x_init):
+    def _build_parameters(
+            model,
+            n_stim,
+            pulse_duration,
+            pulse_duration_min,
+            pulse_duration_max,
+            pulse_duration_bimapping,
+            pulse_duration_similar_for_all_muscles,
+            pulse_intensity,
+            pulse_intensity_min,
+            pulse_intensity_max,
+            pulse_intensity_bimapping,
+            pulse_intensity_similar_for_all_muscles,
+    ):
+        parameters = ParameterList()
+        parameters_bounds = BoundsList()
+        parameters_init = InitialGuessList()
+        parameter_objectives = ParameterObjectiveList()
+
+        for i in range(len(model)):
+            if isinstance(model[i], DingModelPulseDurationFrequency):
+                parameter_name = "pulse_duration" if pulse_duration_similar_for_all_muscles else "pulse_duration" + "_" + model[i].muscle_name
+                if pulse_duration:  #TODO : ADD SEVERAL INDIVIDUAL FIXED PULSE DURATION FOR EACH MUSCLE
+                    if (pulse_duration_similar_for_all_muscles and i == 0) or not pulse_duration_similar_for_all_muscles:
+                        parameters.add(
+                            parameter_name=parameter_name,
+                            function=DingModelPulseDurationFrequency.set_impulse_duration,
+                            size=n_stim,
+                        )
+                        if isinstance(pulse_duration, list):
+                            parameters_bounds.add(
+                                parameter_name,
+                                min_bound=np.array(pulse_duration),
+                                max_bound=np.array(pulse_duration),
+                                interpolation=InterpolationType.CONSTANT,
+                            )
+                            parameters_init.add(key=parameter_name, initial_guess=np.array(pulse_duration))
+                        else:
+                            parameters_bounds.add(
+                                parameter_name,
+                                min_bound=np.array([pulse_duration] * n_stim),
+                                max_bound=np.array([pulse_duration] * n_stim),
+                                interpolation=InterpolationType.CONSTANT,
+                            )
+                            parameters_init[parameter_name] = np.array([pulse_duration] * n_stim)
+
+                elif pulse_duration_min and pulse_duration_max:  #TODO : ADD SEVERAL MIN MAX PULSE DURATION FOR EACH MUSCLE
+                    if (pulse_duration_similar_for_all_muscles and i == 0) or not pulse_duration_similar_for_all_muscles:
+                        parameters_bounds.add(
+                            parameter_name,
+                            min_bound=[pulse_duration_min],
+                            max_bound=[pulse_duration_max],
+                            interpolation=InterpolationType.CONSTANT,
+                        )
+                        parameters_init[parameter_name] = np.array([0] * n_stim)
+                        parameters.add(
+                            parameter_name=parameter_name,
+                            function=DingModelPulseDurationFrequency.set_impulse_duration,
+                            size=n_stim,
+                        )
+
+                    parameter_objectives.add(
+                        ObjectiveFcn.Parameter.MINIMIZE_PARAMETER,
+                        weight=0.0001,
+                        quadratic=True,
+                        target=0,
+                        key=parameter_name,
+                    )
+
+                if pulse_duration_bimapping:
+                        pass
+                        # parameter_bimapping.add(name="pulse_duration", to_second=[0 for _ in range(n_stim)], to_first=[0])
+                        # TODO : Fix Bimapping in Bioptim
+
+            if isinstance(model[i], DingModelIntensityFrequency):
+                parameter_name = "pulse_intensity" if pulse_intensity_similar_for_all_muscles else "pulse_intensity" + "_" + \
+                                                                                                 model[i].muscle_name
+                if pulse_intensity:  # TODO : ADD SEVERAL INDIVIDUAL FIXED PULSE INTENSITY FOR EACH MUSCLE
+                    if (pulse_intensity_similar_for_all_muscles and i == 0) or not pulse_intensity_similar_for_all_muscles:
+                        parameters.add(
+                            parameter_name=parameter_name,
+                            function=DingModelIntensityFrequency.set_impulse_intensity,
+                            size=n_stim,
+                        )
+                        if isinstance(pulse_intensity, list):
+                            parameters_bounds.add(
+                                parameter_name,
+                                min_bound=np.array(pulse_intensity),
+                                max_bound=np.array(pulse_intensity),
+                                interpolation=InterpolationType.CONSTANT,
+                            )
+                            parameters_init.add(key=parameter_name, initial_guess=np.array(pulse_intensity))
+                        else:
+                            parameters_bounds.add(
+                                parameter_name,
+                                min_bound=np.array([pulse_intensity] * n_stim),
+                                max_bound=np.array([pulse_intensity] * n_stim),
+                                interpolation=InterpolationType.CONSTANT,
+                            )
+                            parameters_init[parameter_name] = np.array([pulse_intensity] * n_stim)
+
+                elif pulse_intensity_min and pulse_intensity_max:  #TODO : ADD SEVERAL MIN MAX PULSE INTENSITY FOR EACH MUSCLE
+                    if (
+                            pulse_intensity_similar_for_all_muscles and i == 0) or not pulse_intensity_similar_for_all_muscles:
+                        parameters_bounds.add(
+                            parameter_name,
+                            min_bound=[pulse_intensity_min],
+                            max_bound=[pulse_intensity_max],
+                            interpolation=InterpolationType.CONSTANT,
+                        )
+                        intensity_avg = (pulse_intensity_min + pulse_intensity_max) / 2
+                        parameters_init[parameter_name] = np.array([intensity_avg] * n_stim)
+                        parameters.add(
+                            parameter_name=parameter_name,
+                            function=DingModelIntensityFrequency.set_impulse_intensity,
+                            size=n_stim,
+                        )
+
+                    parameter_objectives.add(
+                        ObjectiveFcn.Parameter.MINIMIZE_PARAMETER,
+                        weight=0.0001,
+                        quadratic=True,
+                        target=0,
+                        key=parameter_name,
+                    )
+
+                if pulse_intensity_bimapping:
+                    pass
+                    # parameter_bimapping.add(name="pulse_intensity", to_second=[0 for _ in range(n_stim)], to_first=[0])
+                    # TODO : Fix Bimapping in Bioptim
+
+        return parameters, parameters_bounds, parameters_init, parameter_objectives
+
+    @staticmethod
+    def _set_bounds(bio_models, fes_muscle_models, bound_type, bound_data, n_stim):
+        # ---- STATE BOUNDS REPRESENTATION ---- #
+        #
+        #                    |‾‾‾‾‾‾‾‾‾‾x_max_middle‾‾‾‾‾‾‾‾‾‾‾‾x_max_end‾
+        #                    |          max_bounds              max_bounds
+        #    x_max_start     |
+        #   _starting_bounds_|
+        #   ‾starting_bounds‾|
+        #    x_min_start     |
+        #                    |          min_bounds              min_bounds
+        #                     ‾‾‾‾‾‾‾‾‾‾x_min_middle‾‾‾‾‾‾‾‾‾‾‾‾x_min_end‾
+
+        # Sets the bound for all the phases
+        x_bounds = BoundsList()
+        x_init = InitialGuessList()
+        for model in fes_muscle_models:
+            variable_bound_list = model.name_dof
+            starting_bounds, min_bounds, max_bounds = (
+                model.standard_rest_values(),
+                model.standard_rest_values(),
+                model.standard_rest_values(),
+            )
+            muscle_name = model.muscle_name
+            for i in range(len(variable_bound_list)):
+                if variable_bound_list[i] == "Cn_"+muscle_name:
+                    max_bounds[i] = 10
+                elif variable_bound_list[i] == "F_"+muscle_name:
+                    max_bounds[i] = 1000
+                elif variable_bound_list[i] == "Tau1_"+muscle_name or variable_bound_list[i] == "Km_"+muscle_name:
+                    max_bounds[i] = 1
+                elif variable_bound_list[i] == "A_"+muscle_name:
+                    min_bounds[i] = 0
+
+            starting_bounds_min = np.concatenate((starting_bounds, min_bounds, min_bounds), axis=1)
+            starting_bounds_max = np.concatenate((starting_bounds, max_bounds, max_bounds), axis=1)
+            middle_bound_min = np.concatenate((min_bounds, min_bounds, min_bounds), axis=1)
+            middle_bound_max = np.concatenate((max_bounds, max_bounds, max_bounds), axis=1)
+
+            for i in range(n_stim):
+                for j in range(len(variable_bound_list)):
+                    if i == 0:
+                        x_bounds.add(
+                            variable_bound_list[j],
+                            min_bound=np.array([starting_bounds_min[j]]),
+                            max_bound=np.array([starting_bounds_max[j]]),
+                            phase=i,
+                            interpolation=InterpolationType.CONSTANT_WITH_FIRST_AND_LAST_DIFFERENT,
+                        )
+                    else:
+                        x_bounds.add(
+                            variable_bound_list[j],
+                            min_bound=np.array([middle_bound_min[j]]),
+                            max_bound=np.array([middle_bound_max[j]]),
+                            phase=i,
+                            interpolation=InterpolationType.CONSTANT_WITH_FIRST_AND_LAST_DIFFERENT,
+                        )
+
+            for i in range(n_stim):
+                for j in range(len(variable_bound_list)):
+                    x_init.add(variable_bound_list[j], model.standard_rest_values()[j], phase=i)
 
         if bound_type == "start_end":
             start_bounds = []
@@ -280,8 +481,8 @@ class FESActuatedBiorbdModelOCP:
     def _set_controls(bio_models, n_stim, with_residual_torque):
         # Controls bounds
         nb_tau = bio_models[0].nb_tau
-        if with_residual_torque:
-            tau_min, tau_max, tau_init = [20] * nb_tau, [20] * nb_tau, [0] * nb_tau
+        if with_residual_torque:  # TODO : ADD SEVERAL INDIVIDUAL FIXED RESIDUAL TORQUE FOR EACH JOINT
+            tau_min, tau_max, tau_init = [-20] * nb_tau, [20] * nb_tau, [0] * nb_tau
         else:
             tau_min, tau_max, tau_init = [0] * nb_tau, [0] * nb_tau, [0] * nb_tau
 
@@ -310,18 +511,20 @@ class FESActuatedBiorbdModelOCP:
                     raise ValueError("The start and end position should be a list of size nb_q")
 
     @staticmethod
-    def _sanity_check_muscle_model(biorbd_model_path, fes_muscle_model):
-        tested_bio_model = FESActuatedBiorbdModel(name=None, biorbd_path=biorbd_model_path, muscles_model=fes_muscle_model)
-        fes_muscle_model_name_list = [fes_muscle_model[x].muscle_name for x in range(len(fes_muscle_model))]
+    def _sanity_check_muscle_model(biorbd_model_path, fes_muscle_models):
+        tested_bio_model = FESActuatedBiorbdModel(name=None, biorbd_path=biorbd_model_path, muscles_model=fes_muscle_models)
+        fes_muscle_models_name_list = [fes_muscle_models[x].muscle_name for x in range(len(fes_muscle_models))]
         for biorbd_muscle in tested_bio_model.muscle_names:
-            if biorbd_muscle not in fes_muscle_model_name_list:
-                raise ValueError(f"The muscle {biorbd_muscle} is not in the fes muscle model")
+            if biorbd_muscle not in fes_muscle_models_name_list:
+                raise ValueError(f"The muscle {biorbd_muscle} is not in the fes muscle model "
+                                 f"please add it into the fes_muscle_models list by providing the muscle_name ="
+                                 f" {biorbd_muscle}")
 
     @staticmethod
-    def _sanity_check_fes_models(fes_muscle_model):
-        for i in range(len(fes_muscle_model)):
+    def _sanity_check_fes_models(fes_muscle_models):
+        for i in range(len(fes_muscle_models)):
             if not isinstance(
-                    fes_muscle_model[i],
+                    fes_muscle_models[i],
                     DingModelFrequency
                     | DingModelFrequencyWithFatigue
                     | DingModelPulseDurationFrequency

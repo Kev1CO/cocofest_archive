@@ -21,9 +21,9 @@ for i in range(n_stim):
 
 ocp = FESActuatedBiorbdModelOCP.prepare_ocp(
     biorbd_model_path="/arm26_biceps.bioMod",
-    motion_type="start_end",
-    motion_data=[[0, 5], [0, 120]],
-    fes_muscle_model=DingModelFrequencyWithFatigue(),
+    bound_type="start_end",
+    bound_data=[[0, 5], [0, 120]],
+    fes_muscle_models=[DingModelFrequencyWithFatigue(muscle_name="BIClong")],
     n_stim=n_stim,
     n_shooting=10,
     final_time=1,
@@ -31,6 +31,7 @@ ocp = FESActuatedBiorbdModelOCP.prepare_ocp(
     time_max=0.1,
     time_bimapping=True,
     custom_objective=objective_functions,
+    with_residual_torque=True,
 )
 
 sol = ocp.solve(Solver.IPOPT(_max_iter=1000))
