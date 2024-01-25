@@ -16,49 +16,75 @@ from bioptim import (
 from cocofest import DingModelIntensityFrequencyWithFatigue, FESActuatedBiorbdModelOCP
 
 
-objective_functions = ObjectiveList()
-n_stim = 10
+n_stim = 33
 n_shooting = 10
 
-q_target = [np.array([[1.1339, 0.6629]]*(n_shooting+1)).T,
-            np.array([[0.9943, 0.7676]]*(n_shooting+1)).T,
-            np.array([[0.7676, 1.0641]]*(n_shooting+1)).T,
-            np.array([[0.5757, 1.3781]]*(n_shooting+1)).T,
-            np.array([[0.4536, 1.4653]]*(n_shooting+1)).T,
-            np.array([[0.6280, 1.3781]]*(n_shooting+1)).T,
-            np.array([[1.0292, 0.9594]]*(n_shooting+1)).T,
-            np.array([[1.0990, 0.8373]]*(n_shooting+1)).T,
-            np.array([[1.1339, 0.6629]]*(n_shooting+1)).T]
+track_q = [np.array([0, 0.125, 0.25, 0.375, 0.5, 0.625, 0.75, 0.875, 1]),
+           [np.array([1.1339,
+                      0.9943,
+                      0.7676,
+                      0.5757,
+                      0.4536,
+                      0.6280,
+                      1.0292,
+                      1.0990,
+                      1.1339]),
+            np.array([0.6629,
+                      0.7676,
+                      1.0641,
+                      1.3781,
+                      1.4653,
+                      1.3781,
+                      0.9594,
+                      0.8373,
+                      0.6629])]]
 
+objective_functions = ObjectiveList()
 for i in range(n_stim):
-    objective_functions.add(ObjectiveFcn.Lagrange.MINIMIZE_CONTROL, key="tau", weight=10, quadratic=True, phase=i)
-    objective_functions.add(ObjectiveFcn.Mayer.MINIMIZE_STATE, key="q", index=[0, 1], node=Node.ALL, target=q_target[i], weight=10, quadratic=True, phase=i)
+    objective_functions.add(ObjectiveFcn.Lagrange.MINIMIZE_CONTROL, key="tau", weight=1, quadratic=True, phase=i)
 
 
 minimum_pulse_intensity = DingModelIntensityFrequencyWithFatigue.min_pulse_intensity(
     DingModelIntensityFrequencyWithFatigue()
 )
 
+import time
+start_time = time.time()
 ocp = FESActuatedBiorbdModelOCP.prepare_ocp(
-    biorbd_model_path="/arm26_cycling.bioMod",
-    bound_type="start",
-    bound_data=[0, 5],
+    biorbd_model_path="/arm26.bioMod",
+    bound_type="start_end",
+    bound_data=[[65, 38], [65, 38]],
     fes_muscle_models=[DingModelIntensityFrequencyWithFatigue(muscle_name="BIClong"),
+                       DingModelIntensityFrequencyWithFatigue(muscle_name="BICshort"),
                        DingModelIntensityFrequencyWithFatigue(muscle_name="TRIlong"),
-                       DingModelIntensityFrequencyWithFatigue(muscle_name="TRIlat")],
+                       DingModelIntensityFrequencyWithFatigue(muscle_name="TRIlat"),
+                       DingModelIntensityFrequencyWithFatigue(muscle_name="TRImed"),
+                       DingModelIntensityFrequencyWithFatigue(muscle_name="BRA")],
     n_stim=n_stim,
     n_shooting=10,
     final_time=1,
-    time_min=0.01,
-    time_max=0.01,
-    time_bimapping=True,
     pulse_intensity_min=minimum_pulse_intensity,
     pulse_intensity_max=130,
     pulse_intensity_bimapping=False,
-    with_residual_torque=False,
+    with_residual_torque=True,
     custom_objective=objective_functions,
+    q_tracking=track_q,
+    use_sx=True,
 )
+print("--- %s seconds --- OCP" % (time.time() - start_time))
 
+start_time = time.time()
 sol = ocp.solve(Solver.IPOPT(_max_iter=1000))
+print("--- %s seconds --- SOL" % (time.time() - start_time))
 sol.animate()
 sol.graphs(show_bounds=False)
+
+# Fast OCP :
+# --- 2.8143112659454346 seconds --- OCP
+# --- 55.290322065353394 seconds --- SOL
+# 106  1.7460726e+03
+
+# Slow OCP :
+# --- 84.57249999046326 seconds --- OCP
+# --- 56.183839321136475 seconds --- SOL
+#  106  1.7460726e+03

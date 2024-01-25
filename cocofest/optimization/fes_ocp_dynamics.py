@@ -15,6 +15,7 @@ from bioptim import (
     InterpolationType,
     ObjectiveFcn,
     OdeSolverBase,
+    Node
 )
 
 from cocofest import (
@@ -26,6 +27,7 @@ from cocofest import (
     DingModelIntensityFrequencyWithFatigue,
     OcpFes,
     FESActuatedBiorbdModel,
+    CustomObjective,
 )
 
 
@@ -62,6 +64,7 @@ class FESActuatedBiorbdModelOCP:
         pulse_intensity_similar_for_all_muscles: bool = False,
         force_tracking: list = None,
         end_node_tracking: int | float = None,
+        q_tracking: list = None,
         custom_objective: ObjectiveList = None,
         with_residual_torque: bool = False,
         use_sx: bool = True,
@@ -159,6 +162,12 @@ class FESActuatedBiorbdModelOCP:
         force_fourier_coef = None if force_tracking is None else OcpFes._build_fourrier_coeff(force_tracking)
         end_node_tracking = end_node_tracking
 
+        q_fourier_coef = [] if q_tracking else None
+        if q_tracking:
+            for i in range(len(q_tracking[1])):
+                q_fourier_coef.append(OcpFes._build_fourrier_coeff([q_tracking[0], q_tracking[1][i]]))
+
+
         n_shooting = [n_shooting] * n_stim
         final_time_phase, constraints, phase_time_bimapping = OcpFes._build_phase_time(
             final_time=final_time,
@@ -203,8 +212,8 @@ class FESActuatedBiorbdModelOCP:
             bio_models, fes_muscle_models, bound_type, bound_data, n_stim,
         )
         u_bounds, u_init = FESActuatedBiorbdModelOCP._set_controls(bio_models, n_stim, with_residual_torque)
-        objective_functions = OcpFes._set_objective(
-            n_stim, n_shooting, force_fourier_coef, end_node_tracking, custom_objective
+        objective_functions = FESActuatedBiorbdModelOCP._set_objective(
+            n_stim, n_shooting, force_fourier_coef, end_node_tracking, custom_objective, q_fourier_coef
         )
 
         return OptimalControlProgram(
@@ -482,7 +491,7 @@ class FESActuatedBiorbdModelOCP:
         # Controls bounds
         nb_tau = bio_models[0].nb_tau
         if with_residual_torque:  # TODO : ADD SEVERAL INDIVIDUAL FIXED RESIDUAL TORQUE FOR EACH JOINT
-            tau_min, tau_max, tau_init = [-20] * nb_tau, [20] * nb_tau, [0] * nb_tau
+            tau_min, tau_max, tau_init = [-500] * nb_tau, [500] * nb_tau, [0] * nb_tau
         else:
             tau_min, tau_max, tau_init = [0] * nb_tau, [0] * nb_tau, [0] * nb_tau
 
@@ -496,6 +505,60 @@ class FESActuatedBiorbdModelOCP:
             u_init.add(key="tau", initial_guess=tau_init, phase=i)
 
         return u_bounds, u_init
+
+    @staticmethod
+    def _set_objective(n_stim, n_shooting, force_fourier_coef, end_node_tracking, custom_objective, q_fourier_coef):
+        # Creates the objective for our problem
+        objective_functions = ObjectiveList()
+        if custom_objective:
+            for i in range(len(custom_objective)):
+                if custom_objective[i]:
+                    for j in range(len(custom_objective[i])):
+                        objective_functions.add(custom_objective[i][j])
+
+        if force_fourier_coef is not None:  # TODO : Enable multiple force tracking for multiple muscles
+            for phase in range(n_stim):
+                for i in range(n_shooting[phase]):
+                    objective_functions.add(
+                        CustomObjective.track_state_from_time,
+                        custom_type=ObjectiveFcn.Mayer,
+                        node=i,
+                        fourier_coeff=force_fourier_coef,
+                        key="F",
+                        quadratic=True,
+                        weight=1,
+                        phase=phase,
+                    )
+
+        if end_node_tracking:
+            if isinstance(end_node_tracking, int | float):
+                objective_functions.add(
+                    ObjectiveFcn.Mayer.MINIMIZE_STATE,
+                    node=Node.END,
+                    key="F",
+                    quadratic=True,
+                    weight=1,
+                    target=end_node_tracking,
+                    phase=n_stim - 1,
+                )
+
+        if q_fourier_coef:
+            for j in range(len(q_fourier_coef)):
+                for phase in range(n_stim):
+                    for i in range(n_shooting[phase]):
+                        objective_functions.add(
+                            CustomObjective.track_state_from_time,
+                            custom_type=ObjectiveFcn.Mayer,
+                            node=i,
+                            fourier_coeff=q_fourier_coef[j],
+                            key="q",
+                            quadratic=True,
+                            weight=1,
+                            phase=phase,
+                            index=j,
+                    )
+
+        return objective_functions
 
     @staticmethod
     def _sanity_check_bounds(bio_models, bound_type, bound_data):
