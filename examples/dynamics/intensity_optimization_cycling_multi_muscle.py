@@ -13,11 +13,10 @@ from bioptim import (
     Solver,
 )
 
-from cocofest import DingModelIntensityFrequencyWithFatigue, FESActuatedBiorbdModelOCP
+from cocofest import DingModelIntensityFrequency, FESActuatedBiorbdModelOCP
 
 
-n_stim = 33
-n_shooting = 10
+n_stim = 30
 
 track_q = [np.array([0, 0.125, 0.25, 0.375, 0.5, 0.625, 0.75, 0.875, 1]),
            [np.array([1.1339,
@@ -44,8 +43,8 @@ for i in range(n_stim):
     objective_functions.add(ObjectiveFcn.Lagrange.MINIMIZE_CONTROL, key="tau", weight=1, quadratic=True, phase=i)
 
 
-minimum_pulse_intensity = DingModelIntensityFrequencyWithFatigue.min_pulse_intensity(
-    DingModelIntensityFrequencyWithFatigue()
+minimum_pulse_intensity = DingModelIntensityFrequency.min_pulse_intensity(
+    DingModelIntensityFrequency()
 )
 
 import time
@@ -54,15 +53,18 @@ ocp = FESActuatedBiorbdModelOCP.prepare_ocp(
     biorbd_model_path="/arm26.bioMod",
     bound_type="start_end",
     bound_data=[[65, 38], [65, 38]],
-    fes_muscle_models=[DingModelIntensityFrequencyWithFatigue(muscle_name="BIClong"),
-                       DingModelIntensityFrequencyWithFatigue(muscle_name="BICshort"),
-                       DingModelIntensityFrequencyWithFatigue(muscle_name="TRIlong"),
-                       DingModelIntensityFrequencyWithFatigue(muscle_name="TRIlat"),
-                       DingModelIntensityFrequencyWithFatigue(muscle_name="TRImed"),
-                       DingModelIntensityFrequencyWithFatigue(muscle_name="BRA")],
+    fes_muscle_models=[DingModelIntensityFrequency(muscle_name="BIClong"),
+                       DingModelIntensityFrequency(muscle_name="BICshort"),
+                       DingModelIntensityFrequency(muscle_name="TRIlong"),
+                       DingModelIntensityFrequency(muscle_name="TRIlat"),
+                       DingModelIntensityFrequency(muscle_name="TRImed"),
+                       DingModelIntensityFrequency(muscle_name="BRA")],
     n_stim=n_stim,
-    n_shooting=10,
+    n_shooting=5,
     final_time=1,
+    time_min=0.05,
+    time_max=1,
+    time_bimapping=True,
     pulse_intensity_min=minimum_pulse_intensity,
     pulse_intensity_max=130,
     pulse_intensity_bimapping=False,
@@ -78,6 +80,7 @@ sol = ocp.solve(Solver.IPOPT(_max_iter=1000))
 print("--- %s seconds --- SOL" % (time.time() - start_time))
 sol.animate()
 sol.graphs(show_bounds=False)
+print(sol.parameters)
 
 # Fast OCP :
 # --- 2.8143112659454346 seconds --- OCP
