@@ -1,6 +1,6 @@
 from typing import Callable
 
-from casadi import vertcat, MX, SX
+from casadi import vertcat, MX, SX, exp, log, sqrt
 from bioptim import (
     BiorbdModel,
     OptimalControlProgram,
@@ -117,8 +117,13 @@ class FESActuatedBiorbdModel(BiorbdModel):
                                                 nlp_dynamics=muscle_model,
                                             ).dxdt
 
-            muscle_forces = DynamicsFunctions.get(nlp.states["F_"+muscle_model.muscle_name], states)
             muscle_idx = bio_muscle_names_at_index.index(muscle_model.muscle_name)
+
+            muscle_forces = DynamicsFunctions.get(nlp.states["F_"+muscle_model.muscle_name], states)
+            muscle_force_length_coeff = FESActuatedBiorbdModel.muscle_force_length_coefficient(model=nlp.model.bio_model.model, muscle=nlp.model.bio_model.model.muscle(muscle_idx), q=q)
+            muscle_force_velocity_coeff = FESActuatedBiorbdModel.muscle_force_velocity_coefficient(model=nlp.model.bio_model.model, muscle=nlp.model.bio_model.model.muscle(muscle_idx), q=q, qdot=qdot)
+            muscle_forces = muscle_forces * muscle_force_length_coeff * muscle_force_velocity_coeff
+
             moment_arm_matrix_for_the_muscle_and_joint = -nlp.model.bio_model.model.musclesLengthJacobian(q).to_mx()[muscle_idx, :].T
             muscles_tau += moment_arm_matrix_for_the_muscle_and_joint @ muscle_forces
 
@@ -239,3 +244,43 @@ class FESActuatedBiorbdModel(BiorbdModel):
         name = "tau"
         name_tau = ["tau"]
         ConfigureProblem.configure_new_variable(name, name_tau, ocp, nlp, as_states, as_controls, fatigue=fatigue)
+
+    @staticmethod
+    def muscle_force_length_coefficient(model, muscle, q):
+
+        b11 = 0.815
+        b21 = 1.055
+        b31 = 0.162
+        b41 = 0.063
+        b12 = 0.433
+        b22 = 0.717
+        b32 = -0.030
+        b42 = 0.200
+        b13 = 0.100
+        b23 = 1.000
+        b33 = 0.354
+        b43 = 0.0
+
+        muscle_length = muscle.length(model, q).to_mx()
+        muscle_optimal_length = muscle.characteristics().optimalLength().to_mx()
+        norm_length = muscle_length / muscle_optimal_length
+
+        m_FlCE = b11 * exp((-0.5 * ((norm_length - b21) * (norm_length - b21)))/((b31 + b41 * norm_length) * (b31 + b41 * norm_length))) + b12 * exp((-0.5 * ((norm_length - b22) * (norm_length - b22))) / ((b32 + b42 * norm_length) * (b32 + b42 * norm_length))) + b13 * exp((-0.5 * ((norm_length - b23) * (norm_length - b23))) / ((b33 + b43 * norm_length) * (b33 + b43 * norm_length)))
+
+        return m_FlCE
+
+    @staticmethod
+    def muscle_force_velocity_coefficient(model, muscle, q, qdot):
+        muscle_velocity = muscle.velocity(model, q, qdot).to_mx()
+        m_cste_maxShorteningSpeed = 10
+        norm_v = muscle_velocity / m_cste_maxShorteningSpeed
+
+        d1 = -0.318
+        d2 = -8.149
+        d3 = -0.374
+        d4 = 0.886
+
+        m_FvCE = d1 * log((d2 * norm_v + d3) + sqrt((d2 * norm_v + d3) * (d2 * norm_v + d3) + 1)) + d4
+
+        return m_FvCE
+#
