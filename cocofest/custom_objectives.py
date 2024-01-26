@@ -68,3 +68,23 @@ class CustomObjective:
             return 1 - (force / controller.states[key].cx)
         else:
             raise RuntimeError(f"Minimization type {minimization_type} not implemented")
+
+    @staticmethod
+    def minimize_overall_muscle_fatigue(controller: PenaltyController) -> MX:
+        """
+        Minimize the overall muscle fatigue.
+        This function is quadratic, meaning that it minimizes towards the target.
+        Targets (default=np.zeros()) and indices (default=all_idx) can be specified.
+
+        Parameters
+        ----------
+        controller: PenaltyController
+            The penalty node elements
+
+        Returns
+        -------
+        The difference between the two keys
+        """
+        muscle_name_list = controller.model.bio_model.muscle_names
+        muscle_fatigue = [controller.states["A_"+muscle_name_list[x]].cx for x in range(len(muscle_name_list))]
+        return sum(muscle_fatigue)

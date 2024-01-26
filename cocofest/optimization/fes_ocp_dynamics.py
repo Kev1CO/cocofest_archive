@@ -69,6 +69,7 @@ class FESActuatedBiorbdModelOCP:
         with_residual_torque: bool = False,
         muscle_force_length_relationship: bool = False,
         muscle_force_velocity_relationship: bool = False,
+        minimize_muscle_fatigue: bool = False,
         use_sx: bool = True,
         ode_solver: OdeSolverBase = OdeSolver.RK4(n_integration_steps=1),
         control_type: ControlType = ControlType.CONSTANT,
@@ -215,7 +216,7 @@ class FESActuatedBiorbdModelOCP:
         )
         u_bounds, u_init = FESActuatedBiorbdModelOCP._set_controls(bio_models, n_stim, with_residual_torque)
         objective_functions = FESActuatedBiorbdModelOCP._set_objective(
-            n_stim, n_shooting, force_fourier_coef, end_node_tracking, custom_objective, q_fourier_coef
+            n_stim, n_shooting, force_fourier_coef, end_node_tracking, custom_objective, q_fourier_coef, minimize_muscle_fatigue
         )
 
         return OptimalControlProgram(
@@ -509,7 +510,7 @@ class FESActuatedBiorbdModelOCP:
         return u_bounds, u_init
 
     @staticmethod
-    def _set_objective(n_stim, n_shooting, force_fourier_coef, end_node_tracking, custom_objective, q_fourier_coef):
+    def _set_objective(n_stim, n_shooting, force_fourier_coef, end_node_tracking, custom_objective, q_fourier_coef, minimize_muscle_fatigue):
         # Creates the objective for our problem
         objective_functions = ObjectiveList()
         if custom_objective:
@@ -559,6 +560,17 @@ class FESActuatedBiorbdModelOCP:
                             phase=phase,
                             index=j,
                     )
+
+        if minimize_muscle_fatigue:
+            for i in range(n_stim):
+                objective_functions.add(
+                    CustomObjective.minimize_overall_muscle_fatigue,
+                    custom_type=ObjectiveFcn.Mayer,
+                    node=Node.ALL,
+                    quadratic=True,
+                    weight=-1,
+                    phase=i,
+                )
 
         return objective_functions
 
