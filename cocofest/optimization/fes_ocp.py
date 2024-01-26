@@ -674,7 +674,7 @@ class OcpFes:
                     for j in range(len(custom_objective[i])):
                         objective_functions.add(custom_objective[i][j])
 
-        if force_fourier_coef is not None:  # TODO : Enable multiple force tracking for multiple muscles
+        if force_fourier_coef is not None:
             for phase in range(n_stim):
                 for i in range(n_shooting[phase]):
                     objective_functions.add(

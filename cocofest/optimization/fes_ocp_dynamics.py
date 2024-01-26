@@ -494,7 +494,7 @@ class FESActuatedBiorbdModelOCP:
         # Controls bounds
         nb_tau = bio_models[0].nb_tau
         if with_residual_torque:  # TODO : ADD SEVERAL INDIVIDUAL FIXED RESIDUAL TORQUE FOR EACH JOINT
-            tau_min, tau_max, tau_init = [-500] * nb_tau, [500] * nb_tau, [0] * nb_tau
+            tau_min, tau_max, tau_init = [-50] * nb_tau, [50] * nb_tau, [0] * nb_tau
         else:
             tau_min, tau_max, tau_init = [0] * nb_tau, [0] * nb_tau, [0] * nb_tau
 
