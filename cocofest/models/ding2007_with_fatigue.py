@@ -42,19 +42,19 @@ class DingModelPulseDurationFrequencyWithFatigue(DingModelPulseDurationFrequency
     @property
     def name_dof(self) -> list[str]:
         muscle_name = "_" + self.muscle_name if self.muscle_name else ""
-        return ["Cn"+muscle_name, "F"+muscle_name, "Tau1"+muscle_name, "Km"+muscle_name]
+        return ["Cn"+muscle_name, "F"+muscle_name, "A"+muscle_name, "Tau1"+muscle_name, "Km"+muscle_name]
 
     @property
     def nb_state(self) -> int:
-        return 4
+        return 5
 
     def standard_rest_values(self) -> np.array:
         """
         Returns
         -------
-        The rested values of Cn, F, Tau1, Km
+        The rested values of Cn, F, A, Tau1, Km
         """
-        return np.array([[0], [0], [self.tau1_rest], [self.km_rest]])
+        return np.array([[0], [0], [self.a_scale], [self.tau1_rest], [self.km_rest]])
 
     def serialize(self) -> tuple[Callable, dict]:
         # This is where you can serialize your models
@@ -81,6 +81,7 @@ class DingModelPulseDurationFrequencyWithFatigue(DingModelPulseDurationFrequency
         self,
         cn: MX,
         f: MX,
+        a: MX = None,
         tau1: MX = None,
         km: MX = None,
         t: MX = None,
@@ -113,11 +114,27 @@ class DingModelPulseDurationFrequencyWithFatigue(DingModelPulseDurationFrequency
         """
         r0 = km + self.r0_km_relationship  # Simplification
         cn_dot = self.cn_dot_fun(cn, r0, t, t_stim_prev=t_stim_prev)  # Equation n°1 from Ding's 2003 article
-        a = self.a_calculation(impulse_time=impulse_time)  # Equation n°3 from Ding's 2007 article
-        f_dot = self.f_dot_fun(cn, f, a, tau1, km)  # Equation n°2 from Ding's 2003 article
+        a_calculated = self.a_calculation(a_scale=a, impulse_time=impulse_time)  # Equation n°3 from Ding's 2007 article
+        f_dot = self.f_dot_fun(cn, f, a_calculated, tau1, km)  # Equation n°2 from Ding's 2003 article
+        a_dot = self.a_dot_fun(a, f)
         tau1_dot = self.tau1_dot_fun(tau1, f)  # Equation n°9 from Ding's 2003 article
         km_dot = self.km_dot_fun(km, f)  # Equation n°11 from Ding's 2003 article
-        return vertcat(cn_dot, f_dot, tau1_dot, km_dot)
+        return vertcat(cn_dot, f_dot, a_dot, tau1_dot, km_dot)
+
+    def a_dot_fun(self, a: MX, f: MX) -> MX | float:
+        """
+        Parameters
+        ----------
+        a: MX
+            The previous step value of scaling factor (unitless)
+        f: MX
+            The previous step value of force (N)
+
+        Returns
+        -------
+        The value of the derivative scaling factor (unitless)
+        """
+        return -(a - self.a_scale) / self.tau_fat + self.alpha_a * f  # Equation n°5
 
     def tau1_dot_fun(self, tau1: MX, f: MX) -> MX | float:
         """
@@ -200,8 +217,9 @@ class DingModelPulseDurationFrequencyWithFatigue(DingModelPulseDurationFrequency
             dxdt=dxdt_fun(
                 cn=states[0],
                 f=states[1],
-                tau1=states[2],
-                km=states[3],
+                a=states[2],
+                tau1=states[3],
+                km=states[4],
                 t=time,
                 t_stim_prev=stim_apparition,
                 impulse_time=impulse_time,
@@ -222,10 +240,43 @@ class DingModelPulseDurationFrequencyWithFatigue(DingModelPulseDurationFrequency
         """
         self.configure_ca_troponin_complex(ocp=ocp, nlp=nlp, as_states=True, as_controls=False, muscle_name=self.muscle_name)
         self.configure_force(ocp=ocp, nlp=nlp, as_states=True, as_controls=False, muscle_name=self.muscle_name)
+        self.configure_scaling_factor(ocp=ocp, nlp=nlp, as_states=True, as_controls=False, muscle_name=self.muscle_name)
         self.configure_time_state_force_no_cross_bridge(ocp=ocp, nlp=nlp, as_states=True, as_controls=False, muscle_name=self.muscle_name)
         self.configure_cross_bridges(ocp=ocp, nlp=nlp, as_states=True, as_controls=False, muscle_name=self.muscle_name)
         stim_apparition = self.get_stim_prev(ocp, nlp)
         ConfigureProblem.configure_dynamics_function(ocp, nlp, dyn_func=self.dynamics, stim_apparition=stim_apparition)
+
+    @staticmethod
+    def configure_scaling_factor(
+            ocp: OptimalControlProgram,
+            nlp: NonLinearProgram,
+            as_states: bool,
+            as_controls: bool,
+            as_states_dot: bool = False,
+            muscle_name: str = None,
+    ):
+        """
+        Configure a new variable of the scaling factor (N/ms)
+
+        Parameters
+        ----------
+        ocp: OptimalControlProgram
+            A reference to the ocp
+        nlp: NonLinearProgram
+            A reference to the phase
+        as_states: bool
+            If the generalized coordinates should be a state
+        as_controls: bool
+            If the generalized coordinates should be a control
+        as_states_dot: bool
+            If the generalized velocities should be a state_dot
+        """
+        muscle_name = "_" + muscle_name if muscle_name else ""
+        name = "A" + muscle_name
+        name_a = [name]
+        ConfigureProblem.configure_new_variable(
+            name, name_a, ocp, nlp, as_states, as_controls, as_states_dot,
+        )
 
     @staticmethod
     def configure_time_state_force_no_cross_bridge(

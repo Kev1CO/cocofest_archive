@@ -91,11 +91,11 @@ class DingModelPulseDurationFrequency(DingModelFrequency):
         """
         r0 = self.km_rest + self.r0_km_relationship  # Simplification
         cn_dot = self.cn_dot_fun(cn, r0, t, t_stim_prev=t_stim_prev)  # Equation n°1 from Ding's 2003 article
-        a = self.a_calculation(impulse_time=impulse_time)  # Equation n°3 from Ding's 2007 article
+        a = self.a_calculation(a_scale=self.a_scale, impulse_time=impulse_time)  # Equation n°3 from Ding's 2007 article
         f_dot = self.f_dot_fun(cn, f, a, self.tau1_rest, self.km_rest)  # Equation n°2 from Ding's 2003 article
         return vertcat(cn_dot, f_dot)
 
-    def a_calculation(self, impulse_time: MX) -> MX:
+    def a_calculation(self, a_scale: float | MX, impulse_time: MX) -> MX:
         """
         Parameters
         ----------
@@ -106,7 +106,7 @@ class DingModelPulseDurationFrequency(DingModelFrequency):
         -------
         The value of scaling factor (unitless)
         """
-        return self.a_scale * (1 - exp(-(impulse_time - self.pd0) / self.pdt))
+        return a_scale * (1 - exp(-(impulse_time - self.pd0) / self.pdt))
 
     def set_impulse_duration(self, value: list[MX]):
         """
