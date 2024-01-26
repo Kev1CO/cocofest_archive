@@ -59,7 +59,7 @@ def test_ding2007_ivp(model, pulse_duration):
     if model._with_fatigue and isinstance(pulse_duration, list):
         np.testing.assert_almost_equal(result.states["F"][0][0], 0)
         np.testing.assert_almost_equal(result.states["F"][0][10], 32.78053644580685)
-        np.testing.assert_almost_equal(result.states["F"][0][-1], 60.936507876880086)
+        np.testing.assert_almost_equal(result.states["F"][0][-1], 60.93650724479694)
     elif model._with_fatigue is False and isinstance(pulse_duration, list):
         np.testing.assert_almost_equal(result.states["F"][0][0], 0)
         np.testing.assert_almost_equal(result.states["F"][0][10], 32.48751154425548)
@@ -67,7 +67,7 @@ def test_ding2007_ivp(model, pulse_duration):
     elif model._with_fatigue and isinstance(pulse_duration, float):
         np.testing.assert_almost_equal(result.states["F"][0][0], 0)
         np.testing.assert_almost_equal(result.states["F"][0][10], 32.78053644580685)
-        np.testing.assert_almost_equal(result.states["F"][0][-1], 42.43955858325622)
+        np.testing.assert_almost_equal(result.states["F"][0][-1], 42.439558210310544)
     elif model._with_fatigue is False and isinstance(pulse_duration, float):
         np.testing.assert_almost_equal(result.states["F"][0][0], 0)
         np.testing.assert_almost_equal(result.states["F"][0][10], 32.48751154425548)

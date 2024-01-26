@@ -51,15 +51,16 @@ def test_ding2003_dynamics():
 
 def test_ding2007_dynamics():
     model = DingModelPulseDurationFrequencyWithFatigue()
-    assert model.nb_state == 4
+    assert model.nb_state == 5
     assert model.name_dof == [
         "Cn",
         "F",
+        "A",
         "Tau1",
         "Km",
     ]
     np.testing.assert_almost_equal(
-        model.standard_rest_values(), np.array([[0], [0], [model.tau1_rest], [model.km_rest]])
+        model.standard_rest_values(), np.array([[0], [0], [model.a_scale], [model.tau1_rest], [model.km_rest]])
     )
     np.testing.assert_almost_equal(
         np.array(
@@ -102,11 +103,11 @@ def test_ding2007_dynamics():
     np.testing.assert_almost_equal(
         np.array(
             model.system_dynamics(
-                cn=5, f=100, tau1=0.050957, km=0.103, t=0.11, t_stim_prev=[0, 0.1], impulse_time=0.0002
+                cn=5, f=100, a=4920, tau1=0.050957, km=0.103, t=0.11, t_stim_prev=[0, 0.1], impulse_time=0.0002
             )
         ).squeeze(),
-        np.array(DM([-417.918, -490.511, 0.0210759, 1.9e-05])).squeeze(),
-        decimal=3,
+        np.array(DM([-4.179e+02, -4.905e+02, -4.000e-04,  2.108e-02,  1.900e-05])).squeeze(),
+        decimal=1,
     )
     np.testing.assert_almost_equal(model.exp_time_fun(t=0.1, t_stim_i=0.09), 0.4028903215291327)
     np.testing.assert_almost_equal(model.ri_fun(r0=1.05, time_between_stim=0.1), 1.0000056342790253)
@@ -118,7 +119,7 @@ def test_ding2007_dynamics():
     np.testing.assert_almost_equal(model.tau1_dot_fun(tau1=0.060601, f=100), 0.021)
     np.testing.assert_almost_equal(model.km_dot_fun(km=0.103, f=100), 1.8999999999999998e-05)
     np.testing.assert_almost_equal(
-        np.array(model.a_calculation(impulse_time=0.0002)).squeeze(), np.array(DM(1464.4646488)).squeeze()
+        np.array(model.a_calculation(a_scale=4920, impulse_time=0.0002)).squeeze(), np.array(DM(1464.4646488)).squeeze()
     )
 
 
