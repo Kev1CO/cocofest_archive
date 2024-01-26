@@ -20,6 +20,8 @@ class FESActuatedBiorbdModel(BiorbdModel):
         name: str = None,
         biorbd_path: str = None,
         muscles_model: DingModelFrequency() = None,
+        muscle_force_length_relationship: bool = False,
+        muscle_force_velocity_relationship: bool = False,
     ):
         super().__init__(biorbd_path)
         self._name = name
@@ -29,6 +31,9 @@ class FESActuatedBiorbdModel(BiorbdModel):
 
         self.muscles_dynamics_model = muscles_model
         self.bio_stim_model = [self.bio_model] + self.muscles_dynamics_model
+
+        self.muscle_force_length_relationship = muscle_force_length_relationship
+        self.muscle_force_velocity_relationship = muscle_force_velocity_relationship
 
     # ---- Absolutely needed methods ---- #
     def serialize(self, index: int = 0) -> tuple[Callable, dict]:
@@ -120,8 +125,12 @@ class FESActuatedBiorbdModel(BiorbdModel):
             muscle_idx = bio_muscle_names_at_index.index(muscle_model.muscle_name)
 
             muscle_forces = DynamicsFunctions.get(nlp.states["F_"+muscle_model.muscle_name], states)
-            muscle_force_length_coeff = FESActuatedBiorbdModel.muscle_force_length_coefficient(model=nlp.model.bio_model.model, muscle=nlp.model.bio_model.model.muscle(muscle_idx), q=q)
-            muscle_force_velocity_coeff = FESActuatedBiorbdModel.muscle_force_velocity_coefficient(model=nlp.model.bio_model.model, muscle=nlp.model.bio_model.model.muscle(muscle_idx), q=q, qdot=qdot)
+            muscle_force_length_coeff = 1
+            muscle_force_velocity_coeff = 1
+            if nlp.model.muscle_force_length_relationship:
+               muscle_force_length_coeff = FESActuatedBiorbdModel.muscle_force_length_coefficient(model=nlp.model.bio_model.model, muscle=nlp.model.bio_model.model.muscle(muscle_idx), q=q)
+            if nlp.model.muscle_force_velocity_relationship:
+               muscle_force_velocity_coeff = FESActuatedBiorbdModel.muscle_force_velocity_coefficient(model=nlp.model.bio_model.model, muscle=nlp.model.bio_model.model.muscle(muscle_idx), q=q, qdot=qdot)
             muscle_forces = muscle_forces * muscle_force_length_coeff * muscle_force_velocity_coeff
 
             moment_arm_matrix_for_the_muscle_and_joint = -nlp.model.bio_model.model.musclesLengthJacobian(q).to_mx()[muscle_idx, :].T
@@ -283,4 +292,3 @@ class FESActuatedBiorbdModel(BiorbdModel):
         m_FvCE = d1 * log((d2 * norm_v + d3) + sqrt((d2 * norm_v + d3) * (d2 * norm_v + d3) + 1)) + d4
 
         return m_FvCE
-#

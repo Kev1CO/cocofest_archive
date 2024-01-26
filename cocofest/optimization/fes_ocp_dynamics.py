@@ -67,6 +67,8 @@ class FESActuatedBiorbdModelOCP:
         q_tracking: list = None,
         custom_objective: ObjectiveList = None,
         with_residual_torque: bool = False,
+        muscle_force_length_relationship: bool = False,
+        muscle_force_velocity_relationship: bool = False,
         use_sx: bool = True,
         ode_solver: OdeSolverBase = OdeSolver.RK4(n_integration_steps=1),
         control_type: ControlType = ControlType.CONSTANT,
@@ -199,7 +201,7 @@ class FESActuatedBiorbdModelOCP:
             )
 
         bio_models = [
-            FESActuatedBiorbdModel(name=None, biorbd_path=biorbd_model_path, muscles_model=fes_muscle_models)
+            FESActuatedBiorbdModel(name=None, biorbd_path=biorbd_model_path, muscles_model=fes_muscle_models, muscle_force_length_relationship=muscle_force_length_relationship, muscle_force_velocity_relationship=muscle_force_velocity_relationship)
             for i in range(n_stim)
         ]
 
