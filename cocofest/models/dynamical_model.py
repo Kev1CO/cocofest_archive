@@ -67,7 +67,9 @@ class FESActuatedBiorbdModel(BiorbdModel):
         parameters: MX | SX,
         stochastic_variables: MX | SX,
         nlp: NonLinearProgram,
-        muscle_models: list[DingModelFrequency] | list[DingModelIntensityFrequency] | list[DingModelPulseDurationFrequency],
+        muscle_models: list[DingModelFrequency]
+        | list[DingModelIntensityFrequency]
+        | list[DingModelPulseDurationFrequency],
         stim_apparition=None,
         state_name_list=None,
     ) -> DynamicsEvaluation:
@@ -106,34 +108,42 @@ class FESActuatedBiorbdModel(BiorbdModel):
             bio_muscle_names_at_index.append(nlp.model.bio_model.model.muscle(i).name().to_string())
 
         for muscle_model in muscle_models:
-            muscle_states_idx = [i for i in range(len(state_name_list)) if muscle_model.muscle_name in state_name_list[i]]
+            muscle_states_idx = [
+                i for i in range(len(state_name_list)) if muscle_model.muscle_name in state_name_list[i]
+            ]
             muscle_states = vertcat()
             for i in range(len(muscle_states_idx)):
                 muscle_states = vertcat(muscle_states, states[muscle_states_idx[i]])
 
             muscle_dxdt = muscle_model.dynamics(
-                                                time,
-                                                muscle_states,
-                                                controls,
-                                                parameters,
-                                                stochastic_variables,
-                                                nlp,
-                                                stim_apparition,
-                                                nlp_dynamics=muscle_model,
-                                            ).dxdt
+                time,
+                muscle_states,
+                controls,
+                parameters,
+                stochastic_variables,
+                nlp,
+                stim_apparition,
+                nlp_dynamics=muscle_model,
+            ).dxdt
 
             muscle_idx = bio_muscle_names_at_index.index(muscle_model.muscle_name)
 
-            muscle_forces = DynamicsFunctions.get(nlp.states["F_"+muscle_model.muscle_name], states)
+            muscle_forces = DynamicsFunctions.get(nlp.states["F_" + muscle_model.muscle_name], states)
             muscle_force_length_coeff = 1
             muscle_force_velocity_coeff = 1
             if nlp.model.muscle_force_length_relationship:
-               muscle_force_length_coeff = FESActuatedBiorbdModel.muscle_force_length_coefficient(model=nlp.model.bio_model.model, muscle=nlp.model.bio_model.model.muscle(muscle_idx), q=q)
+                muscle_force_length_coeff = FESActuatedBiorbdModel.muscle_force_length_coefficient(
+                    model=nlp.model.bio_model.model, muscle=nlp.model.bio_model.model.muscle(muscle_idx), q=q
+                )
             if nlp.model.muscle_force_velocity_relationship:
-               muscle_force_velocity_coeff = FESActuatedBiorbdModel.muscle_force_velocity_coefficient(model=nlp.model.bio_model.model, muscle=nlp.model.bio_model.model.muscle(muscle_idx), q=q, qdot=qdot)
+                muscle_force_velocity_coeff = FESActuatedBiorbdModel.muscle_force_velocity_coefficient(
+                    model=nlp.model.bio_model.model, muscle=nlp.model.bio_model.model.muscle(muscle_idx), q=q, qdot=qdot
+                )
             muscle_forces = muscle_forces * muscle_force_length_coeff * muscle_force_velocity_coeff
 
-            moment_arm_matrix_for_the_muscle_and_joint = -nlp.model.bio_model.model.musclesLengthJacobian(q).to_mx()[muscle_idx, :].T
+            moment_arm_matrix_for_the_muscle_and_joint = (
+                -nlp.model.bio_model.model.musclesLengthJacobian(q).to_mx()[muscle_idx, :].T
+            )
             muscles_tau += moment_arm_matrix_for_the_muscle_and_joint @ muscle_forces
 
             dxdt_muscle_list = vertcat(dxdt_muscle_list, muscle_dxdt)
@@ -159,20 +169,28 @@ class FESActuatedBiorbdModel(BiorbdModel):
         """
         state_name_list = []
         for muscle_dynamics_model in self.muscles_dynamics_model:
-            muscle_dynamics_model.configure_ca_troponin_complex(ocp=ocp, nlp=nlp, as_states=True, as_controls=False, muscle_name=muscle_dynamics_model.muscle_name)
-            state_name_list.append("CN_"+muscle_dynamics_model.muscle_name)
-            muscle_dynamics_model.configure_force(ocp=ocp, nlp=nlp, as_states=True, as_controls=False, muscle_name=muscle_dynamics_model.muscle_name)
+            muscle_dynamics_model.configure_ca_troponin_complex(
+                ocp=ocp, nlp=nlp, as_states=True, as_controls=False, muscle_name=muscle_dynamics_model.muscle_name
+            )
+            state_name_list.append("CN_" + muscle_dynamics_model.muscle_name)
+            muscle_dynamics_model.configure_force(
+                ocp=ocp, nlp=nlp, as_states=True, as_controls=False, muscle_name=muscle_dynamics_model.muscle_name
+            )
             state_name_list.append("F_" + muscle_dynamics_model.muscle_name)
-            if "A_"+muscle_dynamics_model.muscle_name in muscle_dynamics_model.name_dof:
-                muscle_dynamics_model.configure_scaling_factor(ocp=ocp, nlp=nlp, as_states=True, as_controls=False, muscle_name=muscle_dynamics_model.muscle_name)
+            if "A_" + muscle_dynamics_model.muscle_name in muscle_dynamics_model.name_dof:
+                muscle_dynamics_model.configure_scaling_factor(
+                    ocp=ocp, nlp=nlp, as_states=True, as_controls=False, muscle_name=muscle_dynamics_model.muscle_name
+                )
                 state_name_list.append("A_" + muscle_dynamics_model.muscle_name)
-            if "Tau1_"+muscle_dynamics_model.muscle_name in muscle_dynamics_model.name_dof:
+            if "Tau1_" + muscle_dynamics_model.muscle_name in muscle_dynamics_model.name_dof:
                 muscle_dynamics_model.configure_time_state_force_no_cross_bridge(
                     ocp=ocp, nlp=nlp, as_states=True, as_controls=False, muscle_name=muscle_dynamics_model.muscle_name
                 )
                 state_name_list.append("Tau1_" + muscle_dynamics_model.muscle_name)
-            if "Km_"+muscle_dynamics_model.muscle_name in muscle_dynamics_model.name_dof:
-                muscle_dynamics_model.configure_cross_bridges(ocp=ocp, nlp=nlp, as_states=True, as_controls=False, muscle_name=muscle_dynamics_model.muscle_name)
+            if "Km_" + muscle_dynamics_model.muscle_name in muscle_dynamics_model.name_dof:
+                muscle_dynamics_model.configure_cross_bridges(
+                    ocp=ocp, nlp=nlp, as_states=True, as_controls=False, muscle_name=muscle_dynamics_model.muscle_name
+                )
                 state_name_list.append("Km_" + muscle_dynamics_model.muscle_name)
 
         ConfigureProblem.configure_q(ocp, nlp, as_states=True, as_controls=False)
@@ -256,7 +274,6 @@ class FESActuatedBiorbdModel(BiorbdModel):
 
     @staticmethod
     def muscle_force_length_coefficient(model, muscle, q):
-
         b11 = 0.815
         b21 = 1.055
         b31 = 0.162
@@ -274,7 +291,23 @@ class FESActuatedBiorbdModel(BiorbdModel):
         muscle_optimal_length = muscle.characteristics().optimalLength().to_mx()
         norm_length = muscle_length / muscle_optimal_length
 
-        m_FlCE = b11 * exp((-0.5 * ((norm_length - b21) * (norm_length - b21)))/((b31 + b41 * norm_length) * (b31 + b41 * norm_length))) + b12 * exp((-0.5 * ((norm_length - b22) * (norm_length - b22))) / ((b32 + b42 * norm_length) * (b32 + b42 * norm_length))) + b13 * exp((-0.5 * ((norm_length - b23) * (norm_length - b23))) / ((b33 + b43 * norm_length) * (b33 + b43 * norm_length)))
+        m_FlCE = (
+            b11
+            * exp(
+                (-0.5 * ((norm_length - b21) * (norm_length - b21)))
+                / ((b31 + b41 * norm_length) * (b31 + b41 * norm_length))
+            )
+            + b12
+            * exp(
+                (-0.5 * ((norm_length - b22) * (norm_length - b22)))
+                / ((b32 + b42 * norm_length) * (b32 + b42 * norm_length))
+            )
+            + b13
+            * exp(
+                (-0.5 * ((norm_length - b23) * (norm_length - b23)))
+                / ((b33 + b43 * norm_length) * (b33 + b43 * norm_length))
+            )
+        )
 
         return m_FlCE
 

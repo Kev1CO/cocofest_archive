@@ -27,7 +27,10 @@ class DingModelFrequency:
     """
 
     def __init__(
-        self, model_name: str = "ding2003", muscle_name: str = None, sum_stim_truncation: int = None,
+        self,
+        model_name: str = "ding2003",
+        muscle_name: str = None,
+        sum_stim_truncation: int = None,
     ):
         self._model_name = model_name
         self._muscle_name = muscle_name
@@ -83,7 +86,7 @@ class DingModelFrequency:
     @property
     def name_dof(self) -> list[str]:
         muscle_name = "_" + self.muscle_name if self.muscle_name else ""
-        return ["Cn"+muscle_name, "F"+muscle_name]
+        return ["Cn" + muscle_name, "F" + muscle_name]
 
     @property
     def nb_state(self) -> int:
@@ -98,7 +101,13 @@ class DingModelFrequency:
         return self._muscle_name
 
     # ---- Model's dynamics ---- #
-    def system_dynamics(self, cn: MX, f: MX, t: MX = None, t_stim_prev: list[MX] | list[float] = None,) -> MX:
+    def system_dynamics(
+        self,
+        cn: MX,
+        f: MX,
+        t: MX = None,
+        t_stim_prev: list[MX] | list[float] = None,
+    ) -> MX:
         """
         The system dynamics is the function that describes the models.
 
@@ -262,7 +271,14 @@ class DingModelFrequency:
 
         dxdt_fun = nlp_dynamics.system_dynamics if nlp_dynamics else nlp.model.system_dynamics
 
-        return DynamicsEvaluation(dxdt=dxdt_fun(cn=states[0], f=states[1], t=time, t_stim_prev=stim_apparition,),)
+        return DynamicsEvaluation(
+            dxdt=dxdt_fun(
+                cn=states[0],
+                f=states[1],
+                t=time,
+                t_stim_prev=stim_apparition,
+            ),
+        )
 
     def declare_ding_variables(self, ocp: OptimalControlProgram, nlp: NonLinearProgram):
         """
@@ -275,7 +291,9 @@ class DingModelFrequency:
         nlp: NonLinearProgram
             A reference to the phase
         """
-        self.configure_ca_troponin_complex(ocp=ocp, nlp=nlp, as_states=True, as_controls=False, muscle_name=self.muscle_name)
+        self.configure_ca_troponin_complex(
+            ocp=ocp, nlp=nlp, as_states=True, as_controls=False, muscle_name=self.muscle_name
+        )
         self.configure_force(ocp=ocp, nlp=nlp, as_states=True, as_controls=False, muscle_name=self.muscle_name)
         stim_apparition = self.get_stim_prev(ocp, nlp)
         ConfigureProblem.configure_dynamics_function(ocp, nlp, dyn_func=self.dynamics, stim_apparition=stim_apparition)
@@ -306,10 +324,16 @@ class DingModelFrequency:
             If the generalized velocities should be a state_dot
         """
         muscle_name = "_" + muscle_name if muscle_name else ""
-        name = "Cn"+muscle_name
+        name = "Cn" + muscle_name
         name_cn = [name]
         ConfigureProblem.configure_new_variable(
-            name, name_cn, ocp, nlp, as_states, as_controls, as_states_dot,
+            name,
+            name_cn,
+            ocp,
+            nlp,
+            as_states,
+            as_controls,
+            as_states_dot,
         )
 
     @staticmethod
@@ -338,10 +362,16 @@ class DingModelFrequency:
             If the generalized velocities should be a state_dot
         """
         muscle_name = "_" + muscle_name if muscle_name else ""
-        name = "F"+muscle_name
+        name = "F" + muscle_name
         name_f = [name]
         ConfigureProblem.configure_new_variable(
-            name, name_f, ocp, nlp, as_states, as_controls, as_states_dot,
+            name,
+            name_f,
+            ocp,
+            nlp,
+            as_states,
+            as_controls,
+            as_states_dot,
         )
 
     @staticmethod

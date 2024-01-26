@@ -27,7 +27,10 @@ class DingModelFrequencyWithFatigue(DingModelFrequency):
     """
 
     def __init__(
-        self, model_name: str = "ding2003_with_fatigue", muscle_name: str = None, sum_stim_truncation: int = None,
+        self,
+        model_name: str = "ding2003_with_fatigue",
+        muscle_name: str = None,
+        sum_stim_truncation: int = None,
     ):
         super().__init__(model_name=model_name, muscle_name=muscle_name, sum_stim_truncation=sum_stim_truncation)
         self._with_fatigue = True
@@ -80,7 +83,7 @@ class DingModelFrequencyWithFatigue(DingModelFrequency):
     @property
     def name_dof(self) -> list[str]:
         muscle_name = "_" + self.muscle_name if self.muscle_name else ""
-        return ["Cn"+muscle_name, "F"+muscle_name, "A"+muscle_name, "Tau1"+muscle_name, "Km"+muscle_name]
+        return ["Cn" + muscle_name, "F" + muscle_name, "A" + muscle_name, "Tau1" + muscle_name, "Km" + muscle_name]
 
     @property
     def nb_state(self) -> int:
@@ -243,10 +246,14 @@ class DingModelFrequencyWithFatigue(DingModelFrequency):
         nlp: NonLinearProgram
             A reference to the phase
         """
-        self.configure_ca_troponin_complex(ocp=ocp, nlp=nlp, as_states=True, as_controls=False, muscle_name=self.muscle_name)
+        self.configure_ca_troponin_complex(
+            ocp=ocp, nlp=nlp, as_states=True, as_controls=False, muscle_name=self.muscle_name
+        )
         self.configure_force(ocp=ocp, nlp=nlp, as_states=True, as_controls=False, muscle_name=self.muscle_name)
         self.configure_scaling_factor(ocp=ocp, nlp=nlp, as_states=True, as_controls=False, muscle_name=self.muscle_name)
-        self.configure_time_state_force_no_cross_bridge(ocp=ocp, nlp=nlp, as_states=True, as_controls=False, muscle_name=self.muscle_name)
+        self.configure_time_state_force_no_cross_bridge(
+            ocp=ocp, nlp=nlp, as_states=True, as_controls=False, muscle_name=self.muscle_name
+        )
         self.configure_cross_bridges(ocp=ocp, nlp=nlp, as_states=True, as_controls=False, muscle_name=self.muscle_name)
         stim_apparition = self.get_stim_prev(ocp, nlp)
         ConfigureProblem.configure_dynamics_function(ocp, nlp, dyn_func=self.dynamics, stim_apparition=stim_apparition)
@@ -277,10 +284,16 @@ class DingModelFrequencyWithFatigue(DingModelFrequency):
             If the generalized velocities should be a state_dot
         """
         muscle_name = "_" + muscle_name if muscle_name else ""
-        name = "A"+muscle_name
+        name = "A" + muscle_name
         name_a = [name]
         ConfigureProblem.configure_new_variable(
-            name, name_a, ocp, nlp, as_states, as_controls, as_states_dot,
+            name,
+            name_a,
+            ocp,
+            nlp,
+            as_states,
+            as_controls,
+            as_states_dot,
         )
 
     @staticmethod
@@ -309,10 +322,16 @@ class DingModelFrequencyWithFatigue(DingModelFrequency):
             If the generalized velocities should be a state_dot
         """
         muscle_name = "_" + muscle_name if muscle_name else ""
-        name = "Tau1"+muscle_name
+        name = "Tau1" + muscle_name
         name_tau1 = [name]
         ConfigureProblem.configure_new_variable(
-            name, name_tau1, ocp, nlp, as_states, as_controls, as_states_dot,
+            name,
+            name_tau1,
+            ocp,
+            nlp,
+            as_states,
+            as_controls,
+            as_states_dot,
         )
 
     @staticmethod
@@ -341,8 +360,14 @@ class DingModelFrequencyWithFatigue(DingModelFrequency):
             If the generalized velocities should be a state_dot
         """
         muscle_name = "_" + muscle_name if muscle_name else ""
-        name = "Km"+muscle_name
+        name = "Km" + muscle_name
         name_km = [name]
         ConfigureProblem.configure_new_variable(
-            name, name_km, ocp, nlp, as_states, as_controls, as_states_dot,
+            name,
+            name_km,
+            ocp,
+            nlp,
+            as_states,
+            as_controls,
+            as_states_dot,
         )

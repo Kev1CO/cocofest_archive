@@ -15,7 +15,7 @@ from bioptim import (
     InterpolationType,
     ObjectiveFcn,
     OdeSolverBase,
-    Node
+    Node,
 )
 
 from cocofest import (
@@ -75,7 +75,6 @@ class FESActuatedBiorbdModelOCP:
         control_type: ControlType = ControlType.CONSTANT,
         n_threads: int = 1,
     ):
-
         """
         This definition prepares the ocp to be solved
         .
@@ -155,7 +154,9 @@ class FESActuatedBiorbdModelOCP:
 
         OcpFes._sanity_check_frequency(n_stim=n_stim, final_time=final_time, frequency=frequency, round_down=round_down)
 
-        FESActuatedBiorbdModelOCP._sanity_check_muscle_model(biorbd_model_path=biorbd_model_path, fes_muscle_models=fes_muscle_models)
+        FESActuatedBiorbdModelOCP._sanity_check_muscle_model(
+            biorbd_model_path=biorbd_model_path, fes_muscle_models=fes_muscle_models
+        )
 
         n_stim, final_time = OcpFes._build_phase_parameter(
             n_stim=n_stim, final_time=final_time, frequency=frequency, pulse_mode=pulse_mode, round_down=round_down
@@ -170,7 +171,6 @@ class FESActuatedBiorbdModelOCP:
             for i in range(len(q_tracking[1])):
                 q_fourier_coef.append(OcpFes._build_fourrier_coeff([q_tracking[0], q_tracking[1][i]]))
 
-
         n_shooting = [n_shooting] * n_stim
         final_time_phase, constraints, phase_time_bimapping = OcpFes._build_phase_time(
             final_time=final_time,
@@ -180,7 +180,12 @@ class FESActuatedBiorbdModelOCP:
             time_max=time_max,
             time_bimapping=time_bimapping,
         )
-        parameters, parameters_bounds, parameters_init, parameter_objectives = FESActuatedBiorbdModelOCP._build_parameters(
+        (
+            parameters,
+            parameters_bounds,
+            parameters_init,
+            parameter_objectives,
+        ) = FESActuatedBiorbdModelOCP._build_parameters(
             model=fes_muscle_models,
             n_stim=n_stim,
             pulse_duration=pulse_duration,
@@ -202,7 +207,13 @@ class FESActuatedBiorbdModelOCP:
             )
 
         bio_models = [
-            FESActuatedBiorbdModel(name=None, biorbd_path=biorbd_model_path, muscles_model=fes_muscle_models, muscle_force_length_relationship=muscle_force_length_relationship, muscle_force_velocity_relationship=muscle_force_velocity_relationship)
+            FESActuatedBiorbdModel(
+                name=None,
+                biorbd_path=biorbd_model_path,
+                muscles_model=fes_muscle_models,
+                muscle_force_length_relationship=muscle_force_length_relationship,
+                muscle_force_velocity_relationship=muscle_force_velocity_relationship,
+            )
             for i in range(n_stim)
         ]
 
@@ -212,11 +223,21 @@ class FESActuatedBiorbdModelOCP:
 
         dynamics = FESActuatedBiorbdModelOCP._declare_dynamics(bio_models, n_stim)
         x_bounds, x_init = FESActuatedBiorbdModelOCP._set_bounds(
-            bio_models, fes_muscle_models, bound_type, bound_data, n_stim,
+            bio_models,
+            fes_muscle_models,
+            bound_type,
+            bound_data,
+            n_stim,
         )
         u_bounds, u_init = FESActuatedBiorbdModelOCP._set_controls(bio_models, n_stim, with_residual_torque)
         objective_functions = FESActuatedBiorbdModelOCP._set_objective(
-            n_stim, n_shooting, force_fourier_coef, end_node_tracking, custom_objective, q_fourier_coef, minimize_muscle_fatigue
+            n_stim,
+            n_shooting,
+            force_fourier_coef,
+            end_node_tracking,
+            custom_objective,
+            q_fourier_coef,
+            minimize_muscle_fatigue,
         )
 
         return OptimalControlProgram(
@@ -257,18 +278,18 @@ class FESActuatedBiorbdModelOCP:
 
     @staticmethod
     def _build_parameters(
-            model,
-            n_stim,
-            pulse_duration,
-            pulse_duration_min,
-            pulse_duration_max,
-            pulse_duration_bimapping,
-            pulse_duration_similar_for_all_muscles,
-            pulse_intensity,
-            pulse_intensity_min,
-            pulse_intensity_max,
-            pulse_intensity_bimapping,
-            pulse_intensity_similar_for_all_muscles,
+        model,
+        n_stim,
+        pulse_duration,
+        pulse_duration_min,
+        pulse_duration_max,
+        pulse_duration_bimapping,
+        pulse_duration_similar_for_all_muscles,
+        pulse_intensity,
+        pulse_intensity_min,
+        pulse_intensity_max,
+        pulse_intensity_bimapping,
+        pulse_intensity_similar_for_all_muscles,
     ):
         parameters = ParameterList()
         parameters_bounds = BoundsList()
@@ -277,9 +298,15 @@ class FESActuatedBiorbdModelOCP:
 
         for i in range(len(model)):
             if isinstance(model[i], DingModelPulseDurationFrequency):
-                parameter_name = "pulse_duration" if pulse_duration_similar_for_all_muscles else "pulse_duration" + "_" + model[i].muscle_name
-                if pulse_duration:  #TODO : ADD SEVERAL INDIVIDUAL FIXED PULSE DURATION FOR EACH MUSCLE
-                    if (pulse_duration_similar_for_all_muscles and i == 0) or not pulse_duration_similar_for_all_muscles:
+                parameter_name = (
+                    "pulse_duration"
+                    if pulse_duration_similar_for_all_muscles
+                    else "pulse_duration" + "_" + model[i].muscle_name
+                )
+                if pulse_duration:  # TODO : ADD SEVERAL INDIVIDUAL FIXED PULSE DURATION FOR EACH MUSCLE
+                    if (
+                        pulse_duration_similar_for_all_muscles and i == 0
+                    ) or not pulse_duration_similar_for_all_muscles:
                         parameters.add(
                             parameter_name=parameter_name,
                             function=DingModelPulseDurationFrequency.set_impulse_duration,
@@ -302,8 +329,12 @@ class FESActuatedBiorbdModelOCP:
                             )
                             parameters_init[parameter_name] = np.array([pulse_duration] * n_stim)
 
-                elif pulse_duration_min and pulse_duration_max:  #TODO : ADD SEVERAL MIN MAX PULSE DURATION FOR EACH MUSCLE
-                    if (pulse_duration_similar_for_all_muscles and i == 0) or not pulse_duration_similar_for_all_muscles:
+                elif (
+                    pulse_duration_min and pulse_duration_max
+                ):  # TODO : ADD SEVERAL MIN MAX PULSE DURATION FOR EACH MUSCLE
+                    if (
+                        pulse_duration_similar_for_all_muscles and i == 0
+                    ) or not pulse_duration_similar_for_all_muscles:
                         parameters_bounds.add(
                             parameter_name,
                             min_bound=[pulse_duration_min],
@@ -326,15 +357,20 @@ class FESActuatedBiorbdModelOCP:
                     )
 
                 if pulse_duration_bimapping:
-                        pass
-                        # parameter_bimapping.add(name="pulse_duration", to_second=[0 for _ in range(n_stim)], to_first=[0])
-                        # TODO : Fix Bimapping in Bioptim
+                    pass
+                    # parameter_bimapping.add(name="pulse_duration", to_second=[0 for _ in range(n_stim)], to_first=[0])
+                    # TODO : Fix Bimapping in Bioptim
 
             if isinstance(model[i], DingModelIntensityFrequency):
-                parameter_name = "pulse_intensity" if pulse_intensity_similar_for_all_muscles else "pulse_intensity" + "_" + \
-                                                                                                 model[i].muscle_name
+                parameter_name = (
+                    "pulse_intensity"
+                    if pulse_intensity_similar_for_all_muscles
+                    else "pulse_intensity" + "_" + model[i].muscle_name
+                )
                 if pulse_intensity:  # TODO : ADD SEVERAL INDIVIDUAL FIXED PULSE INTENSITY FOR EACH MUSCLE
-                    if (pulse_intensity_similar_for_all_muscles and i == 0) or not pulse_intensity_similar_for_all_muscles:
+                    if (
+                        pulse_intensity_similar_for_all_muscles and i == 0
+                    ) or not pulse_intensity_similar_for_all_muscles:
                         parameters.add(
                             parameter_name=parameter_name,
                             function=DingModelIntensityFrequency.set_impulse_intensity,
@@ -357,9 +393,12 @@ class FESActuatedBiorbdModelOCP:
                             )
                             parameters_init[parameter_name] = np.array([pulse_intensity] * n_stim)
 
-                elif pulse_intensity_min and pulse_intensity_max:  #TODO : ADD SEVERAL MIN MAX PULSE INTENSITY FOR EACH MUSCLE
+                elif (
+                    pulse_intensity_min and pulse_intensity_max
+                ):  # TODO : ADD SEVERAL MIN MAX PULSE INTENSITY FOR EACH MUSCLE
                     if (
-                            pulse_intensity_similar_for_all_muscles and i == 0) or not pulse_intensity_similar_for_all_muscles:
+                        pulse_intensity_similar_for_all_muscles and i == 0
+                    ) or not pulse_intensity_similar_for_all_muscles:
                         parameters_bounds.add(
                             parameter_name,
                             min_bound=[pulse_intensity_min],
@@ -414,13 +453,13 @@ class FESActuatedBiorbdModelOCP:
             )
             muscle_name = model.muscle_name
             for i in range(len(variable_bound_list)):
-                if variable_bound_list[i] == "Cn_"+muscle_name:
+                if variable_bound_list[i] == "Cn_" + muscle_name:
                     max_bounds[i] = 10
-                elif variable_bound_list[i] == "F_"+muscle_name:
+                elif variable_bound_list[i] == "F_" + muscle_name:
                     max_bounds[i] = 1000
-                elif variable_bound_list[i] == "Tau1_"+muscle_name or variable_bound_list[i] == "Km_"+muscle_name:
+                elif variable_bound_list[i] == "Tau1_" + muscle_name or variable_bound_list[i] == "Km_" + muscle_name:
                     max_bounds[i] = 1
-                elif variable_bound_list[i] == "A_"+muscle_name:
+                elif variable_bound_list[i] == "A_" + muscle_name:
                     min_bounds[i] = 0
 
             starting_bounds_min = np.concatenate((starting_bounds, min_bounds, min_bounds), axis=1)
@@ -510,7 +549,15 @@ class FESActuatedBiorbdModelOCP:
         return u_bounds, u_init
 
     @staticmethod
-    def _set_objective(n_stim, n_shooting, force_fourier_coef, end_node_tracking, custom_objective, q_fourier_coef, minimize_muscle_fatigue):
+    def _set_objective(
+        n_stim,
+        n_shooting,
+        force_fourier_coef,
+        end_node_tracking,
+        custom_objective,
+        q_fourier_coef,
+        minimize_muscle_fatigue,
+    ):
         # Creates the objective for our problem
         objective_functions = ObjectiveList()
         if custom_objective:
@@ -559,7 +606,7 @@ class FESActuatedBiorbdModelOCP:
                             weight=1,
                             phase=phase,
                             index=j,
-                    )
+                        )
 
         if minimize_muscle_fatigue:
             for i in range(n_stim):
@@ -589,25 +636,29 @@ class FESActuatedBiorbdModelOCP:
 
     @staticmethod
     def _sanity_check_muscle_model(biorbd_model_path, fes_muscle_models):
-        tested_bio_model = FESActuatedBiorbdModel(name=None, biorbd_path=biorbd_model_path, muscles_model=fes_muscle_models)
+        tested_bio_model = FESActuatedBiorbdModel(
+            name=None, biorbd_path=biorbd_model_path, muscles_model=fes_muscle_models
+        )
         fes_muscle_models_name_list = [fes_muscle_models[x].muscle_name for x in range(len(fes_muscle_models))]
         for biorbd_muscle in tested_bio_model.muscle_names:
             if biorbd_muscle not in fes_muscle_models_name_list:
-                raise ValueError(f"The muscle {biorbd_muscle} is not in the fes muscle model "
-                                 f"please add it into the fes_muscle_models list by providing the muscle_name ="
-                                 f" {biorbd_muscle}")
+                raise ValueError(
+                    f"The muscle {biorbd_muscle} is not in the fes muscle model "
+                    f"please add it into the fes_muscle_models list by providing the muscle_name ="
+                    f" {biorbd_muscle}"
+                )
 
     @staticmethod
     def _sanity_check_fes_models(fes_muscle_models):
         for i in range(len(fes_muscle_models)):
             if not isinstance(
-                    fes_muscle_models[i],
-                    DingModelFrequency
-                    | DingModelFrequencyWithFatigue
-                    | DingModelPulseDurationFrequency
-                    | DingModelPulseDurationFrequencyWithFatigue
-                    | DingModelIntensityFrequency
-                    | DingModelIntensityFrequencyWithFatigue,
+                fes_muscle_models[i],
+                DingModelFrequency
+                | DingModelFrequencyWithFatigue
+                | DingModelPulseDurationFrequency
+                | DingModelPulseDurationFrequencyWithFatigue
+                | DingModelIntensityFrequency
+                | DingModelIntensityFrequencyWithFatigue,
             ):
                 raise TypeError(
                     "model must be a DingModelFrequency, DingModelFrequencyWithFatigue, DingModelPulseDurationFrequency, DingModelPulseDurationFrequencyWithFatigue, DingModelIntensityFrequency, DingModelIntensityFrequencyWithFatigue type"

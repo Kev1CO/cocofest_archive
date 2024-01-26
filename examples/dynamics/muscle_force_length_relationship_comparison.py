@@ -8,7 +8,11 @@ import matplotlib.pyplot as plt
 
 from bioptim import Solver
 
-from cocofest import DingModelPulseDurationFrequencyWithFatigue, DingModelIntensityFrequencyWithFatigue, FESActuatedBiorbdModelOCP
+from cocofest import (
+    DingModelPulseDurationFrequencyWithFatigue,
+    DingModelIntensityFrequencyWithFatigue,
+    FESActuatedBiorbdModelOCP,
+)
 
 minimum_pulse_duration = DingModelPulseDurationFrequencyWithFatigue().pd0
 minimum_pulse_intensity = DingModelIntensityFrequencyWithFatigue.min_pulse_intensity(
@@ -17,11 +21,12 @@ minimum_pulse_intensity = DingModelIntensityFrequencyWithFatigue.min_pulse_inten
 
 sol_list = []
 muscle_force_length_relationship = [False, True, False, True]
-fes_muscle_model = [[DingModelPulseDurationFrequencyWithFatigue(muscle_name="BIClong")],
-                    [DingModelPulseDurationFrequencyWithFatigue(muscle_name="BIClong")],
-                    [DingModelIntensityFrequencyWithFatigue(muscle_name="BIClong")],
-                    [DingModelIntensityFrequencyWithFatigue(muscle_name="BIClong")]
-                    ]
+fes_muscle_model = [
+    [DingModelPulseDurationFrequencyWithFatigue(muscle_name="BIClong")],
+    [DingModelPulseDurationFrequencyWithFatigue(muscle_name="BIClong")],
+    [DingModelIntensityFrequencyWithFatigue(muscle_name="BIClong")],
+    [DingModelIntensityFrequencyWithFatigue(muscle_name="BIClong")],
+]
 
 for i in range(4):
     ocp = FESActuatedBiorbdModelOCP.prepare_ocp(
@@ -42,7 +47,9 @@ for i in range(4):
     sol = ocp.solve(Solver.IPOPT(_max_iter=1000))
     sol_list.append(sol.merge_phases())
 
-plt.title("Comparison between with and without muscle force length relationship for an elbow movement at 10Hz and 40mA or 260us")
+plt.title(
+    "Comparison between with and without muscle force length relationship for an elbow movement at 10Hz and 40mA or 260us"
+)
 plt.plot(sol_list[0].time, sol_list[0].states["q"][0], label="Pulse duration without force length relationship")
 plt.plot(sol_list[1].time, sol_list[1].states["q"][0], label="Pulse duration with force length relationship")
 plt.plot(sol_list[2].time, sol_list[2].states["q"][0], label="Pulse intensity without force length relationship")

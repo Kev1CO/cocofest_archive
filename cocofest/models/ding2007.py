@@ -26,7 +26,9 @@ class DingModelPulseDurationFrequency(DingModelFrequency):
     """
 
     def __init__(self, model_name: str = "ding_2007", muscle_name: str = None, sum_stim_truncation: int = None):
-        super(DingModelPulseDurationFrequency, self).__init__(model_name=model_name, muscle_name=muscle_name, sum_stim_truncation=sum_stim_truncation)
+        super(DingModelPulseDurationFrequency, self).__init__(
+            model_name=model_name, muscle_name=muscle_name, sum_stim_truncation=sum_stim_truncation
+        )
         self._with_fatigue = False
         self.impulse_time = None
         # ---- Custom values for the example ---- #
@@ -67,7 +69,12 @@ class DingModelPulseDurationFrequency(DingModelFrequency):
         )
 
     def system_dynamics(
-        self, cn: MX, f: MX, t: MX = None, t_stim_prev: list[MX] | list[float] = None, impulse_time: MX = None,
+        self,
+        cn: MX,
+        f: MX,
+        t: MX = None,
+        t_stim_prev: list[MX] | list[float] = None,
+        impulse_time: MX = None,
     ) -> MX:
         """
         The system dynamics is the function that describes the models.
@@ -136,7 +143,7 @@ class DingModelPulseDurationFrequency(DingModelFrequency):
         pulse_duration_parameters = vertcat()
         for j in range(nlp_parameters.mx.shape[0]):
             if muscle_name:
-                if "pulse_duration_"+ muscle_name in str(nlp_parameters.mx[j]):
+                if "pulse_duration_" + muscle_name in str(nlp_parameters.mx[j]):
                     pulse_duration_parameters = vertcat(pulse_duration_parameters, nlp_parameters.mx[j])
             elif "pulse_duration" in str(nlp_parameters.mx[j]):
                 pulse_duration_parameters = vertcat(pulse_duration_parameters, nlp_parameters.mx[j])
@@ -191,7 +198,13 @@ class DingModelPulseDurationFrequency(DingModelFrequency):
         dxdt_fun = nlp_dynamics.system_dynamics if nlp_dynamics else nlp.model.system_dynamics
 
         return DynamicsEvaluation(
-            dxdt=dxdt_fun(cn=states[0], f=states[1], t=time, t_stim_prev=stim_apparition, impulse_time=impulse_time,),
+            dxdt=dxdt_fun(
+                cn=states[0],
+                f=states[1],
+                t=time,
+                t_stim_prev=stim_apparition,
+                impulse_time=impulse_time,
+            ),
             defects=None,
         )
 
@@ -206,7 +219,9 @@ class DingModelPulseDurationFrequency(DingModelFrequency):
         nlp: NonLinearProgram
             A reference to the phase
         """
-        self.configure_ca_troponin_complex(ocp=ocp, nlp=nlp, as_states=True, as_controls=False, muscle_name=self.muscle_name)
+        self.configure_ca_troponin_complex(
+            ocp=ocp, nlp=nlp, as_states=True, as_controls=False, muscle_name=self.muscle_name
+        )
         self.configure_force(ocp=ocp, nlp=nlp, as_states=True, as_controls=False, muscle_name=self.muscle_name)
         stim_apparition = self.get_stim_prev(ocp, nlp)
         ConfigureProblem.configure_dynamics_function(ocp, nlp, dyn_func=self.dynamics, stim_apparition=stim_apparition)

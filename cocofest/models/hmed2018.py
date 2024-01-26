@@ -27,7 +27,9 @@ class DingModelIntensityFrequency(DingModelFrequency):
     """
 
     def __init__(self, model_name: str = "hmed2018", muscle_name: str = None, sum_stim_truncation: int = None):
-        super(DingModelIntensityFrequency, self).__init__(model_name=model_name, muscle_name=muscle_name, sum_stim_truncation=sum_stim_truncation)
+        super(DingModelIntensityFrequency, self).__init__(
+            model_name=model_name, muscle_name=muscle_name, sum_stim_truncation=sum_stim_truncation
+        )
         self._with_fatigue = False
         # ---- Custom values for the example ---- #
         # ---- Force models ---- #
@@ -204,7 +206,7 @@ class DingModelIntensityFrequency(DingModelFrequency):
         intensity_parameters = vertcat()
         for j in range(nlp_parameters.mx.shape[0]):
             if muscle_name:
-                if "pulse_intensity_"+ muscle_name in str(nlp_parameters.mx[j]):
+                if "pulse_intensity_" + muscle_name in str(nlp_parameters.mx[j]):
                     intensity_parameters = vertcat(intensity_parameters, nlp_parameters.mx[j])
             elif "pulse_intensity" in str(nlp_parameters.mx[j]):
                 intensity_parameters = vertcat(intensity_parameters, nlp_parameters.mx[j])
@@ -264,7 +266,11 @@ class DingModelIntensityFrequency(DingModelFrequency):
 
         return DynamicsEvaluation(
             dxdt=dxdt_fun(
-                cn=states[0], f=states[1], t=time, t_stim_prev=stim_apparition, intensity_stim=intensity_stim_prev,
+                cn=states[0],
+                f=states[1],
+                t=time,
+                t_stim_prev=stim_apparition,
+                intensity_stim=intensity_stim_prev,
             ),
             defects=None,
         )
@@ -280,7 +286,9 @@ class DingModelIntensityFrequency(DingModelFrequency):
         nlp: NonLinearProgram
             A reference to the phase
         """
-        self.configure_ca_troponin_complex(ocp=ocp, nlp=nlp, as_states=True, as_controls=False, muscle_name=self.muscle_name)
+        self.configure_ca_troponin_complex(
+            ocp=ocp, nlp=nlp, as_states=True, as_controls=False, muscle_name=self.muscle_name
+        )
         self.configure_force(ocp=ocp, nlp=nlp, as_states=True, as_controls=False, muscle_name=self.muscle_name)
         stim_apparition = self.get_stim_prev(ocp, nlp)
         ConfigureProblem.configure_dynamics_function(ocp, nlp, dyn_func=self.dynamics, stim_apparition=stim_apparition)

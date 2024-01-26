@@ -328,7 +328,12 @@ class FunctionalElectricStimulationMultiStart(MultiStart):
                 " DingModelIntensityFrequency",
             )
 
-    def save_results(self, sol: Solution, *combinatorial_parameters, **extra_parameters,) -> None:
+    def save_results(
+        self,
+        sol: Solution,
+        *combinatorial_parameters,
+        **extra_parameters,
+    ) -> None:
         """
         Callback of the post_optimization_callback, this can be used to save the results
 

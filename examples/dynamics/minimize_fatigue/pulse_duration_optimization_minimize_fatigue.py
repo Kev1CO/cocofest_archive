@@ -18,7 +18,16 @@ from cocofest import DingModelPulseDurationFrequencyWithFatigue, FESActuatedBior
 n_stim = 10
 n_shooting = 10
 objective_functions = ObjectiveList()
-objective_functions.add(ObjectiveFcn.Mayer.MINIMIZE_STATE, key="qdot", index=[0, 1], node=Node.END, target=np.array([[0, 0]]*(n_shooting+1)).T, weight=100, quadratic=True, phase=n_stim-1)
+objective_functions.add(
+    ObjectiveFcn.Mayer.MINIMIZE_STATE,
+    key="qdot",
+    index=[0, 1],
+    node=Node.END,
+    target=np.array([[0, 0]] * (n_shooting + 1)).T,
+    weight=100,
+    quadratic=True,
+    phase=n_stim - 1,
+)
 
 minimum_pulse_duration = DingModelPulseDurationFrequencyWithFatigue().pd0
 
@@ -26,8 +35,10 @@ ocp = FESActuatedBiorbdModelOCP.prepare_ocp(
     biorbd_model_path="../arm26_biceps_triceps.bioMod",
     bound_type="start_end",
     bound_data=[[0, 5], [0, 90]],
-    fes_muscle_models=[DingModelPulseDurationFrequencyWithFatigue(muscle_name="BIClong"),
-                       DingModelPulseDurationFrequencyWithFatigue(muscle_name="TRIlong")],
+    fes_muscle_models=[
+        DingModelPulseDurationFrequencyWithFatigue(muscle_name="BIClong"),
+        DingModelPulseDurationFrequencyWithFatigue(muscle_name="TRIlong"),
+    ],
     n_stim=n_stim,
     n_shooting=10,
     final_time=1,

@@ -39,7 +39,14 @@ def test_ding2003_ivp(model):
 @pytest.mark.parametrize("model", [DingModelPulseDurationFrequency(), DingModelPulseDurationFrequencyWithFatigue()])
 @pytest.mark.parametrize("pulse_duration", [0.0003, [0.0003, 0.0004, 0.0005]])
 def test_ding2007_ivp(model, pulse_duration):
-    ivp = IvpFes(model=model, n_stim=3, n_shooting=10, final_time=0.3, pulse_duration=pulse_duration, use_sx=True,)
+    ivp = IvpFes(
+        model=model,
+        n_stim=3,
+        n_shooting=10,
+        final_time=0.3,
+        pulse_duration=pulse_duration,
+        use_sx=True,
+    )
 
     # Creating the solution from the initial guess
     sol_from_initial_guess = Solution.from_initial_guess(ivp, [ivp.x_init, ivp.u_init, ivp.p_init, ivp.s_init])
@@ -70,7 +77,14 @@ def test_ding2007_ivp(model, pulse_duration):
 @pytest.mark.parametrize("model", [DingModelIntensityFrequency(), DingModelIntensityFrequencyWithFatigue()])
 @pytest.mark.parametrize("pulse_intensity", [50, [50, 60, 70]])
 def test_hmed2018_ivp(model, pulse_intensity):
-    ivp = IvpFes(model=model, n_stim=3, n_shooting=10, final_time=0.3, pulse_intensity=pulse_intensity, use_sx=True,)
+    ivp = IvpFes(
+        model=model,
+        n_stim=3,
+        n_shooting=10,
+        final_time=0.3,
+        pulse_intensity=pulse_intensity,
+        use_sx=True,
+    )
 
     # Creating the solution from the initial guess
     sol_from_initial_guess = Solution.from_initial_guess(ivp, [ivp.x_init, ivp.u_init, ivp.p_init, ivp.s_init])
@@ -220,7 +234,11 @@ def test_all_ivp_errors():
 
     with pytest.raises(ValueError, match="pulse_intensity list must have the same length as n_stim"):
         IvpFes(
-            model=DingModelIntensityFrequency(), n_stim=3, n_shooting=10, final_time=0.3, pulse_intensity=[20, 30],
+            model=DingModelIntensityFrequency(),
+            n_stim=3,
+            n_shooting=10,
+            final_time=0.3,
+            pulse_intensity=[20, 30],
         )
 
     pulse_intensity = [20, 30, 0.1]
@@ -242,7 +260,11 @@ def test_all_ivp_errors():
 
     with pytest.raises(TypeError, match="pulse_intensity must be int, float or list type"):
         IvpFes(
-            model=DingModelIntensityFrequency(), n_stim=3, n_shooting=10, final_time=0.3, pulse_intensity=True,
+            model=DingModelIntensityFrequency(),
+            n_stim=3,
+            n_shooting=10,
+            final_time=0.3,
+            pulse_intensity=True,
         )
 
     with pytest.raises(ValueError, match="ode_solver must be a OdeSolver type"):

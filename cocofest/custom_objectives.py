@@ -86,5 +86,5 @@ class CustomObjective:
         The difference between the two keys
         """
         muscle_name_list = controller.model.bio_model.muscle_names
-        muscle_fatigue = [controller.states["A_"+muscle_name_list[x]].cx for x in range(len(muscle_name_list))]
+        muscle_fatigue = [controller.states["A_" + muscle_name_list[x]].cx for x in range(len(muscle_name_list))]
         return sum(muscle_fatigue)

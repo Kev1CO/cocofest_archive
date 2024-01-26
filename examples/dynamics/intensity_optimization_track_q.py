@@ -21,8 +21,26 @@ n_stim = 10
 n_shooting = 10
 for i in range(n_stim):
     objective_functions.add(ObjectiveFcn.Lagrange.MINIMIZE_CONTROL, key="tau", weight=10, quadratic=True, phase=i)
-    objective_functions.add(ObjectiveFcn.Mayer.MINIMIZE_STATE, key="q", index=[0], node=Node.ALL, target=np.array([[1.57]]*(n_shooting+1)).T, weight=10, quadratic=True, phase=i)
-objective_functions.add(ObjectiveFcn.Mayer.MINIMIZE_STATE, key="qdot", index=[0], node=Node.ALL, target=np.array([[0]]*(n_shooting+1)).T, weight=10, quadratic=True, phase=i)
+    objective_functions.add(
+        ObjectiveFcn.Mayer.MINIMIZE_STATE,
+        key="q",
+        index=[0],
+        node=Node.ALL,
+        target=np.array([[1.57]] * (n_shooting + 1)).T,
+        weight=10,
+        quadratic=True,
+        phase=i,
+    )
+objective_functions.add(
+    ObjectiveFcn.Mayer.MINIMIZE_STATE,
+    key="qdot",
+    index=[0],
+    node=Node.ALL,
+    target=np.array([[0]] * (n_shooting + 1)).T,
+    weight=10,
+    quadratic=True,
+    phase=i,
+)
 
 minimum_pulse_intensity = DingModelIntensityFrequencyWithFatigue.min_pulse_intensity(
     DingModelIntensityFrequencyWithFatigue()

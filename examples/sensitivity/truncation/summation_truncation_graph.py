@@ -151,9 +151,15 @@ if computation_time_color_bar_scale == "different":
         )
 
 elif computation_time_color_bar_scale == "same":
-    cbar2 = fig.colorbar(im3, ax=axs[1], label="Computation time (s)", ticks=[3.033, 4, 5, 6, 7, 8, 9, 10.038],)
+    cbar2 = fig.colorbar(
+        im3,
+        ax=axs[1],
+        label="Computation time (s)",
+        ticks=[3.033, 4, 5, 6, 7, 8, 9, 10.038],
+    )
     cbar2.ax.set_yticklabels(
-        [3.033, 4, 5, 6, 7, 8, 9, 10.038], style="italic",
+        [3.033, 4, 5, 6, 7, 8, 9, 10.038],
+        style="italic",
     )
 
 axs[0].set_xlabel("Frequency (Hz)")
