@@ -89,6 +89,8 @@ class DingModelIntensityFrequencyWithFatigue(DingModelIntensityFrequency):
         t: MX = None,
         t_stim_prev: list[MX] | list[float] = None,
         intensity_stim: list[MX] | list[float] = None,
+        force_length_relationship: float | MX = 1,
+        force_velocity_relationship: float | MX = 1,
     ) -> MX:
         """
         The system dynamics is the function that describes the models.
@@ -118,7 +120,7 @@ class DingModelIntensityFrequencyWithFatigue(DingModelIntensityFrequency):
         """
         r0 = km + self.r0_km_relationship  # Simplification
         cn_dot = self.cn_dot_fun(cn, r0, t, t_stim_prev=t_stim_prev, intensity_stim=intensity_stim)  # Equation n°1
-        f_dot = self.f_dot_fun(cn, f, a, tau1, km)  # Equation n°2
+        f_dot = self.f_dot_fun(cn, f, a, tau1, km, force_length_relationship=force_length_relationship, force_velocity_relationship=force_velocity_relationship)  # Equation n°2
         a_dot = self.a_dot_fun(a, f)  # Equation n°5
         tau1_dot = self.tau1_dot_fun(tau1, f)  # Equation n°9
         km_dot = self.km_dot_fun(km, f)  # Equation n°11
@@ -179,6 +181,8 @@ class DingModelIntensityFrequencyWithFatigue(DingModelIntensityFrequency):
         nlp: NonLinearProgram,
         stim_apparition: list[float] = None,
         nlp_dynamics: NonLinearProgram = None,
+        force_length_relationship: float | MX = 1,
+        force_velocity_relationship: float | MX = 1,
     ) -> DynamicsEvaluation:
         """
         Functional electrical stimulation dynamic
@@ -231,6 +235,8 @@ class DingModelIntensityFrequencyWithFatigue(DingModelIntensityFrequency):
                 t=time,
                 t_stim_prev=stim_apparition,
                 intensity_stim=intensity_stim_prev,
+                force_length_relationship=force_length_relationship,
+                force_velocity_relationship=force_velocity_relationship,
             ),
             defects=None,
         )

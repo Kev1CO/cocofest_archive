@@ -107,6 +107,8 @@ class DingModelFrequency:
         f: MX,
         t: MX = None,
         t_stim_prev: list[MX] | list[float] = None,
+        force_length_relationship: MX | float = 1,
+        force_velocity_relationship: MX | float = 1,
     ) -> MX:
         """
         The system dynamics is the function that describes the models.
@@ -128,7 +130,7 @@ class DingModelFrequency:
         """
         r0 = self.km_rest + self.r0_km_relationship  # Simplification
         cn_dot = self.cn_dot_fun(cn, r0, t, t_stim_prev=t_stim_prev)  # Equation n°1
-        f_dot = self.f_dot_fun(cn, f, self.a_rest, self.tau1_rest, self.km_rest)  # Equation n°2
+        f_dot = self.f_dot_fun(cn, f, self.a_rest, self.tau1_rest, self.km_rest, force_length_relationship=force_length_relationship, force_velocity_relationship=force_velocity_relationship)  # Equation n°2
         return vertcat(cn_dot, f_dot)
 
     def exp_time_fun(self, t: MX, t_stim_i: MX) -> MX | float:
@@ -213,7 +215,7 @@ class DingModelFrequency:
 
         return (1 / self.tauc) * sum_multiplier - (cn / self.tauc)  # Equation n°1
 
-    def f_dot_fun(self, cn: MX, f: MX, a: MX | float, tau1: MX | float, km: MX | float) -> MX | float:
+    def f_dot_fun(self, cn: MX, f: MX, a: MX | float, tau1: MX | float, km: MX | float, force_length_relationship: MX | float = 1, force_velocity_relationship: MX | float = 1) -> MX | float:
         """
         Parameters
         ----------
@@ -232,7 +234,7 @@ class DingModelFrequency:
         -------
         The value of the derivative force (N)
         """
-        return a * (cn / (km + cn)) - (f / (tau1 + self.tau2 * (cn / (km + cn))))  # Equation n°2
+        return (a * (cn / (km + cn)) - (f / (tau1 + self.tau2 * (cn / (km + cn))))) * force_length_relationship * force_velocity_relationship # Equation n°2
 
     @staticmethod
     def dynamics(
@@ -244,6 +246,8 @@ class DingModelFrequency:
         nlp: NonLinearProgram,
         stim_apparition=None,
         nlp_dynamics=None,
+        force_length_relationship: MX | float = 1,
+        force_velocity_relationship: MX | float = 1,
     ) -> DynamicsEvaluation:
         """
         Functional electrical stimulation dynamic
@@ -277,6 +281,8 @@ class DingModelFrequency:
                 f=states[1],
                 t=time,
                 t_stim_prev=stim_apparition,
+                force_length_relationship=force_length_relationship,
+                force_velocity_relationship=force_velocity_relationship,
             ),
         )
 

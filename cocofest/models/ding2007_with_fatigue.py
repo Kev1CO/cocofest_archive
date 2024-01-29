@@ -89,6 +89,8 @@ class DingModelPulseDurationFrequencyWithFatigue(DingModelPulseDurationFrequency
         t: MX = None,
         t_stim_prev: list[MX] | list[float] = None,
         impulse_time: MX = None,
+        force_length_relationship: MX | float = 1,
+        force_velocity_relationship: MX | float = 1,
     ) -> MX:
         """
         The system dynamics is the function that describes the models.
@@ -117,7 +119,7 @@ class DingModelPulseDurationFrequencyWithFatigue(DingModelPulseDurationFrequency
         r0 = km + self.r0_km_relationship  # Simplification
         cn_dot = self.cn_dot_fun(cn, r0, t, t_stim_prev=t_stim_prev)  # Equation n°1 from Ding's 2003 article
         a_calculated = self.a_calculation(a_scale=a, impulse_time=impulse_time)  # Equation n°3 from Ding's 2007 article
-        f_dot = self.f_dot_fun(cn, f, a_calculated, tau1, km)  # Equation n°2 from Ding's 2003 article
+        f_dot = self.f_dot_fun(cn, f, a_calculated, tau1, km, force_length_relationship=force_length_relationship, force_velocity_relationship=force_velocity_relationship)  # Equation n°2 from Ding's 2003 article
         a_dot = self.a_dot_fun(a, f)
         tau1_dot = self.tau1_dot_fun(tau1, f)  # Equation n°9 from Ding's 2003 article
         km_dot = self.km_dot_fun(km, f)  # Equation n°11 from Ding's 2003 article
@@ -178,6 +180,8 @@ class DingModelPulseDurationFrequencyWithFatigue(DingModelPulseDurationFrequency
         nlp: NonLinearProgram,
         stim_apparition: list[float] = None,
         nlp_dynamics: NonLinearProgram = None,
+        force_length_relationship: MX | float = 1,
+        force_velocity_relationship: MX | float = 1,
     ) -> DynamicsEvaluation:
         """
         Functional electrical stimulation dynamic
@@ -225,6 +229,8 @@ class DingModelPulseDurationFrequencyWithFatigue(DingModelPulseDurationFrequency
                 t=time,
                 t_stim_prev=stim_apparition,
                 impulse_time=impulse_time,
+                force_length_relationship=force_length_relationship,
+                force_velocity_relationship=force_velocity_relationship,
             ),
             defects=None,
         )

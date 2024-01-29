@@ -115,20 +115,8 @@ class FESActuatedBiorbdModel(BiorbdModel):
             for i in range(len(muscle_states_idx)):
                 muscle_states = vertcat(muscle_states, states[muscle_states_idx[i]])
 
-            muscle_dxdt = muscle_model.dynamics(
-                time,
-                muscle_states,
-                controls,
-                parameters,
-                stochastic_variables,
-                nlp,
-                stim_apparition,
-                nlp_dynamics=muscle_model,
-            ).dxdt
-
             muscle_idx = bio_muscle_names_at_index.index(muscle_model.muscle_name)
 
-            muscle_forces = DynamicsFunctions.get(nlp.states["F_" + muscle_model.muscle_name], states)
             muscle_force_length_coeff = 1
             muscle_force_velocity_coeff = 1
             if nlp.model.muscle_force_length_relationship:
@@ -139,7 +127,21 @@ class FESActuatedBiorbdModel(BiorbdModel):
                 muscle_force_velocity_coeff = FESActuatedBiorbdModel.muscle_force_velocity_coefficient(
                     model=nlp.model.bio_model.model, muscle=nlp.model.bio_model.model.muscle(muscle_idx), q=q, qdot=qdot
                 )
-            muscle_forces = muscle_forces * muscle_force_length_coeff * muscle_force_velocity_coeff
+
+            muscle_dxdt = muscle_model.dynamics(
+                time,
+                muscle_states,
+                controls,
+                parameters,
+                stochastic_variables,
+                nlp,
+                stim_apparition,
+                nlp_dynamics=muscle_model,
+                force_length_relationship=muscle_force_length_coeff,
+                force_velocity_relationship=muscle_force_velocity_coeff,
+            ).dxdt
+
+            muscle_forces = DynamicsFunctions.get(nlp.states["F_" + muscle_model.muscle_name], states)
 
             moment_arm_matrix_for_the_muscle_and_joint = (
                 -nlp.model.bio_model.model.musclesLengthJacobian(q).to_mx()[muscle_idx, :].T
