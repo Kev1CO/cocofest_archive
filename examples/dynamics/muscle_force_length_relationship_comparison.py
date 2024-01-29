@@ -5,6 +5,7 @@ The stimulation frequency will be set to 10Hz and intensity to 40mA.
 No residual torque is allowed.
 """
 import matplotlib.pyplot as plt
+import numpy as np
 
 from bioptim import Solver
 
@@ -20,15 +21,15 @@ minimum_pulse_intensity = DingModelIntensityFrequencyWithFatigue.min_pulse_inten
 )
 
 sol_list = []
-muscle_force_length_relationship = [False, True, False, True]
+muscle_force_length_relationship = [False, True]
 fes_muscle_model = [
     [DingModelPulseDurationFrequencyWithFatigue(muscle_name="BIClong")],
     [DingModelPulseDurationFrequencyWithFatigue(muscle_name="BIClong")],
-    [DingModelIntensityFrequencyWithFatigue(muscle_name="BIClong")],
-    [DingModelIntensityFrequencyWithFatigue(muscle_name="BIClong")],
+    # [DingModelIntensityFrequencyWithFatigue(muscle_name="BIClong")],
+    # [DingModelIntensityFrequencyWithFatigue(muscle_name="BIClong")],
 ]
 
-for i in range(4):
+for i in range(2):
     ocp = FESActuatedBiorbdModelOCP.prepare_ocp(
         biorbd_model_path="/arm26_biceps_1dof.bioMod",
         bound_type="start",
@@ -37,7 +38,7 @@ for i in range(4):
         n_stim=10,
         n_shooting=10,
         final_time=1,
-        pulse_duration=0.00026,
+        pulse_duration=0.00025,
         pulse_intensity=40,
         with_residual_torque=False,
         muscle_force_length_relationship=muscle_force_length_relationship[i],
@@ -47,15 +48,13 @@ for i in range(4):
     sol = ocp.solve(Solver.IPOPT(_max_iter=1000))
     sol_list.append(sol.merge_phases())
 
-plt.title(
-    "Comparison between with and without muscle force length relationship for an elbow movement at 10Hz and 40mA or 260us"
-)
-plt.plot(sol_list[0].time, sol_list[0].states["q"][0], label="Pulse duration without force length relationship")
-plt.plot(sol_list[1].time, sol_list[1].states["q"][0], label="Pulse duration with force length relationship")
-plt.plot(sol_list[2].time, sol_list[2].states["q"][0], label="Pulse intensity without force length relationship")
-plt.plot(sol_list[3].time, sol_list[3].states["q"][0], label="Pulse intensity with force length relationship")
+plt.plot(sol_list[0].time, np.degrees(sol_list[0].states["q"][0]), label="without force length relationship")
+plt.plot(sol_list[1].time, np.degrees(sol_list[1].states["q"][0]), label="with force length relationship")
 
 plt.xlabel("Time (s)")
-plt.ylabel("Angle (rad)")
+plt.ylabel("Angle (°)")
 plt.legend()
 plt.show()
+
+joint_overestimation = np.degrees(sol_list[0].states["q"][0][-1]) - np.degrees(sol_list[1].states["q"][0][-1])
+print(f"Joint overestimation: {joint_overestimation} degrees")
