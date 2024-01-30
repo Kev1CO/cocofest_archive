@@ -146,3 +146,5 @@ ocp = OcpFes.prepare_ocp()
 # Citing
 `Cocofest` is not yet published in a journal.
 But if you use `Cocofest` in your research, please kindly cite this package by giving the repository link.
+
+![](https://github.com/Kev1CO/cocofest/tree/main/docs/arm_flexion.gif)
