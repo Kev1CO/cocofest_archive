@@ -7,7 +7,6 @@ sensitivity threshold and 130mA to satisfy the maintained elbow. No residual tor
 import numpy as np
 
 from bioptim import (
-    Node,
     ObjectiveFcn,
     ObjectiveList,
     Solver,
@@ -33,9 +32,6 @@ for i in range(n_stim):
 
 minimum_pulse_intensity = DingModelIntensityFrequency.min_pulse_intensity(DingModelIntensityFrequency())
 
-import time
-
-start_time = time.time()
 ocp = FESActuatedBiorbdModelOCP.prepare_ocp(
     biorbd_model_path="/arm26.bioMod",
     bound_type="start_end",
@@ -62,21 +58,8 @@ ocp = FESActuatedBiorbdModelOCP.prepare_ocp(
     q_tracking=track_q,
     use_sx=True,
 )
-print("--- %s seconds --- OCP" % (time.time() - start_time))
 
-start_time = time.time()
 sol = ocp.solve(Solver.IPOPT(_max_iter=1000))
-print("--- %s seconds --- SOL" % (time.time() - start_time))
 sol.animate()
 sol.graphs(show_bounds=False)
 print(sol.parameters)
-
-# Fast OCP :
-# --- 2.8143112659454346 seconds --- OCP
-# --- 55.290322065353394 seconds --- SOL
-# 106  1.7460726e+03
-
-# Slow OCP :
-# --- 84.57249999046326 seconds --- OCP
-# --- 56.183839321136475 seconds --- SOL
-#  106  1.7460726e+03

@@ -93,6 +93,10 @@ class DingModelPulseDurationFrequency(DingModelFrequency):
             The time list of the previous stimulations (ms)
         impulse_time: MX
             The pulsation duration of the current stimulation (ms)
+        force_length_relationship: MX | float
+            The force length relationship value (unitless)
+        force_velocity_relationship: MX | float
+            The force velocity relationship value (unitless)
 
         Returns
         -------
@@ -108,6 +112,8 @@ class DingModelPulseDurationFrequency(DingModelFrequency):
         """
         Parameters
         ----------
+        a_scale: float | MX
+            The scaling factor of the current stimulation (unitless)
         impulse_time: MX
             The pulsation duration of the current stimulation (s)
 
@@ -137,6 +143,8 @@ class DingModelPulseDurationFrequency(DingModelFrequency):
         ----------
         nlp_parameters: ParameterList
             The nlp list parameter
+        muscle_name: str
+            The muscle name
 
         Returns
         -------
@@ -161,7 +169,7 @@ class DingModelPulseDurationFrequency(DingModelFrequency):
         stochastic_variables: MX,
         nlp: NonLinearProgram,
         stim_apparition: list[float] = None,
-        nlp_dynamics=None,
+        fes_model=None,
         force_length_relationship: MX | float = 1,
         force_velocity_relationship: MX | float = 1,
     ) -> DynamicsEvaluation:
@@ -184,14 +192,20 @@ class DingModelPulseDurationFrequency(DingModelFrequency):
             A reference to the phase
         stim_apparition: list[float]
             The time list of the previous stimulations (s)
+        fes_model: DingModelPulseDurationFrequency
+            The current phase fes model
+        force_length_relationship: MX | float
+            The force length relationship value (unitless)
+        force_velocity_relationship: MX | float
+            The force velocity relationship value (unitless)
         Returns
         -------
         The derivative of the states in the tuple[MX] format
         """
         pulse_duration_parameters = (
             nlp.model.get_pulse_duration_parameters(nlp.parameters)
-            if nlp_dynamics is None
-            else nlp_dynamics.get_pulse_duration_parameters(nlp.parameters, muscle_name=nlp_dynamics.muscle_name)
+            if fes_model is None
+            else fes_model.get_pulse_duration_parameters(nlp.parameters, muscle_name=fes_model.muscle_name)
         )
 
         if pulse_duration_parameters.shape[0] == 1:  # check if pulse duration is mapped
@@ -199,7 +213,7 @@ class DingModelPulseDurationFrequency(DingModelFrequency):
         else:
             impulse_time = pulse_duration_parameters[nlp.phase_idx]
 
-        dxdt_fun = nlp_dynamics.system_dynamics if nlp_dynamics else nlp.model.system_dynamics
+        dxdt_fun = fes_model.system_dynamics if fes_model else nlp.model.system_dynamics
 
         return DynamicsEvaluation(
             dxdt=dxdt_fun(

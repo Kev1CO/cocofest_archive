@@ -11,7 +11,13 @@ from bioptim import (
     FatigueList,
 )
 
-from cocofest import DingModelFrequency, DingModelIntensityFrequency, DingModelPulseDurationFrequency
+from cocofest import (DingModelFrequency,
+                      DingModelFrequencyWithFatigue,
+                      DingModelPulseDurationFrequency,
+                      DingModelPulseDurationFrequencyWithFatigue,
+                      DingModelIntensityFrequency,
+                      DingModelIntensityFrequencyWithFatigue,
+                      )
 
 
 class FESActuatedBiorbdModel(BiorbdModel):
@@ -68,8 +74,11 @@ class FESActuatedBiorbdModel(BiorbdModel):
         stochastic_variables: MX | SX,
         nlp: NonLinearProgram,
         muscle_models: list[DingModelFrequency]
+        | list[DingModelFrequencyWithFatigue]
+        | list[DingModelPulseDurationFrequency]
+        | list[DingModelPulseDurationFrequencyWithFatigue]
         | list[DingModelIntensityFrequency]
-        | list[DingModelPulseDurationFrequency],
+        | list[DingModelIntensityFrequencyWithFatigue],
         stim_apparition=None,
         state_name_list=None,
     ) -> DynamicsEvaluation:
@@ -90,7 +99,12 @@ class FESActuatedBiorbdModel(BiorbdModel):
             The stochastic variables of the system
         nlp: NonLinearProgram
             A reference to the phase
-
+        muscle_models: list[DingModelFrequency] | list[DingModelIntensityFrequency] | list[DingModelPulseDurationFrequency] | list[DingModelFrequencyWithFatigue] | list[DingModelIntensityFrequencyWithFatigue] | list[DingModelPulseDurationFrequencyWithFatigue]
+            The list of the muscle models
+        stim_apparition: list[float]
+            The stimulations apparition time list  (s)
+        state_name_list: list[str]
+            The states names list
         Returns
         -------
         The derivative of the states in the tuple[MX | SX] format
@@ -136,7 +150,7 @@ class FESActuatedBiorbdModel(BiorbdModel):
                 stochastic_variables,
                 nlp,
                 stim_apparition,
-                nlp_dynamics=muscle_model,
+                fes_model=muscle_model,
                 force_length_relationship=muscle_force_length_coeff,
                 force_velocity_relationship=muscle_force_velocity_coeff,
             ).dxdt
@@ -276,6 +290,22 @@ class FESActuatedBiorbdModel(BiorbdModel):
 
     @staticmethod
     def muscle_force_length_coefficient(model, muscle, q):
+        """
+        Muscle force length coefficient from HillDeGroote
+
+        Parameters
+        ----------
+        model: BiorbdModel
+            The biorbd model
+        muscle: MX
+            The muscle
+        q: MX
+            The generalized coordinates
+
+        Returns
+        -------
+        The muscle force length coefficient
+        """
         b11 = 0.815
         b21 = 1.055
         b31 = 0.162
@@ -315,6 +345,24 @@ class FESActuatedBiorbdModel(BiorbdModel):
 
     @staticmethod
     def muscle_force_velocity_coefficient(model, muscle, q, qdot):
+        """
+        Muscle force velocity coefficient from HillDeGroote
+
+        Parameters
+        ----------
+        model: BiorbdModel
+            The biorbd model
+        muscle: MX
+            The muscle
+        q: MX
+            The generalized coordinates
+        qdot: MX
+            The generalized velocities
+
+        Returns
+        -------
+        The muscle force velocity coefficient
+        """
         muscle_velocity = muscle.velocity(model, q, qdot).to_mx()
         m_cste_maxShorteningSpeed = 10
         norm_v = muscle_velocity / m_cste_maxShorteningSpeed

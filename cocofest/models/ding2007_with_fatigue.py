@@ -1,6 +1,6 @@
 from typing import Callable
 
-from casadi import MX, vertcat, exp
+from casadi import MX, vertcat
 import numpy as np
 
 from bioptim import (
@@ -8,7 +8,6 @@ from bioptim import (
     DynamicsEvaluation,
     NonLinearProgram,
     OptimalControlProgram,
-    ParameterList,
 )
 from .ding2007 import DingModelPulseDurationFrequency
 
@@ -101,6 +100,8 @@ class DingModelPulseDurationFrequencyWithFatigue(DingModelPulseDurationFrequency
             The value of the ca_troponin_complex (unitless)
         f: MX
             The value of the force (N)
+        a: MX
+            The value of the scaling factor (unitless)
         tau1: MX
             The value of the time_state_force_no_cross_bridge (ms)
         km: MX
@@ -111,6 +112,10 @@ class DingModelPulseDurationFrequencyWithFatigue(DingModelPulseDurationFrequency
             The time list of the previous stimulations (ms)
         impulse_time: MX
             The pulsation duration of the current stimulation (ms)
+        force_length_relationship: MX | float
+            The force length relationship value (unitless)
+        force_velocity_relationship: MX | float
+            The force velocity relationship value (unitless)
 
         Returns
         -------
@@ -179,7 +184,7 @@ class DingModelPulseDurationFrequencyWithFatigue(DingModelPulseDurationFrequency
         stochastic_variables: MX,
         nlp: NonLinearProgram,
         stim_apparition: list[float] = None,
-        nlp_dynamics: NonLinearProgram = None,
+        fes_model=None,
         force_length_relationship: MX | float = 1,
         force_velocity_relationship: MX | float = 1,
     ) -> DynamicsEvaluation:
@@ -202,14 +207,20 @@ class DingModelPulseDurationFrequencyWithFatigue(DingModelPulseDurationFrequency
             A reference to the phase
         stim_apparition: list[float]
             The time list of the previous stimulations (s)
+        fes_model: DingModelPulseDurationFrequencyWithFatigue
+            The current phase fes model
+        force_length_relationship: MX | float
+            The force length relationship value (unitless)
+        force_velocity_relationship: MX | float
+            The force velocity relationship value (unitless)
         Returns
         -------
         The derivative of the states in the tuple[MX] format
         """
         pulse_duration_parameters = (
             nlp.model.get_pulse_duration_parameters(nlp.parameters)
-            if nlp_dynamics is None
-            else nlp_dynamics.get_pulse_duration_parameters(nlp.parameters, muscle_name=nlp_dynamics.muscle_name)
+            if fes_model is None
+            else fes_model.get_pulse_duration_parameters(nlp.parameters, muscle_name=fes_model.muscle_name)
         )
 
         if pulse_duration_parameters.shape[0] == 1:  # check if pulse duration is mapped
@@ -217,7 +228,7 @@ class DingModelPulseDurationFrequencyWithFatigue(DingModelPulseDurationFrequency
         else:
             impulse_time = pulse_duration_parameters[nlp.phase_idx]
 
-        dxdt_fun = nlp_dynamics.system_dynamics if nlp_dynamics else nlp.model.system_dynamics
+        dxdt_fun = fes_model.system_dynamics if fes_model else nlp.model.system_dynamics
 
         return DynamicsEvaluation(
             dxdt=dxdt_fun(
@@ -282,6 +293,8 @@ class DingModelPulseDurationFrequencyWithFatigue(DingModelPulseDurationFrequency
             If the generalized coordinates should be a control
         as_states_dot: bool
             If the generalized velocities should be a state_dot
+        muscle_name: str
+            The muscle name
         """
         muscle_name = "_" + muscle_name if muscle_name else ""
         name = "A" + muscle_name
@@ -320,6 +333,8 @@ class DingModelPulseDurationFrequencyWithFatigue(DingModelPulseDurationFrequency
             If the generalized coordinates should be a control
         as_states_dot: bool
             If the generalized velocities should be a state_dot
+        muscle_name: str
+            The muscle name
         """
         muscle_name = "_" + muscle_name if muscle_name else ""
         name = "Tau1" + muscle_name
@@ -358,6 +373,8 @@ class DingModelPulseDurationFrequencyWithFatigue(DingModelPulseDurationFrequency
             If the generalized coordinates should be a control
         as_states_dot: bool
             If the generalized velocities should be a state_dot
+        muscle_name: str
+            The muscle name
         """
         muscle_name = "_" + muscle_name if muscle_name else ""
         name = "Km" + muscle_name

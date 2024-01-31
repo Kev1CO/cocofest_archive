@@ -100,6 +100,10 @@ class DingModelFrequency:
     def muscle_name(self) -> None | str:
         return self._muscle_name
 
+    @property
+    def with_fatigue(self):
+        return self._with_fatigue
+
     # ---- Model's dynamics ---- #
     def system_dynamics(
         self,
@@ -123,6 +127,10 @@ class DingModelFrequency:
             The current time at which the dynamics is evaluated (ms)
         t_stim_prev: list[MX]
             The time list of the previous stimulations (ms)
+        force_length_relationship: MX | float
+            The force length relationship value (unitless)
+        force_velocity_relationship: MX | float
+            The force velocity relationship value (unitless)
 
         Returns
         -------
@@ -229,6 +237,10 @@ class DingModelFrequency:
             The previous step value of time_state_force_no_cross_bridge (ms)
         km: MX | float
             The previous step value of cross_bridges (unitless)
+        force_length_relationship: MX | float
+            The force length relationship value (unitless)
+        force_velocity_relationship: MX | float
+            The force velocity relationship value (unitless)
 
         Returns
         -------
@@ -245,7 +257,7 @@ class DingModelFrequency:
         stochastic_variables: MX,
         nlp: NonLinearProgram,
         stim_apparition=None,
-        nlp_dynamics=None,
+        fes_model=None,
         force_length_relationship: MX | float = 1,
         force_velocity_relationship: MX | float = 1,
     ) -> DynamicsEvaluation:
@@ -268,12 +280,18 @@ class DingModelFrequency:
             A reference to the phase
         stim_apparition: list[float]
             The time list of the previous stimulations (s)
+        fes_model: DingModelFrequency
+            The current phase fes model
+        force_length_relationship: MX | float
+            The force length relationship value (unitless)
+        force_velocity_relationship: MX | float
+            The force velocity relationship value (unitless)
         Returns
         -------
         The derivative of the states in the tuple[MX] format
         """
 
-        dxdt_fun = nlp_dynamics.system_dynamics if nlp_dynamics else nlp.model.system_dynamics
+        dxdt_fun = fes_model.system_dynamics if fes_model else nlp.model.system_dynamics
 
         return DynamicsEvaluation(
             dxdt=dxdt_fun(
@@ -328,6 +346,8 @@ class DingModelFrequency:
             If the generalized coordinates should be a control
         as_states_dot: bool
             If the generalized velocities should be a state_dot
+        muscle_name: str
+            The muscle name
         """
         muscle_name = "_" + muscle_name if muscle_name else ""
         name = "Cn" + muscle_name
@@ -366,6 +386,8 @@ class DingModelFrequency:
             If the generalized coordinates should be a control
         as_states_dot: bool
             If the generalized velocities should be a state_dot
+        muscle_name: str
+            The muscle name
         """
         muscle_name = "_" + muscle_name if muscle_name else ""
         name = "F" + muscle_name
@@ -401,7 +423,3 @@ class DingModelFrequency:
         if not isinstance(t_stim_prev[0], (MX, float)):
             t_stim_prev = [ocp.node_time(phase_idx=i, node_idx=0, type="mx") for i in range(nlp.phase_idx + 1)]
         return t_stim_prev
-
-    @property
-    def with_fatigue(self):
-        return self._with_fatigue

@@ -1,6 +1,6 @@
 from typing import Callable
 
-from casadi import MX, vertcat, tanh
+from casadi import MX, vertcat
 import numpy as np
 
 from bioptim import (
@@ -8,7 +8,6 @@ from bioptim import (
     DynamicsEvaluation,
     NonLinearProgram,
     OptimalControlProgram,
-    ParameterList,
 )
 from .hmed2018 import DingModelIntensityFrequency
 
@@ -113,6 +112,10 @@ class DingModelIntensityFrequencyWithFatigue(DingModelIntensityFrequency):
             The time list of the previous stimulations (ms)
         intensity_stim: list[MX]
             The pulsation intensity of the current stimulation (mA)
+        force_length_relationship: MX | float
+            The force length relationship value (unitless)
+        force_velocity_relationship: MX | float
+            The force velocity relationship value (unitless)
 
         Returns
         -------
@@ -180,7 +183,7 @@ class DingModelIntensityFrequencyWithFatigue(DingModelIntensityFrequency):
         stochastic_variables: MX,
         nlp: NonLinearProgram,
         stim_apparition: list[float] = None,
-        nlp_dynamics: NonLinearProgram = None,
+        fes_model=None,
         force_length_relationship: float | MX = 1,
         force_velocity_relationship: float | MX = 1,
     ) -> DynamicsEvaluation:
@@ -203,6 +206,12 @@ class DingModelIntensityFrequencyWithFatigue(DingModelIntensityFrequency):
             A reference to the phase
         stim_apparition: list[float]
             The time list of the previous stimulations (s)
+        fes_model: DingModelIntensityFrequencyWithFatigue
+            The current phase fes model
+        force_length_relationship: MX | float
+            The force length relationship value (unitless)
+        force_velocity_relationship: MX | float
+            The force velocity relationship value (unitless)
         Returns
         -------
         The derivative of the states in the tuple[MX] format
@@ -212,8 +221,8 @@ class DingModelIntensityFrequencyWithFatigue(DingModelIntensityFrequency):
         )  # Every stimulation intensity before the current phase, i.e.: the intensity of each phase
         intensity_parameters = (
             nlp.model.get_intensity_parameters(nlp.parameters)
-            if nlp_dynamics is None
-            else nlp_dynamics.get_intensity_parameters(nlp.parameters, muscle_name=nlp_dynamics.muscle_name)
+            if fes_model is None
+            else fes_model.get_intensity_parameters(nlp.parameters, muscle_name=fes_model.muscle_name)
         )
 
         if intensity_parameters.shape[0] == 1:  # check if pulse duration is mapped
@@ -223,7 +232,7 @@ class DingModelIntensityFrequencyWithFatigue(DingModelIntensityFrequency):
             for i in range(nlp.phase_idx + 1):
                 intensity_stim_prev.append(intensity_parameters[i])
 
-        dxdt_fun = nlp_dynamics.system_dynamics if nlp_dynamics else nlp.model.system_dynamics
+        dxdt_fun = fes_model.system_dynamics if fes_model else nlp.model.system_dynamics
 
         return DynamicsEvaluation(
             dxdt=dxdt_fun(
@@ -288,6 +297,8 @@ class DingModelIntensityFrequencyWithFatigue(DingModelIntensityFrequency):
             If the generalized coordinates should be a control
         as_states_dot: bool
             If the generalized velocities should be a state_dot
+        muscle_name: str
+            The muscle name
         """
         muscle_name = "_" + muscle_name if muscle_name else ""
         name = "A" + muscle_name
@@ -326,6 +337,8 @@ class DingModelIntensityFrequencyWithFatigue(DingModelIntensityFrequency):
             If the generalized coordinates should be a control
         as_states_dot: bool
             If the generalized velocities should be a state_dot
+        muscle_name: str
+            The muscle name
         """
         muscle_name = "_" + muscle_name if muscle_name else ""
         name = "Tau1" + muscle_name
@@ -364,6 +377,8 @@ class DingModelIntensityFrequencyWithFatigue(DingModelIntensityFrequency):
             If the generalized coordinates should be a control
         as_states_dot: bool
             If the generalized velocities should be a state_dot
+        muscle_name: str
+            The muscle name
         """
         muscle_name = "_" + muscle_name if muscle_name else ""
         name = "Km" + muscle_name

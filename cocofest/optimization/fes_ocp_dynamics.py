@@ -76,11 +76,17 @@ class FESActuatedBiorbdModelOCP:
         n_threads: int = 1,
     ):
         """
-        This definition prepares the ocp to be solved
+        This definition prepares the dynamics ocp to be solved
         .
         Attributes
         ----------
-            fes_muscle_models: DingModelFrequency | DingModelFrequencyWithFatigue | DingModelPulseDurationFrequency | DingModelPulseDurationFrequencyWithFatigue | DingModelIntensityFrequency | DingModelIntensityFrequencyWithFatigue
+            biorbd_model_path: str
+                The bioMod file path
+            bound_type: str
+                The bound type to use (start, end, start_end)
+            bound_data: list
+                The data to use for the bound
+            fes_muscle_models: list[DingModelFrequency] | list[DingModelFrequencyWithFatigue] | list[DingModelPulseDurationFrequency] | list[DingModelPulseDurationFrequencyWithFatigue] | list[DingModelIntensityFrequency] | list[DingModelIntensityFrequencyWithFatigue]
                 The fes model type used for the ocp
             n_stim: int
                 Number of stimulation that will occur during the ocp, it is as well refer as phases
@@ -88,10 +94,6 @@ class FESActuatedBiorbdModelOCP:
                 Number of shooting point for each individual phases
             final_time: float
                 Refers to the final time of the ocp
-            force_tracking: list[np.ndarray, np.ndarray]
-                List of time and associated force to track during ocp optimisation
-            end_node_tracking: int | float
-                Force objective value to reach at the last node
             time_min: int | float
                 Minimum time for a phase
             time_max: int | float
@@ -114,12 +116,28 @@ class FESActuatedBiorbdModelOCP:
                 Maximum pulse intensity for a phase
             pulse_intensity_bimapping: bool
                 Set pulse intensity constant among phases
+            force_tracking: list[np.ndarray, np.ndarray]
+                List of time and associated force to track during ocp optimisation
+            end_node_tracking: int | float
+                Force objective value to reach at the last node
+            q_tracking: list
+                List of time and associated q to track during ocp optimisation
             custom_objective: list[Objective]
                 Additional objective for the system
-            ode_solver: OdeSolver
-                The ode solver to use
+            with_residual_torque: bool
+                If residual torque is used
+            muscle_force_length_relationship: bool
+                If the force length relationship is used
+            muscle_force_velocity_relationship: bool
+                If the force velocity relationship is used
+            minimize_muscle_fatigue: bool
+                Minimize the muscle fatigue
             use_sx: bool
                 The nature of the casadi variables. MX are used if False.
+            ode_solver: OdeSolver
+                The ode solver to use
+            control_type: ControlType
+                The type of control to use
             n_threads: int
                 The number of thread to use while solving (multi-threading if > 1)
         """

@@ -73,8 +73,6 @@ class CustomObjective:
     def minimize_overall_muscle_fatigue(controller: PenaltyController) -> MX:
         """
         Minimize the overall muscle fatigue.
-        This function is quadratic, meaning that it minimizes towards the target.
-        Targets (default=np.zeros()) and indices (default=all_idx) can be specified.
 
         Parameters
         ----------
@@ -83,7 +81,7 @@ class CustomObjective:
 
         Returns
         -------
-        The difference between the two keys
+        The sum of each force scaling factor
         """
         muscle_name_list = controller.model.bio_model.muscle_names
         muscle_fatigue = [controller.states["A_" + muscle_name_list[x]].cx for x in range(len(muscle_name_list))]
