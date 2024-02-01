@@ -3,6 +3,7 @@ import numpy as np
 from bioptim import (
     BoundsList,
     ControlType,
+    ConstraintList,
     DynamicsList,
     InitialGuessList,
     Objective,
@@ -66,6 +67,7 @@ class FESActuatedBiorbdModelOCP:
         end_node_tracking: int | float = None,
         q_tracking: list = None,
         custom_objective: ObjectiveList = None,
+        custom_constraint: ConstraintList = None,
         with_residual_torque: bool = False,
         muscle_force_length_relationship: bool = False,
         muscle_force_velocity_relationship: bool = False,
@@ -217,6 +219,8 @@ class FESActuatedBiorbdModelOCP:
             pulse_intensity_bimapping=pulse_intensity_bimapping,
             pulse_intensity_similar_for_all_muscles=pulse_intensity_similar_for_all_muscles,
         )
+
+        constraints = FESActuatedBiorbdModelOCP._set_constraints(constraints, custom_constraint)
 
         if len(constraints) == 0 and len(parameters) == 0:
             raise ValueError(
@@ -445,6 +449,15 @@ class FESActuatedBiorbdModelOCP:
                     # TODO : Fix Bimapping in Bioptim
 
         return parameters, parameters_bounds, parameters_init, parameter_objectives
+
+    @staticmethod
+    def _set_constraints(constraints, custom_constraint):
+        if custom_constraint:
+            for i in range(len(custom_constraint)):
+                if custom_constraint[i]:
+                    for j in range(len(custom_constraint[i])):
+                        constraints.add(custom_constraint[i][j])
+        return constraints
 
     @staticmethod
     def _set_bounds(bio_models, fes_muscle_models, bound_type, bound_data, n_stim):
