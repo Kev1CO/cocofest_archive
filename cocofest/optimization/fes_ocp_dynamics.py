@@ -650,6 +650,17 @@ class FESActuatedBiorbdModelOCP:
                     phase=i,
                 )
 
+        # if minimize_muscle_fatigue:
+        #     for i in range(n_stim):
+        #         objective_functions.add(
+        #             CustomObjective.minimize_overall_muscle_force,
+        #             custom_type=ObjectiveFcn.Mayer,
+        #             node=Node.ALL,
+        #             quadratic=True,
+        #             weight=1,
+        #             phase=i,
+        #         )
+
         return objective_functions
 
     @staticmethod

@@ -23,23 +23,54 @@ from cocofest import DingModelIntensityFrequencyWithFatigue, DingModelPulseDurat
 get_results = True
 make_graphs = False
 
+# Fiber type proportion from [1]
+biceps_fiber_type_2_proportion = 0.607
+triceps_fiber_type_2_proportion = 0.465
+brachioradialis_fiber_type_2_proportion = 0.457
+
+biceps_long_duration = DingModelPulseDurationFrequencyWithFatigue(muscle_name="BIClong")
+biceps_long_duration.alpha_a = biceps_long_duration.alpha_a * biceps_fiber_type_2_proportion
+biceps_short_duration = DingModelPulseDurationFrequencyWithFatigue(muscle_name="BICshort")
+biceps_short_duration.alpha_a = biceps_short_duration.alpha_a * biceps_fiber_type_2_proportion
+triceps_long_duration = DingModelPulseDurationFrequencyWithFatigue(muscle_name="TRIlong")
+triceps_long_duration.alpha_a = triceps_long_duration.alpha_a * triceps_fiber_type_2_proportion
+triceps_lat_duration = DingModelPulseDurationFrequencyWithFatigue(muscle_name="TRIlat")
+triceps_lat_duration.alpha_a = triceps_lat_duration.alpha_a * triceps_fiber_type_2_proportion
+triceps_med_duration = DingModelPulseDurationFrequencyWithFatigue(muscle_name="TRImed")
+triceps_med_duration.alpha_a = triceps_med_duration.alpha_a * triceps_fiber_type_2_proportion
+brachioradialis_duration = DingModelPulseDurationFrequencyWithFatigue(muscle_name="BRA")
+brachioradialis_duration.alpha_a = brachioradialis_duration.alpha_a * brachioradialis_fiber_type_2_proportion
+
+biceps_long_intensity = DingModelIntensityFrequencyWithFatigue(muscle_name="BIClong")
+biceps_long_intensity.alpha_a = biceps_long_intensity.alpha_a * biceps_fiber_type_2_proportion
+biceps_short_intensity = DingModelIntensityFrequencyWithFatigue(muscle_name="BICshort")
+biceps_short_intensity.alpha_a = biceps_short_intensity.alpha_a * biceps_fiber_type_2_proportion
+triceps_long_intensity = DingModelIntensityFrequencyWithFatigue(muscle_name="TRIlong")
+triceps_long_intensity.alpha_a = triceps_long_intensity.alpha_a * triceps_fiber_type_2_proportion
+triceps_lat_intensity = DingModelIntensityFrequencyWithFatigue(muscle_name="TRIlat")
+triceps_lat_intensity.alpha_a = triceps_lat_intensity.alpha_a * triceps_fiber_type_2_proportion
+triceps_med_intensity = DingModelIntensityFrequencyWithFatigue(muscle_name="TRImed")
+triceps_med_intensity.alpha_a = triceps_med_intensity.alpha_a * triceps_fiber_type_2_proportion
+brachioradialis_intensity = DingModelIntensityFrequencyWithFatigue(muscle_name="BRA")
+brachioradialis_intensity.alpha_a = brachioradialis_intensity.alpha_a * brachioradialis_fiber_type_2_proportion
+
 if get_results:
-    n_stim = 28
+    n_stim = 20
     n_shooting = 5
     objective_functions = ObjectiveList()
 
-    fes_muscle_models = [[DingModelPulseDurationFrequencyWithFatigue(muscle_name="BIClong"),
-                          DingModelPulseDurationFrequencyWithFatigue(muscle_name="BICshort"),
-                          DingModelPulseDurationFrequencyWithFatigue(muscle_name="TRIlong"),
-                          DingModelPulseDurationFrequencyWithFatigue(muscle_name="TRIlat"),
-                          DingModelPulseDurationFrequencyWithFatigue(muscle_name="TRImed"),
-                          DingModelPulseDurationFrequencyWithFatigue(muscle_name="BRA")],
-                         [DingModelIntensityFrequencyWithFatigue(muscle_name="BIClong"),
-                          DingModelIntensityFrequencyWithFatigue(muscle_name="BICshort"),
-                          DingModelIntensityFrequencyWithFatigue(muscle_name="TRIlong"),
-                          DingModelIntensityFrequencyWithFatigue(muscle_name="TRIlat"),
-                          DingModelIntensityFrequencyWithFatigue(muscle_name="TRImed"),
-                          DingModelIntensityFrequencyWithFatigue(muscle_name="BRA")]]
+    fes_muscle_models = [[biceps_long_duration,
+                          biceps_short_duration,
+                          triceps_long_duration,
+                          triceps_lat_duration,
+                          triceps_med_duration,
+                          brachioradialis_duration],
+                         [biceps_long_intensity,
+                          biceps_short_intensity,
+                          triceps_long_intensity,
+                          triceps_lat_intensity,
+                          triceps_med_intensity,
+                          brachioradialis_intensity]]
 
     for i in range(n_stim):
         objective_functions.add(
@@ -55,7 +86,7 @@ if get_results:
         ConstraintFcn.SUPERIMPOSE_MARKERS,
         first_marker="COM_hand",
         second_marker="reaching_target",
-        phase=19,
+        phase=9,
         node=Node.END,
         axes=[Axis.X, Axis.Y]
     )
@@ -68,7 +99,7 @@ if get_results:
         target=np.array([[0, 0]] * (n_shooting + 1)).T,
         weight=1000,
         quadratic=True,
-        phase=19,
+        phase=9,
     )
 
     minimum_pulse_intensity = DingModelIntensityFrequencyWithFatigue.min_pulse_intensity(
@@ -83,49 +114,47 @@ if get_results:
     controls = []
     parameters = []
     for i in range(len(pickle_file_list)):
-        if i == 0:
-            pass
-        else:
-            ocp = FESActuatedBiorbdModelOCP.prepare_ocp(
-                biorbd_model_path="arm26.bioMod",
-                bound_type="start_end",
-                bound_data=[[0, 5], [0, 5]],
-                fes_muscle_models=fes_muscle_models[i],
-                n_stim=n_stim,
-                n_shooting=n_shooting,
-                final_time=1.4,
-                pulse_duration_min=minimum_pulse_duration,
-                pulse_duration_max=0.0006,
-                pulse_duration_bimapping=False,
-                pulse_intensity_min=minimum_pulse_intensity,
-                pulse_intensity_max=80,
-                pulse_intensity_bimapping=False,
-                with_residual_torque=True,
-                custom_objective=objective_functions,
-                custom_constraint=constraint,
-                muscle_force_length_relationship=True,
-                muscle_force_velocity_relationship=True,
-                minimize_muscle_fatigue=False,
-                use_sx=False,
-            )
 
-            sol = ocp.solve(Solver.IPOPT(_max_iter=1000)).merge_phases()
-            # sol.animate()
-            # sol.graphs(show_bounds=False)
-            time = sol.time
-            states = sol.states
-            controls = sol.controls
-            parameters = sol.parameters
+        ocp = FESActuatedBiorbdModelOCP.prepare_ocp(
+            biorbd_model_path="arm26.bioMod",
+            bound_type="start_end",
+            bound_data=[[0, 130], [0, 130]],
+            fes_muscle_models=fes_muscle_models[i],
+            n_stim=n_stim,
+            n_shooting=n_shooting,
+            final_time=1,
+            pulse_duration_min=minimum_pulse_duration,
+            pulse_duration_max=0.0006,
+            pulse_duration_bimapping=False,
+            pulse_intensity_min=minimum_pulse_intensity,
+            pulse_intensity_max=80,
+            pulse_intensity_bimapping=False,
+            with_residual_torque=True,
+            custom_objective=objective_functions,
+            custom_constraint=constraint,
+            muscle_force_length_relationship=True,
+            muscle_force_velocity_relationship=True,
+            minimize_muscle_fatigue=True,
+            use_sx=False,
+        )
 
-            dictionary = {
-                "time": time,
-                "states": states,
-                "controls": controls,
-                "parameters": parameters,
-                }
+        sol = ocp.solve(Solver.IPOPT(_max_iter=1000))  #.merge_phases()
+        sol.animate()
+        sol.graphs(show_bounds=False)
+        time = sol.time
+        states = sol.states
+        controls = sol.controls
+        parameters = sol.parameters
 
-            with open(pickle_file_list[i], "wb") as file:
-                pickle.dump(dictionary, file)
+        dictionary = {
+            "time": time,
+            "states": states,
+            "controls": controls,
+            "parameters": parameters,
+            }
+
+        with open(pickle_file_list[i], "wb") as file:
+            pickle.dump(dictionary, file)
 
 
 if make_graphs:
@@ -170,3 +199,8 @@ if make_graphs:
     # fig.tight_layout()
     plt.show()
 
+
+
+# [1] Dahmane, R., Djordjevič, S., Šimunič, B., & Valenčič, V. (2005).
+# Spatial fiber type distribution in normal human muscle: histochemical and tensiomyographical evaluation.
+# Journal of biomechanics, 38(12), 2451-2459.
