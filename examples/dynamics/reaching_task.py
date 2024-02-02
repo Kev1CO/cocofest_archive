@@ -9,6 +9,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 from bioptim import (
+    Axis,
     ObjectiveFcn,
     ObjectiveList,
     ConstraintList,
@@ -23,8 +24,8 @@ get_results = True
 make_graphs = False
 
 if get_results:
-    n_stim = 10
-    n_shooting = 10
+    n_stim = 28
+    n_shooting = 5
     objective_functions = ObjectiveList()
 
     fes_muscle_models = [[DingModelPulseDurationFrequencyWithFatigue(muscle_name="BIClong"),
@@ -44,17 +45,19 @@ if get_results:
         objective_functions.add(
             ObjectiveFcn.Lagrange.MINIMIZE_CONTROL,
             key="tau",
-            weight=1,
+            weight=100000,
             quadratic=True,
             phase=i,
         )
-    objective_functions.add(
-        ObjectiveFcn.Mayer.SUPERIMPOSE_MARKERS,
+
+    constraint = ConstraintList()
+    constraint.add(
+        ConstraintFcn.SUPERIMPOSE_MARKERS,
         first_marker="COM_hand",
         second_marker="reaching_target",
-        phase=6,
+        phase=19,
         node=Node.END,
-        weight=10000,
+        axes=[Axis.X, Axis.Y]
     )
 
     objective_functions.add(
@@ -63,9 +66,9 @@ if get_results:
         index=[0, 1],
         node=Node.END,
         target=np.array([[0, 0]] * (n_shooting + 1)).T,
-        weight=100,
+        weight=1000,
         quadratic=True,
-        phase=6,
+        phase=19,
     )
 
     minimum_pulse_intensity = DingModelIntensityFrequencyWithFatigue.min_pulse_intensity(
@@ -74,50 +77,55 @@ if get_results:
 
     minimum_pulse_duration = DingModelPulseDurationFrequencyWithFatigue().pd0
 
-    pickle_file_list = ["pulse_duration.pkl", "pulse_intensity.pkl"]
+    pickle_file_list = ["pulse_duration_normal.pkl", "pulse_intensity_normal.pkl"]
     time = []
     states = []
     controls = []
     parameters = []
     for i in range(len(pickle_file_list)):
-        ocp = FESActuatedBiorbdModelOCP.prepare_ocp(
-            biorbd_model_path="arm26.bioMod",
-            bound_type="start_end",
-            bound_data=[[0, 5], [0, 5]],
-            fes_muscle_models=fes_muscle_models[i],
-            n_stim=n_stim,
-            n_shooting=10,
-            final_time=1,
-            pulse_duration_min=minimum_pulse_duration,
-            pulse_duration_max=0.0006,
-            pulse_duration_bimapping=False,
-            pulse_intensity_min=minimum_pulse_intensity,
-            pulse_intensity_max=80,
-            pulse_intensity_bimapping=False,
-            with_residual_torque=True,
-            custom_objective=objective_functions,
-            muscle_force_length_relationship=True,
-            muscle_force_velocity_relationship=True,
-            use_sx=False,
-        )
+        if i == 0:
+            pass
+        else:
+            ocp = FESActuatedBiorbdModelOCP.prepare_ocp(
+                biorbd_model_path="arm26.bioMod",
+                bound_type="start_end",
+                bound_data=[[0, 5], [0, 5]],
+                fes_muscle_models=fes_muscle_models[i],
+                n_stim=n_stim,
+                n_shooting=n_shooting,
+                final_time=1.4,
+                pulse_duration_min=minimum_pulse_duration,
+                pulse_duration_max=0.0006,
+                pulse_duration_bimapping=False,
+                pulse_intensity_min=minimum_pulse_intensity,
+                pulse_intensity_max=80,
+                pulse_intensity_bimapping=False,
+                with_residual_torque=True,
+                custom_objective=objective_functions,
+                custom_constraint=constraint,
+                muscle_force_length_relationship=True,
+                muscle_force_velocity_relationship=True,
+                minimize_muscle_fatigue=False,
+                use_sx=False,
+            )
 
-        sol = ocp.solve(Solver.IPOPT(_max_iter=1000))  #.merge_phases()
-        sol.animate()
-        sol.graphs(show_bounds=False)
-        time = sol.time
-        states = sol.states
-        controls = sol.controls
-        parameters = sol.parameters
+            sol = ocp.solve(Solver.IPOPT(_max_iter=1000)).merge_phases()
+            # sol.animate()
+            # sol.graphs(show_bounds=False)
+            time = sol.time
+            states = sol.states
+            controls = sol.controls
+            parameters = sol.parameters
 
-        dictionary = {
-            "time": time,
-            "states": states,
-            "controls": controls,
-            "parameters": parameters,
-            }
+            dictionary = {
+                "time": time,
+                "states": states,
+                "controls": controls,
+                "parameters": parameters,
+                }
 
-        with open(pickle_file_list[i], "wb") as file:
-            pickle.dump(dictionary, file)
+            with open(pickle_file_list[i], "wb") as file:
+                pickle.dump(dictionary, file)
 
 
 if make_graphs:
@@ -154,7 +162,6 @@ if make_graphs:
 
     plt.setp(axs, xticks=[0, 0.25, 0.5, 0.75, 1], xticklabels=[0, 0.25, 0.5, 0.75, 1],
              yticks=[0, 75, 150], yticklabels=[0, 75, 150])
-
 
     fig.supxlabel('Time (s)', font="Times New Roman", fontsize=14)
     fig.supylabel('Force (N)', font="Times New Roman", fontsize=14)
