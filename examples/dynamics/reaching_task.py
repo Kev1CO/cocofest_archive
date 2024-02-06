@@ -78,7 +78,7 @@ brachioradialis_intensity.a_rest = brachioradialis_intensity.a_rest * brachiorad
 pickle_file_list = ["minimize_muscle_force.pkl", "minimize_muscle_fatigue.pkl"]
 if get_results:
     for i in range(len(pickle_file_list)):
-        n_stim = 40
+        n_stim = 60
         n_shooting = 2
         objective_functions = ObjectiveList()
 
@@ -95,21 +95,21 @@ if get_results:
                               triceps_med_intensity,
                               brachioradialis_intensity]]
 
-        for j in range(n_stim):
-            objective_functions.add(
-                ObjectiveFcn.Lagrange.MINIMIZE_CONTROL,
-                key="tau",
-                weight=100000,
-                quadratic=True,
-                phase=j,
-            )
+        # for j in range(n_stim):
+        #     objective_functions.add(
+        #         ObjectiveFcn.Lagrange.MINIMIZE_CONTROL,
+        #         key="tau",
+        #         weight=100000,
+        #         quadratic=True,
+        #         phase=j,
+        #     )
 
         constraint = ConstraintList()
         constraint.add(
             ConstraintFcn.SUPERIMPOSE_MARKERS,
             first_marker="COM_hand",
             second_marker="reaching_target",
-            phase=19,
+            phase=29,
             node=Node.END,
             axes=[Axis.X, Axis.Y]
         )
@@ -122,7 +122,7 @@ if get_results:
             target=np.array([[0, 0]] * (n_shooting + 1)).T,
             weight=1000,
             quadratic=True,
-            phase=20,
+            phase=30,
         )
 
         objective_functions.add(
@@ -133,7 +133,7 @@ if get_results:
             target=np.array([[0, 0]] * (n_shooting + 1)).T,
             weight=1000,
             quadratic=True,
-            phase=21,
+            phase=31,
         )
 
         minimum_pulse_intensity = DingModelIntensityFrequencyWithFatigue.min_pulse_intensity(
@@ -154,14 +154,14 @@ if get_results:
             fes_muscle_models=fes_muscle_models[0],
             n_stim=n_stim,
             n_shooting=n_shooting,
-            final_time=1,
+            final_time=2,
             pulse_duration_min=minimum_pulse_duration,
             pulse_duration_max=0.0006,
             pulse_duration_bimapping=False,
             pulse_intensity_min=minimum_pulse_intensity,
             pulse_intensity_max=80,
             pulse_intensity_bimapping=False,
-            with_residual_torque=True,
+            with_residual_torque=False,
             custom_objective=objective_functions,
             custom_constraint=constraint,
             muscle_force_length_relationship=True,
@@ -171,9 +171,9 @@ if get_results:
             use_sx=False,
         )
 
-        sol = ocp.solve(Solver.IPOPT(_max_iter=1000)).merge_phases()
-        # sol.animate()
-        # sol.graphs(show_bounds=False)
+        sol = ocp.solve(Solver.IPOPT(_max_iter=1000)) #.merge_phases()
+        sol.animate()
+        sol.graphs(show_bounds=False)
         time = sol.time
         states = sol.states
         controls = sol.controls
