@@ -72,6 +72,7 @@ class FESActuatedBiorbdModelOCP:
         muscle_force_length_relationship: bool = False,
         muscle_force_velocity_relationship: bool = False,
         minimize_muscle_fatigue: bool = False,
+        minimize_muscle_force: bool = False,
         use_sx: bool = True,
         ode_solver: OdeSolverBase = OdeSolver.RK4(n_integration_steps=1),
         control_type: ControlType = ControlType.CONSTANT,
@@ -134,6 +135,8 @@ class FESActuatedBiorbdModelOCP:
                 If the force velocity relationship is used
             minimize_muscle_fatigue: bool
                 Minimize the muscle fatigue
+            minimize_muscle_force: bool
+                Minimize the muscle force
             use_sx: bool
                 The nature of the casadi variables. MX are used if False.
             ode_solver: OdeSolver
@@ -260,6 +263,7 @@ class FESActuatedBiorbdModelOCP:
             custom_objective,
             q_fourier_coef,
             minimize_muscle_fatigue,
+            minimize_muscle_force,
         )
 
         return OptimalControlProgram(
@@ -541,6 +545,7 @@ class FESActuatedBiorbdModelOCP:
             #     q_x_bounds = bound_data[i]
 
             q_x_bounds.min[0] = 0
+            q_x_bounds.max[1] = 2.6166666666666667
 
             if i == 0:
                 if bound_type == "start_end":
@@ -593,6 +598,7 @@ class FESActuatedBiorbdModelOCP:
         custom_objective,
         q_fourier_coef,
         minimize_muscle_fatigue,
+        minimize_muscle_force,
     ):
         # Creates the objective for our problem
         objective_functions = ObjectiveList()
@@ -655,16 +661,16 @@ class FESActuatedBiorbdModelOCP:
                     phase=i,
                 )
 
-        # if minimize_muscle_fatigue:
-        #     for i in range(n_stim):
-        #         objective_functions.add(
-        #             CustomObjective.minimize_overall_muscle_force,
-        #             custom_type=ObjectiveFcn.Mayer,
-        #             node=Node.ALL,
-        #             quadratic=True,
-        #             weight=1,
-        #             phase=i,
-        #         )
+        if minimize_muscle_force:
+            for i in range(n_stim):
+                objective_functions.add(
+                    CustomObjective.minimize_overall_muscle_force_production,
+                    custom_type=ObjectiveFcn.Mayer,
+                    node=Node.ALL,
+                    quadratic=True,
+                    weight=1,
+                    phase=i,
+                )
 
         return objective_functions
 

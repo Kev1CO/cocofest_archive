@@ -75,96 +75,86 @@ brachioradialis_intensity = DingModelIntensityFrequencyWithFatigue(muscle_name="
 brachioradialis_intensity.alpha_a = brachioradialis_intensity.alpha_a * brachioradialis_fiber_type_2_proportion
 brachioradialis_intensity.a_rest = brachioradialis_intensity.a_rest * brachioradialis_a_rest_proportion
 
-
+pickle_file_list = ["minimize_muscle_force.pkl", "minimize_muscle_fatigue.pkl"]
 if get_results:
-    n_stim = 100
-    n_shooting = 1
-    objective_functions = ObjectiveList()
+    for i in range(len(pickle_file_list)):
+        n_stim = 40
+        n_shooting = 2
+        objective_functions = ObjectiveList()
 
-    fes_muscle_models = [[biceps_long_duration,
-                          biceps_short_duration,
-                          triceps_long_duration,
-                          triceps_lat_duration,
-                          triceps_med_duration,
-                          brachioradialis_duration],
-                         [biceps_long_intensity,
-                          biceps_short_intensity,
-                          triceps_long_intensity,
-                          triceps_lat_intensity,
-                          triceps_med_intensity,
-                          brachioradialis_intensity]]
+        fes_muscle_models = [[biceps_long_duration,
+                              biceps_short_duration,
+                              triceps_long_duration,
+                              triceps_lat_duration,
+                              triceps_med_duration,
+                              brachioradialis_duration],
+                             [biceps_long_intensity,
+                              biceps_short_intensity,
+                              triceps_long_intensity,
+                              triceps_lat_intensity,
+                              triceps_med_intensity,
+                              brachioradialis_intensity]]
 
-    for i in range(n_stim):
-        objective_functions.add(
-            ObjectiveFcn.Lagrange.MINIMIZE_CONTROL,
-            key="tau",
-            weight=100000,
-            quadratic=True,
-            phase=i,
+        for j in range(n_stim):
+            objective_functions.add(
+                ObjectiveFcn.Lagrange.MINIMIZE_CONTROL,
+                key="tau",
+                weight=100000,
+                quadratic=True,
+                phase=j,
+            )
+
+        constraint = ConstraintList()
+        constraint.add(
+            ConstraintFcn.SUPERIMPOSE_MARKERS,
+            first_marker="COM_hand",
+            second_marker="reaching_target",
+            phase=19,
+            node=Node.END,
+            axes=[Axis.X, Axis.Y]
         )
 
-    constraint = ConstraintList()
-    constraint.add(
-        ConstraintFcn.SUPERIMPOSE_MARKERS,
-        first_marker="COM_hand",
-        second_marker="reaching_target",
-        phase=24,
-        node=Node.END,
-        axes=[Axis.X, Axis.Y]
-    )
+        objective_functions.add(
+            ObjectiveFcn.Mayer.MINIMIZE_STATE,
+            key="qdot",
+            index=[0, 1],
+            node=Node.ALL,
+            target=np.array([[0, 0]] * (n_shooting + 1)).T,
+            weight=1000,
+            quadratic=True,
+            phase=20,
+        )
 
-    # objective_functions.add(
-    #     ObjectiveFcn.Mayer.SUPERIMPOSE_MARKERS,
-    #     node=Node.ALL,
-    #     first_marker="COM_hand",
-    #     second_marker="reaching_target",
-    #     weight=1000,
-    #     quadratic=True,
-    #     phase=24,
-    # )
-    #
-    # objective_functions.add(
-    #     ObjectiveFcn.Mayer.SUPERIMPOSE_MARKERS,
-    #     node=Node.ALL,
-    #     first_marker="COM_hand",
-    #     second_marker="reaching_target",
-    #     weight=1000,
-    #     quadratic=True,
-    #     phase=25,
-    # )
+        objective_functions.add(
+            ObjectiveFcn.Mayer.MINIMIZE_STATE,
+            key="qdot",
+            index=[0, 1],
+            node=Node.ALL,
+            target=np.array([[0, 0]] * (n_shooting + 1)).T,
+            weight=1000,
+            quadratic=True,
+            phase=21,
+        )
 
-    objective_functions.add(
-        ObjectiveFcn.Mayer.MINIMIZE_STATE,
-        key="qdot",
-        index=[0, 1],
-        node=Node.ALL,
-        target=np.array([[0, 0]] * (n_shooting + 1)).T,
-        weight=1000,
-        quadratic=True,
-        phase=25,
-    )
+        minimum_pulse_intensity = DingModelIntensityFrequencyWithFatigue.min_pulse_intensity(
+            DingModelIntensityFrequencyWithFatigue()
+        )
 
-    minimum_pulse_intensity = DingModelIntensityFrequencyWithFatigue.min_pulse_intensity(
-        DingModelIntensityFrequencyWithFatigue()
-    )
+        minimum_pulse_duration = DingModelPulseDurationFrequencyWithFatigue().pd0
 
-    minimum_pulse_duration = DingModelPulseDurationFrequencyWithFatigue().pd0
-
-    pickle_file_list = ["pulse_duration_normal.pkl", "pulse_intensity_normal.pkl"]
-    time = []
-    states = []
-    controls = []
-    parameters = []
-    for i in range(len(pickle_file_list)):
+        time = []
+        states = []
+        controls = []
+        parameters = []
 
         ocp = FESActuatedBiorbdModelOCP.prepare_ocp(
             biorbd_model_path="arm26.bioMod",
             bound_type="start_end",
-            bound_data=[[0, 130], [0, 130]],
-            fes_muscle_models=fes_muscle_models[i],
+            bound_data=[[0, 150], [0, 150]],
+            fes_muscle_models=fes_muscle_models[0],
             n_stim=n_stim,
             n_shooting=n_shooting,
-            final_time=2,
+            final_time=1,
             pulse_duration_min=minimum_pulse_duration,
             pulse_duration_max=0.0006,
             pulse_duration_bimapping=False,
@@ -176,13 +166,14 @@ if get_results:
             custom_constraint=constraint,
             muscle_force_length_relationship=True,
             muscle_force_velocity_relationship=True,
-            minimize_muscle_fatigue=True,
+            minimize_muscle_fatigue=True if pickle_file_list[i] == "minimize_muscle_fatigue.pkl" else False,
+            minimize_muscle_force=True if pickle_file_list[i] == "minimize_muscle_force.pkl" else False,
             use_sx=False,
         )
 
-        sol = ocp.solve(Solver.IPOPT(_max_iter=1000))  #.merge_phases()
-        sol.animate()
-        sol.graphs(show_bounds=False)
+        sol = ocp.solve(Solver.IPOPT(_max_iter=1000)).merge_phases()
+        # sol.animate()
+        # sol.graphs(show_bounds=False)
         time = sol.time
         states = sol.states
         controls = sol.controls
