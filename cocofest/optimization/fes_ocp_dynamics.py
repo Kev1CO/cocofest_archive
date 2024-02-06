@@ -537,6 +537,11 @@ class FESActuatedBiorbdModelOCP:
             q_x_bounds = bio_models[i].bounds_from_ranges("q")
             qdot_x_bounds = bio_models[i].bounds_from_ranges("qdot")
 
+            # if bound_type == "all":
+            #     q_x_bounds = bound_data[i]
+
+            q_x_bounds.min[0] = 0
+
             if i == 0:
                 if bound_type == "start_end":
                     for j in range(bio_models[i].nb_q):

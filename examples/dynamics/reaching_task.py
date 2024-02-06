@@ -28,35 +28,57 @@ biceps_fiber_type_2_proportion = 0.607
 triceps_fiber_type_2_proportion = 0.465
 brachioradialis_fiber_type_2_proportion = 0.457
 
+# PCSA (cm²) from [2]
+biceps_pcsa = 12.7
+triceps_pcsa = 28.3
+brachioradialis_pcsa = 11.6
+
+biceps_a_rest_proportion = 12.7 / 28.3
+triceps_a_rest_proportion = 1
+brachioradialis_a_rest_proportion = 11.6 / 28.3
+
 biceps_long_duration = DingModelPulseDurationFrequencyWithFatigue(muscle_name="BIClong")
 biceps_long_duration.alpha_a = biceps_long_duration.alpha_a * biceps_fiber_type_2_proportion
+biceps_long_duration.a_rest = biceps_long_duration.a_rest * biceps_a_rest_proportion
 biceps_short_duration = DingModelPulseDurationFrequencyWithFatigue(muscle_name="BICshort")
 biceps_short_duration.alpha_a = biceps_short_duration.alpha_a * biceps_fiber_type_2_proportion
+biceps_short_duration.a_rest = biceps_short_duration.a_rest * biceps_a_rest_proportion
 triceps_long_duration = DingModelPulseDurationFrequencyWithFatigue(muscle_name="TRIlong")
 triceps_long_duration.alpha_a = triceps_long_duration.alpha_a * triceps_fiber_type_2_proportion
+triceps_long_duration.a_rest = triceps_long_duration.a_rest * triceps_a_rest_proportion
 triceps_lat_duration = DingModelPulseDurationFrequencyWithFatigue(muscle_name="TRIlat")
 triceps_lat_duration.alpha_a = triceps_lat_duration.alpha_a * triceps_fiber_type_2_proportion
+triceps_lat_duration.a_rest = triceps_lat_duration.a_rest * triceps_a_rest_proportion
 triceps_med_duration = DingModelPulseDurationFrequencyWithFatigue(muscle_name="TRImed")
 triceps_med_duration.alpha_a = triceps_med_duration.alpha_a * triceps_fiber_type_2_proportion
+triceps_med_duration.a_rest = triceps_med_duration.a_rest * triceps_a_rest_proportion
 brachioradialis_duration = DingModelPulseDurationFrequencyWithFatigue(muscle_name="BRA")
 brachioradialis_duration.alpha_a = brachioradialis_duration.alpha_a * brachioradialis_fiber_type_2_proportion
+brachioradialis_duration.a_rest = brachioradialis_duration.a_rest * brachioradialis_a_rest_proportion
 
 biceps_long_intensity = DingModelIntensityFrequencyWithFatigue(muscle_name="BIClong")
 biceps_long_intensity.alpha_a = biceps_long_intensity.alpha_a * biceps_fiber_type_2_proportion
+biceps_long_intensity.a_rest = biceps_long_intensity.a_rest * biceps_a_rest_proportion
 biceps_short_intensity = DingModelIntensityFrequencyWithFatigue(muscle_name="BICshort")
 biceps_short_intensity.alpha_a = biceps_short_intensity.alpha_a * biceps_fiber_type_2_proportion
+biceps_short_intensity.a_rest = biceps_short_intensity.a_rest * biceps_a_rest_proportion
 triceps_long_intensity = DingModelIntensityFrequencyWithFatigue(muscle_name="TRIlong")
 triceps_long_intensity.alpha_a = triceps_long_intensity.alpha_a * triceps_fiber_type_2_proportion
+triceps_long_intensity.a_rest = triceps_long_intensity.a_rest * triceps_a_rest_proportion
 triceps_lat_intensity = DingModelIntensityFrequencyWithFatigue(muscle_name="TRIlat")
 triceps_lat_intensity.alpha_a = triceps_lat_intensity.alpha_a * triceps_fiber_type_2_proportion
+triceps_lat_intensity.a_rest = triceps_lat_intensity.a_rest * triceps_a_rest_proportion
 triceps_med_intensity = DingModelIntensityFrequencyWithFatigue(muscle_name="TRImed")
 triceps_med_intensity.alpha_a = triceps_med_intensity.alpha_a * triceps_fiber_type_2_proportion
+triceps_med_intensity.a_rest = triceps_med_intensity.a_rest * triceps_a_rest_proportion
 brachioradialis_intensity = DingModelIntensityFrequencyWithFatigue(muscle_name="BRA")
 brachioradialis_intensity.alpha_a = brachioradialis_intensity.alpha_a * brachioradialis_fiber_type_2_proportion
+brachioradialis_intensity.a_rest = brachioradialis_intensity.a_rest * brachioradialis_a_rest_proportion
+
 
 if get_results:
-    n_stim = 20
-    n_shooting = 5
+    n_stim = 100
+    n_shooting = 1
     objective_functions = ObjectiveList()
 
     fes_muscle_models = [[biceps_long_duration,
@@ -86,20 +108,40 @@ if get_results:
         ConstraintFcn.SUPERIMPOSE_MARKERS,
         first_marker="COM_hand",
         second_marker="reaching_target",
-        phase=9,
+        phase=24,
         node=Node.END,
         axes=[Axis.X, Axis.Y]
     )
+
+    # objective_functions.add(
+    #     ObjectiveFcn.Mayer.SUPERIMPOSE_MARKERS,
+    #     node=Node.ALL,
+    #     first_marker="COM_hand",
+    #     second_marker="reaching_target",
+    #     weight=1000,
+    #     quadratic=True,
+    #     phase=24,
+    # )
+    #
+    # objective_functions.add(
+    #     ObjectiveFcn.Mayer.SUPERIMPOSE_MARKERS,
+    #     node=Node.ALL,
+    #     first_marker="COM_hand",
+    #     second_marker="reaching_target",
+    #     weight=1000,
+    #     quadratic=True,
+    #     phase=25,
+    # )
 
     objective_functions.add(
         ObjectiveFcn.Mayer.MINIMIZE_STATE,
         key="qdot",
         index=[0, 1],
-        node=Node.END,
+        node=Node.ALL,
         target=np.array([[0, 0]] * (n_shooting + 1)).T,
         weight=1000,
         quadratic=True,
-        phase=9,
+        phase=25,
     )
 
     minimum_pulse_intensity = DingModelIntensityFrequencyWithFatigue.min_pulse_intensity(
@@ -122,7 +164,7 @@ if get_results:
             fes_muscle_models=fes_muscle_models[i],
             n_stim=n_stim,
             n_shooting=n_shooting,
-            final_time=1,
+            final_time=2,
             pulse_duration_min=minimum_pulse_duration,
             pulse_duration_max=0.0006,
             pulse_duration_bimapping=False,
@@ -200,7 +242,10 @@ if make_graphs:
     plt.show()
 
 
-
 # [1] Dahmane, R., Djordjevič, S., Šimunič, B., & Valenčič, V. (2005).
 # Spatial fiber type distribution in normal human muscle: histochemical and tensiomyographical evaluation.
 # Journal of biomechanics, 38(12), 2451-2459.
+
+# [2] Klein, C. S., Allman, B. L., Marsh, G. D., & Rice, C. L. (2002).
+# Muscle size, strength, and bone geometry in the upper limbs of young and old men.
+# The Journals of Gerontology Series A: Biological Sciences and Medical Sciences, 57(7), M455-M459.
