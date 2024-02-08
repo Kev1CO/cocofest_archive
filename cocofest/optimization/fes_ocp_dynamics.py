@@ -66,7 +66,7 @@ class FESActuatedBiorbdModelOCP:
         pulse_intensity_bimapping: bool = False,
         pulse_intensity_similar_for_all_muscles: bool = False,
         force_tracking: list = None,
-        end_node_tracking: int | float = None,
+        end_node_tracking: list = None,
         q_tracking: list = None,
         custom_objective: ObjectiveList = None,
         custom_constraint: ConstraintList = None,
@@ -260,10 +260,6 @@ class FESActuatedBiorbdModelOCP:
             )
             for i in range(n_stim)
         ]
-
-        FESActuatedBiorbdModelOCP._sanity_check_bounds(
-            bio_models=bio_models, bound_type=bound_type, bound_data=bound_data
-        )
 
         dynamics = FESActuatedBiorbdModelOCP._declare_dynamics(bio_models, n_stim)
         x_bounds, x_init = FESActuatedBiorbdModelOCP._set_bounds(
@@ -561,6 +557,11 @@ class FESActuatedBiorbdModelOCP:
             for i in range(bio_models[0].nb_q):
                 start_bounds.append(3.14 / (180 / bound_data[i]) if bound_data[i] != 0 else 0)
 
+        elif bound_type == "end":
+            end_bounds = []
+            for i in range(bio_models[0].nb_q):
+                end_bounds.append(3.14 / (180 / bound_data[i]) if bound_data[i] != 0 else 0)
+
         for i in range(n_stim):
             q_x_bounds = bio_models[i].bounds_from_ranges("q")
             qdot_x_bounds = bio_models[i].bounds_from_ranges("qdot")
@@ -576,6 +577,9 @@ class FESActuatedBiorbdModelOCP:
 
             if i == n_stim - 1:
                 if bound_type == "start_end":
+                    for j in range(bio_models[i].nb_q):
+                        q_x_bounds[j, [-1]] = end_bounds[j]
+                elif bound_type == "end":
                     for j in range(bio_models[i].nb_q):
                         q_x_bounds[j, [-1]] = end_bounds[j]
 
@@ -695,19 +699,6 @@ class FESActuatedBiorbdModelOCP:
         return objective_functions
 
     @staticmethod
-    def _sanity_check_bounds(bio_models, bound_type, bound_data):
-        for i in range(bio_models[0].nb_q):
-            if bound_type == "start_end":
-                if not isinstance(bound_data, list):
-                    raise TypeError("The bound data should be a list of two elements")
-                if len(bound_data) != 2:
-                    raise ValueError("The bound data should be a list of two elements, start and end position")
-                if not isinstance(bound_data[0], list) or not isinstance(bound_data[1], list):
-                    raise TypeError("The start and end position should be a list")
-                if len(bound_data[0]) != bio_models[0].nb_q or len(bound_data[1]) != bio_models[0].nb_q:
-                    raise ValueError("The start and end position should be a list of size nb_q")
-
-    @staticmethod
     def _sanity_check_muscle_model(biorbd_model_path, fes_muscle_models):
         tested_bio_model = FESActuatedBiorbdModel(
             name=None, biorbd_path=biorbd_model_path, muscles_model=fes_muscle_models
@@ -748,12 +739,15 @@ class FESActuatedBiorbdModelOCP:
             if not isinstance(bound_data, list):
                 raise TypeError("bound_data should be a list")
             if bound_type == "start_end":
-                if len(bound_data) != tested_bio_model.nb_q:
-                    raise ValueError(f"bound_data should be a list of {tested_bio_model.nb_q} elements")
-                if not isinstance(bound_data[0], list) or not isinstance(bound_data[1], list):
+                if len(bound_data) != 2 or not isinstance(bound_data[0], list) or not isinstance(bound_data[1], list):
                     raise TypeError("bound_data should be a list of two list")
-                if len(bound_data[0]) != len(bound_data[1]):
-                    raise ValueError("bound_data should be a list of two list with the same size")
+                if len(bound_data[0]) != tested_bio_model.nb_q or len(bound_data[1]) != tested_bio_model.nb_q:
+                    raise ValueError(f"bound_data should be a list of {tested_bio_model.nb_q} elements")
+                for i in range(len(bound_data[0])):
+                    if not isinstance(bound_data[0][i], int | float) or not isinstance(bound_data[1][i], int | float):
+                        raise TypeError(
+                            f"bound data index {i}: {bound_data[0][i]} and {bound_data[1][i]} should be an int or float"
+                        )
             if bound_type == "start" or bound_type == "end":
                 if len(bound_data) != tested_bio_model.nb_q:
                     raise ValueError(f"bound_data should be a list of {tested_bio_model.nb_q} element")
@@ -782,6 +776,8 @@ class FESActuatedBiorbdModelOCP:
 
         if force_tracking:
             if isinstance(force_tracking, list):
+                if len(force_tracking) != 2:
+                    raise ValueError("force_tracking must of size 2")
                 if not isinstance(force_tracking[0], np.ndarray):
                     raise TypeError(f"force_tracking index 0: {force_tracking[0]} must be np.ndarray type")
                 if not isinstance(force_tracking[1], list):
@@ -790,8 +786,9 @@ class FESActuatedBiorbdModelOCP:
                     raise ValueError(
                         "force_tracking index 1 list must have the same size as the number of muscles in fes_muscle_models"
                     )
-                if len(force_tracking[0]) != len(force_tracking[1]) or len(force_tracking) != 2:
-                    raise ValueError("force_tracking time and force argument must be the same length")
+                for i in range(len(force_tracking[1])):
+                    if len(force_tracking[0]) != len(force_tracking[1][i]):
+                        raise ValueError("force_tracking time and force argument must be the same length")
             else:
                 raise TypeError(f"force_tracking: {force_tracking} must be list type")
 
@@ -812,12 +809,12 @@ class FESActuatedBiorbdModelOCP:
             tested_bio_model = FESActuatedBiorbdModel(
                 name=None, biorbd_path=biorbd_model_path, muscles_model=fes_muscle_models
             )
-            if len(q_tracking[0]) != 1:
-                raise ValueError("q_tracking[0] should be a list of size 1")
+            if not isinstance(q_tracking[0], list):
+                raise ValueError("q_tracking[0] should be a list")
             if len(q_tracking[1]) != tested_bio_model.nb_q:
                 raise ValueError("q_tracking[1] should have the same size as the number of generalized coordinates")
             for i in range(tested_bio_model.nb_q):
-                if len(q_tracking[0][0]) != len(q_tracking[1][i]):
+                if len(q_tracking[0]) != len(q_tracking[1][i]):
                     raise ValueError("q_tracking[0] and q_tracking[1] should have the same size")
 
         list_to_check = [
@@ -828,7 +825,15 @@ class FESActuatedBiorbdModelOCP:
             minimize_muscle_force,
         ]
 
+        list_to_check_name = [
+            "with_residual_torque",
+            "muscle_force_length_relationship",
+            "muscle_force_velocity_relationship",
+            "minimize_muscle_fatigue",
+            "minimize_muscle_force",
+        ]
+
         for i in range(len(list_to_check)):
             if list_to_check[i]:
                 if not isinstance(list_to_check[i], bool):
-                    raise TypeError(f"{list_to_check[i]} should be a boolean")
+                    raise TypeError(f"{list_to_check_name[i]} should be a boolean")
