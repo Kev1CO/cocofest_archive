@@ -1,5 +1,5 @@
 """
-This example will do a pulse duration optimization to either minimize overall muscle force or muscle fatigue
+This example will do a pulse apparition optimization to either minimize overall muscle force or muscle fatigue
 for a reaching task. Those ocp were build to move from starting position (arm: 0°, elbow: 5°) to a target position
 defined in the bioMod file. At the end of the simulation 2 files will be created, one for each optimization.
 The files will contain the time, states, controls and parameters of the ocp.
@@ -14,7 +14,7 @@ from bioptim import (
     Node,
 )
 
-from cocofest import DingModelPulseDurationFrequencyWithFatigue, FESActuatedBiorbdModelOCP
+from cocofest import DingModelFrequencyWithFatigue, FESActuatedBiorbdModelOCP
 
 get_results = True
 make_graphs = False
@@ -35,28 +35,27 @@ biceps_pcsa = 12.7
 triceps_pcsa = 28.3
 brachioradialis_pcsa = 11.6
 
-biceps_a_scale_proportion = 12.7 / 28.3
-triceps_a_scale_proportion = 1
-brachioradialis_a_scale_proportion = 11.6 / 28.3
-a_scale_proportion_list = [biceps_a_scale_proportion,
-                          biceps_a_scale_proportion,
-                          triceps_a_scale_proportion,
-                          triceps_a_scale_proportion,
-                          triceps_a_scale_proportion,
-                          brachioradialis_a_scale_proportion]
+biceps_a_rest_proportion = 12.7 / 28.3
+triceps_a_rest_proportion = 1
+brachioradialis_a_rest_proportion = 11.6 / 28.3
+a_rest_proportion_list = [biceps_a_rest_proportion,
+                          biceps_a_rest_proportion,
+                          triceps_a_rest_proportion,
+                          triceps_a_rest_proportion,
+                          triceps_a_rest_proportion,
+                          brachioradialis_a_rest_proportion]
 
-fes_muscle_models = [DingModelPulseDurationFrequencyWithFatigue(muscle_name="BIClong"),
-                     DingModelPulseDurationFrequencyWithFatigue(muscle_name="BICshort"),
-                     DingModelPulseDurationFrequencyWithFatigue(muscle_name="TRIlong"),
-                     DingModelPulseDurationFrequencyWithFatigue(muscle_name="TRIlat"),
-                     DingModelPulseDurationFrequencyWithFatigue(muscle_name="TRImed"),
-                     DingModelPulseDurationFrequencyWithFatigue(muscle_name="BRA")]
+fes_muscle_models = [DingModelFrequencyWithFatigue(muscle_name="BIClong"),
+                     DingModelFrequencyWithFatigue(muscle_name="BICshort"),
+                     DingModelFrequencyWithFatigue(muscle_name="TRIlong"),
+                     DingModelFrequencyWithFatigue(muscle_name="TRIlat"),
+                     DingModelFrequencyWithFatigue(muscle_name="TRImed"),
+                     DingModelFrequencyWithFatigue(muscle_name="BRA")]
 
 for i in range(len(fes_muscle_models)):
     fes_muscle_models[i].alpha_a = fes_muscle_models[i].alpha_a * alpha_a_proportion_list[i]
-    fes_muscle_models[i].a_scale = fes_muscle_models[i].a_scale * a_scale_proportion_list[i]
+    fes_muscle_models[i].a_rest = fes_muscle_models[i].a_rest * a_rest_proportion_list[i]
 
-minimum_pulse_duration = DingModelPulseDurationFrequencyWithFatigue().pd0
 pickle_file_list = ["minimize_muscle_fatigue.pkl", "minimize_muscle_force.pkl"]
 n_stim = 40
 n_shooting = 5
@@ -86,9 +85,9 @@ if get_results:
             n_stim=n_stim,
             n_shooting=n_shooting,
             final_time=1,
-            pulse_duration_min=minimum_pulse_duration,
-            pulse_duration_max=0.0006,
-            pulse_duration_bimapping=False,
+            time_min=0.01,
+            time_max=0.1,
+            time_bimapping=False,
             with_residual_torque=False,
             custom_constraint=constraint,
             muscle_force_length_relationship=True,
@@ -111,7 +110,7 @@ if get_results:
             "parameters": parameters,
             }
 
-        with open("/result_file/pulse_duration_" + pickle_file_list[i], "wb") as file:
+        with open("/result_file/pulse_apparition_" + pickle_file_list[i], "wb") as file:
             pickle.dump(dictionary, file)
 
 
