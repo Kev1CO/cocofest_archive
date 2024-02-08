@@ -32,7 +32,7 @@ objective_functions.add(
 minimum_pulse_duration = DingModelPulseDurationFrequencyWithFatigue().pd0
 
 ocp = FESActuatedBiorbdModelOCP.prepare_ocp(
-    biorbd_model_path="../arm26_biceps_triceps.bioMod",
+    biorbd_model_path="../../msk_models/arm26_biceps_triceps.bioMod",
     bound_type="start_end",
     bound_data=[[0, 5], [0, 90]],
     fes_muscle_models=[

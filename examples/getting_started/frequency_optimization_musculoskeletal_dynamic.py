@@ -20,7 +20,7 @@ for i in range(n_stim):
     objective_functions.add(ObjectiveFcn.Lagrange.MINIMIZE_CONTROL, key="tau", weight=1, quadratic=True, phase=i)
 
 ocp = FESActuatedBiorbdModelOCP.prepare_ocp(
-    biorbd_model_path="arm26_biceps_1dof.bioMod",
+    biorbd_model_path="../msk_models/arm26_biceps_1dof.bioMod",
     bound_type="start_end",
     bound_data=[[5], [120]],
     fes_muscle_models=[DingModelFrequencyWithFatigue(muscle_name="BIClong")],
@@ -32,6 +32,8 @@ ocp = FESActuatedBiorbdModelOCP.prepare_ocp(
     time_bimapping=True,
     custom_objective=objective_functions,
     with_residual_torque=True,
+    muscle_force_length_relationship=True,
+    muscle_force_velocity_relationship=True,
 )
 
 sol = ocp.solve(Solver.IPOPT(_max_iter=1000))

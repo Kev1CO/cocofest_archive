@@ -1,4 +1,7 @@
 """
+/!\ This example is not functional yet. /!\
+/!\ It is a work in progress as biceps and triceps can not be stimulated seperatly /!\
+
 This example will do a 5 stimulation example with Ding's 2003 frequency model.
 Those ocp were build to move the elbow from 0 to 90 degrees angle.
 The stimulation apparition will be optimized to satisfy the motion and to minimize the overall muscle fatigue.
@@ -33,7 +36,7 @@ for i in range(n_stim):
 
 
 ocp = FESActuatedBiorbdModelOCP.prepare_ocp(
-    biorbd_model_path="../arm26_biceps_triceps.bioMod",
+    biorbd_model_path="../../msk_models/arm26_biceps_triceps.bioMod",
     bound_type="start_end",
     bound_data=[[0, 5], [0, 90]],
     fes_muscle_models=[

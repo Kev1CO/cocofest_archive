@@ -159,7 +159,7 @@ class OcpFes:
             n_stim=n_stim, final_time=final_time, frequency=frequency, pulse_mode=pulse_mode, round_down=round_down
         )
 
-        force_fourier_coef = None if force_tracking is None else OcpFes._build_fourrier_coeff(force_tracking)
+        force_fourier_coef = None if force_tracking is None else OcpFes._build_fourier_coeff(force_tracking)
         end_node_tracking = end_node_tracking
         models = [model] * n_stim
         n_shooting = [n_shooting] * n_stim
@@ -434,7 +434,7 @@ class OcpFes:
                 raise TypeError("round_down must be bool type")
 
     @staticmethod
-    def _build_fourrier_coeff(force_tracking):
+    def _build_fourier_coeff(force_tracking):
         return FourierSeries().compute_real_fourier_coeffs(force_tracking[0], force_tracking[1], 50)
 
     @staticmethod

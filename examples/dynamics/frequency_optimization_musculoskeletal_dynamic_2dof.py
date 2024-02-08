@@ -20,7 +20,7 @@ for i in range(n_stim):
     objective_functions.add(ObjectiveFcn.Lagrange.MINIMIZE_CONTROL, key="tau", weight=1, quadratic=True, phase=i)
 
 ocp = FESActuatedBiorbdModelOCP.prepare_ocp(
-    biorbd_model_path="/arm26_biceps.bioMod",
+    biorbd_model_path="../msk_models/arm26_biceps.bioMod",
     bound_type="start_end",
     bound_data=[[0, 5], [0, 120]],
     fes_muscle_models=[DingModelFrequencyWithFatigue(muscle_name="BIClong")],

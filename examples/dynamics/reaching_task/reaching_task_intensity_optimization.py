@@ -83,7 +83,7 @@ for i in range(len(pickle_file_list)):
     parameters = []
 
     ocp = FESActuatedBiorbdModelOCP.prepare_ocp(
-        biorbd_model_path="../arm26.bioMod",
+        biorbd_model_path="../../msk_models/arm26.bioMod",
         bound_type="start",
         bound_data=[0, 5],
         fes_muscle_models=fes_muscle_models,

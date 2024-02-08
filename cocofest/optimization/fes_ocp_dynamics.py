@@ -89,7 +89,12 @@ class FESActuatedBiorbdModelOCP:
                 The bound type to use (start, end, start_end)
             bound_data: list
                 The data to use for the bound
-            fes_muscle_models: list[DingModelFrequency] | list[DingModelFrequencyWithFatigue] | list[DingModelPulseDurationFrequency] | list[DingModelPulseDurationFrequencyWithFatigue] | list[DingModelIntensityFrequency] | list[DingModelIntensityFrequencyWithFatigue]
+            fes_muscle_models: list[DingModelFrequency]
+                             | list[DingModelFrequencyWithFatigue]
+                             | list[DingModelPulseDurationFrequency]
+                             | list[DingModelPulseDurationFrequencyWithFatigue]
+                             | list[DingModelIntensityFrequency]
+                             | list[DingModelIntensityFrequencyWithFatigue]
                 The fes model type used for the ocp
             n_stim: int
                 Number of stimulation that will occur during the ocp, it is as well refer as phases
@@ -146,7 +151,7 @@ class FESActuatedBiorbdModelOCP:
             n_threads: int
                 The number of thread to use while solving (multi-threading if > 1)
         """
-        # TODO : MAKE A NEW SANITY CHECK FOR THE FES MUSCLE MODEL
+
         OcpFes._sanity_check(
             model=fes_muscle_models[0],
             n_stim=n_stim,
@@ -165,15 +170,26 @@ class FESActuatedBiorbdModelOCP:
             pulse_intensity_min=pulse_intensity_min,
             pulse_intensity_max=pulse_intensity_max,
             pulse_intensity_bimapping=pulse_intensity_bimapping,
-            force_tracking=force_tracking,
-            end_node_tracking=end_node_tracking,
             custom_objective=custom_objective,
             use_sx=use_sx,
             ode_solver=ode_solver,
             n_threads=n_threads,
         )
 
-        FESActuatedBiorbdModelOCP._sanity_check_fes_models(fes_muscle_models)
+        FESActuatedBiorbdModelOCP._sanity_check_fes_models_inputs(
+            biorbd_model_path=biorbd_model_path,
+            bound_type=bound_type,
+            bound_data=bound_data,
+            fes_muscle_models=fes_muscle_models,
+            force_tracking=force_tracking,
+            end_node_tracking=end_node_tracking,
+            q_tracking=q_tracking,
+            with_residual_torque=with_residual_torque,
+            muscle_force_length_relationship=muscle_force_length_relationship,
+            muscle_force_velocity_relationship=muscle_force_velocity_relationship,
+            minimize_muscle_fatigue=minimize_muscle_fatigue,
+            minimize_muscle_force=minimize_muscle_force,
+        )
 
         OcpFes._sanity_check_frequency(n_stim=n_stim, final_time=final_time, frequency=frequency, round_down=round_down)
 
@@ -185,14 +201,15 @@ class FESActuatedBiorbdModelOCP:
             n_stim=n_stim, final_time=final_time, frequency=frequency, pulse_mode=pulse_mode, round_down=round_down
         )
 
-        # NOT AVAILABLE FOR MULTI MUSCLE
-        force_fourier_coef = None if force_tracking is None else OcpFes._build_fourrier_coeff(force_tracking)
-        end_node_tracking = end_node_tracking
+        force_fourier_coef = [] if force_tracking else None
+        if force_tracking:
+            for i in range(len(force_tracking[1])):
+                force_fourier_coef.append(OcpFes._build_fourier_coeff([force_tracking[0], force_tracking[1][i]]))
 
         q_fourier_coef = [] if q_tracking else None
         if q_tracking:
             for i in range(len(q_tracking[1])):
-                q_fourier_coef.append(OcpFes._build_fourrier_coeff([q_tracking[0], q_tracking[1][i]]))
+                q_fourier_coef.append(OcpFes._build_fourier_coeff([q_tracking[0], q_tracking[1][i]]))
 
         n_shooting = [n_shooting] * n_stim
         final_time_phase, constraints, phase_time_bimapping = OcpFes._build_phase_time(
@@ -255,6 +272,7 @@ class FESActuatedBiorbdModelOCP:
             n_stim,
         )
         u_bounds, u_init = FESActuatedBiorbdModelOCP._set_controls(bio_models, n_stim, with_residual_torque)
+        muscle_force_key = ["F_" + fes_muscle_models[i].muscle_name for i in range(len(fes_muscle_models))]
         objective_functions = FESActuatedBiorbdModelOCP._set_objective(
             n_stim,
             n_shooting,
@@ -264,6 +282,7 @@ class FESActuatedBiorbdModelOCP:
             q_fourier_coef,
             minimize_muscle_fatigue,
             minimize_muscle_force,
+            muscle_force_key,
         )
 
         return OptimalControlProgram(
@@ -450,7 +469,9 @@ class FESActuatedBiorbdModelOCP:
 
                 if pulse_intensity_bimapping:
                     pass
-                    # parameter_bimapping.add(name="pulse_intensity", to_second=[0 for _ in range(n_stim)], to_first=[0])
+                    # parameter_bimapping.add(name="pulse_intensity",
+                    #                         to_second=[0 for _ in range(n_stim)],
+                    #                         to_first=[0])
                     # TODO : Fix Bimapping in Bioptim
 
         return parameters, parameters_bounds, parameters_init, parameter_objectives
@@ -542,12 +563,6 @@ class FESActuatedBiorbdModelOCP:
             q_x_bounds = bio_models[i].bounds_from_ranges("q")
             qdot_x_bounds = bio_models[i].bounds_from_ranges("qdot")
 
-            # if bound_type == "all":
-            #     q_x_bounds = bound_data[i]
-
-            q_x_bounds.min[0] = 0
-            q_x_bounds.max[1] = 2.6166666666666667
-
             if i == 0:
                 if bound_type == "start_end":
                     for j in range(bio_models[i].nb_q):
@@ -600,6 +615,7 @@ class FESActuatedBiorbdModelOCP:
         q_fourier_coef,
         minimize_muscle_fatigue,
         minimize_muscle_force,
+        muscle_force_key,
     ):
         # Creates the objective for our problem
         objective_functions = ObjectiveList()
@@ -609,29 +625,30 @@ class FESActuatedBiorbdModelOCP:
                     for j in range(len(custom_objective[i])):
                         objective_functions.add(custom_objective[i][j])
 
-        if force_fourier_coef is not None:  # TODO : Enable multiple force tracking for multiple muscles
-            for phase in range(n_stim):
-                for i in range(n_shooting[phase]):
-                    objective_functions.add(
-                        CustomObjective.track_state_from_time,
-                        custom_type=ObjectiveFcn.Mayer,
-                        node=i,
-                        fourier_coeff=force_fourier_coef,
-                        key="F",
-                        quadratic=True,
-                        weight=1,
-                        phase=phase,
-                    )
+        if force_fourier_coef is not None:
+            for j in range(len(muscle_force_key)):
+                for phase in range(n_stim):
+                    for i in range(n_shooting[phase]):
+                        objective_functions.add(
+                            CustomObjective.track_state_from_time,
+                            custom_type=ObjectiveFcn.Mayer,
+                            node=i,
+                            fourier_coeff=force_fourier_coef[j],
+                            key=muscle_force_key[j],
+                            quadratic=True,
+                            weight=1,
+                            phase=phase,
+                        )
 
-        if end_node_tracking:
-            if isinstance(end_node_tracking, int | float):
+        if end_node_tracking is not None:
+            for j in range(len(muscle_force_key)):
                 objective_functions.add(
                     ObjectiveFcn.Mayer.MINIMIZE_STATE,
                     node=Node.END,
-                    key="F",
+                    key=muscle_force_key[j],
                     quadratic=True,
                     weight=1,
-                    target=end_node_tracking,
+                    target=end_node_tracking[j],
                     phase=n_stim - 1,
                 )
 
@@ -703,7 +720,45 @@ class FESActuatedBiorbdModelOCP:
                 )
 
     @staticmethod
-    def _sanity_check_fes_models(fes_muscle_models):
+    def _sanity_check_fes_models_inputs(
+        biorbd_model_path,
+        bound_type,
+        bound_data,
+        fes_muscle_models,
+        force_tracking,
+        end_node_tracking,
+        q_tracking,
+        with_residual_torque,
+        muscle_force_length_relationship,
+        muscle_force_velocity_relationship,
+        minimize_muscle_fatigue,
+        minimize_muscle_force,
+    ):
+        if not isinstance(biorbd_model_path, str):
+            raise TypeError("biorbd_model_path should be a string")
+
+        if bound_type:
+            tested_bio_model = FESActuatedBiorbdModel(
+                name=None, biorbd_path=biorbd_model_path, muscles_model=fes_muscle_models
+            )
+            if not isinstance(bound_type, str) or bound_type not in ["start", "end", "start_end"]:
+                raise ValueError("bound_type should be a string and should be equal to start, end or start_end")
+            if not isinstance(bound_data, list):
+                raise TypeError("bound_data should be a list")
+            if bound_type == "start_end":
+                if len(bound_data) != tested_bio_model.nb_q:
+                    raise ValueError(f"bound_data should be a list of {tested_bio_model.nb_q} elements")
+                if not isinstance(bound_data[0], list) or not isinstance(bound_data[1], list):
+                    raise TypeError("bound_data should be a list of two list")
+                if len(bound_data[0]) != len(bound_data[1]):
+                    raise ValueError("bound_data should be a list of two list with the same size")
+            if bound_type == "start" or bound_type == "end":
+                if len(bound_data) != tested_bio_model.nb_q:
+                    raise ValueError(f"bound_data should be a list of {tested_bio_model.nb_q} element")
+                for i in range(len(bound_data)):
+                    if not isinstance(bound_data[i], int | float):
+                        raise TypeError(f"bound data index {i}: {bound_data[i]} should be an int or float")
+
         for i in range(len(fes_muscle_models)):
             if not isinstance(
                 fes_muscle_models[i],
@@ -715,5 +770,63 @@ class FESActuatedBiorbdModelOCP:
                 | DingModelIntensityFrequencyWithFatigue,
             ):
                 raise TypeError(
-                    "model must be a DingModelFrequency, DingModelFrequencyWithFatigue, DingModelPulseDurationFrequency, DingModelPulseDurationFrequencyWithFatigue, DingModelIntensityFrequency, DingModelIntensityFrequencyWithFatigue type"
+                    "model must be a DingModelFrequency,"
+                    " DingModelFrequencyWithFatigue,"
+                    " DingModelPulseDurationFrequency,"
+                    " DingModelPulseDurationFrequencyWithFatigue,"
+                    " DingModelIntensityFrequency,"
+                    " DingModelIntensityFrequencyWithFatigue type"
                 )
+
+        if force_tracking:
+            if isinstance(force_tracking, list):
+                if not isinstance(force_tracking[0], np.ndarray):
+                    raise TypeError(f"force_tracking index 0: {force_tracking[0]} must be np.ndarray type")
+                if not isinstance(force_tracking[1], list):
+                    raise TypeError(f"force_tracking index 1: {force_tracking[1]} must be list type")
+                if len(force_tracking[1]) != len(fes_muscle_models):
+                    raise ValueError(
+                        "force_tracking index 1 list must have the same size as the number of muscles in fes_muscle_models"
+                    )
+                if len(force_tracking[0]) != len(force_tracking[1]) or len(force_tracking) != 2:
+                    raise ValueError("force_tracking time and force argument must be the same length")
+            else:
+                raise TypeError(f"force_tracking: {force_tracking} must be list type")
+
+        if end_node_tracking:
+            if not isinstance(end_node_tracking, list):
+                raise TypeError(f"force_tracking: {end_node_tracking} must be list type")
+            if len(end_node_tracking) != len(fes_muscle_models):
+                raise ValueError(
+                    "end_node_tracking list must have the same size as the number of muscles in fes_muscle_models"
+                )
+            for i in range(len(end_node_tracking)):
+                if not isinstance(end_node_tracking[i], int | float):
+                    raise TypeError(f"end_node_tracking index {i}: {end_node_tracking[i]} must be int or float type")
+
+        if q_tracking:
+            if not isinstance(q_tracking, list) and len(q_tracking) != 2:
+                raise TypeError("q_tracking should be a list of size 2")
+            tested_bio_model = FESActuatedBiorbdModel(
+                name=None, biorbd_path=biorbd_model_path, muscles_model=fes_muscle_models
+            )
+            if len(q_tracking[0]) != 1:
+                raise ValueError("q_tracking[0] should be a list of size 1")
+            if len(q_tracking[1]) != tested_bio_model.nb_q:
+                raise ValueError("q_tracking[1] should have the same size as the number of generalized coordinates")
+            for i in range(tested_bio_model.nb_q):
+                if len(q_tracking[0][0]) != len(q_tracking[1][i]):
+                    raise ValueError("q_tracking[0] and q_tracking[1] should have the same size")
+
+        list_to_check = [
+            with_residual_torque,
+            muscle_force_length_relationship,
+            muscle_force_velocity_relationship,
+            minimize_muscle_fatigue,
+            minimize_muscle_force,
+        ]
+
+        for i in range(len(list_to_check)):
+            if list_to_check[i]:
+                if not isinstance(list_to_check[i], bool):
+                    raise TypeError(f"{list_to_check[i]} should be a boolean")

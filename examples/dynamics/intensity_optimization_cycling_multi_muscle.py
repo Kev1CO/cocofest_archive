@@ -33,7 +33,7 @@ for i in range(n_stim):
 minimum_pulse_intensity = DingModelIntensityFrequency.min_pulse_intensity(DingModelIntensityFrequency())
 
 ocp = FESActuatedBiorbdModelOCP.prepare_ocp(
-    biorbd_model_path="/arm26.bioMod",
+    biorbd_model_path="../msk_models/arm26.bioMod",
     bound_type="start_end",
     bound_data=[[65, 38], [65, 38]],
     fes_muscle_models=[

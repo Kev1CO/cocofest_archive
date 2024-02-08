@@ -24,9 +24,9 @@ for i in range(n_stim):
     objective_functions.add(
         ObjectiveFcn.Mayer.MINIMIZE_STATE,
         key="q",
-        index=[0, 1],
+        index=[0],
         node=Node.ALL,
-        target=np.array([[0, 1.57]] * (n_shooting + 1)).T,
+        target=np.array([[1.57]] * (n_shooting + 1)).T,
         weight=10,
         quadratic=True,
         phase=i,
@@ -34,9 +34,9 @@ for i in range(n_stim):
     objective_functions.add(
         ObjectiveFcn.Mayer.MINIMIZE_STATE,
         key="qdot",
-        index=[0, 1],
+        index=[0],
         node=Node.ALL,
-        target=np.array([[0, 0]] * (n_shooting + 1)).T,
+        target=np.array([[0]] * (n_shooting + 1)).T,
         weight=10,
         quadratic=True,
         phase=i,
@@ -47,17 +47,10 @@ minimum_pulse_intensity = DingModelIntensityFrequencyWithFatigue.min_pulse_inten
 )
 
 ocp = FESActuatedBiorbdModelOCP.prepare_ocp(
-    biorbd_model_path="/arm26.bioMod",
+    biorbd_model_path="../msk_models/arm26_biceps_1dof.bioMod",
     bound_type="start",
-    bound_data=[0, 90],
-    fes_muscle_models=[
-        DingModelIntensityFrequencyWithFatigue(muscle_name="BIClong"),
-        DingModelIntensityFrequencyWithFatigue(muscle_name="BICshort"),
-        DingModelIntensityFrequencyWithFatigue(muscle_name="TRIlong"),
-        DingModelIntensityFrequencyWithFatigue(muscle_name="TRIlat"),
-        DingModelIntensityFrequencyWithFatigue(muscle_name="TRImed"),
-        DingModelIntensityFrequencyWithFatigue(muscle_name="BRA"),
-    ],
+    bound_data=[90],
+    fes_muscle_models=[DingModelIntensityFrequencyWithFatigue(muscle_name="BIClong")],
     n_stim=n_stim,
     n_shooting=10,
     final_time=1,
