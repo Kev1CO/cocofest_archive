@@ -16,9 +16,6 @@ from bioptim import (
 
 from cocofest import DingModelPulseDurationFrequencyWithFatigue, FESActuatedBiorbdModelOCP
 
-get_results = True
-make_graphs = False
-
 # Fiber type proportion from [1]
 biceps_fiber_type_2_proportion = 0.607
 triceps_fiber_type_2_proportion = 0.465
@@ -71,48 +68,47 @@ constraint.add(
     axes=[Axis.X, Axis.Y]
 )
 
-if get_results:
-    for i in range(len(pickle_file_list)):
-        time = []
-        states = []
-        controls = []
-        parameters = []
+for i in range(len(pickle_file_list)):
+    time = []
+    states = []
+    controls = []
+    parameters = []
 
-        ocp = FESActuatedBiorbdModelOCP.prepare_ocp(
-            biorbd_model_path="arm26.bioMod",
-            bound_type="start",
-            bound_data=[0, 5],
-            fes_muscle_models=fes_muscle_models,
-            n_stim=n_stim,
-            n_shooting=n_shooting,
-            final_time=1,
-            pulse_duration_min=minimum_pulse_duration,
-            pulse_duration_max=0.0006,
-            pulse_duration_bimapping=False,
-            with_residual_torque=False,
-            custom_constraint=constraint,
-            muscle_force_length_relationship=True,
-            muscle_force_velocity_relationship=True,
-            minimize_muscle_fatigue=True if pickle_file_list[i] == "minimize_muscle_fatigue.pkl" else False,
-            minimize_muscle_force=True if pickle_file_list[i] == "minimize_muscle_force.pkl" else False,
-            use_sx=False,
-        )
+    ocp = FESActuatedBiorbdModelOCP.prepare_ocp(
+        biorbd_model_path="../arm26.bioMod",
+        bound_type="start",
+        bound_data=[0, 5],
+        fes_muscle_models=fes_muscle_models,
+        n_stim=n_stim,
+        n_shooting=n_shooting,
+        final_time=1,
+        pulse_duration_min=minimum_pulse_duration,
+        pulse_duration_max=0.0006,
+        pulse_duration_bimapping=False,
+        with_residual_torque=False,
+        custom_constraint=constraint,
+        muscle_force_length_relationship=True,
+        muscle_force_velocity_relationship=True,
+        minimize_muscle_fatigue=True if pickle_file_list[i] == "minimize_muscle_fatigue.pkl" else False,
+        minimize_muscle_force=True if pickle_file_list[i] == "minimize_muscle_force.pkl" else False,
+        use_sx=False,
+    )
 
-        sol = ocp.solve(Solver.IPOPT(_max_iter=10000)).merge_phases()
-        time = sol.time
-        states = sol.states
-        controls = sol.controls
-        parameters = sol.parameters
+    sol = ocp.solve(Solver.IPOPT(_max_iter=10000)).merge_phases()
+    time = sol.time
+    states = sol.states
+    controls = sol.controls
+    parameters = sol.parameters
 
-        dictionary = {
-            "time": time,
-            "states": states,
-            "controls": controls,
-            "parameters": parameters,
-            }
+    dictionary = {
+        "time": time,
+        "states": states,
+        "controls": controls,
+        "parameters": parameters,
+        }
 
-        with open("/result_file/pulse_duration_" + pickle_file_list[i], "wb") as file:
-            pickle.dump(dictionary, file)
+    with open("/result_file/pulse_duration_" + pickle_file_list[i], "wb") as file:
+        pickle.dump(dictionary, file)
 
 
 # [1] Dahmane, R., Djordjevič, S., Šimunič, B., & Valenčič, V. (2005).
