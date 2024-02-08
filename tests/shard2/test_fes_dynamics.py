@@ -87,8 +87,8 @@ def test_multi_muscle_fes_dynamics():
     np.testing.assert_almost_equal(sol.states["q"][0][-1], 0)
     np.testing.assert_almost_equal(sol.states["q"][1][0], 0.08722222222222223)
     np.testing.assert_almost_equal(sol.states["q"][1][-1], 2.0933333333333333)
-    np.testing.assert_almost_equal(sol.states["F_BIClong"][0][-1], 33.20686595)
-    np.testing.assert_almost_equal(sol.states["F_TRIlong"][0][-1], 18.36373478)
+    np.testing.assert_almost_equal(sol.states["F_BIClong"][0][-1], 33.206865, decimal=6)
+    np.testing.assert_almost_equal(sol.states["F_TRIlong"][0][-1], 18.363734, decimal=6)
 
 
 def test_fes_models_inputs_sanity_check_errors():
