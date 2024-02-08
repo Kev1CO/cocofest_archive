@@ -1,5 +1,6 @@
 import re
 import pytest
+import os
 
 import numpy as np
 from bioptim import (
@@ -10,6 +11,11 @@ from bioptim import (
 
 from cocofest import DingModelPulseDurationFrequencyWithFatigue, FESActuatedBiorbdModelOCP
 
+from examples.msk_models import init as ocp_module
+
+biomodel_folder = os.path.dirname(ocp_module.__file__)
+biorbd_model_path = biomodel_folder + "/arm26_biceps_triceps.bioMod"
+
 
 def test_multi_muscle_fes_dynamics():
     objective_functions = ObjectiveList()
@@ -19,7 +25,7 @@ def test_multi_muscle_fes_dynamics():
 
     minimum_pulse_duration = DingModelPulseDurationFrequencyWithFatigue().pd0
     ocp = FESActuatedBiorbdModelOCP.prepare_ocp(
-        biorbd_model_path="../../examples/msk_models/arm26_biceps_triceps.bioMod",
+        biorbd_model_path=biorbd_model_path,
         bound_type="start_end",
         bound_data=[[0, 5], [0, 120]],
         fes_muscle_models=[
@@ -110,7 +116,7 @@ def test_fes_models_inputs_sanity_check_errors():
         match=re.escape("bound_type should be a string and should be equal to start, end or start_end"),
     ):
         ocp = FESActuatedBiorbdModelOCP.prepare_ocp(
-            biorbd_model_path="../../examples/msk_models/arm26_biceps_triceps.bioMod",
+            biorbd_model_path=biorbd_model_path,
             bound_type="hello",
             bound_data=[[0, 5], [0, 120]],
             fes_muscle_models=[
@@ -129,7 +135,7 @@ def test_fes_models_inputs_sanity_check_errors():
         match=re.escape("bound_data should be a list"),
     ):
         ocp = FESActuatedBiorbdModelOCP.prepare_ocp(
-            biorbd_model_path="../../examples/msk_models/arm26_biceps_triceps.bioMod",
+            biorbd_model_path=biorbd_model_path,
             bound_type="start_end",
             bound_data="[[0, 5], [0, 120]]",
             fes_muscle_models=[
@@ -148,7 +154,7 @@ def test_fes_models_inputs_sanity_check_errors():
         match=re.escape(f"bound_data should be a list of {2} elements"),
     ):
         ocp = FESActuatedBiorbdModelOCP.prepare_ocp(
-            biorbd_model_path="../../examples/msk_models/arm26_biceps_triceps.bioMod",
+            biorbd_model_path=biorbd_model_path,
             bound_type="start_end",
             bound_data=[[0, 5, 7], [0, 120, 150]],
             fes_muscle_models=[
@@ -167,7 +173,7 @@ def test_fes_models_inputs_sanity_check_errors():
         match=re.escape(f"bound_data should be a list of two list"),
     ):
         ocp = FESActuatedBiorbdModelOCP.prepare_ocp(
-            biorbd_model_path="../../examples/msk_models/arm26_biceps_triceps.bioMod",
+            biorbd_model_path=biorbd_model_path,
             bound_type="start_end",
             bound_data=["[0, 5]", [0, 120]],
             fes_muscle_models=[
@@ -186,7 +192,7 @@ def test_fes_models_inputs_sanity_check_errors():
         match=re.escape(f"bound_data should be a list of {2} elements"),
     ):
         ocp = FESActuatedBiorbdModelOCP.prepare_ocp(
-            biorbd_model_path="../../examples/msk_models/arm26_biceps_triceps.bioMod",
+            biorbd_model_path=biorbd_model_path,
             bound_type="start_end",
             bound_data=[[0, 5, 7], [0, 120, 150]],
             fes_muscle_models=[
@@ -205,7 +211,7 @@ def test_fes_models_inputs_sanity_check_errors():
         match=re.escape(f"bound data index {1}: {5} and {'120'} should be an int or float"),
     ):
         ocp = FESActuatedBiorbdModelOCP.prepare_ocp(
-            biorbd_model_path="../../examples/msk_models/arm26_biceps_triceps.bioMod",
+            biorbd_model_path=biorbd_model_path,
             bound_type="start_end",
             bound_data=[[0, 5], [0, "120"]],
             fes_muscle_models=[
@@ -224,7 +230,7 @@ def test_fes_models_inputs_sanity_check_errors():
         match=re.escape(f"bound_data should be a list of {2} element"),
     ):
         ocp = FESActuatedBiorbdModelOCP.prepare_ocp(
-            biorbd_model_path="../../examples/msk_models/arm26_biceps_triceps.bioMod",
+            biorbd_model_path=biorbd_model_path,
             bound_type="start",
             bound_data=[0, 5, 10],
             fes_muscle_models=[
@@ -243,7 +249,7 @@ def test_fes_models_inputs_sanity_check_errors():
         match=re.escape(f"bound data index {1}: {'5'} should be an int or float"),
     ):
         ocp = FESActuatedBiorbdModelOCP.prepare_ocp(
-            biorbd_model_path="../../examples/msk_models/arm26_biceps_triceps.bioMod",
+            biorbd_model_path=biorbd_model_path,
             bound_type="end",
             bound_data=[0, "5"],
             fes_muscle_models=[
@@ -269,7 +275,7 @@ def test_fes_models_inputs_sanity_check_errors():
         ),
     ):
         ocp = FESActuatedBiorbdModelOCP.prepare_ocp(
-            biorbd_model_path="../../examples/msk_models/arm26_biceps_triceps.bioMod",
+            biorbd_model_path=biorbd_model_path,
             bound_type="start",
             bound_data=[0, 5],
             fes_muscle_models=[
@@ -288,7 +294,7 @@ def test_fes_models_inputs_sanity_check_errors():
         match=re.escape(f"force_tracking: {'hello'} must be list type"),
     ):
         ocp = FESActuatedBiorbdModelOCP.prepare_ocp(
-            biorbd_model_path="../../examples/msk_models/arm26_biceps_triceps.bioMod",
+            biorbd_model_path=biorbd_model_path,
             bound_type="start",
             bound_data=[0, 5],
             fes_muscle_models=[
@@ -308,7 +314,7 @@ def test_fes_models_inputs_sanity_check_errors():
         match=re.escape("force_tracking must of size 2"),
     ):
         ocp = FESActuatedBiorbdModelOCP.prepare_ocp(
-            biorbd_model_path="../../examples/msk_models/arm26_biceps_triceps.bioMod",
+            biorbd_model_path=biorbd_model_path,
             bound_type="end",
             bound_data=[0, 5],
             fes_muscle_models=[
@@ -328,7 +334,7 @@ def test_fes_models_inputs_sanity_check_errors():
         match=re.escape(f"force_tracking index 0: {'hello'} must be np.ndarray type"),
     ):
         ocp = FESActuatedBiorbdModelOCP.prepare_ocp(
-            biorbd_model_path="../../examples/msk_models/arm26_biceps_triceps.bioMod",
+            biorbd_model_path=biorbd_model_path,
             bound_type="start",
             bound_data=[0, 5],
             fes_muscle_models=[
@@ -348,7 +354,7 @@ def test_fes_models_inputs_sanity_check_errors():
         match=re.escape(f"force_tracking index 1: {'[1, 2, 3]'} must be list type"),
     ):
         ocp = FESActuatedBiorbdModelOCP.prepare_ocp(
-            biorbd_model_path="../../examples/msk_models/arm26_biceps_triceps.bioMod",
+            biorbd_model_path=biorbd_model_path,
             bound_type="start",
             bound_data=[0, 5],
             fes_muscle_models=[
@@ -370,7 +376,7 @@ def test_fes_models_inputs_sanity_check_errors():
         ),
     ):
         ocp = FESActuatedBiorbdModelOCP.prepare_ocp(
-            biorbd_model_path="../../examples/msk_models/arm26_biceps_triceps.bioMod",
+            biorbd_model_path=biorbd_model_path,
             bound_type="start",
             bound_data=[0, 5],
             fes_muscle_models=[
@@ -390,7 +396,7 @@ def test_fes_models_inputs_sanity_check_errors():
         match=re.escape("force_tracking time and force argument must be the same length"),
     ):
         ocp = FESActuatedBiorbdModelOCP.prepare_ocp(
-            biorbd_model_path="../../examples/msk_models/arm26_biceps_triceps.bioMod",
+            biorbd_model_path=biorbd_model_path,
             bound_type="start",
             bound_data=[0, 5],
             fes_muscle_models=[
@@ -410,7 +416,7 @@ def test_fes_models_inputs_sanity_check_errors():
         match=re.escape(f"force_tracking: {'hello'} must be list type"),
     ):
         ocp = FESActuatedBiorbdModelOCP.prepare_ocp(
-            biorbd_model_path="../../examples/msk_models/arm26_biceps_triceps.bioMod",
+            biorbd_model_path=biorbd_model_path,
             bound_type="start",
             bound_data=[0, 5],
             fes_muscle_models=[
@@ -430,7 +436,7 @@ def test_fes_models_inputs_sanity_check_errors():
         match=re.escape("end_node_tracking list must have the same size as the number of muscles in fes_muscle_models"),
     ):
         ocp = FESActuatedBiorbdModelOCP.prepare_ocp(
-            biorbd_model_path="../../examples/msk_models/arm26_biceps_triceps.bioMod",
+            biorbd_model_path=biorbd_model_path,
             bound_type="start",
             bound_data=[0, 5],
             fes_muscle_models=[
@@ -450,7 +456,7 @@ def test_fes_models_inputs_sanity_check_errors():
         match=re.escape(f"end_node_tracking index {1}: {'hello'} must be int or float type"),
     ):
         ocp = FESActuatedBiorbdModelOCP.prepare_ocp(
-            biorbd_model_path="../../examples/msk_models/arm26_biceps_triceps.bioMod",
+            biorbd_model_path=biorbd_model_path,
             bound_type="start",
             bound_data=[0, 5],
             fes_muscle_models=[
@@ -470,7 +476,7 @@ def test_fes_models_inputs_sanity_check_errors():
         match=re.escape("q_tracking should be a list of size 2"),
     ):
         ocp = FESActuatedBiorbdModelOCP.prepare_ocp(
-            biorbd_model_path="../../examples/msk_models/arm26_biceps_triceps.bioMod",
+            biorbd_model_path=biorbd_model_path,
             bound_type="start",
             bound_data=[0, 5],
             fes_muscle_models=[
@@ -490,7 +496,7 @@ def test_fes_models_inputs_sanity_check_errors():
         match=re.escape("q_tracking[0] should be a list"),
     ):
         ocp = FESActuatedBiorbdModelOCP.prepare_ocp(
-            biorbd_model_path="../../examples/msk_models/arm26_biceps_triceps.bioMod",
+            biorbd_model_path=biorbd_model_path,
             bound_type="start",
             bound_data=[0, 5],
             fes_muscle_models=[
@@ -510,7 +516,7 @@ def test_fes_models_inputs_sanity_check_errors():
         match=re.escape("q_tracking[1] should have the same size as the number of generalized coordinates"),
     ):
         ocp = FESActuatedBiorbdModelOCP.prepare_ocp(
-            biorbd_model_path="../../examples/msk_models/arm26_biceps_triceps.bioMod",
+            biorbd_model_path=biorbd_model_path,
             bound_type="start",
             bound_data=[0, 5],
             fes_muscle_models=[
@@ -530,7 +536,7 @@ def test_fes_models_inputs_sanity_check_errors():
         match=re.escape("q_tracking[0] and q_tracking[1] should have the same size"),
     ):
         ocp = FESActuatedBiorbdModelOCP.prepare_ocp(
-            biorbd_model_path="../../examples/msk_models/arm26_biceps_triceps.bioMod",
+            biorbd_model_path=biorbd_model_path,
             bound_type="start",
             bound_data=[0, 5],
             fes_muscle_models=[
@@ -550,7 +556,7 @@ def test_fes_models_inputs_sanity_check_errors():
         match=re.escape(f"{'with_residual_torque'} should be a boolean"),
     ):
         ocp = FESActuatedBiorbdModelOCP.prepare_ocp(
-            biorbd_model_path="../../examples/msk_models/arm26_biceps_triceps.bioMod",
+            biorbd_model_path=biorbd_model_path,
             bound_type="start",
             bound_data=[0, 5],
             fes_muscle_models=[
@@ -576,7 +582,7 @@ def test_fes_muscle_models_sanity_check_errors():
         ),
     ):
         ocp = FESActuatedBiorbdModelOCP.prepare_ocp(
-            biorbd_model_path="../../examples/msk_models/arm26_biceps_triceps.bioMod",
+            biorbd_model_path=biorbd_model_path,
             bound_type="start",
             bound_data=[0, 5],
             fes_muscle_models=[DingModelPulseDurationFrequencyWithFatigue(muscle_name="BIClong")],
