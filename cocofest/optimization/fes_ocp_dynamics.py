@@ -367,7 +367,8 @@ class FESActuatedBiorbdModelOCP:
                             max_bound=[pulse_duration_max],
                             interpolation=InterpolationType.CONSTANT,
                         )
-                        parameters_init[parameter_name] = np.array([0] * n_stim)
+                        pulse_duration_avg = (pulse_duration_max + pulse_duration_min) / 2
+                        parameters_init[parameter_name] = np.array([pulse_duration_avg] * n_stim)
                         parameters.add(
                             parameter_name=parameter_name,
                             function=DingModelPulseDurationFrequency.set_impulse_duration,
