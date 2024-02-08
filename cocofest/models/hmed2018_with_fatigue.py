@@ -123,7 +123,15 @@ class DingModelIntensityFrequencyWithFatigue(DingModelIntensityFrequency):
         """
         r0 = km + self.r0_km_relationship  # Simplification
         cn_dot = self.cn_dot_fun(cn, r0, t, t_stim_prev=t_stim_prev, intensity_stim=intensity_stim)  # Equation n°1
-        f_dot = self.f_dot_fun(cn, f, a, tau1, km, force_length_relationship=force_length_relationship, force_velocity_relationship=force_velocity_relationship)  # Equation n°2
+        f_dot = self.f_dot_fun(
+            cn,
+            f,
+            a,
+            tau1,
+            km,
+            force_length_relationship=force_length_relationship,
+            force_velocity_relationship=force_velocity_relationship,
+        )  # Equation n°2
         a_dot = self.a_dot_fun(a, f)  # Equation n°5
         tau1_dot = self.tau1_dot_fun(tau1, f)  # Equation n°9
         km_dot = self.km_dot_fun(km, f)  # Equation n°11

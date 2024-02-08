@@ -20,12 +20,14 @@ from cocofest import DingModelPulseDurationFrequencyWithFatigue, FESActuatedBior
 biceps_fiber_type_2_proportion = 0.607
 triceps_fiber_type_2_proportion = 0.465
 brachioradialis_fiber_type_2_proportion = 0.457
-alpha_a_proportion_list = [biceps_fiber_type_2_proportion,
-                           biceps_fiber_type_2_proportion,
-                           triceps_fiber_type_2_proportion,
-                           triceps_fiber_type_2_proportion,
-                           triceps_fiber_type_2_proportion,
-                           brachioradialis_fiber_type_2_proportion]
+alpha_a_proportion_list = [
+    biceps_fiber_type_2_proportion,
+    biceps_fiber_type_2_proportion,
+    triceps_fiber_type_2_proportion,
+    triceps_fiber_type_2_proportion,
+    triceps_fiber_type_2_proportion,
+    brachioradialis_fiber_type_2_proportion,
+]
 
 # PCSA (cm²) from [2]
 biceps_pcsa = 12.7
@@ -35,19 +37,23 @@ brachioradialis_pcsa = 11.6
 biceps_a_scale_proportion = 12.7 / 28.3
 triceps_a_scale_proportion = 1
 brachioradialis_a_scale_proportion = 11.6 / 28.3
-a_scale_proportion_list = [biceps_a_scale_proportion,
-                          biceps_a_scale_proportion,
-                          triceps_a_scale_proportion,
-                          triceps_a_scale_proportion,
-                          triceps_a_scale_proportion,
-                          brachioradialis_a_scale_proportion]
+a_scale_proportion_list = [
+    biceps_a_scale_proportion,
+    biceps_a_scale_proportion,
+    triceps_a_scale_proportion,
+    triceps_a_scale_proportion,
+    triceps_a_scale_proportion,
+    brachioradialis_a_scale_proportion,
+]
 
-fes_muscle_models = [DingModelPulseDurationFrequencyWithFatigue(muscle_name="BIClong"),
-                     DingModelPulseDurationFrequencyWithFatigue(muscle_name="BICshort"),
-                     DingModelPulseDurationFrequencyWithFatigue(muscle_name="TRIlong"),
-                     DingModelPulseDurationFrequencyWithFatigue(muscle_name="TRIlat"),
-                     DingModelPulseDurationFrequencyWithFatigue(muscle_name="TRImed"),
-                     DingModelPulseDurationFrequencyWithFatigue(muscle_name="BRA")]
+fes_muscle_models = [
+    DingModelPulseDurationFrequencyWithFatigue(muscle_name="BIClong"),
+    DingModelPulseDurationFrequencyWithFatigue(muscle_name="BICshort"),
+    DingModelPulseDurationFrequencyWithFatigue(muscle_name="TRIlong"),
+    DingModelPulseDurationFrequencyWithFatigue(muscle_name="TRIlat"),
+    DingModelPulseDurationFrequencyWithFatigue(muscle_name="TRImed"),
+    DingModelPulseDurationFrequencyWithFatigue(muscle_name="BRA"),
+]
 
 for i in range(len(fes_muscle_models)):
     fes_muscle_models[i].alpha_a = fes_muscle_models[i].alpha_a * alpha_a_proportion_list[i]
@@ -63,9 +69,9 @@ constraint.add(
     ConstraintFcn.SUPERIMPOSE_MARKERS,
     first_marker="COM_hand",
     second_marker="reaching_target",
-    phase=n_stim-1,
+    phase=n_stim - 1,
     node=Node.END,
-    axes=[Axis.X, Axis.Y]
+    axes=[Axis.X, Axis.Y],
 )
 
 for i in range(len(pickle_file_list)):
@@ -105,7 +111,7 @@ for i in range(len(pickle_file_list)):
         "states": states,
         "controls": controls,
         "parameters": parameters,
-        }
+    }
 
     with open("/result_file/pulse_duration_" + pickle_file_list[i], "wb") as file:
         pickle.dump(dictionary, file)

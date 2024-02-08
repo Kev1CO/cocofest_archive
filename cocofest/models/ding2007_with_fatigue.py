@@ -124,7 +124,15 @@ class DingModelPulseDurationFrequencyWithFatigue(DingModelPulseDurationFrequency
         r0 = km + self.r0_km_relationship  # Simplification
         cn_dot = self.cn_dot_fun(cn, r0, t, t_stim_prev=t_stim_prev)  # Equation n°1 from Ding's 2003 article
         a_calculated = self.a_calculation(a_scale=a, impulse_time=impulse_time)  # Equation n°3 from Ding's 2007 article
-        f_dot = self.f_dot_fun(cn, f, a_calculated, tau1, km, force_length_relationship=force_length_relationship, force_velocity_relationship=force_velocity_relationship)  # Equation n°2 from Ding's 2003 article
+        f_dot = self.f_dot_fun(
+            cn,
+            f,
+            a_calculated,
+            tau1,
+            km,
+            force_length_relationship=force_length_relationship,
+            force_velocity_relationship=force_velocity_relationship,
+        )  # Equation n°2 from Ding's 2003 article
         a_dot = self.a_dot_fun(a, f)
         tau1_dot = self.tau1_dot_fun(tau1, f)  # Equation n°9 from Ding's 2003 article
         km_dot = self.km_dot_fun(km, f)  # Equation n°11 from Ding's 2003 article

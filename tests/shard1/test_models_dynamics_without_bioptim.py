@@ -106,7 +106,7 @@ def test_ding2007_dynamics():
                 cn=5, f=100, a=4920, tau1=0.050957, km=0.103, t=0.11, t_stim_prev=[0, 0.1], impulse_time=0.0002
             )
         ).squeeze(),
-        np.array(DM([-4.179e+02, -4.905e+02, -4.000e-04,  2.108e-02,  1.900e-05])).squeeze(),
+        np.array(DM([-4.179e02, -4.905e02, -4.000e-04, 2.108e-02, 1.900e-05])).squeeze(),
         decimal=1,
     )
     np.testing.assert_almost_equal(model.exp_time_fun(t=0.1, t_stim_i=0.09), 0.4028903215291327)

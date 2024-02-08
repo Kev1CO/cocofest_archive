@@ -18,7 +18,11 @@ from bioptim import (
     Node,
 )
 
-from cocofest import DingModelIntensityFrequencyWithFatigue, DingModelPulseDurationFrequencyWithFatigue, FESActuatedBiorbdModelOCP
+from cocofest import (
+    DingModelIntensityFrequencyWithFatigue,
+    DingModelPulseDurationFrequencyWithFatigue,
+    FESActuatedBiorbdModelOCP,
+)
 
 get_results = False
 make_graphs = True
@@ -83,18 +87,24 @@ if get_results:
         n_shooting = 2
         objective_functions = ObjectiveList()
 
-        fes_muscle_models = [[biceps_long_duration,
-                              biceps_short_duration,
-                              triceps_long_duration,
-                              triceps_lat_duration,
-                              triceps_med_duration,
-                              brachioradialis_duration],
-                             [biceps_long_intensity,
-                              biceps_short_intensity,
-                              triceps_long_intensity,
-                              triceps_lat_intensity,
-                              triceps_med_intensity,
-                              brachioradialis_intensity]]
+        fes_muscle_models = [
+            [
+                biceps_long_duration,
+                biceps_short_duration,
+                triceps_long_duration,
+                triceps_lat_duration,
+                triceps_med_duration,
+                brachioradialis_duration,
+            ],
+            [
+                biceps_long_intensity,
+                biceps_short_intensity,
+                triceps_long_intensity,
+                triceps_lat_intensity,
+                triceps_med_intensity,
+                brachioradialis_intensity,
+            ],
+        ]
 
         # for j in range(n_stim):
         #     objective_functions.add(
@@ -112,7 +122,7 @@ if get_results:
             second_marker="reaching_target",
             phase=39,
             node=Node.END,
-            axes=[Axis.X, Axis.Y]
+            axes=[Axis.X, Axis.Y],
         )
 
         # objective_functions.add(
@@ -185,7 +195,7 @@ if get_results:
             "states": states,
             "controls": controls,
             "parameters": parameters,
-            }
+        }
 
         with open(pickle_file_list[i], "wb") as file:
             pickle.dump(dictionary, file)
@@ -207,20 +217,49 @@ if make_graphs:
             axs[i][j].set_xlim(left=0, right=1)
             axs[i][j].set_ylim(bottom=0, top=300)
 
-            axs[i][j].text(.025, .975, f'{muscle_names[counter]}', transform=axs[i][j].transAxes, ha="left", va="top", weight='bold', font="Times New Roman")
+            axs[i][j].text(
+                0.025,
+                0.975,
+                f"{muscle_names[counter]}",
+                transform=axs[i][j].transAxes,
+                ha="left",
+                va="top",
+                weight="bold",
+                font="Times New Roman",
+            )
 
             labels = axs[i][j].get_xticklabels() + axs[i][j].get_yticklabels()
             [label.set_fontname("Times New Roman") for label in labels]
             [label.set_fontsize(14) for label in labels]
 
             if i == 0 and j == 0:
-                axs[i][j].plot(data_minimize_force["time"], data_minimize_force["states"][muscle_keys[counter]][0], ms=4, linewidth=5.0,
-                               label="Minimizing force")
-                axs[i][j].plot(data_minimize_fatigue["time"], data_minimize_fatigue["states"][muscle_keys[counter]][0], ms=4, linewidth=5.0,
-                               label="Minimizing fatigue")
+                axs[i][j].plot(
+                    data_minimize_force["time"],
+                    data_minimize_force["states"][muscle_keys[counter]][0],
+                    ms=4,
+                    linewidth=5.0,
+                    label="Minimizing force",
+                )
+                axs[i][j].plot(
+                    data_minimize_fatigue["time"],
+                    data_minimize_fatigue["states"][muscle_keys[counter]][0],
+                    ms=4,
+                    linewidth=5.0,
+                    label="Minimizing fatigue",
+                )
             else:
-                axs[i][j].plot(data_minimize_force["time"], data_minimize_force["states"][muscle_keys[counter]][0], ms=4, linewidth=5.0)
-                axs[i][j].plot(data_minimize_fatigue["time"], data_minimize_fatigue["states"][muscle_keys[counter]][0], ms=4, linewidth=5.0)
+                axs[i][j].plot(
+                    data_minimize_force["time"],
+                    data_minimize_force["states"][muscle_keys[counter]][0],
+                    ms=4,
+                    linewidth=5.0,
+                )
+                axs[i][j].plot(
+                    data_minimize_fatigue["time"],
+                    data_minimize_fatigue["states"][muscle_keys[counter]][0],
+                    ms=4,
+                    linewidth=5.0,
+                )
             counter += 1
 
     # axs[3][0].plot(data_minimize_force["time"], data_minimize_force["states"]["q"][0], ms=4,
@@ -233,11 +272,16 @@ if make_graphs:
     # axs[3][1].plot(data_minimize_fatigue["time"], data_minimize_fatigue["states"]["q"][1], ms=4,
     #                linewidth=5.0)
 
-    plt.setp(axs, xticks=[0, 0.25, 0.5, 0.75, 1], xticklabels=[0, 0.25, 0.5, 0.75, 1],
-             yticks=[0, 100, 200, 300], yticklabels=[0, 100, 200, 300])
+    plt.setp(
+        axs,
+        xticks=[0, 0.25, 0.5, 0.75, 1],
+        xticklabels=[0, 0.25, 0.5, 0.75, 1],
+        yticks=[0, 100, 200, 300],
+        yticklabels=[0, 100, 200, 300],
+    )
 
-    fig.supxlabel('Time (s)', font="Times New Roman", fontsize=14)
-    fig.supylabel('Force (N)', font="Times New Roman", fontsize=14)
+    fig.supxlabel("Time (s)", font="Times New Roman", fontsize=14)
+    fig.supylabel("Force (N)", font="Times New Roman", fontsize=14)
 
     # fig.legend()
     # fig.tight_layout()
@@ -248,8 +292,6 @@ if make_graphs:
 # a_sum = 0
 # for key_a in a_list:
 #     a_sum += data_minimize_force["states"][key_a][0][-1]
-
-
 
 
 # [1] Dahmane, R., Djordjevič, S., Šimunič, B., & Valenčič, V. (2005).

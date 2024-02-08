@@ -75,7 +75,7 @@ if get_results:
             "states": states,
             "controls": controls,
             "parameters": parameters,
-            }
+        }
 
         with open(pickle_file_list[i], "wb") as file:
             pickle.dump(dictionary, file)
@@ -92,4 +92,3 @@ if get_results:
 #     plt.plot(data_minimize["time"], data_minimize["states"]["F_BIClong"][0], label="Minimizing fatigue")
 #     plt.legend()
 #     plt.show()
-

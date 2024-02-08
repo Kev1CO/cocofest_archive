@@ -11,13 +11,14 @@ from bioptim import (
     FatigueList,
 )
 
-from cocofest import (DingModelFrequency,
-                      DingModelFrequencyWithFatigue,
-                      DingModelPulseDurationFrequency,
-                      DingModelPulseDurationFrequencyWithFatigue,
-                      DingModelIntensityFrequency,
-                      DingModelIntensityFrequencyWithFatigue,
-                      )
+from cocofest import (
+    DingModelFrequency,
+    DingModelFrequencyWithFatigue,
+    DingModelPulseDurationFrequency,
+    DingModelPulseDurationFrequencyWithFatigue,
+    DingModelIntensityFrequency,
+    DingModelIntensityFrequencyWithFatigue,
+)
 
 
 class FESActuatedBiorbdModel(BiorbdModel):
