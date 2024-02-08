@@ -20,8 +20,8 @@ from bioptim import (
 
 from cocofest import DingModelIntensityFrequencyWithFatigue, DingModelPulseDurationFrequencyWithFatigue, FESActuatedBiorbdModelOCP
 
-get_results = True
-make_graphs = False
+get_results = False
+make_graphs = True
 
 # Fiber type proportion from [1]
 biceps_fiber_type_2_proportion = 0.607
@@ -75,7 +75,8 @@ brachioradialis_intensity = DingModelIntensityFrequencyWithFatigue(muscle_name="
 brachioradialis_intensity.alpha_a = brachioradialis_intensity.alpha_a * brachioradialis_fiber_type_2_proportion
 brachioradialis_intensity.a_rest = brachioradialis_intensity.a_rest * brachioradialis_a_rest_proportion
 
-pickle_file_list = ["minimize_muscle_force.pkl", "minimize_muscle_fatigue.pkl"]
+# pickle_file_list = ["minimize_muscle_fatigue.pkl", "minimize_muscle_force.pkl"]
+pickle_file_list = ["minimize_muscle_force.pkl"]
 if get_results:
     for i in range(len(pickle_file_list)):
         n_stim = 60
@@ -109,32 +110,32 @@ if get_results:
             ConstraintFcn.SUPERIMPOSE_MARKERS,
             first_marker="COM_hand",
             second_marker="reaching_target",
-            phase=29,
+            phase=39,
             node=Node.END,
             axes=[Axis.X, Axis.Y]
         )
 
-        objective_functions.add(
-            ObjectiveFcn.Mayer.MINIMIZE_STATE,
-            key="qdot",
-            index=[0, 1],
-            node=Node.ALL,
-            target=np.array([[0, 0]] * (n_shooting + 1)).T,
-            weight=1000,
-            quadratic=True,
-            phase=30,
-        )
-
-        objective_functions.add(
-            ObjectiveFcn.Mayer.MINIMIZE_STATE,
-            key="qdot",
-            index=[0, 1],
-            node=Node.ALL,
-            target=np.array([[0, 0]] * (n_shooting + 1)).T,
-            weight=1000,
-            quadratic=True,
-            phase=31,
-        )
+        # objective_functions.add(
+        #     ObjectiveFcn.Mayer.MINIMIZE_STATE,
+        #     key="qdot",
+        #     index=[0, 1],
+        #     node=Node.ALL,
+        #     target=np.array([[0, 0]] * (n_shooting + 1)).T,
+        #     weight=1000,
+        #     quadratic=True,
+        #     phase=20,
+        # )
+        #
+        # objective_functions.add(
+        #     ObjectiveFcn.Mayer.MINIMIZE_STATE,
+        #     key="qdot",
+        #     index=[0, 1],
+        #     node=Node.ALL,
+        #     target=np.array([[0, 0]] * (n_shooting + 1)).T,
+        #     weight=1000,
+        #     quadratic=True,
+        #     phase=21,
+        # )
 
         minimum_pulse_intensity = DingModelIntensityFrequencyWithFatigue.min_pulse_intensity(
             DingModelIntensityFrequencyWithFatigue()
@@ -149,8 +150,8 @@ if get_results:
 
         ocp = FESActuatedBiorbdModelOCP.prepare_ocp(
             biorbd_model_path="arm26.bioMod",
-            bound_type="start_end",
-            bound_data=[[0, 150], [0, 150]],
+            bound_type="start",
+            bound_data=[0, 5],
             fes_muscle_models=fes_muscle_models[0],
             n_stim=n_stim,
             n_shooting=n_shooting,
@@ -171,9 +172,9 @@ if get_results:
             use_sx=False,
         )
 
-        sol = ocp.solve(Solver.IPOPT(_max_iter=1000)) #.merge_phases()
-        sol.animate()
-        sol.graphs(show_bounds=False)
+        sol = ocp.solve(Solver.IPOPT(_max_iter=100000)).merge_phases()
+        # sol.animate()
+        # sol.graphs(show_bounds=False)
         time = sol.time
         states = sol.states
         controls = sol.controls
@@ -191,11 +192,11 @@ if get_results:
 
 
 if make_graphs:
-    with open(r"normal.pkl", "rb") as f:
-        data_normal = pickle.load(f)
+    with open(r"minimize_muscle_force.pkl", "rb") as f:
+        data_minimize_force = pickle.load(f)
 
-    with open(r"minimizing_fatigue.pkl", "rb") as f:
-        data_minimize = pickle.load(f)
+    with open(r"minimize_muscle_fatigue.pkl", "rb") as f:
+        data_minimize_fatigue = pickle.load(f)
 
     muscle_keys = ["F_BIClong", "F_BICshort", "F_TRIlong", "F_TRIlat", "F_TRImed", "F_BRA"]
     muscle_names = ["BIClong", "BICshort", "TRIlong", "TRIlat", "TRImed", "BRA"]
@@ -204,7 +205,7 @@ if make_graphs:
     for i in range(3):
         for j in range(2):
             axs[i][j].set_xlim(left=0, right=1)
-            axs[i][j].set_ylim(bottom=0, top=190)
+            axs[i][j].set_ylim(bottom=0, top=300)
 
             axs[i][j].text(.025, .975, f'{muscle_names[counter]}', transform=axs[i][j].transAxes, ha="left", va="top", weight='bold', font="Times New Roman")
 
@@ -213,17 +214,27 @@ if make_graphs:
             [label.set_fontsize(14) for label in labels]
 
             if i == 0 and j == 0:
-                axs[i][j].plot(data_normal["time"], data_normal["states"][muscle_keys[counter]][0], ms=4, linewidth=5.0,
-                               label="Normal")
-                axs[i][j].plot(data_minimize["time"], data_minimize["states"][muscle_keys[counter]][0], ms=4, linewidth=5.0,
+                axs[i][j].plot(data_minimize_force["time"], data_minimize_force["states"][muscle_keys[counter]][0], ms=4, linewidth=5.0,
+                               label="Minimizing force")
+                axs[i][j].plot(data_minimize_fatigue["time"], data_minimize_fatigue["states"][muscle_keys[counter]][0], ms=4, linewidth=5.0,
                                label="Minimizing fatigue")
             else:
-                axs[i][j].plot(data_normal["time"], data_normal["states"][muscle_keys[counter]][0], ms=4, linewidth=5.0)
-                axs[i][j].plot(data_minimize["time"], data_minimize["states"][muscle_keys[counter]][0], ms=4, linewidth=5.0)
+                axs[i][j].plot(data_minimize_force["time"], data_minimize_force["states"][muscle_keys[counter]][0], ms=4, linewidth=5.0)
+                axs[i][j].plot(data_minimize_fatigue["time"], data_minimize_fatigue["states"][muscle_keys[counter]][0], ms=4, linewidth=5.0)
             counter += 1
 
+    # axs[3][0].plot(data_minimize_force["time"], data_minimize_force["states"]["q"][0], ms=4,
+    #                linewidth=5.0)
+    # axs[3][0].plot(data_minimize_fatigue["time"], data_minimize_fatigue["states"]["q"][0], ms=4,
+    #                linewidth=5.0)
+    #
+    # axs[3][1].plot(data_minimize_force["time"], data_minimize_force["states"]["q"][1], ms=4,
+    #                linewidth=5.0)
+    # axs[3][1].plot(data_minimize_fatigue["time"], data_minimize_fatigue["states"]["q"][1], ms=4,
+    #                linewidth=5.0)
+
     plt.setp(axs, xticks=[0, 0.25, 0.5, 0.75, 1], xticklabels=[0, 0.25, 0.5, 0.75, 1],
-             yticks=[0, 75, 150], yticklabels=[0, 75, 150])
+             yticks=[0, 100, 200, 300], yticklabels=[0, 100, 200, 300])
 
     fig.supxlabel('Time (s)', font="Times New Roman", fontsize=14)
     fig.supylabel('Force (N)', font="Times New Roman", fontsize=14)
@@ -231,6 +242,14 @@ if make_graphs:
     # fig.legend()
     # fig.tight_layout()
     plt.show()
+
+
+# a_list = ["A_BIClong", "A_BICshort", "A_TRIlong", "A_TRIlat", "A_TRImed", "A_BRA"]
+# a_sum = 0
+# for key_a in a_list:
+#     a_sum += data_minimize_force["states"][key_a][0][-1]
+
+
 
 
 # [1] Dahmane, R., Djordjevič, S., Šimunič, B., & Valenčič, V. (2005).
