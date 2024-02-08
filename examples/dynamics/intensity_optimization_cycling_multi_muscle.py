@@ -4,6 +4,7 @@ This ocp was build to maintain an elbow angle of 90 degrees.
 The stimulation frequency will be optimized between 1 and 10 Hz as well as the pulse intensity between minimal
 sensitivity threshold and 130mA to satisfy the maintained elbow. No residual torque is allowed.
 """
+
 import numpy as np
 
 from bioptim import (

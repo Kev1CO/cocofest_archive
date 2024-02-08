@@ -27,11 +27,11 @@ intensity_path = [
 chosen_graph_to_plot_path = (
     frequency_path
     if chosen_graph_to_plot == "frequency"
-    else duration_path
-    if chosen_graph_to_plot == "duration"
-    else intensity_path
-    if chosen_graph_to_plot == "duration"
-    else None
+    else (
+        duration_path
+        if chosen_graph_to_plot == "duration"
+        else intensity_path if chosen_graph_to_plot == "duration" else None
+    )
 )
 
 if chosen_graph_to_plot_path is None:

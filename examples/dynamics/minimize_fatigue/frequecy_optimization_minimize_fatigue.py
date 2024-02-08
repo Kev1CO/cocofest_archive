@@ -7,6 +7,7 @@ Those ocp were build to move the elbow from 0 to 90 degrees angle.
 The stimulation apparition will be optimized to satisfy the motion and to minimize the overall muscle fatigue.
 Stimulations can occur between 0.01 to 1 second. Residual torque added to help convergence.
 """
+
 import numpy as np
 
 from bioptim import (

@@ -4,6 +4,7 @@ Those ocp were build to move the elbow from 0 to 90 degrees angle.
 The stimulation frequency will be set to 10Hz and pulse intensity will be optimized to satisfy the motion and to minimize the overall muscle fatigue.
 Intensity can be optimized from sensitivity threshold to 130mA. No residual torque is allowed.
 """
+
 import numpy as np
 
 from bioptim import (

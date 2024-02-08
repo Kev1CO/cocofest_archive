@@ -2,6 +2,7 @@
 This example will do a 10 stimulation example using doublets and triplets.
 The example model is the Ding2003 frequency model.
 """
+
 import numpy as np
 import matplotlib.pyplot as plt
 from bioptim import Solution, Shooting, SolutionIntegrator

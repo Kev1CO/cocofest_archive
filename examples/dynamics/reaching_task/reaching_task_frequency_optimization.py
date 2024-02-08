@@ -4,6 +4,7 @@ for a reaching task. Those ocp were build to move from starting position (arm: 0
 defined in the bioMod file. At the end of the simulation 2 files will be created, one for each optimization.
 The files will contain the time, states, controls and parameters of the ocp.
 """
+
 import pickle
 
 from bioptim import (

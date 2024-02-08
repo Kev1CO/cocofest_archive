@@ -38,12 +38,14 @@ class FESActuatedBiorbdModelOCP:
         biorbd_model_path: str,
         bound_type: str = None,
         bound_data: list = None,
-        fes_muscle_models: list[DingModelFrequency]
-        | list[DingModelFrequencyWithFatigue]
-        | list[DingModelPulseDurationFrequency]
-        | list[DingModelPulseDurationFrequencyWithFatigue]
-        | list[DingModelIntensityFrequency]
-        | list[DingModelIntensityFrequencyWithFatigue] = None,
+        fes_muscle_models: (
+            list[DingModelFrequency]
+            | list[DingModelFrequencyWithFatigue]
+            | list[DingModelPulseDurationFrequency]
+            | list[DingModelPulseDurationFrequencyWithFatigue]
+            | list[DingModelIntensityFrequency]
+            | list[DingModelIntensityFrequencyWithFatigue]
+        ) = None,
         n_stim: int = None,
         n_shooting: int = None,
         final_time: int | float = None,

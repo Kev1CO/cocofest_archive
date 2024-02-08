@@ -74,12 +74,14 @@ class FESActuatedBiorbdModel(BiorbdModel):
         parameters: MX | SX,
         stochastic_variables: MX | SX,
         nlp: NonLinearProgram,
-        muscle_models: list[DingModelFrequency]
-        | list[DingModelFrequencyWithFatigue]
-        | list[DingModelPulseDurationFrequency]
-        | list[DingModelPulseDurationFrequencyWithFatigue]
-        | list[DingModelIntensityFrequency]
-        | list[DingModelIntensityFrequencyWithFatigue],
+        muscle_models: (
+            list[DingModelFrequency]
+            | list[DingModelFrequencyWithFatigue]
+            | list[DingModelPulseDurationFrequency]
+            | list[DingModelPulseDurationFrequencyWithFatigue]
+            | list[DingModelIntensityFrequency]
+            | list[DingModelIntensityFrequencyWithFatigue]
+        ),
         stim_apparition=None,
         state_name_list=None,
     ) -> DynamicsEvaluation:
