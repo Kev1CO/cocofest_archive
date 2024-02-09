@@ -9,7 +9,11 @@ from bioptim import (
     Solver,
 )
 
-from cocofest import DingModelPulseDurationFrequencyWithFatigue, FESActuatedBiorbdModelOCP
+from cocofest import (
+    DingModelPulseDurationFrequencyWithFatigue,
+    DingModelIntensityFrequencyWithFatigue,
+    FESActuatedBiorbdModelOCP,
+)
 
 from examples.msk_models import init as ocp_module
 
@@ -17,7 +21,7 @@ biomodel_folder = os.path.dirname(ocp_module.__file__)
 biorbd_model_path = biomodel_folder + "/arm26_biceps_triceps.bioMod"
 
 
-def test_multi_muscle_fes_dynamics():
+def test_pulse_duration_multi_muscle_fes_dynamics():
     objective_functions = ObjectiveList()
     n_stim = 10
     for i in range(n_stim):
@@ -89,6 +93,83 @@ def test_multi_muscle_fes_dynamics():
     np.testing.assert_almost_equal(sol.states["q"][1][-1], 2.0933333333333333)
     np.testing.assert_almost_equal(sol.states["F_BIClong"][0][-1], 33.206865, decimal=6)
     np.testing.assert_almost_equal(sol.states["F_TRIlong"][0][-1], 18.363734, decimal=6)
+
+
+def test_pulse_intensity_multi_muscle_fes_dynamics():
+    n_stim = 10
+    minimum_pulse_intensity = DingModelIntensityFrequencyWithFatigue.min_pulse_intensity(
+        DingModelIntensityFrequencyWithFatigue()
+    )
+    track_forces = [
+        np.array([0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1]),
+        [np.array([0, 10, 40, 90, 140, 80, 50, 10, 0, 0, 0]), np.array([0, 0, 0, 10, 40, 90, 140, 80, 50, 10, 0])],
+    ]
+
+    ocp = FESActuatedBiorbdModelOCP.prepare_ocp(
+        biorbd_model_path=biorbd_model_path,
+        bound_type="start",
+        bound_data=[0, 5],
+        fes_muscle_models=[
+            DingModelIntensityFrequencyWithFatigue(muscle_name="BIClong"),
+            DingModelIntensityFrequencyWithFatigue(muscle_name="TRIlong"),
+        ],
+        n_stim=n_stim,
+        n_shooting=5,
+        final_time=1,
+        pulse_intensity_min=minimum_pulse_intensity,
+        pulse_intensity_max=130,
+        pulse_intensity_bimapping=False,
+        force_tracking=track_forces,
+        with_residual_torque=False,
+        muscle_force_length_relationship=True,
+        muscle_force_velocity_relationship=True,
+        use_sx=False,
+    )
+
+    sol = ocp.solve(Solver.IPOPT(_max_iter=1000)).merge_phases()
+
+    np.testing.assert_almost_equal(sol.cost, 6666357.331403, decimal=6)
+    np.testing.assert_almost_equal(
+        sol.parameters["pulse_intensity_BIClong"],
+        np.array(
+            [
+                [130.00000125],
+                [130.00000126],
+                [130.00000128],
+                [130.00000128],
+                [130.00000121],
+                [50.86019267],
+                [17.02854916],
+                [17.02854916],
+                [17.02854917],
+                [17.0285492],
+            ]
+        ),
+    )
+    np.testing.assert_almost_equal(
+        sol.parameters["pulse_intensity_TRIlong"],
+        np.array(
+            [
+                [45.78076277],
+                [25.84044302],
+                [59.54858653],
+                [130.00000124],
+                [130.00000128],
+                [130.00000128],
+                [130.00000122],
+                [76.08547779],
+                [17.02854916],
+                [22.72956196],
+            ]
+        ),
+    )
+
+    np.testing.assert_almost_equal(sol.states["q"][0][0], 0)
+    np.testing.assert_almost_equal(sol.states["q"][0][-1], -0.35378857156156907)
+    np.testing.assert_almost_equal(sol.states["q"][1][0], 0.08722222222222223)
+    np.testing.assert_almost_equal(sol.states["q"][1][-1], -7.097935277992009e-10)
+    np.testing.assert_almost_equal(sol.states["F_BIClong"][0][-1], 47.408594, decimal=6)
+    np.testing.assert_almost_equal(sol.states["F_TRIlong"][0][-1], 29.131785, decimal=6)
 
 
 def test_fes_models_inputs_sanity_check_errors():
