@@ -75,6 +75,16 @@ constraint.add(
     axes=[Axis.X, Axis.Y],
 )
 
+force_keys = ["F_BIClong", "F_BICshort", "F_TRIlong", "F_TRIlat", "F_TRImed", "F_BRA"]
+for force_key in force_keys:
+    constraint.add(
+        ConstraintFcn.TRACK_STATE,
+        key=force_key,
+        phase=n_stim - 1,
+        node=Node.END,
+        target=0,
+    )
+
 for i in range(len(pickle_file_list)):
     time = []
     states = []
