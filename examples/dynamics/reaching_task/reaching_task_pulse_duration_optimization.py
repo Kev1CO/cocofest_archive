@@ -62,43 +62,29 @@ for i in range(len(fes_muscle_models)):
 
 minimum_pulse_duration = DingModelPulseDurationFrequencyWithFatigue().pd0
 pickle_file_list = ["minimize_muscle_fatigue.pkl", "minimize_muscle_force.pkl"]
-n_stim = 40
-n_shooting = 5
+n_stim = 60
+n_shooting = 2
 
 constraint = ConstraintList()
 constraint.add(
     ConstraintFcn.SUPERIMPOSE_MARKERS,
     first_marker="COM_hand",
     second_marker="reaching_target",
-    phase=n_stim - 1,
+    phase=39,
     node=Node.END,
     axes=[Axis.X, Axis.Y],
 )
 
-force_keys = ["F_BIClong", "F_BICshort", "F_TRIlong", "F_TRIlat", "F_TRImed", "F_BRA"]
-for force_key in force_keys:
-    constraint.add(
-        ConstraintFcn.TRACK_STATE,
-        key=force_key,
-        phase=n_stim - 1,
-        node=Node.END,
-        target=0,
-    )
-
 for i in range(len(pickle_file_list)):
-    time = []
-    states = []
-    controls = []
-    parameters = []
 
     ocp = FESActuatedBiorbdModelOCP.prepare_ocp(
         biorbd_model_path="../../msk_models/arm26.bioMod",
-        bound_type="start",
-        bound_data=[0, 5],
+        bound_type="start_end",
+        bound_data=[[0, 5], [0, 5]],
         fes_muscle_models=fes_muscle_models,
         n_stim=n_stim,
         n_shooting=n_shooting,
-        final_time=1,
+        final_time=1.5,
         pulse_duration_min=minimum_pulse_duration,
         pulse_duration_max=0.0006,
         pulse_duration_bimapping=False,
@@ -124,7 +110,7 @@ for i in range(len(pickle_file_list)):
         "parameters": parameters,
     }
 
-    with open("/result_file/pulse_duration_" + pickle_file_list[i], "wb") as file:
+    with open("result_file/pulse_duration_" + pickle_file_list[i], "wb") as file:
         pickle.dump(dictionary, file)
 
 

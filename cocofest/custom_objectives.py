@@ -103,5 +103,5 @@ class CustomObjective:
         The sum of each force
         """
         muscle_name_list = controller.model.bio_model.muscle_names
-        muscle_force = [controller.states["F_" + muscle_name_list[x]].cx for x in range(len(muscle_name_list))]
+        muscle_force = [controller.states["F_" + muscle_name_list[x]].cx ** 3 for x in range(len(muscle_name_list))]
         return sum(muscle_force)
