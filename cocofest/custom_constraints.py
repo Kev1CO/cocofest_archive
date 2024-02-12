@@ -10,22 +10,24 @@ from bioptim import PenaltyController
 class CustomConstraint:
     @staticmethod
     def pulse_time_apparition_as_phase(controller: PenaltyController) -> MX | SX:
-        ocp_phase_time = []
-        pulse_apparition_time = []
-        for i in range(controller.ocp.n_stim):
-            ocp_phase_time.append(controller.ocp.phase_time(i))
-            pulse_apparition_time.append(controller.ocp.phase_time(i) * i)
+        substract_list_time = []
+        for i in range(controller.ocp.n_phases):
+            substract_list_time.append(controller.phases_time_cx[i] - controller.parameters["pulse_apparition_time"].cx[i])
 
-        return pulse_apparition_time
+        return sum(substract_list_time)
 
     @staticmethod
     def pulse_time_apparition_bimapping(controller: PenaltyController) -> MX | SX:  #TODO
-        ocp_phase_time = []
-        pulse_apparition_time = []
-        for i in range(controller.ocp.n_stim):
-            ocp_phase_time.append(controller.ocp.phase_time(i))
-            pulse_apparition_time.append(controller.ocp.phase_time(i) * i)
+        pulse_apparition_time_list = []
+        for i in range(controller.ocp.n_phases):
+            pulse_apparition_time_list.append(controller.parameters["pulse_apparition_time"].cx[i])
+        pulse_apparition_time_diff_list = []
+        for i in range(1, controller.ocp.n_phases):
+            pulse_apparition_time_diff_list.append(pulse_apparition_time_list[i] - pulse_apparition_time_list[i-1])
+        pulse_apparition_time_diff_substract_list = []
+        for i in range(controller.ocp.n_phases-1):
+            pulse_apparition_time_diff_substract_list.append(pulse_apparition_time_diff_list[0] - pulse_apparition_time_diff_list[i])
 
-        return pulse_apparition_time
+        return sum(pulse_apparition_time_diff_substract_list)
 
 

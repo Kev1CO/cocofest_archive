@@ -197,7 +197,7 @@ class OcpFes:
         dynamics = OcpFes._declare_dynamics(models, n_stim)
         x_bounds, x_init = OcpFes._set_bounds(model, n_stim)
         objective_functions = OcpFes._set_objective(
-            n_stim, n_shooting, force_fourier_coef, end_node_tracking, custom_objective
+            n_stim, n_shooting, force_fourier_coef, end_node_tracking, custom_objective, time_min, time_max
         )
 
         return OptimalControlProgram(
@@ -468,7 +468,7 @@ class OcpFes:
         #     if time_bimapping is True:
         #         phase_time_bimapping = BiMapping(to_second=[0 for _ in range(n_stim)], to_first=[0])
         #
-        final_time_phase = [0.01] * n_stim
+        final_time_phase = [final_time/n_stim] * n_stim
 
         return final_time_phase, phase_time_bimapping
 
@@ -501,26 +501,27 @@ class OcpFes:
             )
             parameters_bounds.add(
                 "pulse_apparition_time",
-                min_bound=[time_min],
-                max_bound=[time_max],
+                min_bound=np.array([time_min] * n_stim),
+                max_bound=np.array([time_max] * n_stim),
                 interpolation=InterpolationType.CONSTANT,
             )
-            parameters_init["pulse_apparition_time"] = np.array([0] * n_stim)
+            parameters_init["pulse_apparition_time"] = np.array([(time_max+time_min)/2] * n_stim)
 
-            parameter_objectives.add(
-                ObjectiveFcn.Parameter.MINIMIZE_PARAMETER,
-                weight=0.0001,
-                quadratic=True,
-                target=0,
-                key="pulse_apparition_time",
-            )
+            # parameter_objectives.add(
+            #     ObjectiveFcn.Parameter.MINIMIZE_PARAMETER,
+            #     weight=0.0001,
+            #     quadratic=True,
+            #     target=0,
+            #     key="pulse_apparition_time",
+            # )
 
             constraints = ConstraintList()
             for i in range(n_stim):
                 constraints.add(CustomConstraint.pulse_time_apparition_as_phase, node=Node.START, phase=i, target=0)
 
             if time_bimapping is True:
-                constraints.add(CustomConstraint.pulse_time_apparition_bimapping)
+                for i in range(n_stim):
+                    constraints.add(CustomConstraint.pulse_time_apparition_bimapping, node=Node.START, phase=i, target=0)
                 # phase_time_bimapping = BiMapping(to_second=[0 for _ in range(n_stim)], to_first=[0])
 
         if isinstance(model, DingModelPulseDurationFrequency):
@@ -642,6 +643,7 @@ class OcpFes:
                 phase=i,
                 phase_dynamics=PhaseDynamics.ONE_PER_NODE,
             )
+
         return dynamics
 
     @staticmethod
@@ -706,7 +708,7 @@ class OcpFes:
         return x_bounds, x_init
 
     @staticmethod
-    def _set_objective(n_stim, n_shooting, force_fourier_coef, end_node_tracking, custom_objective):
+    def _set_objective(n_stim, n_shooting, force_fourier_coef, end_node_tracking, custom_objective, time_min, time_max):
         # Creates the objective for our problem
         objective_functions = ObjectiveList()
         if custom_objective:
@@ -738,6 +740,11 @@ class OcpFes:
                     target=end_node_tracking,
                     phase=n_stim - 1,
                 )
+
+        if time_min and time_max:
+            for i in range(n_stim):
+                objective_functions.add(ObjectiveFcn.Mayer.MINIMIZE_TIME, weight=0.001, min_bound=time_min,
+                                        max_bound=time_max, quadratic=True, phase=i)
 
         return objective_functions
 

@@ -381,7 +381,7 @@ class DingModelFrequency:
         # t_stim_prev = [ocp.node_time(phase_idx=i, node_idx=0, type=type) for i in range(nlp.phase_idx + 1)]
         # if not isinstance(t_stim_prev[0], (MX, float)):
             # t_stim_prev = [ocp.node_time(phase_idx=i, node_idx=0, type="mx") for i in range(nlp.phase_idx + 1)]
-        t_stim_prev = [ocp.nlp[phase_idx].parameters["pulse_apparition_time"].mx for phase_idx in range(nlp.phase_idx + 1)]
+        t_stim_prev = [ocp.parameters['pulse_apparition_time'].mx[phase_idx] for phase_idx in range(nlp.phase_idx + 1)]
 
         return t_stim_prev
 
