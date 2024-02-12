@@ -1,4 +1,5 @@
 from .custom_objectives import CustomObjective
+from .custom_constraints import CustomConstraint
 from .models.ding2003 import DingModelFrequency
 from .models.ding2003_with_fatigue import DingModelFrequencyWithFatigue
 from .models.ding2007 import DingModelPulseDurationFrequency

@@ -22,6 +22,7 @@ from bioptim import (
 )
 
 from ..custom_objectives import CustomObjective
+from ..custom_constraints import CustomConstraint
 from ..fourier_approx import FourierSeries
 from cocofest import (
     DingModelFrequency,
@@ -163,7 +164,7 @@ class OcpFes:
         end_node_tracking = end_node_tracking
         models = [model] * n_stim
         n_shooting = [n_shooting] * n_stim
-        final_time_phase, constraints, phase_time_bimapping = OcpFes._build_phase_time(
+        final_time_phase, phase_time_bimapping = OcpFes._build_phase_time(
             final_time=final_time,
             n_stim=n_stim,
             pulse_mode=pulse_mode,
@@ -171,9 +172,12 @@ class OcpFes:
             time_max=time_max,
             time_bimapping=time_bimapping,
         )
-        parameters, parameters_bounds, parameters_init, parameter_objectives = OcpFes._build_parameters(
+        parameters, parameters_bounds, parameters_init, parameter_objectives, constraints = OcpFes._build_parameters(
             model=model,
             n_stim=n_stim,
+            time_min=time_min,
+            time_max=time_max,
+            time_bimapping=time_bimapping,
             pulse_duration=pulse_duration,
             pulse_duration_min=pulse_duration_min,
             pulse_duration_max=pulse_duration_max,
@@ -210,7 +214,7 @@ class OcpFes:
             parameter_bounds=parameters_bounds,
             parameter_init=parameters_init,
             parameter_objectives=parameter_objectives,
-            control_type=ControlType.NONE,
+            control_type=ControlType.CONSTANT,
             use_sx=use_sx,
             ode_solver=ode_solver,
             n_threads=n_threads,
@@ -439,7 +443,7 @@ class OcpFes:
 
     @staticmethod
     def _build_phase_time(final_time, n_stim, pulse_mode, time_min, time_max, time_bimapping):
-        constraints = ConstraintList()
+
         final_time_phase = None
         # parameter_bimapping = BiMappingList()
         phase_time_bimapping = None
@@ -451,27 +455,30 @@ class OcpFes:
                 for i in range(n_stim - 1):
                     final_time_phase = final_time_phase + (step,)
 
-        else:
-            for i in range(n_stim):
-                constraints.add(
-                    ConstraintFcn.TIME_CONSTRAINT,
-                    node=Node.END,
-                    min_bound=time_min,
-                    max_bound=time_max,
-                    phase=i,
-                )
+        # else:
+        #     for i in range(n_stim):
+        #         constraints.add(
+        #             ConstraintFcn.TIME_CONSTRAINT,
+        #             node=Node.END,
+        #             min_bound=time_min,
+        #             max_bound=time_max,
+        #             phase=i,
+        #         )
+        #
+        #     if time_bimapping is True:
+        #         phase_time_bimapping = BiMapping(to_second=[0 for _ in range(n_stim)], to_first=[0])
+        #
+        final_time_phase = [0.01] * n_stim
 
-            if time_bimapping is True:
-                phase_time_bimapping = BiMapping(to_second=[0 for _ in range(n_stim)], to_first=[0])
-
-            final_time_phase = [0.01] * n_stim
-
-        return final_time_phase, constraints, phase_time_bimapping
+        return final_time_phase, phase_time_bimapping
 
     @staticmethod
     def _build_parameters(
         model,
         n_stim,
+        time_min,
+        time_max,
+        time_bimapping,
         pulse_duration,
         pulse_duration_min,
         pulse_duration_max,
@@ -485,6 +492,37 @@ class OcpFes:
         parameters_bounds = BoundsList()
         parameters_init = InitialGuessList()
         parameter_objectives = ParameterObjectiveList()
+
+        if time_min and time_max:
+            parameters.add(
+                parameter_name="pulse_apparition_time",
+                function=DingModelFrequency.set_pulse_apparition_time,
+                size=n_stim,
+            )
+            parameters_bounds.add(
+                "pulse_apparition_time",
+                min_bound=[time_min],
+                max_bound=[time_max],
+                interpolation=InterpolationType.CONSTANT,
+            )
+            parameters_init["pulse_apparition_time"] = np.array([0] * n_stim)
+
+            parameter_objectives.add(
+                ObjectiveFcn.Parameter.MINIMIZE_PARAMETER,
+                weight=0.0001,
+                quadratic=True,
+                target=0,
+                key="pulse_apparition_time",
+            )
+
+            constraints = ConstraintList()
+            for i in range(n_stim):
+                constraints.add(CustomConstraint.pulse_time_apparition_as_phase, node=Node.START, phase=i, target=0)
+
+            if time_bimapping is True:
+                constraints.add(CustomConstraint.pulse_time_apparition_bimapping)
+                # phase_time_bimapping = BiMapping(to_second=[0 for _ in range(n_stim)], to_first=[0])
+
         if isinstance(model, DingModelPulseDurationFrequency):
             if pulse_duration:
                 parameters.add(
@@ -590,7 +628,7 @@ class OcpFes:
                 # parameter_bimapping.add(name="pulse_intensity", to_second=[0 for _ in range(n_stim)], to_first=[0])
                 # TODO : Fix Bimapping in Bioptim
 
-        return parameters, parameters_bounds, parameters_init, parameter_objectives
+        return parameters, parameters_bounds, parameters_init, parameter_objectives, constraints
 
     @staticmethod
     def _declare_dynamics(models, n_stim):

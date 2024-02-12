@@ -34,6 +34,7 @@ class DingModelFrequency:
         self._name = name
         self._sum_stim_truncation = sum_stim_truncation
         self._with_fatigue = False
+        self.pulse_apparition_time = None
         # ---- Custom values for the example ---- #
         self.tauc = 0.020  # Value from Ding's experimentation [1] (s)
         self.r0_km_relationship = 1.04  # (unitless)
@@ -376,11 +377,26 @@ class DingModelFrequency:
         The list of previous stimulation time
         """
         type = "mx" if "time" in ocp.nlp[nlp.phase_idx].parameters else None
-        t_stim_prev = [ocp.node_time(phase_idx=i, node_idx=0, type=type) for i in range(nlp.phase_idx + 1)]
-        if not isinstance(t_stim_prev[0], (MX, float)):
-            t_stim_prev = [ocp.node_time(phase_idx=i, node_idx=0, type="mx") for i in range(nlp.phase_idx + 1)]
+
+        # t_stim_prev = [ocp.node_time(phase_idx=i, node_idx=0, type=type) for i in range(nlp.phase_idx + 1)]
+        # if not isinstance(t_stim_prev[0], (MX, float)):
+            # t_stim_prev = [ocp.node_time(phase_idx=i, node_idx=0, type="mx") for i in range(nlp.phase_idx + 1)]
+        t_stim_prev = [ocp.nlp[phase_idx].parameters["pulse_apparition_time"].mx for phase_idx in range(nlp.phase_idx + 1)]
+
         return t_stim_prev
 
     @property
     def with_fatigue(self):
         return self._with_fatigue
+
+
+    def set_pulse_apparition_time(self, value: list[MX]):
+        """
+        Sets the pulse apparition time for each pulse (phases) according to the ocp parameter "pulse_apparition_time"
+
+        Parameters
+        ----------
+        value: list[MX]
+            The pulse apparition time list (s)
+        """
+        self.pulse_apparition_time = value
