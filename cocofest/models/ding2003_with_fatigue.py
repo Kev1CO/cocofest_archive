@@ -1,6 +1,6 @@
 from typing import Callable
 
-from casadi import MX, exp, vertcat
+from casadi import MX, exp, vertcat, if_else
 import numpy as np
 
 from bioptim import (
@@ -213,6 +213,9 @@ class DingModelFrequencyWithFatigue(DingModelFrequency):
         The derivative of the states in the tuple[MX] format
         """
 
+        stim_apparition = [parameters[idx] for idx in range(nlp.phase_idx + 1)]
+        # stim_apparition = [sum(stim_apparition[:i]) for i in range(1, len(stim_apparition) + 1)]
+
         return DynamicsEvaluation(
             dxdt=nlp.model.system_dynamics(
                 cn=states[0],
@@ -220,7 +223,7 @@ class DingModelFrequencyWithFatigue(DingModelFrequency):
                 a=states[2],
                 tau1=states[3],
                 km=states[4],
-                t=time,
+                t=time[0],
                 t_stim_prev=stim_apparition,
             ),
             defects=None,

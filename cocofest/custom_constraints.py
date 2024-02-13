@@ -10,11 +10,11 @@ from bioptim import PenaltyController
 class CustomConstraint:
     @staticmethod
     def pulse_time_apparition_as_phase(controller: PenaltyController) -> MX | SX:
-        substract_list_time = []
+        time_apparition_as_phase = 0
         for i in range(controller.ocp.n_phases):
-            substract_list_time.append(controller.phases_time_cx[i] - controller.parameters["pulse_apparition_time"].cx[i])
+            time_apparition_as_phase += controller.ocp.node_time(i, 0) - controller.parameters["pulse_apparition_time"].cx[i]
+        return time_apparition_as_phase
 
-        return sum(substract_list_time)
 
     @staticmethod
     def pulse_time_apparition_bimapping(controller: PenaltyController) -> MX | SX:  #TODO
