@@ -14,7 +14,7 @@ from bioptim import (
     Solver,
 )
 
-from cocofest import DingModelPulseDurationFrequencyWithFatigue, FESActuatedBiorbdModelOCP
+from cocofest import DingModelPulseDurationFrequencyWithFatigue, OcpFesMsk
 
 n_stim = 10
 n_shooting = 10
@@ -32,7 +32,7 @@ objective_functions.add(
 
 minimum_pulse_duration = DingModelPulseDurationFrequencyWithFatigue().pd0
 
-ocp = FESActuatedBiorbdModelOCP.prepare_ocp(
+ocp = OcpFesMsk.prepare_ocp(
     biorbd_model_path="../../msk_models/arm26_biceps_triceps.bioMod",
     bound_type="start_end",
     bound_data=[[0, 5], [0, 90]],

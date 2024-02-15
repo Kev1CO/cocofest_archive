@@ -17,7 +17,7 @@ from bioptim import (
     Solver,
 )
 
-from cocofest import DingModelFrequencyWithFatigue, FESActuatedBiorbdModelOCP
+from cocofest import DingModelFrequencyWithFatigue, OcpFesMsk
 
 n_stim = 5
 n_shooting = 10
@@ -36,7 +36,7 @@ for i in range(n_stim):
     objective_functions.add(ObjectiveFcn.Lagrange.MINIMIZE_CONTROL, key="tau", weight=10000, quadratic=True, phase=i)
 
 
-ocp = FESActuatedBiorbdModelOCP.prepare_ocp(
+ocp = OcpFesMsk.prepare_ocp(
     biorbd_model_path="../../msk_models/arm26_biceps_triceps.bioMod",
     bound_type="start_end",
     bound_data=[[0, 5], [0, 90]],

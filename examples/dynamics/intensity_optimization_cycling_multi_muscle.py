@@ -13,7 +13,7 @@ from bioptim import (
     Solver,
 )
 
-from cocofest import DingModelIntensityFrequency, FESActuatedBiorbdModelOCP
+from cocofest import DingModelIntensityFrequency, OcpFesMsk
 
 
 n_stim = 30
@@ -33,7 +33,7 @@ for i in range(n_stim):
 
 minimum_pulse_intensity = DingModelIntensityFrequency.min_pulse_intensity(DingModelIntensityFrequency())
 
-ocp = FESActuatedBiorbdModelOCP.prepare_ocp(
+ocp = OcpFesMsk.prepare_ocp(
     biorbd_model_path="../msk_models/arm26.bioMod",
     bound_type="start_end",
     bound_data=[[65, 38], [65, 38]],

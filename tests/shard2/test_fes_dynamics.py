@@ -12,7 +12,7 @@ from bioptim import (
 from cocofest import (
     DingModelPulseDurationFrequencyWithFatigue,
     DingModelIntensityFrequencyWithFatigue,
-    FESActuatedBiorbdModelOCP,
+    OcpFesMsk,
 )
 
 from examples.msk_models import init as ocp_module
@@ -28,7 +28,7 @@ def test_pulse_duration_multi_muscle_fes_dynamics():
         objective_functions.add(ObjectiveFcn.Lagrange.MINIMIZE_CONTROL, key="tau", weight=1, quadratic=True, phase=i)
 
     minimum_pulse_duration = DingModelPulseDurationFrequencyWithFatigue().pd0
-    ocp = FESActuatedBiorbdModelOCP.prepare_ocp(
+    ocp = OcpFesMsk.prepare_ocp(
         biorbd_model_path=biorbd_model_path,
         bound_type="start_end",
         bound_data=[[0, 5], [0, 120]],
@@ -105,7 +105,7 @@ def test_pulse_intensity_multi_muscle_fes_dynamics():
         [np.array([0, 10, 40, 90, 140, 80, 50, 10, 0, 0, 0]), np.array([0, 0, 0, 10, 40, 90, 140, 80, 50, 10, 0])],
     ]
 
-    ocp = FESActuatedBiorbdModelOCP.prepare_ocp(
+    ocp = OcpFesMsk.prepare_ocp(
         biorbd_model_path=biorbd_model_path,
         bound_type="start",
         bound_data=[0, 5],
@@ -177,7 +177,7 @@ def test_fes_models_inputs_sanity_check_errors():
         TypeError,
         match=re.escape("biorbd_model_path should be a string"),
     ):
-        ocp = FESActuatedBiorbdModelOCP.prepare_ocp(
+        ocp = OcpFesMsk.prepare_ocp(
             biorbd_model_path=5,
             bound_type="start_end",
             bound_data=[[0, 5], [0, 120]],
@@ -196,7 +196,7 @@ def test_fes_models_inputs_sanity_check_errors():
         ValueError,
         match=re.escape("bound_type should be a string and should be equal to start, end or start_end"),
     ):
-        ocp = FESActuatedBiorbdModelOCP.prepare_ocp(
+        ocp = OcpFesMsk.prepare_ocp(
             biorbd_model_path=biorbd_model_path,
             bound_type="hello",
             bound_data=[[0, 5], [0, 120]],
@@ -215,7 +215,7 @@ def test_fes_models_inputs_sanity_check_errors():
         TypeError,
         match=re.escape("bound_data should be a list"),
     ):
-        ocp = FESActuatedBiorbdModelOCP.prepare_ocp(
+        ocp = OcpFesMsk.prepare_ocp(
             biorbd_model_path=biorbd_model_path,
             bound_type="start_end",
             bound_data="[[0, 5], [0, 120]]",
@@ -234,7 +234,7 @@ def test_fes_models_inputs_sanity_check_errors():
         ValueError,
         match=re.escape(f"bound_data should be a list of {2} elements"),
     ):
-        ocp = FESActuatedBiorbdModelOCP.prepare_ocp(
+        ocp = OcpFesMsk.prepare_ocp(
             biorbd_model_path=biorbd_model_path,
             bound_type="start_end",
             bound_data=[[0, 5, 7], [0, 120, 150]],
@@ -253,7 +253,7 @@ def test_fes_models_inputs_sanity_check_errors():
         TypeError,
         match=re.escape(f"bound_data should be a list of two list"),
     ):
-        ocp = FESActuatedBiorbdModelOCP.prepare_ocp(
+        ocp = OcpFesMsk.prepare_ocp(
             biorbd_model_path=biorbd_model_path,
             bound_type="start_end",
             bound_data=["[0, 5]", [0, 120]],
@@ -272,7 +272,7 @@ def test_fes_models_inputs_sanity_check_errors():
         ValueError,
         match=re.escape(f"bound_data should be a list of {2} elements"),
     ):
-        ocp = FESActuatedBiorbdModelOCP.prepare_ocp(
+        ocp = OcpFesMsk.prepare_ocp(
             biorbd_model_path=biorbd_model_path,
             bound_type="start_end",
             bound_data=[[0, 5, 7], [0, 120, 150]],
@@ -291,7 +291,7 @@ def test_fes_models_inputs_sanity_check_errors():
         TypeError,
         match=re.escape(f"bound data index {1}: {5} and {'120'} should be an int or float"),
     ):
-        ocp = FESActuatedBiorbdModelOCP.prepare_ocp(
+        ocp = OcpFesMsk.prepare_ocp(
             biorbd_model_path=biorbd_model_path,
             bound_type="start_end",
             bound_data=[[0, 5], [0, "120"]],
@@ -310,7 +310,7 @@ def test_fes_models_inputs_sanity_check_errors():
         ValueError,
         match=re.escape(f"bound_data should be a list of {2} element"),
     ):
-        ocp = FESActuatedBiorbdModelOCP.prepare_ocp(
+        ocp = OcpFesMsk.prepare_ocp(
             biorbd_model_path=biorbd_model_path,
             bound_type="start",
             bound_data=[0, 5, 10],
@@ -329,7 +329,7 @@ def test_fes_models_inputs_sanity_check_errors():
         TypeError,
         match=re.escape(f"bound data index {1}: {'5'} should be an int or float"),
     ):
-        ocp = FESActuatedBiorbdModelOCP.prepare_ocp(
+        ocp = OcpFesMsk.prepare_ocp(
             biorbd_model_path=biorbd_model_path,
             bound_type="end",
             bound_data=[0, "5"],
@@ -355,7 +355,7 @@ def test_fes_models_inputs_sanity_check_errors():
             " DingModelIntensityFrequencyWithFatigue type"
         ),
     ):
-        ocp = FESActuatedBiorbdModelOCP.prepare_ocp(
+        ocp = OcpFesMsk.prepare_ocp(
             biorbd_model_path=biorbd_model_path,
             bound_type="start",
             bound_data=[0, 5],
@@ -374,7 +374,7 @@ def test_fes_models_inputs_sanity_check_errors():
         TypeError,
         match=re.escape(f"force_tracking: {'hello'} must be list type"),
     ):
-        ocp = FESActuatedBiorbdModelOCP.prepare_ocp(
+        ocp = OcpFesMsk.prepare_ocp(
             biorbd_model_path=biorbd_model_path,
             bound_type="start",
             bound_data=[0, 5],
@@ -394,7 +394,7 @@ def test_fes_models_inputs_sanity_check_errors():
         ValueError,
         match=re.escape("force_tracking must of size 2"),
     ):
-        ocp = FESActuatedBiorbdModelOCP.prepare_ocp(
+        ocp = OcpFesMsk.prepare_ocp(
             biorbd_model_path=biorbd_model_path,
             bound_type="end",
             bound_data=[0, 5],
@@ -414,7 +414,7 @@ def test_fes_models_inputs_sanity_check_errors():
         TypeError,
         match=re.escape(f"force_tracking index 0: {'hello'} must be np.ndarray type"),
     ):
-        ocp = FESActuatedBiorbdModelOCP.prepare_ocp(
+        ocp = OcpFesMsk.prepare_ocp(
             biorbd_model_path=biorbd_model_path,
             bound_type="start",
             bound_data=[0, 5],
@@ -434,7 +434,7 @@ def test_fes_models_inputs_sanity_check_errors():
         TypeError,
         match=re.escape(f"force_tracking index 1: {'[1, 2, 3]'} must be list type"),
     ):
-        ocp = FESActuatedBiorbdModelOCP.prepare_ocp(
+        ocp = OcpFesMsk.prepare_ocp(
             biorbd_model_path=biorbd_model_path,
             bound_type="start",
             bound_data=[0, 5],
@@ -456,7 +456,7 @@ def test_fes_models_inputs_sanity_check_errors():
             "force_tracking index 1 list must have the same size as the number of muscles in fes_muscle_models"
         ),
     ):
-        ocp = FESActuatedBiorbdModelOCP.prepare_ocp(
+        ocp = OcpFesMsk.prepare_ocp(
             biorbd_model_path=biorbd_model_path,
             bound_type="start",
             bound_data=[0, 5],
@@ -476,7 +476,7 @@ def test_fes_models_inputs_sanity_check_errors():
         ValueError,
         match=re.escape("force_tracking time and force argument must be the same length"),
     ):
-        ocp = FESActuatedBiorbdModelOCP.prepare_ocp(
+        ocp = OcpFesMsk.prepare_ocp(
             biorbd_model_path=biorbd_model_path,
             bound_type="start",
             bound_data=[0, 5],
@@ -496,7 +496,7 @@ def test_fes_models_inputs_sanity_check_errors():
         TypeError,
         match=re.escape(f"force_tracking: {'hello'} must be list type"),
     ):
-        ocp = FESActuatedBiorbdModelOCP.prepare_ocp(
+        ocp = OcpFesMsk.prepare_ocp(
             biorbd_model_path=biorbd_model_path,
             bound_type="start",
             bound_data=[0, 5],
@@ -516,7 +516,7 @@ def test_fes_models_inputs_sanity_check_errors():
         ValueError,
         match=re.escape("end_node_tracking list must have the same size as the number of muscles in fes_muscle_models"),
     ):
-        ocp = FESActuatedBiorbdModelOCP.prepare_ocp(
+        ocp = OcpFesMsk.prepare_ocp(
             biorbd_model_path=biorbd_model_path,
             bound_type="start",
             bound_data=[0, 5],
@@ -536,7 +536,7 @@ def test_fes_models_inputs_sanity_check_errors():
         TypeError,
         match=re.escape(f"end_node_tracking index {1}: {'hello'} must be int or float type"),
     ):
-        ocp = FESActuatedBiorbdModelOCP.prepare_ocp(
+        ocp = OcpFesMsk.prepare_ocp(
             biorbd_model_path=biorbd_model_path,
             bound_type="start",
             bound_data=[0, 5],
@@ -556,7 +556,7 @@ def test_fes_models_inputs_sanity_check_errors():
         TypeError,
         match=re.escape("q_tracking should be a list of size 2"),
     ):
-        ocp = FESActuatedBiorbdModelOCP.prepare_ocp(
+        ocp = OcpFesMsk.prepare_ocp(
             biorbd_model_path=biorbd_model_path,
             bound_type="start",
             bound_data=[0, 5],
@@ -576,7 +576,7 @@ def test_fes_models_inputs_sanity_check_errors():
         ValueError,
         match=re.escape("q_tracking[0] should be a list"),
     ):
-        ocp = FESActuatedBiorbdModelOCP.prepare_ocp(
+        ocp = OcpFesMsk.prepare_ocp(
             biorbd_model_path=biorbd_model_path,
             bound_type="start",
             bound_data=[0, 5],
@@ -596,7 +596,7 @@ def test_fes_models_inputs_sanity_check_errors():
         ValueError,
         match=re.escape("q_tracking[1] should have the same size as the number of generalized coordinates"),
     ):
-        ocp = FESActuatedBiorbdModelOCP.prepare_ocp(
+        ocp = OcpFesMsk.prepare_ocp(
             biorbd_model_path=biorbd_model_path,
             bound_type="start",
             bound_data=[0, 5],
@@ -616,7 +616,7 @@ def test_fes_models_inputs_sanity_check_errors():
         ValueError,
         match=re.escape("q_tracking[0] and q_tracking[1] should have the same size"),
     ):
-        ocp = FESActuatedBiorbdModelOCP.prepare_ocp(
+        ocp = OcpFesMsk.prepare_ocp(
             biorbd_model_path=biorbd_model_path,
             bound_type="start",
             bound_data=[0, 5],
@@ -636,7 +636,7 @@ def test_fes_models_inputs_sanity_check_errors():
         TypeError,
         match=re.escape(f"{'with_residual_torque'} should be a boolean"),
     ):
-        ocp = FESActuatedBiorbdModelOCP.prepare_ocp(
+        ocp = OcpFesMsk.prepare_ocp(
             biorbd_model_path=biorbd_model_path,
             bound_type="start",
             bound_data=[0, 5],
@@ -662,7 +662,7 @@ def test_fes_muscle_models_sanity_check_errors():
             f" {'TRIlong'}"
         ),
     ):
-        ocp = FESActuatedBiorbdModelOCP.prepare_ocp(
+        ocp = OcpFesMsk.prepare_ocp(
             biorbd_model_path=biorbd_model_path,
             bound_type="start",
             bound_data=[0, 5],

@@ -15,7 +15,7 @@ from bioptim import (
     Node,
 )
 
-from cocofest import DingModelFrequencyWithFatigue, FESActuatedBiorbdModelOCP
+from cocofest import DingModelFrequencyWithFatigue, OcpFesMsk
 
 # Fiber type proportion from [1]
 biceps_fiber_type_2_proportion = 0.607
@@ -80,7 +80,7 @@ for i in range(len(pickle_file_list)):
     controls = []
     parameters = []
 
-    ocp = FESActuatedBiorbdModelOCP.prepare_ocp(
+    ocp = OcpFesMsk.prepare_ocp(
         biorbd_model_path="../../msk_models/arm26.bioMod",
         bound_type="start",
         bound_data=[0, 5],

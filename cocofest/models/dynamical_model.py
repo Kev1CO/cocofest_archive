@@ -21,7 +21,7 @@ from cocofest import (
 )
 
 
-class FESActuatedBiorbdModel(BiorbdModel):
+class FesMskModel(BiorbdModel):
     def __init__(
         self,
         name: str = None,
@@ -137,11 +137,11 @@ class FESActuatedBiorbdModel(BiorbdModel):
             muscle_force_length_coeff = 1
             muscle_force_velocity_coeff = 1
             if nlp.model.muscle_force_length_relationship:
-                muscle_force_length_coeff = FESActuatedBiorbdModel.muscle_force_length_coefficient(
+                muscle_force_length_coeff = FesMskModel.muscle_force_length_coefficient(
                     model=nlp.model.bio_model.model, muscle=nlp.model.bio_model.model.muscle(muscle_idx), q=q
                 )
             if nlp.model.muscle_force_velocity_relationship:
-                muscle_force_velocity_coeff = FESActuatedBiorbdModel.muscle_force_velocity_coefficient(
+                muscle_force_velocity_coeff = FesMskModel.muscle_force_velocity_coefficient(
                     model=nlp.model.bio_model.model, muscle=nlp.model.bio_model.model.muscle(muscle_idx), q=q, qdot=qdot
                 )
 

@@ -27,12 +27,12 @@ from cocofest import (
     DingModelIntensityFrequency,
     DingModelIntensityFrequencyWithFatigue,
     OcpFes,
-    FESActuatedBiorbdModel,
+    FesMskModel,
     CustomObjective,
 )
 
 
-class FESActuatedBiorbdModelOCP:
+class OcpFesMsk:
     @staticmethod
     def prepare_ocp(
         biorbd_model_path: str,
@@ -178,7 +178,7 @@ class FESActuatedBiorbdModelOCP:
             n_threads=n_threads,
         )
 
-        FESActuatedBiorbdModelOCP._sanity_check_fes_models_inputs(
+        OcpFesMsk._sanity_check_fes_models_inputs(
             biorbd_model_path=biorbd_model_path,
             bound_type=bound_type,
             bound_data=bound_data,
@@ -195,7 +195,7 @@ class FESActuatedBiorbdModelOCP:
 
         OcpFes._sanity_check_frequency(n_stim=n_stim, final_time=final_time, frequency=frequency, round_down=round_down)
 
-        FESActuatedBiorbdModelOCP._sanity_check_muscle_model(
+        OcpFesMsk._sanity_check_muscle_model(
             biorbd_model_path=biorbd_model_path, fes_muscle_models=fes_muscle_models
         )
 
@@ -227,7 +227,7 @@ class FESActuatedBiorbdModelOCP:
             parameters_bounds,
             parameters_init,
             parameter_objectives,
-        ) = FESActuatedBiorbdModelOCP._build_parameters(
+        ) = OcpFesMsk._build_parameters(
             model=fes_muscle_models,
             n_stim=n_stim,
             pulse_duration=pulse_duration,
@@ -242,7 +242,7 @@ class FESActuatedBiorbdModelOCP:
             pulse_intensity_similar_for_all_muscles=pulse_intensity_similar_for_all_muscles,
         )
 
-        constraints = FESActuatedBiorbdModelOCP._set_constraints(constraints, custom_constraint)
+        constraints = OcpFesMsk._set_constraints(constraints, custom_constraint)
 
         if len(constraints) == 0 and len(parameters) == 0:
             raise ValueError(
@@ -251,7 +251,7 @@ class FESActuatedBiorbdModelOCP:
             )
 
         bio_models = [
-            FESActuatedBiorbdModel(
+            FesMskModel(
                 name=None,
                 biorbd_path=biorbd_model_path,
                 muscles_model=fes_muscle_models,
@@ -261,17 +261,17 @@ class FESActuatedBiorbdModelOCP:
             for i in range(n_stim)
         ]
 
-        dynamics = FESActuatedBiorbdModelOCP._declare_dynamics(bio_models, n_stim)
-        x_bounds, x_init = FESActuatedBiorbdModelOCP._set_bounds(
+        dynamics = OcpFesMsk._declare_dynamics(bio_models, n_stim)
+        x_bounds, x_init = OcpFesMsk._set_bounds(
             bio_models,
             fes_muscle_models,
             bound_type,
             bound_data,
             n_stim,
         )
-        u_bounds, u_init = FESActuatedBiorbdModelOCP._set_controls(bio_models, n_stim, with_residual_torque)
+        u_bounds, u_init = OcpFesMsk._set_controls(bio_models, n_stim, with_residual_torque)
         muscle_force_key = ["F_" + fes_muscle_models[i].muscle_name for i in range(len(fes_muscle_models))]
-        objective_functions = FESActuatedBiorbdModelOCP._set_objective(
+        objective_functions = OcpFesMsk._set_objective(
             n_stim,
             n_shooting,
             force_fourier_coef,
@@ -700,7 +700,7 @@ class FESActuatedBiorbdModelOCP:
 
     @staticmethod
     def _sanity_check_muscle_model(biorbd_model_path, fes_muscle_models):
-        tested_bio_model = FESActuatedBiorbdModel(
+        tested_bio_model = FesMskModel(
             name=None, biorbd_path=biorbd_model_path, muscles_model=fes_muscle_models
         )
         fes_muscle_models_name_list = [fes_muscle_models[x].muscle_name for x in range(len(fes_muscle_models))]
@@ -731,7 +731,7 @@ class FESActuatedBiorbdModelOCP:
             raise TypeError("biorbd_model_path should be a string")
 
         if bound_type:
-            tested_bio_model = FESActuatedBiorbdModel(
+            tested_bio_model = FesMskModel(
                 name=None, biorbd_path=biorbd_model_path, muscles_model=fes_muscle_models
             )
             if not isinstance(bound_type, str) or bound_type not in ["start", "end", "start_end"]:
@@ -806,7 +806,7 @@ class FESActuatedBiorbdModelOCP:
         if q_tracking:
             if not isinstance(q_tracking, list) and len(q_tracking) != 2:
                 raise TypeError("q_tracking should be a list of size 2")
-            tested_bio_model = FESActuatedBiorbdModel(
+            tested_bio_model = FesMskModel(
                 name=None, biorbd_path=biorbd_model_path, muscles_model=fes_muscle_models
             )
             if not isinstance(q_tracking[0], list):

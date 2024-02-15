@@ -10,7 +10,7 @@ from bioptim import Solver
 
 from cocofest import (
     DingModelPulseDurationFrequencyWithFatigue,
-    FESActuatedBiorbdModelOCP,
+    OcpFesMsk,
 )
 
 minimum_pulse_duration = DingModelPulseDurationFrequencyWithFatigue().pd0
@@ -19,7 +19,7 @@ sol_list = []
 muscle_force_length_relationship = [False, True]
 
 for i in range(2):
-    ocp = FESActuatedBiorbdModelOCP.prepare_ocp(
+    ocp = OcpFesMsk.prepare_ocp(
         biorbd_model_path="../msk_models/arm26_biceps_1dof.bioMod",
         bound_type="start",
         bound_data=[0],

@@ -11,7 +11,7 @@ from bioptim import (
     Solver,
 )
 
-from cocofest import DingModelPulseDurationFrequencyWithFatigue, FESActuatedBiorbdModelOCP
+from cocofest import DingModelPulseDurationFrequencyWithFatigue, OcpFesMsk
 
 
 objective_functions = ObjectiveList()
@@ -20,7 +20,7 @@ for i in range(n_stim):
     objective_functions.add(ObjectiveFcn.Lagrange.MINIMIZE_CONTROL, key="tau", weight=1, quadratic=True, phase=i)
 
 minimum_pulse_duration = DingModelPulseDurationFrequencyWithFatigue().pd0
-ocp = FESActuatedBiorbdModelOCP.prepare_ocp(
+ocp = OcpFesMsk.prepare_ocp(
     biorbd_model_path="../msk_models/arm26_biceps_1dof.bioMod",
     bound_type="start_end",
     bound_data=[[5], [120]],
