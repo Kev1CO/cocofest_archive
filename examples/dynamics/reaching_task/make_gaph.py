@@ -63,12 +63,6 @@ for i in range(2):
         [label.set_fontname("Times New Roman") for label in labels]
         [label.set_fontsize(14) for label in labels]
 
-        axs[i][j].scatter(
-            1,
-            0,
-            color="red"
-        )
-
         if j == 0:
             plt.setp(
                 axs[i][j],
@@ -139,12 +133,6 @@ for i in range(2):
     [label.set_fontname("Times New Roman") for label in labels]
     [label.set_fontsize(14) for label in labels]
 
-    axs[2][i].scatter(
-        1,
-        -2,
-        color="red"
-    )
-
     if i == 0:
         plt.setp(
             axs[2][i],
@@ -178,7 +166,7 @@ for i in range(2):
 
 # fatigue across time
 axs[2][2].set_xlim(left=0, right=1.5)
-axs[2][2].set_ylim(bottom=-6, top=0)
+# axs[2][2].set_ylim(bottom=-0.63, top=0)
 
 axs[2][2].text(
     0.3,
@@ -213,38 +201,30 @@ for i in range(len(data_minimize_force["time"])):
 
 a_force_diff_list = []
 a_fatigue_diff_list = []
+fatigue_minimization_percentage_gain_list = []
 for i in range(len(data_minimize_force["time"])):
     a_force_diff_list.append((a_force_sum_list[i] - a_force_sum_list[0])*1000)
     a_fatigue_diff_list.append((a_fatigue_sum_list[i] - a_fatigue_sum_list[0])*1000)
 
-plt.setp(
-    axs[2][2],
-    xticks=[0, 0.5, 1, 1.5],
-    xticklabels=[0, 0.5, 1, 1.5],
-    yticks=[0, -2, -4, -6],
-    yticklabels=[0, 2, 4, 6],
-)
+    fatigue_minimization_percentage_gain_list.append((a_fatigue_sum_list[i] - a_force_sum_list[i]) / (a_force_sum_list[0] - a_force_sum_list[-1]) * 100)
 
-axs[2][2].plot(data_minimize_force["time"], a_force_diff_list, ms=4, linewidth=5.0)
-axs[2][2].plot(data_minimize_force["time"], a_fatigue_diff_list, ms=4, linewidth=5.0)
-
-axs[2][2].scatter(
-    1,
-    -6,
-    color="red"
-)
+axs[2][2].plot(data_minimize_force["time"], fatigue_minimization_percentage_gain_list, ms=4, linewidth=5.0, color="green")
 
 axs[2][2].text(
     0,
     1.15,
-    f"{'-1e-4'}",
+    f"{'%'}",
     transform=axs[2][2].transAxes,
     ha="left",
     va="top",
     fontsize=10,
 )
 
-# fig.delaxes(axs[2][2])
+plt.setp(
+    axs[2][2],
+    xticks=[0, 0.5, 1, 1.5],
+    xticklabels=[0, 0.5, 1, 1.5],
+)
 
 # Figure labels
 axs[1][0].text(
