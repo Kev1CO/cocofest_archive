@@ -136,7 +136,7 @@ The stimulation last 1s and the stimulation frequency is 10Hz.
 The optimized parameter are each stimulation pulse width.
 
 <p align="center">
-  <img width="500" height="300" src=docs/arm_flexion.gif>
+  <img width="500" src=docs/arm_flexion.gif>
 </p>
 
 
