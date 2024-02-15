@@ -135,7 +135,11 @@ The objective function is to reach a 90° forearm position and 0° arm position 
 The stimulation last 1s and the stimulation frequency is 10Hz.
 The optimized parameter are each stimulation pulse width.
 
-<img src=docs/arm_flexion.gif width="500" align="center">
+<p align="center">
+  <img width="500" height="300" src=docs/arm_flexion.gif>
+</p>
+
+
 
 # Other functionalities
 
