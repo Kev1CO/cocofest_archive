@@ -177,17 +177,12 @@ class DingModelFrequency:
         if len(t_stim_prev) == 1:
             ri = 1
             exp_time = self.exp_time_fun(t, t_stim_prev[0])  # Part of Eq n°1
-
-            # sum_result = if_else(t >= t_stim_prev[0], ri * exp_time, 0)
-
             sum_multiplier += ri * exp_time  # sum_result   # Part of Eq n°1
         else:
             for i in range(1, len(t_stim_prev)):
                 previous_phase_time = t_stim_prev[i] - t_stim_prev[i - 1]
                 ri = self.ri_fun(r0, previous_phase_time)  # Part of Eq n°1
                 exp_time = self.exp_time_fun(t, t_stim_prev[i])  # Part of Eq n°1
-                # sum_result = if_else(t >= t_stim_prev[i], ri * exp_time, 0)
-
                 sum_multiplier += ri * exp_time  # sum_result # Part of Eq n°1
         return sum_multiplier
 
@@ -266,8 +261,6 @@ class DingModelFrequency:
         -------
         The derivative of the states in the tuple[MX] format
         """
-        stim_apparition = [parameters['pulse_apparition_time'].mx[phase_idx] for phase_idx in
-                       range(parameters['pulse_apparition_time'].shape)]
 
         return DynamicsEvaluation(
             dxdt=nlp.model.system_dynamics(
@@ -383,19 +376,12 @@ class DingModelFrequency:
         -------
         The list of previous stimulation time
         """
-        type = "mx" if "time" in ocp.nlp[nlp.phase_idx].parameters else None
-
-        # t_stim_prev = [ocp.node_time(phase_idx=i, node_idx=0, type=type) for i in range(nlp.phase_idx + 1)]
-        # if not isinstance(t_stim_prev[0], (MX, float)):
-            # t_stim_prev = [ocp.node_time(phase_idx=i, node_idx=0, type="mx") for i in range(nlp.phase_idx + 1)]
-        t_stim_prev = [ocp.parameters['pulse_apparition_time'].mx[phase_idx] for phase_idx in range(ocp.parameters['pulse_apparition_time'].shape)]
-
+        t_stim_prev = [ocp.parameters['pulse_apparition_time'].mx[phase_idx] for phase_idx in range(nlp.phase_idx + 1)]
         return t_stim_prev
 
     @property
     def with_fatigue(self):
         return self._with_fatigue
-
 
     def set_pulse_apparition_time(self, value: list[MX]):
         """
