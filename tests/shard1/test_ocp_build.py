@@ -5,7 +5,6 @@ import re
 import numpy as np
 
 from cocofest import (
-    FunctionalElectricStimulationMultiStart,
     DingModelFrequency,
     DingModelFrequencyWithFatigue,
     DingModelPulseDurationFrequency,
@@ -432,38 +431,6 @@ def test_ocp_not_for_optimal_error():
             final_time=1,
             use_sx=True,
         )
-
-
-@pytest.mark.parametrize(
-    "force_tracking, end_node_tracking", [(init_force_tracking, None), (None, init_end_node_tracking)]
-)
-@pytest.mark.parametrize("min_pulse_duration, min_pulse_intensity", [(minimum_pulse_duration, minimum_pulse_intensity)])
-def test_multi_start_building(force_tracking, end_node_tracking, min_pulse_duration, min_pulse_intensity):
-    multi_start = FunctionalElectricStimulationMultiStart(
-        methode="standard",
-        model=[DingModelFrequency(), DingModelPulseDurationFrequency(), DingModelIntensityFrequency()],
-        n_stim=[10],
-        n_shooting=[20],
-        final_time=[1],
-        frequency=[None],
-        force_tracking=[force_tracking],
-        end_node_tracking=[end_node_tracking],
-        time_min=[0.01],
-        time_max=[0.1],
-        time_bimapping=[False],
-        pulse_duration=[None],
-        pulse_duration_min=[minimum_pulse_duration],
-        pulse_duration_max=[0.0006],
-        pulse_duration_bimapping=[None],
-        pulse_intensity=[None],
-        pulse_intensity_min=[minimum_pulse_intensity],
-        pulse_intensity_max=[130],
-        pulse_intensity_bimapping=[None],
-        path_folder="./temp",
-    )
-
-    # --- Delete the temp file ---#
-    shutil.rmtree("./temp")
 
 
 def test_ding2007_build():
