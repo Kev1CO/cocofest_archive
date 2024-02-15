@@ -1,4 +1,3 @@
-[//]: # (<img align="right" width="400" src="docs/cocofest_logo.png">)
 <img align="right" width="400" src="docs/cocofest_logo.png">
 
 # COCOFEST
@@ -32,11 +31,11 @@ To solve the OCP, the robust solver [Ipopt](https://github.com/coin-or/Ipopt) ha
 [Create your own FES OCP](#create-your-own-fes-ocp)
 
 [Examples](#examples)
+- [Musculoskeletal model driven by FES models](#musculoskeletal-model-driven-by-FES-models)
 
 <details>
 <summary><a href="#other-functionalities">Other functionalities</a></summary>
 
-- [With fatigue](#with-fatigue)
 - [Initial value problem](#initital-value-problem)
 - [Summation truncation](#summation-truncation)
 
@@ -51,11 +50,36 @@ Cloning the repository is the first step to be able to use the package.
 
 ## Dependencies
 `Cocofest` relies on several libraries. 
-Based on `bioptim`, the user is invited to directly download the framework from anaconda or from the [sources](https://github.com/pyomeca/bioptim) by cloning the repository
+Follows the steps to install everything you need to use `Cocofest`.
+</br>
+First, you need to create a new conda environment
 ```bash
-conda install -c conda-forge bioptim
+conda create -n YOUR_ENV_NAME python=3.10
 ```
-The other [bioptim dependencies](https://github.com/pyomeca/bioptim#dependencies) must be installed as well.
+
+Then, activate the environment
+```bash
+conda activate YOUR_ENV_NAME
+```
+
+This step will allow you to install the dependencies in the environment much quicker
+```bash:
+conda install -cconda-forge conda-libmamba-solver
+```
+
+After, install the dependencies
+```bash
+conda install numpy matplotlib pytest casadi biorbd -cconda-forge --solver=libmamba
+```
+
+Finally, install the bioptim setup.py file located in your cocofest/external/bioptim folder
+```bash
+cd <path_up_to_cocofest_file>/external/bioptim
+python setup.py install
+```
+
+You got everything you need to use `Cocofest`!
+
 
 # Available FES models
 The available FES models are likely to increase so stay tune.
@@ -91,7 +115,7 @@ the minimum and maximum time between two stimulation pulse, the time bimapping
 (If True, will act like a frequency at constant pulse interval).
 
 ```python
-ocp = OcpFes.prepare_ocp(...,
+ocp = OcpFes().prepare_ocp(...,
                          n_stim=10,
                          n_shooting=20,
                          ...,)
@@ -105,41 +129,37 @@ result = ocp.solve()
 
 # Examples
 You can find all the available examples in the [examples](https://github.com/Kev1CO/cocofest/tree/main/examples) file.
+## Musculoskeletal model driven by FES models
+The following example is a musculoskeletal model driven by the Ding2007 FES model.
+The objective function is to reach a 90° forearm position and 0° arm position at the movement end.
+The stimulation last 1s and the stimulation frequency is 10Hz.
+The optimized parameter are each stimulation pulse width.
+
+<img src=docs/arm_flexion.gif width="500" align="center">
 
 # Other functionalities
-
-## With fatigue
-It is possible to compute the models with their fatigue equations or not.
-For example, the "ding2003" model can be use with fatigue DingModelFrequencyWithFatigue or without DingModelFrequency.
-If no fatigue is applied, the fatigue equation will not be added to the model and the muscle force will remain 
-constant during the simulation regardless of the previous stimulation appearance.
-
-```python
-ocp = OcpFes.prepare_ocp(model=DingModelFrequencyWithFatigue())
-```
 
 ## Initital value problem
 You can also compute the models form initial value problem.
 For that, use the IvpFes class to build the computed problem.
 
 ```python
-ocp = IvpFes(
-    ding_model=DingModelFrequency(),
-)
+ocp = IvpFes(model=DingModelFrequency(), ...)
 ```
 
 ## Summation truncation
 The summation truncation is an integer parameter that can be added to the model.
 It will truncate the stimulation apparition list used for the calcium summation.
-The integer number defines the stimulation number to keep for this summation.
+The integer number defines the stimulation number to keep prior this summation calculation (e.g only the 5 past stimulation will be included).
 
 ```python
-ocp = OcpFes.prepare_ocp()
+ocp = OcpFes().prepare_ocp(model=DingModelFrequency(sum_stim_truncation=5))
 ```
 
 
 # Citing
 `Cocofest` is not yet published in a journal.
-But if you use `Cocofest` in your research, please kindly cite this package by giving the repository link.
+But if you use `Cocofest` in your research, please kindly cite this zenodo link [10.5281/zenodo.10427934](https://doi.org/10.5281/zenodo.10427934).
 
-![](docs/arm_flexion.gif)
+# Acknowledgements
+The Cocofest [logo](docs/cocofest_logo.png) has been design by [MaxMV](https://www.instagram.com/max_mv3/)
