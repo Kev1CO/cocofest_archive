@@ -8,9 +8,6 @@ It is based on the [bioptim](https://github.com/pyomeca/bioptim) framework for t
 Bioptim uses [biorbd](https://github.com/pyomeca/biorbd) a biomechanics library and benefits from the powerful algorithmic diff provided by [CasADi](https://web.casadi.org/).
 To solve the OCP, the robust solver [Ipopt](https://github.com/coin-or/Ipopt) has been implemented.
 
-<br />
-<br />
-
 ## Status
 
 | Type          | Status                                                                                                                                                                |
