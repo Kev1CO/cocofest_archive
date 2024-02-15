@@ -21,10 +21,10 @@ intensity_path = [
 ]
 
 chosen_graph_to_plot_path = (
-        duration_path
-        if chosen_graph_to_plot == "duration"
-        else intensity_path if chosen_graph_to_plot == "intensity" else None
-    )
+    duration_path
+    if chosen_graph_to_plot == "duration"
+    else intensity_path if chosen_graph_to_plot == "intensity" else None
+)
 
 
 if chosen_graph_to_plot_path is None:
@@ -39,7 +39,7 @@ with open(chosen_graph_to_plot_path[1], "rb") as f:
 force_muscle_keys = ["F_BIClong", "F_BICshort", "F_TRIlong", "F_TRIlat", "F_TRImed", "F_BRA"]
 muscle_names = ["BIClong", "BICshort", "TRIlong", "TRIlat", "TRImed", "BRA"]
 muscle_title_x_postiton = [0.55, 0.5, 0.56, 0.62, 0.55, 0.73]
-fig, axs = plt.subplots(3, 3, figsize=(5, 3),  constrained_layout=True)
+fig, axs = plt.subplots(3, 3, figsize=(5, 3), constrained_layout=True)
 index = 0
 
 # Force across time
@@ -203,12 +203,16 @@ a_force_diff_list = []
 a_fatigue_diff_list = []
 fatigue_minimization_percentage_gain_list = []
 for i in range(len(data_minimize_force["time"])):
-    a_force_diff_list.append((a_force_sum_list[i] - a_force_sum_list[0])*1000)
-    a_fatigue_diff_list.append((a_fatigue_sum_list[i] - a_fatigue_sum_list[0])*1000)
+    a_force_diff_list.append((a_force_sum_list[i] - a_force_sum_list[0]) * 1000)
+    a_fatigue_diff_list.append((a_fatigue_sum_list[i] - a_fatigue_sum_list[0]) * 1000)
 
-    fatigue_minimization_percentage_gain_list.append((a_fatigue_sum_list[i] - a_force_sum_list[i]) / (a_force_sum_list[0] - a_force_sum_list[-1]) * 100)
+    fatigue_minimization_percentage_gain_list.append(
+        (a_fatigue_sum_list[i] - a_force_sum_list[i]) / (a_force_sum_list[0] - a_force_sum_list[-1]) * 100
+    )
 
-axs[2][2].plot(data_minimize_force["time"], fatigue_minimization_percentage_gain_list, ms=4, linewidth=5.0, color="green")
+axs[2][2].plot(
+    data_minimize_force["time"], fatigue_minimization_percentage_gain_list, ms=4, linewidth=5.0, color="green"
+)
 
 axs[2][2].text(
     0,

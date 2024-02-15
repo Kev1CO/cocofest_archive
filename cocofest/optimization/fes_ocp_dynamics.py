@@ -195,9 +195,7 @@ class OcpFesMsk:
 
         OcpFes._sanity_check_frequency(n_stim=n_stim, final_time=final_time, frequency=frequency, round_down=round_down)
 
-        OcpFesMsk._sanity_check_muscle_model(
-            biorbd_model_path=biorbd_model_path, fes_muscle_models=fes_muscle_models
-        )
+        OcpFesMsk._sanity_check_muscle_model(biorbd_model_path=biorbd_model_path, fes_muscle_models=fes_muscle_models)
 
         n_stim, final_time = OcpFes._build_phase_parameter(
             n_stim=n_stim, final_time=final_time, frequency=frequency, pulse_mode=pulse_mode, round_down=round_down
@@ -699,9 +697,7 @@ class OcpFesMsk:
 
     @staticmethod
     def _sanity_check_muscle_model(biorbd_model_path, fes_muscle_models):
-        tested_bio_model = FesMskModel(
-            name=None, biorbd_path=biorbd_model_path, muscles_model=fes_muscle_models
-        )
+        tested_bio_model = FesMskModel(name=None, biorbd_path=biorbd_model_path, muscles_model=fes_muscle_models)
         fes_muscle_models_name_list = [fes_muscle_models[x].muscle_name for x in range(len(fes_muscle_models))]
         for biorbd_muscle in tested_bio_model.muscle_names:
             if biorbd_muscle not in fes_muscle_models_name_list:
@@ -730,9 +726,7 @@ class OcpFesMsk:
             raise TypeError("biorbd_model_path should be a string")
 
         if bound_type:
-            tested_bio_model = FesMskModel(
-                name=None, biorbd_path=biorbd_model_path, muscles_model=fes_muscle_models
-            )
+            tested_bio_model = FesMskModel(name=None, biorbd_path=biorbd_model_path, muscles_model=fes_muscle_models)
             if not isinstance(bound_type, str) or bound_type not in ["start", "end", "start_end"]:
                 raise ValueError("bound_type should be a string and should be equal to start, end or start_end")
             if not isinstance(bound_data, list):
@@ -805,9 +799,7 @@ class OcpFesMsk:
         if q_tracking:
             if not isinstance(q_tracking, list) and len(q_tracking) != 2:
                 raise TypeError("q_tracking should be a list of size 2")
-            tested_bio_model = FesMskModel(
-                name=None, biorbd_path=biorbd_model_path, muscles_model=fes_muscle_models
-            )
+            tested_bio_model = FesMskModel(name=None, biorbd_path=biorbd_model_path, muscles_model=fes_muscle_models)
             if not isinstance(q_tracking[0], list):
                 raise ValueError("q_tracking[0] should be a list")
             if len(q_tracking[1]) != tested_bio_model.nb_q:
