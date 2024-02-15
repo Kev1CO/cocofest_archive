@@ -6,13 +6,11 @@ from .models.ding2007_with_fatigue import DingModelPulseDurationFrequencyWithFat
 from .models.hmed2018 import DingModelIntensityFrequency
 from .models.hmed2018_with_fatigue import DingModelIntensityFrequencyWithFatigue
 from .models.dynamical_model import FesMskModel
-from .optimization.fes_multi_start import FunctionalElectricStimulationMultiStart
 from .optimization.fes_ocp import OcpFes
 from .optimization.fes_identification_ocp import OcpFesId
 from .optimization.fes_ocp_dynamics import OcpFesMsk
 from .integration.ivp_fes import IvpFes
 from .fourier_approx import FourierSeries
-from .read_data import ExtractData
 from .identification.ding2003_force_parameter_identification import DingModelFrequencyForceParameterIdentification
 from .identification.ding2007_force_parameter_identification import (
     DingModelPulseDurationFrequencyForceParameterIdentification,
