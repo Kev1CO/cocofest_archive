@@ -48,12 +48,14 @@ class DingModelFrequencyParameterIdentification:
 
     def __init__(
         self,
-        model: DingModelFrequency
-        | DingModelFrequencyWithFatigue
-        | DingModelPulseDurationFrequency
-        | DingModelPulseDurationFrequencyWithFatigue
-        | DingModelIntensityFrequency
-        | DingModelIntensityFrequencyWithFatigue,
+        model: (
+            DingModelFrequency
+            | DingModelFrequencyWithFatigue
+            | DingModelPulseDurationFrequency
+            | DingModelPulseDurationFrequencyWithFatigue
+            | DingModelIntensityFrequency
+            | DingModelIntensityFrequencyWithFatigue
+        ),
         force_model_data_path: str | list[str] = None,
         force_model_identification_method: str = "full",
         force_model_identification_with_average_method_initial_guess: bool = False,

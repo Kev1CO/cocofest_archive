@@ -61,9 +61,7 @@ class ForceSensorToMuscleForce:  # TODO : Enable several muscles (biceps, tricep
                 muscle_name = (
                     muscle_name
                     if isinstance(muscle_name, str)
-                    else muscle_name[i]
-                    if isinstance(muscle_name, list)
-                    else "biceps"
+                    else muscle_name[i] if isinstance(muscle_name, list) else "biceps"
                 )
                 dictionary = {"time": self.time, muscle_name: self.all_biceps_force_vector, "stim_time": self.stim_time}
                 with open(save_pickle_path, "wb") as file:

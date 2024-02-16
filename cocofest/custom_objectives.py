@@ -2,6 +2,7 @@
 This custom objective is to enable the tracking of a curve by a state at all node. Used for sample data control problems
 such as functional electro stimulation
 """
+
 import numpy as np
 from casadi import MX, SX
 

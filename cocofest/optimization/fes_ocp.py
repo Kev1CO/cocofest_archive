@@ -48,12 +48,14 @@ class OcpFes:
 
     @staticmethod
     def prepare_ocp(
-        model: DingModelFrequency
-        | DingModelFrequencyWithFatigue
-        | DingModelPulseDurationFrequency
-        | DingModelPulseDurationFrequencyWithFatigue
-        | DingModelIntensityFrequency
-        | DingModelIntensityFrequencyWithFatigue = None,
+        model: (
+            DingModelFrequency
+            | DingModelFrequencyWithFatigue
+            | DingModelPulseDurationFrequency
+            | DingModelPulseDurationFrequencyWithFatigue
+            | DingModelIntensityFrequency
+            | DingModelIntensityFrequencyWithFatigue
+        ) = None,
         n_stim: int = None,
         n_shooting: int = None,
         final_time: int | float = None,

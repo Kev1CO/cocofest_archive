@@ -105,7 +105,7 @@ for i in range(len(name_error_list)):
                 c_integration_time = [single_computations_time][i][counter]
 
             counter += 1
-        ground_truth_computation_time = computations_time_list[i][counter-1]
+        ground_truth_computation_time = computations_time_list[i][counter - 1]
         time_diff = ground_truth_computation_time - computations_time_list[i][computation_time_beneath_1e_8_counter]
         time_diff = 0 if time_diff < 0 else time_diff
         computation_time_beneath_1e_8.append(time_diff)
@@ -171,10 +171,12 @@ cbar1.ax.set_yticklabels(
         "{:.1e}".format(float(round(max_error))),
     ],
     size=25,
-    fontname="Times New Roman"
+    fontname="Times New Roman",
 )
 
-axs.plot(np.arange(1, 101, 1).tolist(), np.arange(1, 101, 1).tolist(), color="red", ls="-", label="Ground truth", linewidth=4)
+axs.plot(
+    np.arange(1, 101, 1).tolist(), np.arange(1, 101, 1).tolist(), color="red", ls="-", label="Ground truth", linewidth=4
+)
 
 x_beneath_1e_8 = np.arange(1, 101, 1).tolist()
 for i in range(1):
@@ -185,9 +187,33 @@ for i in range(1):
     axs.plot(x_beneath_1e_8, y_beneath_1e_8, color="darkred", label="Calcium absolute error < 1e-8", linewidth=3)
 
 axs.scatter(0, 0, color="white", label="OCP (s) | 100 Integrations (s)", marker="+", s=0, lw=0)
-axs.scatter(1, 1, color="blue", label="  "+ str(round(a_ocp_time, 3)) + "              " + str(round(a_integration_time, 3)), marker="^", s=200, lw=5)
-axs.scatter(100, 39, color="black", label="  "+ str(round(b_ocp_time, 3)) + "              " + str(round(b_integration_time, 3)), marker="+", s=500, lw=5)
-axs.scatter(100, 100, color="green", label="  "+ str(round(c_ocp_time, 3)) + "              " + str(round(c_integration_time, 3)), marker=",", s=200, lw=5)
+axs.scatter(
+    1,
+    1,
+    color="blue",
+    label="  " + str(round(a_ocp_time, 3)) + "              " + str(round(a_integration_time, 3)),
+    marker="^",
+    s=200,
+    lw=5,
+)
+axs.scatter(
+    100,
+    39,
+    color="black",
+    label="  " + str(round(b_ocp_time, 3)) + "              " + str(round(b_integration_time, 3)),
+    marker="+",
+    s=500,
+    lw=5,
+)
+axs.scatter(
+    100,
+    100,
+    color="green",
+    label="  " + str(round(c_ocp_time, 3)) + "              " + str(round(c_integration_time, 3)),
+    marker=",",
+    s=200,
+    lw=5,
+)
 
 axs.set_xlabel("Frequency (Hz)", fontsize=25, fontname="Times New Roman")
 axs.xaxis.set_major_locator(MaxNLocator(integer=True))
@@ -210,5 +236,5 @@ axs.tick_params(axis="both", which="major", labelsize=25)
 axs.set_axisbelow(True)
 axs.grid()
 
-axs.legend(loc="upper left", prop={'family':'Times New Roman', 'size': 20})
+axs.legend(loc="upper left", prop={"family": "Times New Roman", "size": 20})
 plt.show()

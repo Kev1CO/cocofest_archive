@@ -69,7 +69,9 @@ for mode in modes:
                 start_time = time.time()
 
                 # Creating the solution from the initial guess
-                sol_from_initial_guess = Solution.from_initial_guess(ivp, [ivp.x_init, ivp.u_init, ivp.p_init, ivp.s_init])
+                sol_from_initial_guess = Solution.from_initial_guess(
+                    ivp, [ivp.x_init, ivp.u_init, ivp.p_init, ivp.s_init]
+                )
 
                 # Integrating the solution
                 result = sol_from_initial_guess.integrate(
@@ -86,7 +88,9 @@ for mode in modes:
                     tau1 = result.states["Tau1"][0][-1]
 
                 counter += 1
-                print("currently : " + str(counter) + "/" + str(nb) + " in " + str(round(time_computation[-1], 4)) + "s")
+                print(
+                    "currently : " + str(counter) + "/" + str(nb) + " in " + str(round(time_computation[-1], 4)) + "s"
+                )
 
             time_computation_for_n_rep = sum(time_computation)
             time_computation_mean = sum(time_computation) / len(time_computation)
