@@ -78,7 +78,7 @@ cd <path_up_to_cocofest_file>/external/bioptim
 python setup.py install
 ```
 
-You got everything you need to use `Cocofest`!
+You are now ready to use `Cocofest`!
 
 
 # Available FES models
