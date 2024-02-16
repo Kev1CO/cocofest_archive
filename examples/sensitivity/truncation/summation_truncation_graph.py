@@ -93,17 +93,14 @@ for i in range(len(name_error_list)):
                 counter_beneath_1e_8 += 1
             list_error.append(error_val)
             if parameter_list[i][counter] == [1, 1]:
-                print("[1, 1]", computations_time_list[i][counter])
                 a_ocp_time = [single_ocp_time][i][counter]
                 a_integration_time = [single_computations_time][i][counter]
 
             if parameter_list[i][counter] == [100, 39]:
-                print("[100, 39]", computations_time_list[i][counter])
                 b_ocp_time = [single_ocp_time][i][counter]
                 b_integration_time = [single_computations_time][i][counter]
 
             if parameter_list[i][counter] == [100, 100]:
-                print("[100, 100]", computations_time_list[i][counter])
                 c_ocp_time = [single_ocp_time][i][counter]
                 c_integration_time = [single_computations_time][i][counter]
 
@@ -131,7 +128,7 @@ min_computation_time = min(list_min_computation_time)
 # --- Plotting the results --- #
 
 fig, axs = plt.subplots(1, 1)
-plt.rcParams['figure.figsize'] = [10, 10]
+fig.set_size_inches(13, 10)
 cmap = plt.get_cmap().copy()
 cmap = cmap.with_extremes(under="black")
 
