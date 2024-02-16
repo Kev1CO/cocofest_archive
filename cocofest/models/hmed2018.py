@@ -26,8 +26,10 @@ class DingModelIntensityFrequency(DingModelFrequency):
     Computers in Biology and Medicine, 101, 218-228.
     """
 
-    def __init__(self, name: str = "hmed2018", sum_stim_truncation: int = None):
-        super(DingModelIntensityFrequency, self).__init__(name=name, sum_stim_truncation=sum_stim_truncation)
+    def __init__(self, model_name: str = "hmed2018", muscle_name: str = None, sum_stim_truncation: int = None):
+        super(DingModelIntensityFrequency, self).__init__(
+            model_name=model_name, muscle_name=muscle_name, sum_stim_truncation=sum_stim_truncation
+        )
         self._with_fatigue = False
         # ---- Custom values for the example ---- #
         # ---- Force models ---- #
@@ -36,6 +38,19 @@ class DingModelIntensityFrequency(DingModelFrequency):
         self.Is = 63.1  # (mA) Muscle saturation intensity.
         self.cr = 0.833  # (-) Translation of axis coordinates.
         self.impulse_intensity = None
+
+    def set_ar(self, model, ar: MX | float):
+        # models is required for bioptim compatibility
+        self.ar = ar
+
+    def set_bs(self, model, bs: MX | float):
+        self.bs = bs
+
+    def set_Is(self, model, Is: MX | float):
+        self.Is = Is
+
+    def set_cr(self, model, cr: MX | float):
+        self.cr = cr
 
     # ---- Absolutely needed methods ---- #
     def serialize(self) -> tuple[Callable, dict]:
@@ -63,6 +78,8 @@ class DingModelIntensityFrequency(DingModelFrequency):
         t: MX = None,
         t_stim_prev: list[MX] | list[float] = None,
         intensity_stim: list[MX] | list[float] = None,
+        force_length_relationship: MX | float = 1,
+        force_velocity_relationship: MX | float = 1,
     ) -> MX:
         """
         The system dynamics is the function that describes the models.
@@ -79,6 +96,10 @@ class DingModelIntensityFrequency(DingModelFrequency):
             The time list of the previous stimulations (ms)
         intensity_stim: list[MX]
             The pulsation intensity of the current stimulation (mA)
+        force_length_relationship: MX | float
+            The force length relationship value (unitless)
+        force_velocity_relationship: MX | float
+            The force velocity relationship value (unitless)
 
         Returns
         -------
@@ -86,7 +107,15 @@ class DingModelIntensityFrequency(DingModelFrequency):
         """
         r0 = self.km_rest + self.r0_km_relationship  # Simplification
         cn_dot = self.cn_dot_fun(cn, r0, t, t_stim_prev=t_stim_prev, intensity_stim=intensity_stim)  # Equation n°1
-        f_dot = self.f_dot_fun(cn, f, self.a_rest, self.tau1_rest, self.km_rest)  # Equation n°2
+        f_dot = self.f_dot_fun(
+            cn,
+            f,
+            self.a_rest,
+            self.tau1_rest,
+            self.km_rest,
+            force_length_relationship=force_length_relationship,
+            force_velocity_relationship=force_velocity_relationship,
+        )  # Equation n°2
         return vertcat(cn_dot, f_dot)
 
     def cn_dot_fun(
@@ -139,9 +168,6 @@ class DingModelIntensityFrequency(DingModelFrequency):
         for i in range(len(t_stim_prev)):  # Eq from [1]
             if i == 0 and len(t_stim_prev) == 1:  # Eq from Bakir et al.
                 ri = 1
-            elif i == 0 and len(t_stim_prev) != 1:
-                previous_phase_time = t_stim_prev[i + 1] - t_stim_prev[i]
-                ri = self.ri_fun(r0, previous_phase_time)
             else:
                 previous_phase_time = t_stim_prev[i] - t_stim_prev[i - 1]
                 ri = self.ri_fun(r0, previous_phase_time)
@@ -178,7 +204,7 @@ class DingModelIntensityFrequency(DingModelFrequency):
             self.impulse_intensity.append(value[i])
 
     @staticmethod
-    def get_intensity_parameters(nlp_parameters: ParameterList) -> MX:
+    def get_intensity_parameters(nlp_parameters: ParameterList, muscle_name: str = None) -> MX:
         """
         Get the nlp list of intensity parameters
 
@@ -186,6 +212,8 @@ class DingModelIntensityFrequency(DingModelFrequency):
         ----------
         nlp_parameters: ParameterList
             The nlp list parameter
+        muscle_name: str
+            The muscle name
 
         Returns
         -------
@@ -193,7 +221,10 @@ class DingModelIntensityFrequency(DingModelFrequency):
         """
         intensity_parameters = vertcat()
         for j in range(nlp_parameters.mx.shape[0]):
-            if "pulse_intensity" in str(nlp_parameters.mx[j]):
+            if muscle_name:
+                if "pulse_intensity_" + muscle_name in str(nlp_parameters.mx[j]):
+                    intensity_parameters = vertcat(intensity_parameters, nlp_parameters.mx[j])
+            elif "pulse_intensity" in str(nlp_parameters.mx[j]):
                 intensity_parameters = vertcat(intensity_parameters, nlp_parameters.mx[j])
         return intensity_parameters
 
@@ -206,6 +237,9 @@ class DingModelIntensityFrequency(DingModelFrequency):
         stochastic_variables: MX,
         nlp: NonLinearProgram,
         stim_apparition: list[float] = None,
+        fes_model: NonLinearProgram = None,
+        force_length_relationship: MX | float = 1,
+        force_velocity_relationship: MX | float = 1,
     ) -> DynamicsEvaluation:
         """
         Functional electrical stimulation dynamic
@@ -226,6 +260,12 @@ class DingModelIntensityFrequency(DingModelFrequency):
             A reference to the phase
         stim_apparition: list[float]
             The time list of the previous stimulations (s)
+        fes_model: DingModelIntensityFrequency
+            The current phase fes model
+        force_length_relationship: MX | float
+            The force length relationship value (unitless)
+        force_velocity_relationship: MX | float
+            The force velocity relationship value (unitless)
         Returns
         -------
         The derivative of the states in the tuple[MX] format
@@ -233,7 +273,11 @@ class DingModelIntensityFrequency(DingModelFrequency):
         intensity_stim_prev = (
             []
         )  # Every stimulation intensity before the current phase, i.e.: the intensity of each phase
-        intensity_parameters = nlp.model.get_intensity_parameters(nlp.parameters)
+        intensity_parameters = (
+            nlp.model.get_intensity_parameters(nlp.parameters)
+            if fes_model is None
+            else fes_model.get_intensity_parameters(nlp.parameters, muscle_name=fes_model.muscle_name)
+        )
 
         if intensity_parameters.shape[0] == 1:  # check if pulse duration is mapped
             for i in range(nlp.phase_idx + 1):
@@ -242,13 +286,17 @@ class DingModelIntensityFrequency(DingModelFrequency):
             for i in range(nlp.phase_idx + 1):
                 intensity_stim_prev.append(intensity_parameters[i])
 
+        dxdt_fun = fes_model.system_dynamics if fes_model else nlp.model.system_dynamics
+
         return DynamicsEvaluation(
-            dxdt=nlp.model.system_dynamics(
+            dxdt=dxdt_fun(
                 cn=states[0],
                 f=states[1],
                 t=time,
                 t_stim_prev=stim_apparition,
                 intensity_stim=intensity_stim_prev,
+                force_length_relationship=force_length_relationship,
+                force_velocity_relationship=force_velocity_relationship,
             ),
             defects=None,
         )
@@ -264,8 +312,10 @@ class DingModelIntensityFrequency(DingModelFrequency):
         nlp: NonLinearProgram
             A reference to the phase
         """
-        self.configure_ca_troponin_complex(ocp=ocp, nlp=nlp, as_states=True, as_controls=False)
-        self.configure_force(ocp=ocp, nlp=nlp, as_states=True, as_controls=False)
+        self.configure_ca_troponin_complex(
+            ocp=ocp, nlp=nlp, as_states=True, as_controls=False, muscle_name=self.muscle_name
+        )
+        self.configure_force(ocp=ocp, nlp=nlp, as_states=True, as_controls=False, muscle_name=self.muscle_name)
         stim_apparition = self.get_stim_prev(ocp, nlp)
         ConfigureProblem.configure_dynamics_function(ocp, nlp, dyn_func=self.dynamics, stim_apparition=stim_apparition)
 

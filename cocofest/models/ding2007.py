@@ -1,7 +1,6 @@
 from typing import Callable
 
 from casadi import MX, vertcat, exp
-import numpy as np
 
 from bioptim import (
     ConfigureProblem,
@@ -26,8 +25,10 @@ class DingModelPulseDurationFrequency(DingModelFrequency):
     Muscle & Nerve: Official Journal of the American Association of Electrodiagnostic Medicine, 36(2), 214-222.
     """
 
-    def __init__(self, name: str = "ding_2007", sum_stim_truncation: int = None):
-        super(DingModelPulseDurationFrequency, self).__init__(name=name, sum_stim_truncation=sum_stim_truncation)
+    def __init__(self, model_name: str = "ding_2007", muscle_name: str = None, sum_stim_truncation: int = None):
+        super(DingModelPulseDurationFrequency, self).__init__(
+            model_name=model_name, muscle_name=muscle_name, sum_stim_truncation=sum_stim_truncation
+        )
         self._with_fatigue = False
         self.impulse_time = None
         # ---- Custom values for the example ---- #
@@ -39,6 +40,16 @@ class DingModelPulseDurationFrequency(DingModelFrequency):
         self.tau2 = 0.001  # Value from Ding's 2007 article (s)
         self.km = 0.137  # Value from Ding's 2007 article (unitless)
         self.tauc = 0.011  # Value from Ding's 2007 article (s)
+
+    def set_a_scale(self, model, a_scale: MX | float):
+        # models is required for bioptim compatibility
+        self.a_scale = a_scale
+
+    def set_pd0(self, model, pd0: MX | float):
+        self.pd0 = pd0
+
+    def set_pdt(self, model, pdt: MX | float):
+        self.pdt = pdt
 
     def serialize(self) -> tuple[Callable, dict]:
         # This is where you can serialize your models
@@ -64,6 +75,8 @@ class DingModelPulseDurationFrequency(DingModelFrequency):
         t: MX = None,
         t_stim_prev: list[MX] | list[float] = None,
         impulse_time: MX = None,
+        force_length_relationship: MX | float = 1,
+        force_velocity_relationship: MX | float = 1,
     ) -> MX:
         """
         The system dynamics is the function that describes the models.
@@ -80,6 +93,10 @@ class DingModelPulseDurationFrequency(DingModelFrequency):
             The time list of the previous stimulations (ms)
         impulse_time: MX
             The pulsation duration of the current stimulation (ms)
+        force_length_relationship: MX | float
+            The force length relationship value (unitless)
+        force_velocity_relationship: MX | float
+            The force velocity relationship value (unitless)
 
         Returns
         -------
@@ -87,14 +104,24 @@ class DingModelPulseDurationFrequency(DingModelFrequency):
         """
         r0 = self.km_rest + self.r0_km_relationship  # Simplification
         cn_dot = self.cn_dot_fun(cn, r0, t, t_stim_prev=t_stim_prev)  # Equation n°1 from Ding's 2003 article
-        a = self.a_calculation(impulse_time=impulse_time)  # Equation n°3 from Ding's 2007 article
-        f_dot = self.f_dot_fun(cn, f, a, self.tau1_rest, self.km_rest)  # Equation n°2 from Ding's 2003 article
+        a = self.a_calculation(a_scale=self.a_scale, impulse_time=impulse_time)  # Equation n°3 from Ding's 2007 article
+        f_dot = self.f_dot_fun(
+            cn,
+            f,
+            a,
+            self.tau1_rest,
+            self.km_rest,
+            force_length_relationship=force_length_relationship,
+            force_velocity_relationship=force_velocity_relationship,
+        )  # Equation n°2 from Ding's 2003 article
         return vertcat(cn_dot, f_dot)
 
-    def a_calculation(self, impulse_time: MX) -> MX:
+    def a_calculation(self, a_scale: float | MX, impulse_time: MX) -> MX:
         """
         Parameters
         ----------
+        a_scale: float | MX
+            The scaling factor of the current stimulation (unitless)
         impulse_time: MX
             The pulsation duration of the current stimulation (s)
 
@@ -102,7 +129,7 @@ class DingModelPulseDurationFrequency(DingModelFrequency):
         -------
         The value of scaling factor (unitless)
         """
-        return self.a_scale * (1 - exp(-(impulse_time - self.pd0) / self.pdt))
+        return a_scale * (1 - exp(-(impulse_time - self.pd0) / self.pdt))
 
     def set_impulse_duration(self, value: list[MX]):
         """
@@ -116,7 +143,7 @@ class DingModelPulseDurationFrequency(DingModelFrequency):
         self.impulse_time = value
 
     @staticmethod
-    def get_pulse_duration_parameters(nlp_parameters: ParameterList) -> MX:
+    def get_pulse_duration_parameters(nlp_parameters: ParameterList, muscle_name: str = None) -> MX:
         """
         Get the nlp list of pulse_duration parameters
 
@@ -124,6 +151,8 @@ class DingModelPulseDurationFrequency(DingModelFrequency):
         ----------
         nlp_parameters: ParameterList
             The nlp list parameter
+        muscle_name: str
+            The muscle name
 
         Returns
         -------
@@ -131,8 +160,12 @@ class DingModelPulseDurationFrequency(DingModelFrequency):
         """
         pulse_duration_parameters = vertcat()
         for j in range(nlp_parameters.mx.shape[0]):
-            if "pulse_duration" in str(nlp_parameters.mx[j]):
+            if muscle_name:
+                if "pulse_duration_" + muscle_name in str(nlp_parameters.mx[j]):
+                    pulse_duration_parameters = vertcat(pulse_duration_parameters, nlp_parameters.mx[j])
+            elif "pulse_duration" in str(nlp_parameters.mx[j]):
                 pulse_duration_parameters = vertcat(pulse_duration_parameters, nlp_parameters.mx[j])
+
         return pulse_duration_parameters
 
     @staticmethod
@@ -144,6 +177,9 @@ class DingModelPulseDurationFrequency(DingModelFrequency):
         stochastic_variables: MX,
         nlp: NonLinearProgram,
         stim_apparition: list[float] = None,
+        fes_model=None,
+        force_length_relationship: MX | float = 1,
+        force_velocity_relationship: MX | float = 1,
     ) -> DynamicsEvaluation:
         """
         Functional electrical stimulation dynamic
@@ -164,24 +200,38 @@ class DingModelPulseDurationFrequency(DingModelFrequency):
             A reference to the phase
         stim_apparition: list[float]
             The time list of the previous stimulations (s)
+        fes_model: DingModelPulseDurationFrequency
+            The current phase fes model
+        force_length_relationship: MX | float
+            The force length relationship value (unitless)
+        force_velocity_relationship: MX | float
+            The force velocity relationship value (unitless)
         Returns
         -------
         The derivative of the states in the tuple[MX] format
         """
-        pulse_duration_parameters = nlp.model.get_pulse_duration_parameters(nlp.parameters)
+        pulse_duration_parameters = (
+            nlp.model.get_pulse_duration_parameters(nlp.parameters)
+            if fes_model is None
+            else fes_model.get_pulse_duration_parameters(nlp.parameters, muscle_name=fes_model.muscle_name)
+        )
 
         if pulse_duration_parameters.shape[0] == 1:  # check if pulse duration is mapped
             impulse_time = pulse_duration_parameters[0]
         else:
             impulse_time = pulse_duration_parameters[nlp.phase_idx]
 
+        dxdt_fun = fes_model.system_dynamics if fes_model else nlp.model.system_dynamics
+
         return DynamicsEvaluation(
-            dxdt=nlp.model.system_dynamics(
+            dxdt=dxdt_fun(
                 cn=states[0],
                 f=states[1],
                 t=time,
                 t_stim_prev=stim_apparition,
                 impulse_time=impulse_time,
+                force_length_relationship=force_length_relationship,
+                force_velocity_relationship=force_velocity_relationship,
             ),
             defects=None,
         )
@@ -197,7 +247,9 @@ class DingModelPulseDurationFrequency(DingModelFrequency):
         nlp: NonLinearProgram
             A reference to the phase
         """
-        self.configure_ca_troponin_complex(ocp=ocp, nlp=nlp, as_states=True, as_controls=False)
-        self.configure_force(ocp=ocp, nlp=nlp, as_states=True, as_controls=False)
+        self.configure_ca_troponin_complex(
+            ocp=ocp, nlp=nlp, as_states=True, as_controls=False, muscle_name=self.muscle_name
+        )
+        self.configure_force(ocp=ocp, nlp=nlp, as_states=True, as_controls=False, muscle_name=self.muscle_name)
         stim_apparition = self.get_stim_prev(ocp, nlp)
         ConfigureProblem.configure_dynamics_function(ocp, nlp, dyn_func=self.dynamics, stim_apparition=stim_apparition)

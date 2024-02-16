@@ -1,6 +1,6 @@
 from typing import Callable
 
-from casadi import MX, vertcat, tanh
+from casadi import MX, vertcat
 import numpy as np
 
 from bioptim import (
@@ -8,7 +8,6 @@ from bioptim import (
     DynamicsEvaluation,
     NonLinearProgram,
     OptimalControlProgram,
-    ParameterList,
 )
 from .hmed2018 import DingModelIntensityFrequency
 
@@ -26,8 +25,12 @@ class DingModelIntensityFrequencyWithFatigue(DingModelIntensityFrequency):
     Computers in Biology and Medicine, 101, 218-228.
     """
 
-    def __init__(self, name: str = "hmed2018_with_fatigue", sum_stim_truncation: int = None):
-        super(DingModelIntensityFrequencyWithFatigue, self).__init__(name=name, sum_stim_truncation=sum_stim_truncation)
+    def __init__(
+        self, model_name: str = "hmed2018_with_fatigue", muscle_name: str = None, sum_stim_truncation: int = None
+    ):
+        super(DingModelIntensityFrequencyWithFatigue, self).__init__(
+            model_name=model_name, muscle_name=muscle_name, sum_stim_truncation=sum_stim_truncation
+        )
         self._with_fatigue = True
         # ---- Fatigue models ---- #
         self.alpha_a = -4.0 * 10e-7  # Value from Ding's experimentation [1] (s^-2)
@@ -38,7 +41,8 @@ class DingModelIntensityFrequencyWithFatigue(DingModelIntensityFrequency):
     # ---- Absolutely needed methods ---- #
     @property
     def name_dof(self) -> list[str]:
-        return ["Cn", "F", "A", "Tau1", "Km"]
+        muscle_name = "_" + self.muscle_name if self.muscle_name else ""
+        return ["Cn" + muscle_name, "F" + muscle_name, "A" + muscle_name, "Tau1" + muscle_name, "Km" + muscle_name]
 
     @property
     def nb_state(self) -> int:
@@ -84,6 +88,8 @@ class DingModelIntensityFrequencyWithFatigue(DingModelIntensityFrequency):
         t: MX = None,
         t_stim_prev: list[MX] | list[float] = None,
         intensity_stim: list[MX] | list[float] = None,
+        force_length_relationship: float | MX = 1,
+        force_velocity_relationship: float | MX = 1,
     ) -> MX:
         """
         The system dynamics is the function that describes the models.
@@ -106,6 +112,10 @@ class DingModelIntensityFrequencyWithFatigue(DingModelIntensityFrequency):
             The time list of the previous stimulations (ms)
         intensity_stim: list[MX]
             The pulsation intensity of the current stimulation (mA)
+        force_length_relationship: MX | float
+            The force length relationship value (unitless)
+        force_velocity_relationship: MX | float
+            The force velocity relationship value (unitless)
 
         Returns
         -------
@@ -113,7 +123,15 @@ class DingModelIntensityFrequencyWithFatigue(DingModelIntensityFrequency):
         """
         r0 = km + self.r0_km_relationship  # Simplification
         cn_dot = self.cn_dot_fun(cn, r0, t, t_stim_prev=t_stim_prev, intensity_stim=intensity_stim)  # Equation n°1
-        f_dot = self.f_dot_fun(cn, f, a, tau1, km)  # Equation n°2
+        f_dot = self.f_dot_fun(
+            cn,
+            f,
+            a,
+            tau1,
+            km,
+            force_length_relationship=force_length_relationship,
+            force_velocity_relationship=force_velocity_relationship,
+        )  # Equation n°2
         a_dot = self.a_dot_fun(a, f)  # Equation n°5
         tau1_dot = self.tau1_dot_fun(tau1, f)  # Equation n°9
         km_dot = self.km_dot_fun(km, f)  # Equation n°11
@@ -173,6 +191,9 @@ class DingModelIntensityFrequencyWithFatigue(DingModelIntensityFrequency):
         stochastic_variables: MX,
         nlp: NonLinearProgram,
         stim_apparition: list[float] = None,
+        fes_model=None,
+        force_length_relationship: float | MX = 1,
+        force_velocity_relationship: float | MX = 1,
     ) -> DynamicsEvaluation:
         """
         Functional electrical stimulation dynamic
@@ -193,6 +214,12 @@ class DingModelIntensityFrequencyWithFatigue(DingModelIntensityFrequency):
             A reference to the phase
         stim_apparition: list[float]
             The time list of the previous stimulations (s)
+        fes_model: DingModelIntensityFrequencyWithFatigue
+            The current phase fes model
+        force_length_relationship: MX | float
+            The force length relationship value (unitless)
+        force_velocity_relationship: MX | float
+            The force velocity relationship value (unitless)
         Returns
         -------
         The derivative of the states in the tuple[MX] format
@@ -200,7 +227,11 @@ class DingModelIntensityFrequencyWithFatigue(DingModelIntensityFrequency):
         intensity_stim_prev = (
             []
         )  # Every stimulation intensity before the current phase, i.e.: the intensity of each phase
-        intensity_parameters = nlp.model.get_intensity_parameters(nlp.parameters)
+        intensity_parameters = (
+            nlp.model.get_intensity_parameters(nlp.parameters)
+            if fes_model is None
+            else fes_model.get_intensity_parameters(nlp.parameters, muscle_name=fes_model.muscle_name)
+        )
 
         if intensity_parameters.shape[0] == 1:  # check if pulse duration is mapped
             for i in range(nlp.phase_idx + 1):
@@ -209,8 +240,10 @@ class DingModelIntensityFrequencyWithFatigue(DingModelIntensityFrequency):
             for i in range(nlp.phase_idx + 1):
                 intensity_stim_prev.append(intensity_parameters[i])
 
+        dxdt_fun = fes_model.system_dynamics if fes_model else nlp.model.system_dynamics
+
         return DynamicsEvaluation(
-            dxdt=nlp.model.system_dynamics(
+            dxdt=dxdt_fun(
                 cn=states[0],
                 f=states[1],
                 a=states[2],
@@ -219,6 +252,8 @@ class DingModelIntensityFrequencyWithFatigue(DingModelIntensityFrequency):
                 t=time,
                 t_stim_prev=stim_apparition,
                 intensity_stim=intensity_stim_prev,
+                force_length_relationship=force_length_relationship,
+                force_velocity_relationship=force_velocity_relationship,
             ),
             defects=None,
         )
@@ -234,11 +269,15 @@ class DingModelIntensityFrequencyWithFatigue(DingModelIntensityFrequency):
         nlp: NonLinearProgram
             A reference to the phase
         """
-        self.configure_ca_troponin_complex(ocp=ocp, nlp=nlp, as_states=True, as_controls=False)
-        self.configure_force(ocp=ocp, nlp=nlp, as_states=True, as_controls=False)
-        self.configure_scaling_factor(ocp=ocp, nlp=nlp, as_states=True, as_controls=False)
-        self.configure_time_state_force_no_cross_bridge(ocp=ocp, nlp=nlp, as_states=True, as_controls=False)
-        self.configure_cross_bridges(ocp=ocp, nlp=nlp, as_states=True, as_controls=False)
+        self.configure_ca_troponin_complex(
+            ocp=ocp, nlp=nlp, as_states=True, as_controls=False, muscle_name=self.muscle_name
+        )
+        self.configure_force(ocp=ocp, nlp=nlp, as_states=True, as_controls=False, muscle_name=self.muscle_name)
+        self.configure_scaling_factor(ocp=ocp, nlp=nlp, as_states=True, as_controls=False, muscle_name=self.muscle_name)
+        self.configure_time_state_force_no_cross_bridge(
+            ocp=ocp, nlp=nlp, as_states=True, as_controls=False, muscle_name=self.muscle_name
+        )
+        self.configure_cross_bridges(ocp=ocp, nlp=nlp, as_states=True, as_controls=False, muscle_name=self.muscle_name)
         stim_apparition = self.get_stim_prev(ocp, nlp)
         ConfigureProblem.configure_dynamics_function(ocp, nlp, dyn_func=self.dynamics, stim_apparition=stim_apparition)
 
@@ -249,6 +288,7 @@ class DingModelIntensityFrequencyWithFatigue(DingModelIntensityFrequency):
         as_states: bool,
         as_controls: bool,
         as_states_dot: bool = False,
+        muscle_name: str = None,
     ):
         """
         Configure a new variable of the scaling factor (N/ms)
@@ -265,8 +305,11 @@ class DingModelIntensityFrequencyWithFatigue(DingModelIntensityFrequency):
             If the generalized coordinates should be a control
         as_states_dot: bool
             If the generalized velocities should be a state_dot
+        muscle_name: str
+            The muscle name
         """
-        name = "A"
+        muscle_name = "_" + muscle_name if muscle_name else ""
+        name = "A" + muscle_name
         name_a = [name]
         ConfigureProblem.configure_new_variable(
             name,
@@ -285,6 +328,7 @@ class DingModelIntensityFrequencyWithFatigue(DingModelIntensityFrequency):
         as_states: bool,
         as_controls: bool,
         as_states_dot: bool = False,
+        muscle_name: str = None,
     ):
         """
         Configure a new variable for time constant of force decline at the absence of strongly bound cross-bridges (ms)
@@ -301,8 +345,11 @@ class DingModelIntensityFrequencyWithFatigue(DingModelIntensityFrequency):
             If the generalized coordinates should be a control
         as_states_dot: bool
             If the generalized velocities should be a state_dot
+        muscle_name: str
+            The muscle name
         """
-        name = "Tau1"
+        muscle_name = "_" + muscle_name if muscle_name else ""
+        name = "Tau1" + muscle_name
         name_tau1 = [name]
         ConfigureProblem.configure_new_variable(
             name,
@@ -321,6 +368,7 @@ class DingModelIntensityFrequencyWithFatigue(DingModelIntensityFrequency):
         as_states: bool,
         as_controls: bool,
         as_states_dot: bool = False,
+        muscle_name: str = None,
     ):
         """
         Configure a new variable for sensitivity of strongly bound cross-bridges to Cn (unitless)
@@ -337,8 +385,11 @@ class DingModelIntensityFrequencyWithFatigue(DingModelIntensityFrequency):
             If the generalized coordinates should be a control
         as_states_dot: bool
             If the generalized velocities should be a state_dot
+        muscle_name: str
+            The muscle name
         """
-        name = "Km"
+        muscle_name = "_" + muscle_name if muscle_name else ""
+        name = "Km" + muscle_name
         name_km = [name]
         ConfigureProblem.configure_new_variable(
             name,

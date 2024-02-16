@@ -28,10 +28,12 @@ class DingModelFrequency:
 
     def __init__(
         self,
-        name: str = "ding2003",
+        model_name: str = "ding2003",
+        muscle_name: str = None,
         sum_stim_truncation: int = None,
     ):
-        self._name = name
+        self._model_name = model_name
+        self._muscle_name = muscle_name
         self._sum_stim_truncation = sum_stim_truncation
         self._with_fatigue = False
         # ---- Custom values for the example ---- #
@@ -83,15 +85,24 @@ class DingModelFrequency:
     # ---- Needed for the example ---- #
     @property
     def name_dof(self) -> list[str]:
-        return ["Cn", "F"]
+        muscle_name = "_" + self.muscle_name if self.muscle_name else ""
+        return ["Cn" + muscle_name, "F" + muscle_name]
 
     @property
     def nb_state(self) -> int:
         return 2
 
     @property
-    def name(self) -> None | str:
-        return self._name
+    def model_name(self) -> None | str:
+        return self._model_name
+
+    @property
+    def muscle_name(self) -> None | str:
+        return self._muscle_name
+
+    @property
+    def with_fatigue(self):
+        return self._with_fatigue
 
     # ---- Model's dynamics ---- #
     def system_dynamics(
@@ -100,6 +111,8 @@ class DingModelFrequency:
         f: MX,
         t: MX = None,
         t_stim_prev: list[MX] | list[float] = None,
+        force_length_relationship: MX | float = 1,
+        force_velocity_relationship: MX | float = 1,
     ) -> MX:
         """
         The system dynamics is the function that describes the models.
@@ -114,6 +127,10 @@ class DingModelFrequency:
             The current time at which the dynamics is evaluated (ms)
         t_stim_prev: list[MX]
             The time list of the previous stimulations (ms)
+        force_length_relationship: MX | float
+            The force length relationship value (unitless)
+        force_velocity_relationship: MX | float
+            The force velocity relationship value (unitless)
 
         Returns
         -------
@@ -121,7 +138,15 @@ class DingModelFrequency:
         """
         r0 = self.km_rest + self.r0_km_relationship  # Simplification
         cn_dot = self.cn_dot_fun(cn, r0, t, t_stim_prev=t_stim_prev)  # Equation n°1
-        f_dot = self.f_dot_fun(cn, f, self.a_rest, self.tau1_rest, self.km_rest)  # Equation n°2
+        f_dot = self.f_dot_fun(
+            cn,
+            f,
+            self.a_rest,
+            self.tau1_rest,
+            self.km_rest,
+            force_length_relationship=force_length_relationship,
+            force_velocity_relationship=force_velocity_relationship,
+        )  # Equation n°2
         return vertcat(cn_dot, f_dot)
 
     def exp_time_fun(self, t: MX, t_stim_i: MX) -> MX | float:
@@ -206,7 +231,16 @@ class DingModelFrequency:
 
         return (1 / self.tauc) * sum_multiplier - (cn / self.tauc)  # Equation n°1
 
-    def f_dot_fun(self, cn: MX, f: MX, a: MX | float, tau1: MX | float, km: MX | float) -> MX | float:
+    def f_dot_fun(
+        self,
+        cn: MX,
+        f: MX,
+        a: MX | float,
+        tau1: MX | float,
+        km: MX | float,
+        force_length_relationship: MX | float = 1,
+        force_velocity_relationship: MX | float = 1,
+    ) -> MX | float:
         """
         Parameters
         ----------
@@ -220,12 +254,20 @@ class DingModelFrequency:
             The previous step value of time_state_force_no_cross_bridge (ms)
         km: MX | float
             The previous step value of cross_bridges (unitless)
+        force_length_relationship: MX | float
+            The force length relationship value (unitless)
+        force_velocity_relationship: MX | float
+            The force velocity relationship value (unitless)
 
         Returns
         -------
         The value of the derivative force (N)
         """
-        return a * (cn / (km + cn)) - (f / (tau1 + self.tau2 * (cn / (km + cn))))  # Equation n°2
+        return (
+            (a * (cn / (km + cn)) - (f / (tau1 + self.tau2 * (cn / (km + cn)))))
+            * force_length_relationship
+            * force_velocity_relationship
+        )  # Equation n°2
 
     @staticmethod
     def dynamics(
@@ -236,6 +278,9 @@ class DingModelFrequency:
         stochastic_variables: MX,
         nlp: NonLinearProgram,
         stim_apparition=None,
+        fes_model=None,
+        force_length_relationship: MX | float = 1,
+        force_velocity_relationship: MX | float = 1,
     ) -> DynamicsEvaluation:
         """
         Functional electrical stimulation dynamic
@@ -256,19 +301,28 @@ class DingModelFrequency:
             A reference to the phase
         stim_apparition: list[float]
             The time list of the previous stimulations (s)
+        fes_model: DingModelFrequency
+            The current phase fes model
+        force_length_relationship: MX | float
+            The force length relationship value (unitless)
+        force_velocity_relationship: MX | float
+            The force velocity relationship value (unitless)
         Returns
         -------
         The derivative of the states in the tuple[MX] format
         """
 
+        dxdt_fun = fes_model.system_dynamics if fes_model else nlp.model.system_dynamics
+
         return DynamicsEvaluation(
-            dxdt=nlp.model.system_dynamics(
+            dxdt=dxdt_fun(
                 cn=states[0],
                 f=states[1],
                 t=time,
                 t_stim_prev=stim_apparition,
+                force_length_relationship=force_length_relationship,
+                force_velocity_relationship=force_velocity_relationship,
             ),
-            defects=None,
         )
 
     def declare_ding_variables(self, ocp: OptimalControlProgram, nlp: NonLinearProgram):
@@ -282,8 +336,10 @@ class DingModelFrequency:
         nlp: NonLinearProgram
             A reference to the phase
         """
-        self.configure_ca_troponin_complex(ocp=ocp, nlp=nlp, as_states=True, as_controls=False)
-        self.configure_force(ocp=ocp, nlp=nlp, as_states=True, as_controls=False)
+        self.configure_ca_troponin_complex(
+            ocp=ocp, nlp=nlp, as_states=True, as_controls=False, muscle_name=self.muscle_name
+        )
+        self.configure_force(ocp=ocp, nlp=nlp, as_states=True, as_controls=False, muscle_name=self.muscle_name)
         stim_apparition = self.get_stim_prev(ocp, nlp)
         ConfigureProblem.configure_dynamics_function(ocp, nlp, dyn_func=self.dynamics, stim_apparition=stim_apparition)
 
@@ -294,6 +350,7 @@ class DingModelFrequency:
         as_states: bool,
         as_controls: bool,
         as_states_dot: bool = False,
+        muscle_name: str = None,
     ):
         """
         Configure a new variable of the Ca+ troponin complex (unitless)
@@ -310,8 +367,11 @@ class DingModelFrequency:
             If the generalized coordinates should be a control
         as_states_dot: bool
             If the generalized velocities should be a state_dot
+        muscle_name: str
+            The muscle name
         """
-        name = "Cn"
+        muscle_name = "_" + muscle_name if muscle_name else ""
+        name = "Cn" + muscle_name
         name_cn = [name]
         ConfigureProblem.configure_new_variable(
             name,
@@ -330,6 +390,7 @@ class DingModelFrequency:
         as_states: bool,
         as_controls: bool,
         as_states_dot: bool = False,
+        muscle_name: str = None,
     ):
         """
         Configure a new variable of the force (N)
@@ -346,8 +407,11 @@ class DingModelFrequency:
             If the generalized coordinates should be a control
         as_states_dot: bool
             If the generalized velocities should be a state_dot
+        muscle_name: str
+            The muscle name
         """
-        name = "F"
+        muscle_name = "_" + muscle_name if muscle_name else ""
+        name = "F" + muscle_name
         name_f = [name]
         ConfigureProblem.configure_new_variable(
             name,

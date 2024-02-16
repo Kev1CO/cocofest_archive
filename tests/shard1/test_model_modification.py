@@ -1,8 +1,6 @@
 import numpy as np
 
-from cocofest import (
-    DingModelFrequencyWithFatigue,
-)
+from cocofest import DingModelFrequencyWithFatigue
 
 
 def test_ding2003_modification():

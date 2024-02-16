@@ -4,7 +4,6 @@ channels:
 - conda-forge
 dependencies:
 - biorbd = 1.10.2
-- biosiglive
 - bioviz
 - python-graphviz
 - pyqtgraph
