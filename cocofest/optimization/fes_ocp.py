@@ -48,12 +48,14 @@ class OcpFes:
 
     @staticmethod
     def prepare_ocp(
-        model: DingModelFrequency
-        | DingModelFrequencyWithFatigue
-        | DingModelPulseDurationFrequency
-        | DingModelPulseDurationFrequencyWithFatigue
-        | DingModelIntensityFrequency
-        | DingModelIntensityFrequencyWithFatigue = None,
+        model: (
+            DingModelFrequency
+            | DingModelFrequencyWithFatigue
+            | DingModelPulseDurationFrequency
+            | DingModelPulseDurationFrequencyWithFatigue
+            | DingModelIntensityFrequency
+            | DingModelIntensityFrequencyWithFatigue
+        ) = None,
         n_stim: int = None,
         n_shooting: int = None,
         final_time: int | float = None,
@@ -159,7 +161,7 @@ class OcpFes:
             n_stim=n_stim, final_time=final_time, frequency=frequency, pulse_mode=pulse_mode, round_down=round_down
         )
 
-        force_fourier_coef = None if force_tracking is None else OcpFes._build_fourrier_coeff(force_tracking)
+        force_fourier_coef = None if force_tracking is None else OcpFes._build_fourier_coeff(force_tracking)
         end_node_tracking = end_node_tracking
         models = [model] * n_stim
         n_shooting = [n_shooting] * n_stim
@@ -434,7 +436,7 @@ class OcpFes:
                 raise TypeError("round_down must be bool type")
 
     @staticmethod
-    def _build_fourrier_coeff(force_tracking):
+    def _build_fourier_coeff(force_tracking):
         return FourierSeries().compute_real_fourier_coeffs(force_tracking[0], force_tracking[1], 50)
 
     @staticmethod
@@ -485,6 +487,7 @@ class OcpFes:
         parameters_bounds = BoundsList()
         parameters_init = InitialGuessList()
         parameter_objectives = ParameterObjectiveList()
+
         if isinstance(model, DingModelPulseDurationFrequency):
             if pulse_duration:
                 parameters.add(
@@ -673,7 +676,9 @@ class OcpFes:
         objective_functions = ObjectiveList()
         if custom_objective:
             for i in range(len(custom_objective)):
-                objective_functions.add(custom_objective[0][i])
+                if custom_objective[i]:
+                    for j in range(len(custom_objective[i])):
+                        objective_functions.add(custom_objective[i][j])
 
         if force_fourier_coef is not None:
             for phase in range(n_stim):

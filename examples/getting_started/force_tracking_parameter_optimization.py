@@ -2,6 +2,7 @@
 This example will do a 10 stimulation example with Ding's 2003 frequency model associated to Bakir's 2022 intensity work
 This ocp was build to match a force curve across all optimization.
 """
+
 import matplotlib.pyplot as plt
 import numpy as np
 
