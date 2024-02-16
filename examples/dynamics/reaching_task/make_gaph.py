@@ -1,12 +1,11 @@
 """
 This script is used to make the graph of the muscle force and fatigue for the reaching task.
 The data used to make the graph is from the result file of the optimization.
-The available graphs are: duration, intensity
+The available graphs are: duration
 """
 
 import pickle
 import matplotlib.pyplot as plt
-import numpy as np
 
 chosen_graph_to_plot = "duration"
 
@@ -15,15 +14,10 @@ duration_path = [
     r"result_file/pulse_duration_minimize_muscle_fatigue.pkl",
 ]
 
-intensity_path = [
-    r"result_file/pulse_intensity_minimize_muscle_force.pkl",
-    r"result_file/pulse_intensity_minimize_muscle_fatigue.pkl",
-]
-
 chosen_graph_to_plot_path = (
     duration_path
     if chosen_graph_to_plot == "duration"
-    else intensity_path if chosen_graph_to_plot == "intensity" else None
+    else None
 )
 
 
@@ -166,7 +160,6 @@ for i in range(2):
 
 # fatigue across time
 axs[2][2].set_xlim(left=0, right=1.5)
-# axs[2][2].set_ylim(bottom=-0.63, top=0)
 
 axs[2][2].text(
     0.3,
