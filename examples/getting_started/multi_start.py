@@ -2,6 +2,7 @@
 An example of how to use multi-start to find local minima from stimulation parameter.
 This example is a variation of the fes frequency in examples/frequency_optimization.py.
 """
+
 import shutil
 
 from cocofest import DingModelFrequencyWithFatigue, FunctionalElectricStimulationMultiStart

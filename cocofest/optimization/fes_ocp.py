@@ -49,12 +49,14 @@ class OcpFes:
 
     @staticmethod
     def prepare_ocp(
-        model: DingModelFrequency
-        | DingModelFrequencyWithFatigue
-        | DingModelPulseDurationFrequency
-        | DingModelPulseDurationFrequencyWithFatigue
-        | DingModelIntensityFrequency
-        | DingModelIntensityFrequencyWithFatigue = None,
+        model: (
+            DingModelFrequency
+            | DingModelFrequencyWithFatigue
+            | DingModelPulseDurationFrequency
+            | DingModelPulseDurationFrequencyWithFatigue
+            | DingModelIntensityFrequency
+            | DingModelIntensityFrequencyWithFatigue
+        ) = None,
         n_stim: int = None,
         n_shooting: int = None,
         final_time: int | float = None,
@@ -213,7 +215,7 @@ class OcpFes:
             parameter_bounds=parameters_bounds,
             parameter_init=parameters_init,
             parameter_objectives=parameter_objectives,
-            control_type=ControlType.CONSTANT,
+            control_type=ControlType.NONE,
             use_sx=use_sx,
             ode_solver=ode_solver,
             n_threads=n_threads,
@@ -447,7 +449,7 @@ class OcpFes:
                 for i in range(n_stim - 1):
                     final_time_phase = final_time_phase + (step,)
         else:
-            final_time_phase = [final_time/n_stim] * n_stim
+            final_time_phase = [final_time / n_stim] * n_stim
 
         return final_time_phase
 
@@ -655,7 +657,7 @@ class OcpFes:
                         phase=i,
                         # phase=0,
                         interpolation=InterpolationType.CONSTANT_WITH_FIRST_AND_LAST_DIFFERENT,
-                )
+                    )
                 else:
                     x_bounds.add(
                         variable_bound_list[j],
@@ -709,8 +711,14 @@ class OcpFes:
 
         if time_min and time_max:
             for i in range(n_stim):
-                objective_functions.add(ObjectiveFcn.Mayer.MINIMIZE_TIME, weight=0.001, min_bound=time_min,
-                                        max_bound=time_max, quadratic=True, phase=i)
+                objective_functions.add(
+                    ObjectiveFcn.Mayer.MINIMIZE_TIME,
+                    weight=0.001,
+                    min_bound=time_min,
+                    max_bound=time_max,
+                    quadratic=True,
+                    phase=i,
+                )
             # objective_functions.add(ObjectiveFcn.Mayer.MINIMIZE_TIME, weight=0.001, min_bound=0,
             #                         max_bound=1, quadratic=True)
 

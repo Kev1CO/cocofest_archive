@@ -376,7 +376,7 @@ class DingModelFrequency:
         -------
         The list of previous stimulation time
         """
-        t_stim_prev = [ocp.parameters['pulse_apparition_time'].mx[phase_idx] for phase_idx in range(nlp.phase_idx + 1)]
+        t_stim_prev = [ocp.parameters["pulse_apparition_time"].mx[phase_idx] for phase_idx in range(nlp.phase_idx + 1)]
         return t_stim_prev
 
     @property

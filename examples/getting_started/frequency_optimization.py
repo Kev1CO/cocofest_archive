@@ -3,6 +3,7 @@ This example will do a 10 stimulation example with Ding's 2003 frequency model.
 This ocp was build to match a force value of 270N at the end of the last node.
 """
 
+from bioptim import Solver
 from cocofest import DingModelFrequencyWithFatigue, OcpFes
 
 # --- Build ocp --- #
@@ -22,7 +23,7 @@ ocp = OcpFes().prepare_ocp(
 )
 
 # --- Solve the program --- #
-sol = ocp.solve()
+sol = ocp.solve(Solver.IPOPT(show_online_optim=False, _max_iter=10000))
 
 # --- Show results --- #
 sol.graphs()
