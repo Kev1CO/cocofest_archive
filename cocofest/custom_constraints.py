@@ -14,19 +14,13 @@ class CustomConstraint:
 
     @staticmethod
     def pulse_time_apparition_bimapping(controller: PenaltyController) -> MX | SX:
-        base = 0
-        if controller.ocp.n_phases > 1:
-            base = (
-                controller.parameters["pulse_apparition_time"].cx[1]
-                - controller.parameters["pulse_apparition_time"].cx[0]
-            )
-        else:
+        if controller.ocp.n_phases <= 1:
             RuntimeError("There is only one phase, the bimapping constraint is not possible")
 
-        return base - (
-            controller.parameters["pulse_apparition_time"].cx[controller.phase_idx]
-            - controller.parameters["pulse_apparition_time"].cx[controller.phase_idx - 1]
-        )
+        first_phase_tf = controller.ocp.node_time(0, controller.ocp.nlp[controller.phase_idx].ns)
+        current_phase_tf = controller.ocp.nlp[controller.phase_idx].node_time(controller.ocp.nlp[controller.phase_idx].ns)
+
+        return first_phase_tf - current_phase_tf
 
     @staticmethod
     def pulse_duration_bimapping(controller: PenaltyController) -> MX | SX:

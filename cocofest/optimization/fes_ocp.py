@@ -215,7 +215,7 @@ class OcpFes:
             parameter_bounds=parameters_bounds,
             parameter_init=parameters_init,
             parameter_objectives=parameter_objectives,
-            control_type=ControlType.NONE,
+            control_type=ControlType.CONSTANT,
             use_sx=use_sx,
             ode_solver=ode_solver,
             n_threads=n_threads,
@@ -499,7 +499,7 @@ class OcpFes:
             constraints.add(CustomConstraint.pulse_time_apparition_as_phase, node=Node.START, phase=i, target=0)
 
         if time_bimapping and time_min and time_max:
-            for i in range(1, n_stim):
+            for i in range(n_stim):
                 constraints.add(CustomConstraint.pulse_time_apparition_bimapping, node=Node.START, target=0, phase=i)
 
         if isinstance(model, DingModelPulseDurationFrequency):
@@ -655,7 +655,6 @@ class OcpFes:
                         min_bound=np.array([starting_bounds_min[j]]),
                         max_bound=np.array([starting_bounds_max[j]]),
                         phase=i,
-                        # phase=0,
                         interpolation=InterpolationType.CONSTANT_WITH_FIRST_AND_LAST_DIFFERENT,
                     )
                 else:
@@ -706,21 +705,18 @@ class OcpFes:
                     weight=1,
                     target=end_node_tracking,
                     phase=n_stim - 1,
-                    # phase=0,
                 )
 
         if time_min and time_max:
             for i in range(n_stim):
                 objective_functions.add(
                     ObjectiveFcn.Mayer.MINIMIZE_TIME,
-                    weight=0.001,
+                    weight=0.001/n_shooting[i],
                     min_bound=time_min,
                     max_bound=time_max,
                     quadratic=True,
                     phase=i,
                 )
-            # objective_functions.add(ObjectiveFcn.Mayer.MINIMIZE_TIME, weight=0.001, min_bound=0,
-            #                         max_bound=1, quadratic=True)
 
         return objective_functions
 

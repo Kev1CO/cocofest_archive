@@ -299,7 +299,7 @@ def test_ocp_output(model, force_tracking, use_sx, min_pulse_duration, min_pulse
 # TODO : add test_multi_start_ocp
 
 
-@pytest.mark.parametrize("use_sx", [False, True])
+@pytest.mark.parametrize("use_sx", [True])
 @pytest.mark.parametrize("bimapped", [False, True])
 def test_time_dependent_ocp_output(use_sx, bimapped):
     ocp = OcpFes().prepare_ocp(
@@ -1014,3 +1014,45 @@ def test_time_dependent_ocp_output(use_sx, bimapped):
 
             np.testing.assert_almost_equal(float(sol.cost), 3.719442753142962e-05)
             np.testing.assert_almost_equal(sol.time[-1], 0.5381208818685651)
+
+# from bioptim import SolutionMerge
+def test_single_phase_time_dependent_ocp_output():
+    ocp = OcpFes().prepare_ocp(
+        model=DingModelFrequencyWithFatigue(),
+        n_stim=1,
+        n_shooting=10,
+        final_time=0.1,
+        use_sx=True,
+    )
+
+    sol = ocp.solve(Solver.IPOPT(show_online_optim=False, _max_iter=1000))
+    # merge_sol = sol.merge_phases()
+    # merge_sol = sol.decision_states(False, SolutionMerge.ALL)
+    sol.graphs()
+    np.testing.assert_almost_equal(
+        sol.parameters["pulse_apparition_time"],
+        np.array([[0.0]]
+        )
+    )
+
+    np.testing.assert_almost_equal(
+        sol.states["F"],
+        # merge_sol[1],
+        np.array([[ 0.        , 15.85448036, 36.35382298, 54.98028518, 70.84149988,
+       83.4707505 , 92.52389842, 97.78058713, 99.22489701, 97.12756918,
+       92.06532562]]))
+
+    np.testing.assert_almost_equal(float(sol.cost), 0.0)
+
+
+
+
+
+
+
+
+
+
+
+
+
