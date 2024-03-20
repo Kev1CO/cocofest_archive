@@ -24,7 +24,7 @@ objective_functions.add(
     key="qdot",
     index=[0, 1],
     node=Node.END,
-    target=np.array([[0, 0]] * (n_shooting + 1)).T,
+    target=np.array([[0, 0]]).T,
     weight=100,
     quadratic=True,
     phase=n_stim - 1,

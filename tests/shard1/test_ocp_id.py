@@ -5,7 +5,7 @@ import os
 import numpy as np
 import pytest
 
-from bioptim import Shooting, SolutionIntegrator, Solution
+from bioptim import Shooting, SolutionIntegrator, Solution, SolutionMerge
 from cocofest import (
     OcpFesId,
     IvpFes,
@@ -129,21 +129,21 @@ additional_key_settings = {
         "min_bound": 0.001,
         "max_bound": 1,
         "function": model.set_km_rest,
-        "scaling": 1000,
+        "scaling": 1,
     },
     "tau1_rest": {
         "initial_guess": 0.5,
         "min_bound": 0.0001,
         "max_bound": 1,
         "function": model.set_tau1_rest,
-        "scaling": 1000,
+        "scaling": 1,
     },
     "tau2": {
         "initial_guess": 0.5,
         "min_bound": 0.0001,
         "max_bound": 1,
         "function": model.set_tau2,
-        "scaling": 1000,
+        "scaling": 1,
     },
 }
 
@@ -151,28 +151,33 @@ additional_key_settings = {
 def test_ocp_id_ding2003():
     # --- Creating the simulated data to identify on --- #
     # Building the Initial Value Problem
+    final_time = 1
+    ns = 10
+    n_stim = 10
     ivp = IvpFes(
         model=DingModelFrequency(),
-        n_stim=10,
-        n_shooting=10,
-        final_time=1,
+        n_stim=n_stim,
+        n_shooting=ns,
+        final_time=final_time,
         use_sx=True,
         extend_last_phase=1,
     )
 
     # Creating the solution from the initial guess
-    sol_from_initial_guess = Solution.from_initial_guess(ivp, [ivp.x_init, ivp.u_init, ivp.p_init, ivp.s_init])
+    dt = np.array([final_time / (ns * n_stim)] * n_stim)
+    sol_from_initial_guess = Solution.from_initial_guess(ivp, [dt, ivp.x_init, ivp.u_init, ivp.p_init, ivp.s_init])
 
     # Integrating the solution
-    result = sol_from_initial_guess.integrate(
-        shooting_type=Shooting.SINGLE, integrator=SolutionIntegrator.OCP, merge_phases=True
+    result, time = sol_from_initial_guess.integrate(
+        shooting_type=Shooting.SINGLE,
+        integrator=SolutionIntegrator.OCP,
+        to_merge=[SolutionMerge.NODES, SolutionMerge.PHASES],
+        return_time=True,
+        duplicated_times=False,
     )
 
-    force = result.states["F"]
-    force = force.tolist()
-    time = [result.time.tolist()]
-    stim_temp = [0 if i == 0 else result.ocp.nlp[i].tf for i in range(len(result.ocp.nlp))]
-    stim = [sum(stim_temp[: i + 1]) for i in range(len(stim_temp))]
+    force = result["F"][0].tolist()
+    time = [float(time) for time in time]
 
     # Saving the data in a pickle file
     dictionary = {
@@ -212,29 +217,34 @@ def test_ocp_id_ding2003():
 def test_ocp_id_ding2007():
     # --- Creating the simulated data to identify on --- #
     # Building the Initial Value Problem
+    final_time = 1
+    ns = 10
+    n_stim = 10
     ivp = IvpFes(
         model=DingModelPulseDurationFrequency(),
-        n_stim=10,
+        n_stim=n_stim,
         pulse_duration=[0.003] * 10,
-        n_shooting=10,
-        final_time=1,
+        n_shooting=ns,
+        final_time=final_time,
         use_sx=True,
         extend_last_phase=1,
     )
 
     # Creating the solution from the initial guess
-    sol_from_initial_guess = Solution.from_initial_guess(ivp, [ivp.x_init, ivp.u_init, ivp.p_init, ivp.s_init])
+    dt = np.array([final_time / (ns * n_stim)] * n_stim)
+    sol_from_initial_guess = Solution.from_initial_guess(ivp, [dt, ivp.x_init, ivp.u_init, ivp.p_init, ivp.s_init])
 
     # Integrating the solution
-    result = sol_from_initial_guess.integrate(
-        shooting_type=Shooting.SINGLE, integrator=SolutionIntegrator.OCP, merge_phases=True
+    result, time = sol_from_initial_guess.integrate(
+        shooting_type=Shooting.SINGLE,
+        integrator=SolutionIntegrator.OCP,
+        to_merge=[SolutionMerge.NODES, SolutionMerge.PHASES],
+        return_time=True,
+        duplicated_times=False,
     )
 
-    force = result.states["F"]
-    force = force.tolist()
-    time = [result.time.tolist()]
-    stim_temp = [0 if i == 0 else result.ocp.nlp[i].tf for i in range(len(result.ocp.nlp))]
-    stim = [sum(stim_temp[: i + 1]) for i in range(len(stim_temp))]
+    force = result["F"][0].tolist()
+    time = [float(time) for time in time]
 
     # Saving the data in a pickle file
     dictionary = {
@@ -277,29 +287,34 @@ def test_ocp_id_ding2007():
 def test_ocp_id_hmed2018():
     # --- Creating the simulated data to identify on --- #
     # Building the Initial Value Problem
+    final_time = 1
+    ns = 100
+    n_stim = 10
     ivp = IvpFes(
         model=DingModelIntensityFrequency(),
-        n_stim=10,
+        n_stim=n_stim,
         pulse_intensity=[50] * 10,
-        n_shooting=100,
-        final_time=1,
+        n_shooting=ns,
+        final_time=final_time,
         use_sx=True,
         extend_last_phase=1,
     )
 
     # Creating the solution from the initial guess
-    sol_from_initial_guess = Solution.from_initial_guess(ivp, [ivp.x_init, ivp.u_init, ivp.p_init, ivp.s_init])
+    dt = np.array([final_time / (ns * n_stim)] * n_stim)
+    sol_from_initial_guess = Solution.from_initial_guess(ivp, [dt, ivp.x_init, ivp.u_init, ivp.p_init, ivp.s_init])
 
     # Integrating the solution
-    result = sol_from_initial_guess.integrate(
-        shooting_type=Shooting.SINGLE, integrator=SolutionIntegrator.OCP, merge_phases=True
+    result, time = sol_from_initial_guess.integrate(
+        shooting_type=Shooting.SINGLE,
+        integrator=SolutionIntegrator.OCP,
+        to_merge=[SolutionMerge.NODES, SolutionMerge.PHASES],
+        return_time=True,
+        duplicated_times=False,
     )
 
-    force = result.states["F"]
-    force = force.tolist()
-    time = [result.time.tolist()]
-    stim_temp = [0 if i == 0 else result.ocp.nlp[i].tf for i in range(len(result.ocp.nlp))]
-    stim = [sum(stim_temp[: i + 1]) for i in range(len(stim_temp))]
+    force = result["F"][0].tolist()
+    time = [float(time) for time in time]
 
     # Saving the data in a pickle file
     dictionary = {

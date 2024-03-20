@@ -14,6 +14,7 @@ from bioptim import (
     ParameterList,
     PhaseTransitionFcn,
     PhaseTransitionList,
+    VariableScaling,
 )
 
 from cocofest.custom_objectives import CustomObjective
@@ -109,10 +110,12 @@ class OcpFesId(OcpFes):
         constraints = ConstraintList()
         parameters, parameters_bounds, parameters_init = OcpFesId._set_parameters(
             n_stim=n_stim,
+            stim_apparition_time=final_time_phase,
             parameter_to_identify=key_parameter_to_identify,
             parameter_setting=additional_key_settings,
             pulse_duration=pulse_duration,
             pulse_intensity=pulse_intensity,
+            use_sx=use_sx,
         )
         dynamics = OcpFesId._declare_dynamics(models=models, n_stim=n_stim)
         x_bounds, x_init = OcpFesId._set_bounds(
@@ -141,7 +144,7 @@ class OcpFesId(OcpFes):
             objective_functions=objective_functions,
             constraints=constraints,
             ode_solver=ode_solver,
-            control_type=ControlType.NONE,
+            control_type=ControlType.CONSTANT,
             use_sx=use_sx,
             parameters=parameters,
             parameter_bounds=parameters_bounds,
@@ -274,7 +277,7 @@ class OcpFesId(OcpFes):
         return x_bounds, x_init
 
     @staticmethod
-    def _set_objective(model, n_stim, n_shooting, force_tracking, custom_objective):
+    def _set_objective(model, n_stim, n_shooting, force_tracking, custom_objective, **kwargs):
         # Creates the objective for our problem (in this case, match a force curve)
         objective_functions = ObjectiveList()
 
@@ -302,20 +305,49 @@ class OcpFesId(OcpFes):
         return objective_functions
 
     @staticmethod
-    def _set_parameters(n_stim, parameter_to_identify, parameter_setting, pulse_duration=None, pulse_intensity=None):
-        parameters = ParameterList()
+    def _set_parameters(
+        n_stim,
+        stim_apparition_time,
+        parameter_to_identify,
+        parameter_setting,
+        use_sx,
+        pulse_duration=None,
+        pulse_intensity=None,
+    ):
+        parameters = ParameterList(use_sx=use_sx)
         parameters_bounds = BoundsList()
         parameters_init = InitialGuessList()
 
+        # stim_apparition_time = np.cumsum(stim_apparition_time).tolist()
+        stim_apparition_time = [0] + np.cumsum(stim_apparition_time[:-1]).tolist()
+
+        parameters.add(
+            name="pulse_apparition_time",
+            function=DingModelFrequency.set_pulse_apparition_time,
+            size=n_stim,
+            scaling=VariableScaling("pulse_apparition_time", [1] * n_stim),
+        )
+
+        parameters_bounds.add(
+            "pulse_apparition_time",
+            min_bound=np.array(stim_apparition_time),
+            max_bound=np.array(stim_apparition_time),
+            interpolation=InterpolationType.CONSTANT,
+        )
+        parameters_init.add(
+            key="pulse_apparition_time",
+            initial_guess=np.array(stim_apparition_time),
+        )
+
         for i in range(len(parameter_to_identify)):
             parameters.add(
-                parameter_name=parameter_to_identify[i],
-                list_index=i,
+                name=parameter_to_identify[i],
                 function=parameter_setting[parameter_to_identify[i]]["function"],
                 size=1,
-                scaling=np.array([parameter_setting[parameter_to_identify[i]]["scaling"]]),
+                scaling=VariableScaling(
+                    parameter_to_identify[i], [parameter_setting[parameter_to_identify[i]]["scaling"]]
+                ),
             )
-
             parameters_bounds.add(
                 parameter_to_identify[i],
                 min_bound=np.array([parameter_setting[parameter_to_identify[i]]["min_bound"]]),
@@ -329,10 +361,10 @@ class OcpFesId(OcpFes):
 
         if pulse_duration:
             parameters.add(
-                parameter_name="pulse_duration",
-                list_index=len(parameter_to_identify),
+                name="pulse_duration",
                 function=DingModelPulseDurationFrequency.set_impulse_duration,
                 size=n_stim,
+                scaling=VariableScaling("pulse_duration", [1] * n_stim),
             )
             if isinstance(pulse_duration, list):
                 parameters_bounds.add(
@@ -353,10 +385,10 @@ class OcpFesId(OcpFes):
 
         if pulse_intensity:
             parameters.add(
-                parameter_name="pulse_intensity",
-                list_index=len(parameter_to_identify),
+                name="pulse_intensity",
                 function=DingModelIntensityFrequency.set_impulse_intensity,
                 size=n_stim,
+                scaling=VariableScaling("pulse_intensity", [1] * n_stim),
             )
             if isinstance(pulse_intensity, list):
                 parameters_bounds.add(

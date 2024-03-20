@@ -6,16 +6,16 @@ This ocp was build to match a force curve across all optimization.
 import matplotlib.pyplot as plt
 import numpy as np
 
+from bioptim import SolutionMerge
 from cocofest import (
     DingModelIntensityFrequency,
-    ExtractData,
     FourierSeries,
     OcpFes,
 )
 
 # --- Building force to track ---#
-time, force = ExtractData.load_data("../data/hand_cycling_force.bio")
-force = force - force[0]
+time = np.linspace(0, 1, 100)
+force = abs(np.sin(time * 5) + np.random.normal(scale=0.1, size=len(time))) * 100
 force_tracking = [time, force]
 
 # --- Build ocp --- #
@@ -44,14 +44,19 @@ sol = ocp.solve()
 sol.graphs()
 
 # --- Show results from solution --- #
-sol_merged = sol.merge_phases()
+sol_merged = sol.decision_states(to_merge=[SolutionMerge.PHASES, SolutionMerge.NODES])
+
 fourier_fun = FourierSeries()
 fourier_coef = fourier_fun.compute_real_fourier_coeffs(time, force, 50)
 y_approx = FourierSeries().fit_func_by_fourier_series_with_real_coeffs(time, fourier_coef)
 plt.title("Comparison between given and simulated force after parameter optimization")
 plt.plot(time, force, color="red", label="force from file")
 plt.plot(time, y_approx, color="orange", label="force after fourier transform")
-plt.plot(sol_merged.time, sol_merged.states["F"].squeeze(), color="blue", label="force from optimized stimulation")
+
+solution_time = sol.decision_time(to_merge=SolutionMerge.KEYS, continuous=True)
+solution_time = [float(j) for sub in solution_time for j in sub]
+
+plt.plot(solution_time, sol_merged["F"].squeeze(), color="blue", label="force from optimized stimulation")
 plt.xlabel("Time (s)")
 plt.ylabel("Force (N)")
 plt.legend()

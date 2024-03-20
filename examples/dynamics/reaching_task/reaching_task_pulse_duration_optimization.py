@@ -9,10 +9,10 @@ import pickle
 
 from bioptim import (
     Axis,
-    ConstraintList,
     ConstraintFcn,
-    Solver,
+    ConstraintList,
     Node,
+    Solver,
 )
 
 from cocofest import DingModelPulseDurationFrequencyWithFatigue, OcpFesMsk

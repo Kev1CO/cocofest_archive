@@ -1,8 +1,9 @@
 import time
 
+import numpy as np
 import pickle
 
-from bioptim import Solution, Shooting, SolutionIntegrator
+from bioptim import Solution, Shooting, SolutionIntegrator, SolutionMerge
 from cocofest import (
     DingModelFrequencyWithFatigue,
     IvpFes,
@@ -18,6 +19,7 @@ repetition = 100
 modes = ["Single", "Doublet", "Triplet"]
 nb = int((max_stim - min_stim) ** 2 / 2 + (max_stim - min_stim) / 2) * len(modes) * repetition
 node_shooting = 1000
+final_time = 1
 for mode in modes:
     print("currently mode: " + mode)
     force_total_results = []
@@ -69,23 +71,27 @@ for mode in modes:
                 start_time = time.time()
 
                 # Creating the solution from the initial guess
+                dt = np.array([final_time / (node_shooting * n_stim)] * n_stim)
                 sol_from_initial_guess = Solution.from_initial_guess(
-                    ivp, [ivp.x_init, ivp.u_init, ivp.p_init, ivp.s_init]
+                    ivp, [dt, ivp.x_init, ivp.u_init, ivp.p_init, ivp.s_init]
                 )
 
                 # Integrating the solution
                 result = sol_from_initial_guess.integrate(
-                    shooting_type=Shooting.SINGLE, integrator=SolutionIntegrator.OCP, merge_phases=True
+                    shooting_type=Shooting.SINGLE,
+                    integrator=SolutionIntegrator.OCP,
+                    to_merge=[SolutionMerge.NODES, SolutionMerge.PHASES],
+                    duplicated_times=False,
                 )
 
                 time_computation.append(time.time() - start_time)
 
                 if k == 0:
-                    force = result.states["F"][0][-1]
-                    calcium = result.states["Cn"][0][-1]
-                    a = result.states["A"][0][-1]
-                    km = result.states["Km"][0][-1]
-                    tau1 = result.states["Tau1"][0][-1]
+                    force = result["F"][0][-1]
+                    calcium = result["Cn"][0][-1]
+                    a = result["A"][0][-1]
+                    km = result["Km"][0][-1]
+                    tau1 = result["Tau1"][0][-1]
 
                 counter += 1
                 print(

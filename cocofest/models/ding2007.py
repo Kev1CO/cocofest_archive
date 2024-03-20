@@ -143,13 +143,15 @@ class DingModelPulseDurationFrequency(DingModelFrequency):
         self.impulse_time = value
 
     @staticmethod
-    def get_pulse_duration_parameters(nlp_parameters: ParameterList, muscle_name: str = None) -> MX:
+    def get_pulse_duration_parameters(nlp, parameters: ParameterList, muscle_name: str = None) -> MX:
         """
         Get the nlp list of pulse_duration parameters
 
         Parameters
         ----------
-        nlp_parameters: ParameterList
+        nlp: NonLinearProgram
+            A reference to the phase
+        parameters: ParameterList
             The nlp list parameter
         muscle_name: str
             The muscle name
@@ -159,12 +161,14 @@ class DingModelPulseDurationFrequency(DingModelFrequency):
         The list of list of pulse_duration parameters
         """
         pulse_duration_parameters = vertcat()
-        for j in range(nlp_parameters.mx.shape[0]):
+        for j in range(parameters.shape[0]):
             if muscle_name:
-                if "pulse_duration_" + muscle_name in str(nlp_parameters.mx[j]):
-                    pulse_duration_parameters = vertcat(pulse_duration_parameters, nlp_parameters.mx[j])
-            elif "pulse_duration" in str(nlp_parameters.mx[j]):
-                pulse_duration_parameters = vertcat(pulse_duration_parameters, nlp_parameters.mx[j])
+                # if "pulse_duration_" + muscle_name in str(nlp.parameters.scaled.cx[j].name()):
+                if "pulse_duration_" + muscle_name in nlp.parameters.scaled.cx[j].str():
+                    pulse_duration_parameters = vertcat(pulse_duration_parameters, parameters[j])
+            # elif "pulse_duration" in str(nlp.parameters.scaled.cx[j].name()):
+            elif "pulse_duration" in nlp.parameters.scaled.cx[j].str():
+                pulse_duration_parameters = vertcat(pulse_duration_parameters, parameters[j])
 
         return pulse_duration_parameters
 
@@ -176,7 +180,6 @@ class DingModelPulseDurationFrequency(DingModelFrequency):
         parameters: MX,
         stochastic_variables: MX,
         nlp: NonLinearProgram,
-        stim_apparition: list[float] = None,
         fes_model=None,
         force_length_relationship: MX | float = 1,
         force_velocity_relationship: MX | float = 1,
@@ -198,8 +201,6 @@ class DingModelPulseDurationFrequency(DingModelFrequency):
             The stochastic variables of the system, none
         nlp: NonLinearProgram
             A reference to the phase
-        stim_apparition: list[float]
-            The time list of the previous stimulations (s)
         fes_model: DingModelPulseDurationFrequency
             The current phase fes model
         force_length_relationship: MX | float
@@ -211,9 +212,9 @@ class DingModelPulseDurationFrequency(DingModelFrequency):
         The derivative of the states in the tuple[MX] format
         """
         pulse_duration_parameters = (
-            nlp.model.get_pulse_duration_parameters(nlp.parameters)
+            nlp.model.get_pulse_duration_parameters(nlp, parameters)
             if fes_model is None
-            else fes_model.get_pulse_duration_parameters(nlp.parameters, muscle_name=fes_model.muscle_name)
+            else fes_model.get_pulse_duration_parameters(nlp, parameters, muscle_name=fes_model.muscle_name)
         )
 
         if pulse_duration_parameters.shape[0] == 1:  # check if pulse duration is mapped
@@ -222,6 +223,11 @@ class DingModelPulseDurationFrequency(DingModelFrequency):
             impulse_time = pulse_duration_parameters[nlp.phase_idx]
 
         dxdt_fun = fes_model.system_dynamics if fes_model else nlp.model.system_dynamics
+        stim_apparition = (
+            fes_model.get_stim_prev(nlp=nlp, parameters=parameters, idx=nlp.phase_idx)
+            if fes_model
+            else nlp.model.get_stim_prev(nlp=nlp, parameters=parameters, idx=nlp.phase_idx)
+        )
 
         return DynamicsEvaluation(
             dxdt=dxdt_fun(
@@ -251,5 +257,4 @@ class DingModelPulseDurationFrequency(DingModelFrequency):
             ocp=ocp, nlp=nlp, as_states=True, as_controls=False, muscle_name=self.muscle_name
         )
         self.configure_force(ocp=ocp, nlp=nlp, as_states=True, as_controls=False, muscle_name=self.muscle_name)
-        stim_apparition = self.get_stim_prev(ocp, nlp)
-        ConfigureProblem.configure_dynamics_function(ocp, nlp, dyn_func=self.dynamics, stim_apparition=stim_apparition)
+        ConfigureProblem.configure_dynamics_function(ocp, nlp, dyn_func=self.dynamics)

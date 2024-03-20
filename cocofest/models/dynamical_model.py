@@ -152,7 +152,6 @@ class FesMskModel(BiorbdModel):
                 parameters,
                 stochastic_variables,
                 nlp,
-                stim_apparition,
                 fes_model=muscle_model,
                 force_length_relationship=muscle_force_length_coeff,
                 force_velocity_relationship=muscle_force_velocity_coeff,
@@ -218,14 +217,11 @@ class FesMskModel(BiorbdModel):
         state_name_list.append("qdot")
         ConfigureProblem.configure_tau(ocp, nlp, as_states=False, as_controls=True)
 
-        time_type = "mx" if "time" in ocp.parameters.keys() else None
-        stim_apparition = [ocp.node_time(phase_idx=i, node_idx=0, type=time_type) for i in range(nlp.phase_idx + 1)]
         ConfigureProblem.configure_dynamics_function(
             ocp,
             nlp,
             dyn_func=self.muscle_dynamic,
             muscle_models=self.muscles_dynamics_model,
-            stim_apparition=stim_apparition,
             state_name_list=state_name_list,
         )
 

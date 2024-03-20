@@ -207,7 +207,6 @@ class DingModelFrequencyWithFatigue(DingModelFrequency):
         parameters: MX,
         stochastic_variables: MX,
         nlp: NonLinearProgram,
-        stim_apparition=None,
         fes_model=None,
         force_length_relationship: MX | float = 1,
         force_velocity_relationship: MX | float = 1,
@@ -229,8 +228,6 @@ class DingModelFrequencyWithFatigue(DingModelFrequency):
             The stochastic variables of the system, none
         nlp: NonLinearProgram
             A reference to the phase
-        stim_apparition: list[float]
-            The time list of the previous stimulations (s)
         fes_model: DingModelFrequencyWithFatigue
             The current phase fes model
         force_length_relationship: MX | float
@@ -243,6 +240,11 @@ class DingModelFrequencyWithFatigue(DingModelFrequency):
         """
 
         dxdt_fun = fes_model.system_dynamics if fes_model else nlp.model.system_dynamics
+        stim_apparition = (
+            fes_model.get_stim_prev(nlp=nlp, parameters=parameters, idx=nlp.phase_idx)
+            if fes_model
+            else nlp.model.get_stim_prev(nlp=nlp, parameters=parameters, idx=nlp.phase_idx)
+        )
 
         return DynamicsEvaluation(
             dxdt=dxdt_fun(
@@ -279,8 +281,7 @@ class DingModelFrequencyWithFatigue(DingModelFrequency):
             ocp=ocp, nlp=nlp, as_states=True, as_controls=False, muscle_name=self.muscle_name
         )
         self.configure_cross_bridges(ocp=ocp, nlp=nlp, as_states=True, as_controls=False, muscle_name=self.muscle_name)
-        stim_apparition = self.get_stim_prev(ocp, nlp)
-        ConfigureProblem.configure_dynamics_function(ocp, nlp, dyn_func=self.dynamics, stim_apparition=stim_apparition)
+        ConfigureProblem.configure_dynamics_function(ocp, nlp, dyn_func=self.dynamics)
 
     @staticmethod
     def configure_scaling_factor(

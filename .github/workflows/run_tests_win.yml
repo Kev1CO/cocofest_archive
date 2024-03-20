@@ -48,7 +48,6 @@ jobs:
           cd external
           ./bioptim_install_windows.sh 4 ${{ env.PREFIX_WINDOWS }}
           cd ..
-#        if: matrix.os == 'windows-latest' && matrix.shard == 1
 
       - name: Install extra dependencies
         run: mamba install pytest-cov black pytest pytest-cov codecov packaging -cconda-forge
@@ -103,7 +102,7 @@ jobs:
 
       - name: Install extra dependencies
         run: pip install coverage
-            #mamba install coverage -cconda-forge
+
       - name: Download all workflow run artifacts
         id: download
         uses: actions/download-artifact@v3

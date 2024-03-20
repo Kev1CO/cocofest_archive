@@ -9,9 +9,13 @@ from bioptim import (
     PhaseDynamics,
     BoundsList,
     InterpolationType,
+    VariableScaling,
+    ConstraintList,
+    Node,
 )
 
 from cocofest import (
+    CustomConstraint,
     DingModelFrequency,
     DingModelFrequencyWithFatigue,
     DingModelPulseDurationFrequency,
@@ -96,23 +100,18 @@ class IvpFes(OptimalControlProgram):
         elif pulse_mode == "Doublet":
             doublet_step = 0.005
             step = final_time / (n_stim / 2) - doublet_step
-            self.final_time_phase = (doublet_step,)
             for i in range(int(n_stim / 2)):
+                self.final_time_phase = (doublet_step,) if i == 0 else self.final_time_phase + (doublet_step,)
                 self.final_time_phase = self.final_time_phase + (step,)
-                self.final_time_phase = self.final_time_phase + (doublet_step,)
 
         elif pulse_mode == "Triplet":
             doublet_step = 0.005
             triplet_step = 0.005
             step = final_time / (n_stim / 3) - doublet_step - triplet_step
-            self.final_time_phase = (
-                doublet_step,
-                triplet_step,
-            )
             for i in range(int(n_stim / 3)):
-                self.final_time_phase = self.final_time_phase + (step,)
-                self.final_time_phase = self.final_time_phase + (doublet_step,)
+                self.final_time_phase = (doublet_step,) if i == 0 else self.final_time_phase + (doublet_step,)
                 self.final_time_phase = self.final_time_phase + (triplet_step,)
+                self.final_time_phase = self.final_time_phase + (step,)
 
         else:
             raise ValueError("Pulse mode not yet implemented")
@@ -121,9 +120,50 @@ class IvpFes(OptimalControlProgram):
             self.final_time_phase = self.final_time_phase[:-1] + (self.final_time_phase[-1] + extend_last_phase,)
             self.n_shooting[-1] = int((extend_last_phase / step) * n_shooting) + self.n_shooting[-1]
 
-        parameters = ParameterList()
+        parameters = ParameterList(use_sx=use_sx)
         parameters_init = InitialGuessList()
         parameters_bounds = BoundsList()
+
+        if pulse_mode == "Single":
+            pulse_apparition_time = [final_time / n_stim * i for i in range(n_stim)]
+        elif pulse_mode == "Doublet":
+            pulse_apparition_time = [
+                [final_time / (n_stim / 2) * i, final_time / (n_stim / 2) * i + 0.005] for i in range(int(n_stim / 2))
+            ]
+            pulse_apparition_time = [item for sublist in pulse_apparition_time for item in sublist]
+        elif pulse_mode == "Triplet":
+            pulse_apparition_time = [
+                [
+                    final_time / (n_stim / 3) * i,
+                    final_time / (n_stim / 3) * i + 0.005,
+                    final_time / (n_stim / 3) * i + 0.010,
+                ]
+                for i in range(int(n_stim / 3))
+            ]
+            pulse_apparition_time = [item for sublist in pulse_apparition_time for item in sublist]
+        else:
+            raise ValueError("Pulse mode not yet implemented")
+
+        pulse_apparition_time = np.round(np.array(pulse_apparition_time), 3).tolist()
+        parameters_bounds.add(
+            "pulse_apparition_time",
+            min_bound=np.array(pulse_apparition_time),
+            max_bound=np.array(pulse_apparition_time),
+            interpolation=InterpolationType.CONSTANT,
+        )
+
+        parameters_init.add(
+            key="pulse_apparition_time",
+            initial_guess=np.array(pulse_apparition_time),
+        )
+
+        parameters.add(
+            name="pulse_apparition_time",
+            function=DingModelFrequency.set_pulse_apparition_time,
+            size=n_stim,
+            scaling=VariableScaling("pulse_apparition_time", [1] * n_stim),
+        )
+
         if isinstance(model, DingModelPulseDurationFrequency | DingModelPulseDurationFrequencyWithFatigue):
             minimum_pulse_duration = model.pd0
             if isinstance(pulse_duration, bool) or not isinstance(pulse_duration, int | float | list):
@@ -162,9 +202,10 @@ class IvpFes(OptimalControlProgram):
                 )
 
             parameters.add(
-                parameter_name="pulse_duration",
+                name="pulse_duration",
                 function=DingModelPulseDurationFrequency.set_impulse_duration,
                 size=n_stim,
+                scaling=VariableScaling("pulse_duration", [1] * n_stim),
             )
 
         if isinstance(model, DingModelIntensityFrequency | DingModelIntensityFrequencyWithFatigue):
@@ -193,9 +234,10 @@ class IvpFes(OptimalControlProgram):
                 parameters_init["pulse_intensity"] = np.array(pulse_intensity)
 
             parameters.add(
-                parameter_name="pulse_intensity",
+                name="pulse_intensity",
                 function=DingModelIntensityFrequency.set_impulse_intensity,
                 size=n_stim,
+                scaling=VariableScaling("pulse_intensity", [1] * n_stim),
             )
 
         self.parameters = parameters
@@ -219,7 +261,7 @@ class IvpFes(OptimalControlProgram):
             n_shooting=self.n_shooting,
             phase_time=self.final_time_phase,
             ode_solver=ode_solver,
-            control_type=ControlType.NONE,
+            control_type=ControlType.CONSTANT,
             use_sx=use_sx,
             parameters=parameters,
             parameter_init=parameters_init,
@@ -254,6 +296,7 @@ class IvpFes(OptimalControlProgram):
         if len(ocp.parameters) != 0:
             for key in ocp.parameters.keys():
                 p.add(key=key, initial_guess=ocp.parameters_init[key])
+
         return x, u, p, s
 
     @classmethod

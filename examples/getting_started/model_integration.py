@@ -1,5 +1,6 @@
 import matplotlib.pyplot as plt
-from bioptim import Solution, Shooting, SolutionIntegrator
+import numpy as np
+from bioptim import Solution, Shooting, SolutionIntegrator, SolutionMerge
 from cocofest import (
     DingModelFrequencyWithFatigue,
     IvpFes,
@@ -8,25 +9,34 @@ from cocofest import (
 
 # --- Build ocp --- #
 # This problem was build to be integrated and has no objectives nor parameter to optimize.
+phase = 10
+ns = 20
+final_time = 1
 ivp = IvpFes(
     model=DingModelFrequencyWithFatigue(),
-    n_stim=10,
-    n_shooting=20,
-    final_time=1,
+    n_stim=phase,
+    n_shooting=ns,
+    final_time=final_time,
     use_sx=True,
 )
 
 # Creating the solution from the initial guess
-sol_from_initial_guess = Solution.from_initial_guess(ivp, [ivp.x_init, ivp.u_init, ivp.p_init, ivp.s_init])
+dt = np.array([final_time / (ns * phase)] * phase)
+sol_from_initial_guess = Solution.from_initial_guess(ivp, [dt, ivp.x_init, ivp.u_init, ivp.p_init, ivp.s_init])
 
 # Integrating the solution
-result = sol_from_initial_guess.integrate(
-    shooting_type=Shooting.SINGLE, integrator=SolutionIntegrator.OCP, merge_phases=True
+result, time = sol_from_initial_guess.integrate(
+    shooting_type=Shooting.SINGLE,
+    integrator=SolutionIntegrator.OCP,
+    to_merge=[SolutionMerge.NODES, SolutionMerge.PHASES],
+    return_time=True,
+    duplicated_times=False,
 )
 
 # Plotting the force state result
 plt.title("Force state result")
-plt.plot(result.time, result.states["F"][0], color="blue", label="force")
+
+plt.plot(time, result["F"][0], color="blue", label="force")
 plt.xlabel("time (s)")
 plt.ylabel("force (N)")
 plt.legend()

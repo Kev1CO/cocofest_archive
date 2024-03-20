@@ -40,6 +40,6 @@ ocp = OcpFesMsk.prepare_ocp(
     muscle_force_velocity_relationship=True,
 )
 
-sol = ocp.solve(Solver.IPOPT(_max_iter=1000))
+sol = ocp.solve(Solver.IPOPT(_max_iter=2000))
 sol.animate()
 sol.graphs(show_bounds=False)

@@ -418,21 +418,6 @@ def test_ocp_building(
     )
 
 
-def test_ocp_not_for_optimal_error():
-    with pytest.raises(
-        ValueError,
-        match="This is not an optimal control problem,"
-        " add parameter to optimize or use the IvpFes method to build your problem",
-    ):
-        ocp = OcpFes().prepare_ocp(
-            model=DingModelFrequency(),
-            n_stim=1,
-            n_shooting=10,
-            final_time=1,
-            use_sx=True,
-        )
-
-
 def test_ding2007_build():
     min_duration = DingModelPulseDurationFrequency().pd0
     ocp = OcpFes().prepare_ocp(
@@ -588,17 +573,6 @@ def test_all_ocp_fes_errors():
             pulse_duration_max=0.005,
         )
 
-    with pytest.raises(NotImplementedError, match="Parameter mapping in bioptim not yet implemented"):
-        OcpFes.prepare_ocp(
-            model=DingModelPulseDurationFrequency(),
-            n_stim=3,
-            n_shooting=10,
-            final_time=0.3,
-            pulse_duration_min=0.001,
-            pulse_duration_max=0.005,
-            pulse_duration_bimapping=True,
-        )
-
     with pytest.raises(
         ValueError, match="Pulse intensity or pulse intensity min max bounds need to be set for this model"
     ):
@@ -683,17 +657,6 @@ def test_all_ocp_fes_errors():
             final_time=0.3,
             pulse_intensity_min=pulse_intensity_min,
             pulse_intensity_max=100,
-        )
-
-    with pytest.raises(NotImplementedError, match="Parameter mapping in bioptim not yet implemented"):
-        OcpFes.prepare_ocp(
-            model=DingModelIntensityFrequency(),
-            n_stim=3,
-            n_shooting=10,
-            final_time=0.3,
-            pulse_intensity_min=20,
-            pulse_intensity_max=100,
-            pulse_intensity_bimapping=True,
         )
 
     with pytest.raises(

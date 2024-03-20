@@ -24,7 +24,7 @@ objective_functions.add(
     key="qdot",
     index=[0, 1],
     node=Node.END,
-    target=np.array([[0, 0]] * (n_shooting + 1)).T,
+    target=np.array([[0, 0]]).T,
     weight=100,
     quadratic=True,
     phase=n_stim - 1,
@@ -53,6 +53,6 @@ ocp = OcpFesMsk.prepare_ocp(
     minimize_muscle_fatigue=True,
 )
 
-sol = ocp.solve(Solver.IPOPT(_max_iter=1000))
+sol = ocp.solve(Solver.IPOPT(_max_iter=3000))
 sol.animate()
 sol.graphs(show_bounds=False)

@@ -10,7 +10,7 @@ import os
 import matplotlib.pyplot as plt
 import numpy as np
 
-from bioptim import Solution, Shooting, SolutionIntegrator
+from bioptim import Solution, Shooting, SolutionIntegrator, SolutionMerge
 
 from cocofest import (
     DingModelFrequency,
@@ -38,20 +38,23 @@ ivp = IvpFes(
 )
 
 # Creating the solution from the initial guess
-sol_from_initial_guess = Solution.from_initial_guess(ivp, [ivp.x_init, ivp.u_init, ivp.p_init, ivp.s_init])
+dt = np.array([final_time / (n_shooting * n_stim)] * n_stim)
+sol_from_initial_guess = Solution.from_initial_guess(ivp, [dt, ivp.x_init, ivp.u_init, ivp.p_init, ivp.s_init])
 
 # Integrating the solution
-result = sol_from_initial_guess.integrate(
-    shooting_type=Shooting.SINGLE, integrator=SolutionIntegrator.OCP, merge_phases=True
+result, time = sol_from_initial_guess.integrate(
+    shooting_type=Shooting.SINGLE,
+    integrator=SolutionIntegrator.OCP,
+    to_merge=[SolutionMerge.NODES, SolutionMerge.PHASES],
+    return_time=True,
+    duplicated_times=False,
 )
 
 # Adding noise to the force
-noise = np.random.normal(0, 5, len(result.states["F"][0]))
-force1 = result.states["F"] + noise
-force = force1.tolist()
-time = [result.time.tolist()]
-stim_temp = [0 if i == 0 else result.ocp.nlp[i].tf for i in range(len(result.ocp.nlp))]
-stim = [sum(stim_temp[: i + 1]) for i in range(len(stim_temp))]
+noise = np.random.normal(0, 5, len(result["F"][0]))
+force = result["F"][0] + noise
+
+stim = [final_time / n_stim * i for i in range(n_stim)]
 
 # Saving the data in a pickle file
 dictionary = {
@@ -74,7 +77,7 @@ ocp = DingModelFrequencyForceParameterIdentification(
     key_parameter_to_identify=["a_rest", "km_rest", "tau1_rest", "tau2"],
     additional_key_settings={},
     n_shooting=n_shooting,
-    # a_rest=2500,
+    # a_rest=3009,
     use_sx=True,
 )
 
@@ -100,6 +103,7 @@ ivp_from_identification = IvpFes(
 identified_sol_from_initial_guess = Solution.from_initial_guess(
     ivp_from_identification,
     [
+        dt,
         ivp_from_identification.x_init,
         ivp_from_identification.u_init,
         ivp_from_identification.p_init,
@@ -108,12 +112,15 @@ identified_sol_from_initial_guess = Solution.from_initial_guess(
 )
 
 # Integrating the solution
-identified_result = identified_sol_from_initial_guess.integrate(
-    shooting_type=Shooting.SINGLE, integrator=SolutionIntegrator.OCP, merge_phases=True
+identified_result, identified_time = identified_sol_from_initial_guess.integrate(
+    shooting_type=Shooting.SINGLE,
+    integrator=SolutionIntegrator.OCP,
+    to_merge=[SolutionMerge.NODES, SolutionMerge.PHASES],
+    return_time=True,
+    duplicated_times=False,
 )
 
-identified_time = identified_result.time.tolist()
-identified_force = identified_result.states["F"][0]
+identified_force = identified_result["F"][0]
 
 (
     pickle_time_data,
