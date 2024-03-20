@@ -17,9 +17,11 @@ from bioptim import (
     ObjectiveFcn,
     OdeSolverBase,
     Node,
+    VariableScaling,
 )
 
 from cocofest import (
+    CustomConstraint,
     DingModelFrequency,
     DingModelFrequencyWithFatigue,
     DingModelPulseDurationFrequency,
@@ -212,22 +214,25 @@ class OcpFesMsk:
                 q_fourier_coef.append(OcpFes._build_fourier_coeff([q_tracking[0], q_tracking[1][i]]))
 
         n_shooting = [n_shooting] * n_stim
-        final_time_phase, constraints, phase_time_bimapping = OcpFes._build_phase_time(
+        final_time_phase = OcpFes._build_phase_time(
             final_time=final_time,
             n_stim=n_stim,
             pulse_mode=pulse_mode,
             time_min=time_min,
             time_max=time_max,
-            time_bimapping=time_bimapping,
         )
         (
             parameters,
             parameters_bounds,
             parameters_init,
             parameter_objectives,
+            constraints,
         ) = OcpFesMsk._build_parameters(
             model=fes_muscle_models,
             n_stim=n_stim,
+            time_min=time_min,
+            time_max=time_max,
+            time_bimapping=time_bimapping,
             pulse_duration=pulse_duration,
             pulse_duration_min=pulse_duration_min,
             pulse_duration_max=pulse_duration_max,
@@ -238,6 +243,7 @@ class OcpFesMsk:
             pulse_intensity_max=pulse_intensity_max,
             pulse_intensity_bimapping=pulse_intensity_bimapping,
             pulse_intensity_similar_for_all_muscles=pulse_intensity_similar_for_all_muscles,
+            use_sx=use_sx,
         )
 
         constraints = OcpFesMsk._set_constraints(constraints, custom_constraint)
@@ -279,6 +285,8 @@ class OcpFesMsk:
             minimize_muscle_fatigue,
             minimize_muscle_force,
             muscle_force_key,
+            time_min,
+            time_max,
         )
 
         return OptimalControlProgram(
@@ -287,7 +295,6 @@ class OcpFesMsk:
             n_shooting=n_shooting,
             phase_time=final_time_phase,
             objective_functions=objective_functions,
-            time_phase_mapping=phase_time_bimapping,
             x_init=x_init,
             x_bounds=x_bounds,
             u_init=u_init,
@@ -321,6 +328,9 @@ class OcpFesMsk:
     def _build_parameters(
         model,
         n_stim,
+        time_min,
+        time_max,
+        time_bimapping,
         pulse_duration,
         pulse_duration_min,
         pulse_duration_max,
@@ -331,11 +341,42 @@ class OcpFesMsk:
         pulse_intensity_max,
         pulse_intensity_bimapping,
         pulse_intensity_similar_for_all_muscles,
+        use_sx,
     ):
-        parameters = ParameterList()
+        parameters = ParameterList(use_sx=use_sx)
         parameters_bounds = BoundsList()
         parameters_init = InitialGuessList()
         parameter_objectives = ParameterObjectiveList()
+        constraints = ConstraintList()
+
+        parameters.add(
+            name="pulse_apparition_time",
+            function=DingModelFrequency.set_pulse_apparition_time,
+            size=n_stim,
+            scaling=VariableScaling("pulse_apparition_time", [1] * n_stim),
+        )
+
+        if time_min and time_max:
+            time_min_list = [time_min * n for n in range(n_stim)]
+            time_max_list = [time_max * n for n in range(n_stim)]
+        else:
+            time_min_list = [0] * n_stim
+            time_max_list = [100] * n_stim
+        parameters_bounds.add(
+            "pulse_apparition_time",
+            min_bound=np.array(time_min_list),
+            max_bound=np.array(time_max_list),
+            interpolation=InterpolationType.CONSTANT,
+        )
+
+        parameters_init["pulse_apparition_time"] = np.array([0] * n_stim)
+
+        for i in range(n_stim):
+            constraints.add(CustomConstraint.pulse_time_apparition_as_phase, node=Node.START, phase=i, target=0)
+
+        if time_bimapping and time_min and time_max:
+            for i in range(n_stim):
+                constraints.add(CustomConstraint.pulse_time_apparition_bimapping, node=Node.START, target=0, phase=i)
 
         for i in range(len(model)):
             if isinstance(model[i], DingModelPulseDurationFrequency):
@@ -349,9 +390,10 @@ class OcpFesMsk:
                         pulse_duration_similar_for_all_muscles and i == 0
                     ) or not pulse_duration_similar_for_all_muscles:
                         parameters.add(
-                            parameter_name=parameter_name,
+                            name=parameter_name,
                             function=DingModelPulseDurationFrequency.set_impulse_duration,
                             size=n_stim,
+                            scaling=VariableScaling(parameter_name, [1] * n_stim),
                         )
                         if isinstance(pulse_duration, list):
                             parameters_bounds.add(
@@ -385,18 +427,11 @@ class OcpFesMsk:
                         pulse_duration_avg = (pulse_duration_max + pulse_duration_min) / 2
                         parameters_init[parameter_name] = np.array([pulse_duration_avg] * n_stim)
                         parameters.add(
-                            parameter_name=parameter_name,
+                            name=parameter_name,
                             function=DingModelPulseDurationFrequency.set_impulse_duration,
                             size=n_stim,
+                            scaling=VariableScaling(parameter_name, [1] * n_stim),
                         )
-
-                    parameter_objectives.add(
-                        ObjectiveFcn.Parameter.MINIMIZE_PARAMETER,
-                        weight=0.0001,
-                        quadratic=True,
-                        target=0,
-                        key=parameter_name,
-                    )
 
                 if pulse_duration_bimapping:
                     pass
@@ -414,9 +449,10 @@ class OcpFesMsk:
                         pulse_intensity_similar_for_all_muscles and i == 0
                     ) or not pulse_intensity_similar_for_all_muscles:
                         parameters.add(
-                            parameter_name=parameter_name,
+                            name=parameter_name,
                             function=DingModelIntensityFrequency.set_impulse_intensity,
                             size=n_stim,
+                            scaling=VariableScaling(parameter_name, [1] * n_stim),
                         )
                         if isinstance(pulse_intensity, list):
                             parameters_bounds.add(
@@ -450,18 +486,11 @@ class OcpFesMsk:
                         intensity_avg = (pulse_intensity_min + pulse_intensity_max) / 2
                         parameters_init[parameter_name] = np.array([intensity_avg] * n_stim)
                         parameters.add(
-                            parameter_name=parameter_name,
+                            name=parameter_name,
                             function=DingModelIntensityFrequency.set_impulse_intensity,
                             size=n_stim,
+                            scaling=VariableScaling(parameter_name, [1] * n_stim),
                         )
-
-                    parameter_objectives.add(
-                        ObjectiveFcn.Parameter.MINIMIZE_PARAMETER,
-                        weight=0.0001,
-                        quadratic=True,
-                        target=0,
-                        key=parameter_name,
-                    )
 
                 if pulse_intensity_bimapping:
                     pass
@@ -470,7 +499,7 @@ class OcpFesMsk:
                     #                         to_first=[0])
                     # TODO : Fix Bimapping in Bioptim
 
-        return parameters, parameters_bounds, parameters_init, parameter_objectives
+        return parameters, parameters_bounds, parameters_init, parameter_objectives, constraints
 
     @staticmethod
     def _set_constraints(constraints, custom_constraint):
@@ -620,6 +649,8 @@ class OcpFesMsk:
         minimize_muscle_fatigue,
         minimize_muscle_force,
         muscle_force_key,
+        time_min,
+        time_max,
     ):
         # Creates the objective for our problem
         objective_functions = ObjectiveList()
@@ -692,6 +723,17 @@ class OcpFesMsk:
                 weight=1,
                 phase=n_stim - 1,
             )
+
+        if time_min and time_max:
+            for i in range(n_stim):
+                objective_functions.add(
+                    ObjectiveFcn.Mayer.MINIMIZE_TIME,
+                    weight=0.001 / n_shooting[i],
+                    min_bound=time_min,
+                    max_bound=time_max,
+                    quadratic=True,
+                    phase=i,
+                )
 
         return objective_functions
 
@@ -800,8 +842,8 @@ class OcpFesMsk:
             if not isinstance(q_tracking, list) and len(q_tracking) != 2:
                 raise TypeError("q_tracking should be a list of size 2")
             tested_bio_model = FesMskModel(name=None, biorbd_path=biorbd_model_path, muscles_model=fes_muscle_models)
-            if not isinstance(q_tracking[0], list):
-                raise ValueError("q_tracking[0] should be a list")
+            if not isinstance(q_tracking[0], list | np.ndarray):
+                raise ValueError("q_tracking[0] should be a list or array type")
             if len(q_tracking[1]) != tested_bio_model.nb_q:
                 raise ValueError("q_tracking[1] should have the same size as the number of generalized coordinates")
             for i in range(tested_bio_model.nb_q):

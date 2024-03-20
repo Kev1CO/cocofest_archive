@@ -36,6 +36,7 @@ class DingModelFrequency:
         self._muscle_name = muscle_name
         self._sum_stim_truncation = sum_stim_truncation
         self._with_fatigue = False
+        self.pulse_apparition_time = None
         # ---- Custom values for the example ---- #
         self.tauc = 0.020  # Value from Ding's experimentation [1] (s)
         self.r0_km_relationship = 1.04  # (unitless)
@@ -277,7 +278,6 @@ class DingModelFrequency:
         parameters: MX,
         stochastic_variables: MX,
         nlp: NonLinearProgram,
-        stim_apparition=None,
         fes_model=None,
         force_length_relationship: MX | float = 1,
         force_velocity_relationship: MX | float = 1,
@@ -299,8 +299,6 @@ class DingModelFrequency:
             The stochastic variables of the system, none
         nlp: NonLinearProgram
             A reference to the phase
-        stim_apparition: list[float]
-            The time list of the previous stimulations (s)
         fes_model: DingModelFrequency
             The current phase fes model
         force_length_relationship: MX | float
@@ -313,6 +311,11 @@ class DingModelFrequency:
         """
 
         dxdt_fun = fes_model.system_dynamics if fes_model else nlp.model.system_dynamics
+        stim_apparition = (
+            fes_model.get_stim_prev(nlp=nlp, parameters=parameters, idx=nlp.phase_idx)
+            if fes_model
+            else nlp.model.get_stim_prev(nlp=nlp, parameters=parameters, idx=nlp.phase_idx)
+        )
 
         return DynamicsEvaluation(
             dxdt=dxdt_fun(
@@ -340,8 +343,7 @@ class DingModelFrequency:
             ocp=ocp, nlp=nlp, as_states=True, as_controls=False, muscle_name=self.muscle_name
         )
         self.configure_force(ocp=ocp, nlp=nlp, as_states=True, as_controls=False, muscle_name=self.muscle_name)
-        stim_apparition = self.get_stim_prev(ocp, nlp)
-        ConfigureProblem.configure_dynamics_function(ocp, nlp, dyn_func=self.dynamics, stim_apparition=stim_apparition)
+        ConfigureProblem.configure_dynamics_function(ocp, nlp, dyn_func=self.dynamics)
 
     @staticmethod
     def configure_ca_troponin_complex(
@@ -424,23 +426,40 @@ class DingModelFrequency:
         )
 
     @staticmethod
-    def get_stim_prev(ocp: OptimalControlProgram, nlp: NonLinearProgram) -> list[float]:
+    def get_stim_prev(nlp: NonLinearProgram, parameters: MX, idx: int) -> list[float]:
         """
         Get the nlp list of previous stimulation apparition time
 
         Parameters
         ----------
-        ocp: OptimalControlProgram
-            The OptimalControlProgram of the problem
         nlp: NonLinearProgram
             The NonLinearProgram of the ocp of the current phase
+        parameters: MX
+            The parameters of the ocp
+        idx: int
+            The index of the current phase
 
         Returns
         -------
         The list of previous stimulation time
         """
-        type = "mx" if "time" in ocp.nlp[nlp.phase_idx].parameters else None
-        t_stim_prev = [ocp.node_time(phase_idx=i, node_idx=0, type=type) for i in range(nlp.phase_idx + 1)]
-        if not isinstance(t_stim_prev[0], (MX, float)):
-            t_stim_prev = [ocp.node_time(phase_idx=i, node_idx=0, type="mx") for i in range(nlp.phase_idx + 1)]
+        t_stim_prev = []
+        for j in range(parameters.shape[0]):
+            # if "pulse_apparition_time" in str(nlp.parameters.cx[j].name()):
+            if "pulse_apparition_time" in nlp.parameters.cx[j].str():
+                t_stim_prev.append(parameters[j])
+            if len(t_stim_prev) > idx:
+                break
+
         return t_stim_prev
+
+    def set_pulse_apparition_time(self, value: list[MX]):
+        """
+        Sets the pulse apparition time for each pulse (phases) according to the ocp parameter "pulse_apparition_time"
+
+        Parameters
+        ----------
+        value: list[MX]
+            The pulse apparition time list (s)
+        """
+        self.pulse_apparition_time = value

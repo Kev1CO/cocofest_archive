@@ -190,7 +190,6 @@ class DingModelIntensityFrequencyWithFatigue(DingModelIntensityFrequency):
         parameters: MX,
         stochastic_variables: MX,
         nlp: NonLinearProgram,
-        stim_apparition: list[float] = None,
         fes_model=None,
         force_length_relationship: float | MX = 1,
         force_velocity_relationship: float | MX = 1,
@@ -212,8 +211,6 @@ class DingModelIntensityFrequencyWithFatigue(DingModelIntensityFrequency):
             The stochastic variables of the system, none
         nlp: NonLinearProgram
             A reference to the phase
-        stim_apparition: list[float]
-            The time list of the previous stimulations (s)
         fes_model: DingModelIntensityFrequencyWithFatigue
             The current phase fes model
         force_length_relationship: MX | float
@@ -228,9 +225,9 @@ class DingModelIntensityFrequencyWithFatigue(DingModelIntensityFrequency):
             []
         )  # Every stimulation intensity before the current phase, i.e.: the intensity of each phase
         intensity_parameters = (
-            nlp.model.get_intensity_parameters(nlp.parameters)
+            nlp.model.get_intensity_parameters(nlp, parameters)
             if fes_model is None
-            else fes_model.get_intensity_parameters(nlp.parameters, muscle_name=fes_model.muscle_name)
+            else fes_model.get_intensity_parameters(nlp, parameters, muscle_name=fes_model.muscle_name)
         )
 
         if intensity_parameters.shape[0] == 1:  # check if pulse duration is mapped
@@ -241,6 +238,11 @@ class DingModelIntensityFrequencyWithFatigue(DingModelIntensityFrequency):
                 intensity_stim_prev.append(intensity_parameters[i])
 
         dxdt_fun = fes_model.system_dynamics if fes_model else nlp.model.system_dynamics
+        stim_apparition = (
+            fes_model.get_stim_prev(nlp=nlp, parameters=parameters, idx=nlp.phase_idx)
+            if fes_model
+            else nlp.model.get_stim_prev(nlp=nlp, parameters=parameters, idx=nlp.phase_idx)
+        )
 
         return DynamicsEvaluation(
             dxdt=dxdt_fun(
@@ -278,8 +280,7 @@ class DingModelIntensityFrequencyWithFatigue(DingModelIntensityFrequency):
             ocp=ocp, nlp=nlp, as_states=True, as_controls=False, muscle_name=self.muscle_name
         )
         self.configure_cross_bridges(ocp=ocp, nlp=nlp, as_states=True, as_controls=False, muscle_name=self.muscle_name)
-        stim_apparition = self.get_stim_prev(ocp, nlp)
-        ConfigureProblem.configure_dynamics_function(ocp, nlp, dyn_func=self.dynamics, stim_apparition=stim_apparition)
+        ConfigureProblem.configure_dynamics_function(ocp, nlp, dyn_func=self.dynamics)
 
     @staticmethod
     def configure_scaling_factor(

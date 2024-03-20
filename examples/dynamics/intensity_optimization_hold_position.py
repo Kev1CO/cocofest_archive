@@ -61,7 +61,7 @@ ocp = OcpFesMsk.prepare_ocp(
     pulse_intensity_min=minimum_pulse_intensity,
     pulse_intensity_max=130,
     pulse_intensity_bimapping=False,
-    with_residual_torque=True,
+    with_residual_torque=False,
     custom_objective=objective_functions,
 )
 

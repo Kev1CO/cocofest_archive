@@ -204,13 +204,15 @@ class DingModelIntensityFrequency(DingModelFrequency):
             self.impulse_intensity.append(value[i])
 
     @staticmethod
-    def get_intensity_parameters(nlp_parameters: ParameterList, muscle_name: str = None) -> MX:
+    def get_intensity_parameters(nlp, parameters: ParameterList, muscle_name: str = None) -> MX:
         """
         Get the nlp list of intensity parameters
 
         Parameters
         ----------
-        nlp_parameters: ParameterList
+        nlp: NonLinearProgram
+            A reference to the phase
+        parameters: ParameterList
             The nlp list parameter
         muscle_name: str
             The muscle name
@@ -220,12 +222,13 @@ class DingModelIntensityFrequency(DingModelFrequency):
         The list of intensity parameters
         """
         intensity_parameters = vertcat()
-        for j in range(nlp_parameters.mx.shape[0]):
+        for j in range(parameters.shape[0]):
             if muscle_name:
-                if "pulse_intensity_" + muscle_name in str(nlp_parameters.mx[j]):
-                    intensity_parameters = vertcat(intensity_parameters, nlp_parameters.mx[j])
-            elif "pulse_intensity" in str(nlp_parameters.mx[j]):
-                intensity_parameters = vertcat(intensity_parameters, nlp_parameters.mx[j])
+                if "pulse_intensity_" + muscle_name in nlp.parameters.scaled.cx[j].str():
+                    intensity_parameters = vertcat(intensity_parameters, parameters[j])
+            elif "pulse_intensity" in nlp.parameters.scaled.cx[j].str():
+                intensity_parameters = vertcat(intensity_parameters, parameters[j])
+
         return intensity_parameters
 
     @staticmethod
@@ -236,7 +239,6 @@ class DingModelIntensityFrequency(DingModelFrequency):
         parameters: MX,
         stochastic_variables: MX,
         nlp: NonLinearProgram,
-        stim_apparition: list[float] = None,
         fes_model: NonLinearProgram = None,
         force_length_relationship: MX | float = 1,
         force_velocity_relationship: MX | float = 1,
@@ -258,8 +260,6 @@ class DingModelIntensityFrequency(DingModelFrequency):
             The stochastic variables of the system, none
         nlp: NonLinearProgram
             A reference to the phase
-        stim_apparition: list[float]
-            The time list of the previous stimulations (s)
         fes_model: DingModelIntensityFrequency
             The current phase fes model
         force_length_relationship: MX | float
@@ -274,9 +274,9 @@ class DingModelIntensityFrequency(DingModelFrequency):
             []
         )  # Every stimulation intensity before the current phase, i.e.: the intensity of each phase
         intensity_parameters = (
-            nlp.model.get_intensity_parameters(nlp.parameters)
+            nlp.model.get_intensity_parameters(nlp, parameters)
             if fes_model is None
-            else fes_model.get_intensity_parameters(nlp.parameters, muscle_name=fes_model.muscle_name)
+            else fes_model.get_intensity_parameters(nlp, parameters, muscle_name=fes_model.muscle_name)
         )
 
         if intensity_parameters.shape[0] == 1:  # check if pulse duration is mapped
@@ -287,6 +287,11 @@ class DingModelIntensityFrequency(DingModelFrequency):
                 intensity_stim_prev.append(intensity_parameters[i])
 
         dxdt_fun = fes_model.system_dynamics if fes_model else nlp.model.system_dynamics
+        stim_apparition = (
+            fes_model.get_stim_prev(nlp=nlp, parameters=parameters, idx=nlp.phase_idx)
+            if fes_model
+            else nlp.model.get_stim_prev(nlp=nlp, parameters=parameters, idx=nlp.phase_idx)
+        )
 
         return DynamicsEvaluation(
             dxdt=dxdt_fun(
@@ -316,8 +321,7 @@ class DingModelIntensityFrequency(DingModelFrequency):
             ocp=ocp, nlp=nlp, as_states=True, as_controls=False, muscle_name=self.muscle_name
         )
         self.configure_force(ocp=ocp, nlp=nlp, as_states=True, as_controls=False, muscle_name=self.muscle_name)
-        stim_apparition = self.get_stim_prev(ocp, nlp)
-        ConfigureProblem.configure_dynamics_function(ocp, nlp, dyn_func=self.dynamics, stim_apparition=stim_apparition)
+        ConfigureProblem.configure_dynamics_function(ocp, nlp, dyn_func=self.dynamics)
 
     def min_pulse_intensity(self):
         """

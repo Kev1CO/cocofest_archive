@@ -226,9 +226,9 @@ class DingModelPulseDurationFrequencyWithFatigue(DingModelPulseDurationFrequency
         The derivative of the states in the tuple[MX] format
         """
         pulse_duration_parameters = (
-            nlp.model.get_pulse_duration_parameters(nlp.parameters)
+            nlp.model.get_pulse_duration_parameters(nlp, parameters)
             if fes_model is None
-            else fes_model.get_pulse_duration_parameters(nlp.parameters, muscle_name=fes_model.muscle_name)
+            else fes_model.get_pulse_duration_parameters(nlp, parameters, muscle_name=fes_model.muscle_name)
         )
 
         if pulse_duration_parameters.shape[0] == 1:  # check if pulse duration is mapped
@@ -237,6 +237,11 @@ class DingModelPulseDurationFrequencyWithFatigue(DingModelPulseDurationFrequency
             impulse_time = pulse_duration_parameters[nlp.phase_idx]
 
         dxdt_fun = fes_model.system_dynamics if fes_model else nlp.model.system_dynamics
+        stim_apparition = (
+            fes_model.get_stim_prev(nlp=nlp, parameters=parameters, idx=nlp.phase_idx)
+            if fes_model
+            else nlp.model.get_stim_prev(nlp=nlp, parameters=parameters, idx=nlp.phase_idx)
+        )
 
         return DynamicsEvaluation(
             dxdt=dxdt_fun(
@@ -274,8 +279,7 @@ class DingModelPulseDurationFrequencyWithFatigue(DingModelPulseDurationFrequency
             ocp=ocp, nlp=nlp, as_states=True, as_controls=False, muscle_name=self.muscle_name
         )
         self.configure_cross_bridges(ocp=ocp, nlp=nlp, as_states=True, as_controls=False, muscle_name=self.muscle_name)
-        stim_apparition = self.get_stim_prev(ocp, nlp)
-        ConfigureProblem.configure_dynamics_function(ocp, nlp, dyn_func=self.dynamics, stim_apparition=stim_apparition)
+        ConfigureProblem.configure_dynamics_function(ocp, nlp, dyn_func=self.dynamics)
 
     @staticmethod
     def configure_scaling_factor(

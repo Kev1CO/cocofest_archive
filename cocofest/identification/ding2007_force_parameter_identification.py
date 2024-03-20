@@ -85,21 +85,21 @@ class DingModelPulseDurationFrequencyForceParameterIdentification(DingModelFrequ
                 "min_bound": 0.0001,
                 "max_bound": 1,
                 "function": model.set_tau1_rest,
-                "scaling": 10000,
+                "scaling": 1,  # 10000
             },
             "tau2": {
                 "initial_guess": 0.5,
                 "min_bound": 0.0001,
                 "max_bound": 1,
                 "function": model.set_tau2,
-                "scaling": 10000,
+                "scaling": 1,  # 10000
             },
             "km_rest": {
                 "initial_guess": 0.5,
                 "min_bound": 0.001,
                 "max_bound": 1,
                 "function": model.set_km_rest,
-                "scaling": 10000,
+                "scaling": 1,  # 10000
             },
             "a_scale": {
                 "initial_guess": 5000,
@@ -113,15 +113,15 @@ class DingModelPulseDurationFrequencyForceParameterIdentification(DingModelFrequ
                 "min_bound": 1e-4,
                 "max_bound": 6e-4,
                 "function": model.set_pd0,
-                "scaling": 1e3,
+                "scaling": 1,  # 1000
             },
             "pdt": {
                 "initial_guess": 1e-4,
                 "min_bound": 1e-4,
                 "max_bound": 6e-4,
                 "function": model.set_pdt,
-                "scaling": 1e3,
-            },  # TODO : work on scaling, decreases time optimization
+                "scaling": 1,  # 1000
+            },
         }
 
     def _set_default_parameters_list(self):
@@ -265,11 +265,12 @@ class DingModelPulseDurationFrequencyForceParameterIdentification(DingModelFrequ
 
         print(f"OCP creation time : {time_package.time() - start_time} seconds")
 
-        self.force_identification_result = self.force_ocp.solve(Solver.IPOPT(_hessian_approximation="limited-memory"))
+        # self.force_identification_result = self.force_ocp.solve(Solver.IPOPT(_hessian_approximation="limited-memory"))
+        self.force_identification_result = self.force_ocp.solve(Solver.IPOPT())
 
         identified_parameters = {}
         for key in self.key_parameter_to_identify:
-            identified_parameters[key] = self.force_identification_result.parameters[key][0][0]
+            identified_parameters[key] = self.force_identification_result.parameters[key][0]
 
         self.attributing_values_to_parameters(identified_parameters)
 

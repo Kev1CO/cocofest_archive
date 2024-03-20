@@ -96,32 +96,44 @@ class DingModelPulseIntensityFrequencyForceParameterIdentification(DingModelFreq
                 "min_bound": 0.001,
                 "max_bound": 1,
                 "function": model.set_km_rest,
-                "scaling": 1000,
+                "scaling": 1,  # 1000
             },
             "tau1_rest": {
                 "initial_guess": 0.5,
                 "min_bound": 0.0001,
                 "max_bound": 1,
                 "function": model.set_tau1_rest,
-                "scaling": 1000,
+                "scaling": 1,  # 1000
             },
             "tau2": {
                 "initial_guess": 0.5,
                 "min_bound": 0.0001,
                 "max_bound": 1,
                 "function": model.set_tau2,
-                "scaling": 1000,
+                "scaling": 1,  # 1000
             },
-            "ar": {"initial_guess": 0.5, "min_bound": 0.01, "max_bound": 1, "function": model.set_ar, "scaling": 100},
+            "ar": {
+                "initial_guess": 0.5,
+                "min_bound": 0.01,
+                "max_bound": 1,
+                "function": model.set_ar,
+                "scaling": 1,
+            },  # 100
             "bs": {
                 "initial_guess": 0.05,
                 "min_bound": 0.001,
                 "max_bound": 0.1,
                 "function": model.set_bs,
-                "scaling": 1000,
+                "scaling": 1,  # 1000
             },
             "Is": {"initial_guess": 50, "min_bound": 1, "max_bound": 150, "function": model.set_Is, "scaling": 1},
-            "cr": {"initial_guess": 1, "min_bound": 0.01, "max_bound": 2, "function": model.set_cr, "scaling": 100},
+            "cr": {
+                "initial_guess": 1,
+                "min_bound": 0.01,
+                "max_bound": 2,
+                "function": model.set_cr,
+                "scaling": 1,
+            },  # 100
         }
 
     def _set_default_parameters_list(self):
@@ -279,11 +291,10 @@ class DingModelPulseIntensityFrequencyForceParameterIdentification(DingModelFreq
 
         print(f"OCP creation time : {time_package.time() - start_time} seconds")
 
-        self.force_identification_result = self.force_ocp.solve(Solver.IPOPT(_hessian_approximation="limited-memory"))
-
+        self.force_identification_result = self.force_ocp.solve(Solver.IPOPT(_max_iter=100000))
         identified_parameters = {}
         for key in self.key_parameter_to_identify:
-            identified_parameters[key] = self.force_identification_result.parameters[key][0][0]
+            identified_parameters[key] = self.force_identification_result.parameters[key][0]
 
         self.attributing_values_to_parameters(identified_parameters)
 

@@ -21,7 +21,6 @@ objective_functions = ObjectiveList()
 n_stim = 10
 n_shooting = 10
 for i in range(n_stim):
-    objective_functions.add(ObjectiveFcn.Lagrange.MINIMIZE_CONTROL, key="tau", weight=10, quadratic=True, phase=i)
     objective_functions.add(
         ObjectiveFcn.Mayer.MINIMIZE_STATE,
         key="q",
@@ -68,7 +67,7 @@ ocp = OcpFesMsk.prepare_ocp(
     pulse_intensity_min=minimum_pulse_intensity,
     pulse_intensity_max=130,
     pulse_intensity_bimapping=False,
-    with_residual_torque=True,
+    with_residual_torque=False,
     custom_objective=objective_functions,
 )
 
