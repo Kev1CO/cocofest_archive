@@ -10,6 +10,7 @@ from bioptim import (
     ParameterList,
 )
 from .ding2003 import DingModelFrequency
+from .state_configue import StateConfigure
 
 
 class DingModelPulseDurationFrequency(DingModelFrequency):
@@ -253,8 +254,5 @@ class DingModelPulseDurationFrequency(DingModelFrequency):
         nlp: NonLinearProgram
             A reference to the phase
         """
-        self.configure_ca_troponin_complex(
-            ocp=ocp, nlp=nlp, as_states=True, as_controls=False, muscle_name=self.muscle_name
-        )
-        self.configure_force(ocp=ocp, nlp=nlp, as_states=True, as_controls=False, muscle_name=self.muscle_name)
+        StateConfigure().configure_all_fes_model_states(ocp, nlp, fes_model=self)
         ConfigureProblem.configure_dynamics_function(ocp, nlp, dyn_func=self.dynamics)

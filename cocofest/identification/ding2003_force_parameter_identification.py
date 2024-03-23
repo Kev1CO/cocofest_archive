@@ -4,8 +4,9 @@ import numpy as np
 import pickle
 
 from bioptim import Solver, Objective, OdeSolver
-from cocofest import DingModelFrequency
-from cocofest.optimization.fes_identification_ocp import OcpFesId
+
+from ..models.ding2003 import DingModelFrequency
+from ..optimization.fes_identification_ocp import OcpFesId
 
 
 class DingModelFrequencyForceParameterIdentification:

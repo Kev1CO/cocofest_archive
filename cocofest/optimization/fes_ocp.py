@@ -25,14 +25,14 @@ from bioptim import (
 from ..custom_objectives import CustomObjective
 from ..custom_constraints import CustomConstraint
 from ..fourier_approx import FourierSeries
-from cocofest import (
-    DingModelFrequency,
-    DingModelFrequencyWithFatigue,
-    DingModelPulseDurationFrequency,
-    DingModelPulseDurationFrequencyWithFatigue,
-    DingModelIntensityFrequency,
-    DingModelIntensityFrequencyWithFatigue,
-)
+
+from ..models.fes_model import FesModel
+from ..models.ding2007 import DingModelPulseDurationFrequency
+from ..models.ding2007_with_fatigue import DingModelPulseDurationFrequencyWithFatigue
+from ..models.ding2003 import DingModelFrequency
+from ..models.ding2003_with_fatigue import DingModelFrequencyWithFatigue
+from ..models.hmed2018 import DingModelIntensityFrequency
+from ..models.hmed2018_with_fatigue import DingModelIntensityFrequencyWithFatigue
 
 
 class OcpFes:
@@ -50,14 +50,7 @@ class OcpFes:
 
     @staticmethod
     def prepare_ocp(
-        model: (
-            DingModelFrequency
-            | DingModelFrequencyWithFatigue
-            | DingModelPulseDurationFrequency
-            | DingModelPulseDurationFrequencyWithFatigue
-            | DingModelIntensityFrequency
-            | DingModelIntensityFrequencyWithFatigue
-        ) = None,
+        model: FesModel = None,
         n_stim: int = None,
         n_shooting: int = None,
         final_time: int | float = None,
@@ -87,7 +80,7 @@ class OcpFes:
         .
         Attributes
         ----------
-            model: DingModelFrequency | DingModelFrequencyWithFatigue | DingModelPulseDurationFrequency | DingModelPulseDurationFrequencyWithFatigue | DingModelIntensityFrequency | DingModelIntensityFrequencyWithFatigue
+            model: FesModel
                 The model type used for the ocp
             n_stim: int
                 Number of stimulation that will occur during the ocp, it is as well refer as phases
@@ -249,18 +242,8 @@ class OcpFes:
         ode_solver=None,
         n_threads=None,
     ):
-        if not isinstance(
-            model,
-            DingModelFrequency
-            | DingModelFrequencyWithFatigue
-            | DingModelPulseDurationFrequency
-            | DingModelPulseDurationFrequencyWithFatigue
-            | DingModelIntensityFrequency
-            | DingModelIntensityFrequencyWithFatigue,
-        ):
-            raise TypeError(
-                "model must be a DingModelFrequency, DingModelFrequencyWithFatigue, DingModelPulseDurationFrequency, DingModelPulseDurationFrequencyWithFatigue, DingModelIntensityFrequency, DingModelIntensityFrequencyWithFatigue type"
-            )
+        if not isinstance(model, FesModel):
+            raise TypeError("model must be a FesModel type")
 
         if n_stim:
             if isinstance(n_stim, int):

@@ -10,19 +10,15 @@ from bioptim import (
     BoundsList,
     InterpolationType,
     VariableScaling,
-    ConstraintList,
-    Node,
 )
 
-from cocofest import (
-    CustomConstraint,
-    DingModelFrequency,
-    DingModelFrequencyWithFatigue,
-    DingModelPulseDurationFrequency,
-    DingModelPulseDurationFrequencyWithFatigue,
-    DingModelIntensityFrequency,
-    DingModelIntensityFrequencyWithFatigue,
-)
+from ..models.fes_model import FesModel
+from ..models.ding2007 import DingModelPulseDurationFrequency
+from ..models.ding2007_with_fatigue import DingModelPulseDurationFrequencyWithFatigue
+from ..models.ding2003 import DingModelFrequency
+from ..models.ding2003_with_fatigue import DingModelFrequencyWithFatigue
+from ..models.hmed2018 import DingModelIntensityFrequency
+from ..models.hmed2018_with_fatigue import DingModelIntensityFrequencyWithFatigue
 
 
 class IvpFes(OptimalControlProgram):
@@ -32,7 +28,7 @@ class IvpFes(OptimalControlProgram):
 
     Attributes
     ----------
-    model: DingModelFrequency | DingModelFrequencyWithFatigue | DingModelPulseDurationFrequency | DingModelPulseDurationFrequencyWithFatigue | DingModelIntensityFrequency | DingModelIntensityFrequencyWithFatigue
+    model: FesModel
         The model type used for the ocp
     n_stim: int
         Number of stimulation that will occur during the ocp, it is as well refer as phases
@@ -61,14 +57,7 @@ class IvpFes(OptimalControlProgram):
 
     def __init__(
         self,
-        model: (
-            DingModelFrequency
-            | DingModelFrequencyWithFatigue
-            | DingModelPulseDurationFrequency
-            | DingModelPulseDurationFrequencyWithFatigue
-            | DingModelIntensityFrequency
-            | DingModelIntensityFrequencyWithFatigue
-        ),
+        model: FesModel,
         n_stim: int = None,
         n_shooting: int = None,
         final_time: float = None,
@@ -302,14 +291,7 @@ class IvpFes(OptimalControlProgram):
     @classmethod
     def from_frequency_and_final_time(
         cls,
-        model: (
-            DingModelFrequency
-            | DingModelFrequencyWithFatigue
-            | DingModelPulseDurationFrequency
-            | DingModelPulseDurationFrequencyWithFatigue
-            | DingModelIntensityFrequency
-            | DingModelIntensityFrequencyWithFatigue
-        ),
+        model: FesModel,
         n_shooting: int,
         final_time: float,
         frequency: int | float = None,
@@ -345,14 +327,7 @@ class IvpFes(OptimalControlProgram):
     @classmethod
     def from_frequency_and_n_stim(
         cls,
-        model: (
-            DingModelFrequency
-            | DingModelFrequencyWithFatigue
-            | DingModelPulseDurationFrequency
-            | DingModelPulseDurationFrequencyWithFatigue
-            | DingModelIntensityFrequency
-            | DingModelIntensityFrequencyWithFatigue
-        ),
+        model: FesModel,
         n_stim: int,
         n_shooting: int,
         frequency: int | float = None,

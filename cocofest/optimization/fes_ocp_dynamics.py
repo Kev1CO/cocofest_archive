@@ -20,18 +20,14 @@ from bioptim import (
     VariableScaling,
 )
 
-from cocofest import (
-    CustomConstraint,
-    DingModelFrequency,
-    DingModelFrequencyWithFatigue,
-    DingModelPulseDurationFrequency,
-    DingModelPulseDurationFrequencyWithFatigue,
-    DingModelIntensityFrequency,
-    DingModelIntensityFrequencyWithFatigue,
-    OcpFes,
-    FesMskModel,
-    CustomObjective,
-)
+from ..custom_constraints import CustomConstraint
+from ..custom_objectives import CustomObjective
+from ..models.fes_model import FesModel
+from ..models.ding2003 import DingModelFrequency
+from ..models.ding2007 import DingModelPulseDurationFrequency
+from ..models.hmed2018 import DingModelIntensityFrequency
+from ..models.dynamical_model import FesMskModel
+from ..optimization.fes_ocp import OcpFes
 
 
 class OcpFesMsk:
@@ -40,14 +36,7 @@ class OcpFesMsk:
         biorbd_model_path: str,
         bound_type: str = None,
         bound_data: list = None,
-        fes_muscle_models: (
-            list[DingModelFrequency]
-            | list[DingModelFrequencyWithFatigue]
-            | list[DingModelPulseDurationFrequency]
-            | list[DingModelPulseDurationFrequencyWithFatigue]
-            | list[DingModelIntensityFrequency]
-            | list[DingModelIntensityFrequencyWithFatigue]
-        ) = None,
+        fes_muscle_models: list[FesModel] = None,
         n_stim: int = None,
         n_shooting: int = None,
         final_time: int | float = None,
@@ -93,12 +82,7 @@ class OcpFesMsk:
                 The bound type to use (start, end, start_end)
             bound_data: list
                 The data to use for the bound
-            fes_muscle_models: list[DingModelFrequency]
-                             | list[DingModelFrequencyWithFatigue]
-                             | list[DingModelPulseDurationFrequency]
-                             | list[DingModelPulseDurationFrequencyWithFatigue]
-                             | list[DingModelIntensityFrequency]
-                             | list[DingModelIntensityFrequencyWithFatigue]
+            fes_muscle_models: list[FesModel]
                 The fes model type used for the ocp
             n_stim: int
                 Number of stimulation that will occur during the ocp, it is as well refer as phases
@@ -527,13 +511,15 @@ class OcpFesMsk:
         x_bounds = BoundsList()
         x_init = InitialGuessList()
         for model in fes_muscle_models:
-            variable_bound_list = model.name_dof
+            muscle_name = model.muscle_name
+            variable_bound_list = [model.name_dof[i] + "_" + muscle_name for i in range(len(model.name_dof))]
+
             starting_bounds, min_bounds, max_bounds = (
                 model.standard_rest_values(),
                 model.standard_rest_values(),
                 model.standard_rest_values(),
             )
-            muscle_name = model.muscle_name
+
             for i in range(len(variable_bound_list)):
                 if variable_bound_list[i] == "Cn_" + muscle_name:
                     max_bounds[i] = 10
@@ -791,23 +777,8 @@ class OcpFesMsk:
                         raise TypeError(f"bound data index {i}: {bound_data[i]} should be an int or float")
 
         for i in range(len(fes_muscle_models)):
-            if not isinstance(
-                fes_muscle_models[i],
-                DingModelFrequency
-                | DingModelFrequencyWithFatigue
-                | DingModelPulseDurationFrequency
-                | DingModelPulseDurationFrequencyWithFatigue
-                | DingModelIntensityFrequency
-                | DingModelIntensityFrequencyWithFatigue,
-            ):
-                raise TypeError(
-                    "model must be a DingModelFrequency,"
-                    " DingModelFrequencyWithFatigue,"
-                    " DingModelPulseDurationFrequency,"
-                    " DingModelPulseDurationFrequencyWithFatigue,"
-                    " DingModelIntensityFrequency,"
-                    " DingModelIntensityFrequencyWithFatigue type"
-                )
+            if not isinstance(fes_muscle_models[i], FesModel):
+                raise TypeError("model must be a FesModel type")
 
         if force_tracking:
             if isinstance(force_tracking, list):

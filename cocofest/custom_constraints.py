@@ -1,5 +1,5 @@
 """
-This custom constraint are for the functional electrical stimulation frequency and intensity.
+This class regroups all the custom constraints that are used in the optimization problem.
 """
 
 from casadi import MX, SX

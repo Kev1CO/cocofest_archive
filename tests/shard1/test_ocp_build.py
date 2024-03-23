@@ -452,7 +452,7 @@ def test_hmed2018_build():
 def test_all_ocp_fes_errors():
     with pytest.raises(
         TypeError,
-        match="model must be a DingModelFrequency, DingModelFrequencyWithFatigue, DingModelPulseDurationFrequency, DingModelPulseDurationFrequencyWithFatigue, DingModelIntensityFrequency, DingModelIntensityFrequencyWithFatigue type",
+        match="model must be a FesModel type",
     ):
         OcpFes.prepare_ocp(model=None)
 

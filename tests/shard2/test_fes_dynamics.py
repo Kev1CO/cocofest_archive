@@ -16,7 +16,7 @@ from cocofest import (
     OcpFesMsk,
 )
 
-from examples.msk_models import init as ocp_module
+from cocofest.examples.msk_models import init as ocp_module
 
 biomodel_folder = os.path.dirname(ocp_module.__file__)
 biorbd_model_path = biomodel_folder + "/arm26_biceps_triceps.bioMod"
@@ -349,14 +349,7 @@ def test_fes_models_inputs_sanity_check_errors():
 
     with pytest.raises(
         TypeError,
-        match=re.escape(
-            "model must be a DingModelFrequency,"
-            " DingModelFrequencyWithFatigue,"
-            " DingModelPulseDurationFrequency,"
-            " DingModelPulseDurationFrequencyWithFatigue,"
-            " DingModelIntensityFrequency,"
-            " DingModelIntensityFrequencyWithFatigue type"
-        ),
+        match="model must be a FesModel type",
     ):
         ocp = OcpFesMsk.prepare_ocp(
             biorbd_model_path=biorbd_model_path,

@@ -2,8 +2,9 @@ import time as time_package
 import numpy as np
 
 from bioptim import Solver, Objective, OdeSolver
-from cocofest import DingModelPulseDurationFrequency, DingModelFrequencyForceParameterIdentification
-from cocofest.optimization.fes_identification_ocp import OcpFesId
+from ..models.ding2007 import DingModelPulseDurationFrequency
+from ..identification.ding2003_force_parameter_identification import DingModelFrequencyForceParameterIdentification
+from ..optimization.fes_identification_ocp import OcpFesId
 
 
 class DingModelPulseDurationFrequencyForceParameterIdentification(DingModelFrequencyForceParameterIdentification):
@@ -265,7 +266,6 @@ class DingModelPulseDurationFrequencyForceParameterIdentification(DingModelFrequ
 
         print(f"OCP creation time : {time_package.time() - start_time} seconds")
 
-        # self.force_identification_result = self.force_ocp.solve(Solver.IPOPT(_hessian_approximation="limited-memory"))
         self.force_identification_result = self.force_ocp.solve(Solver.IPOPT())
 
         identified_parameters = {}

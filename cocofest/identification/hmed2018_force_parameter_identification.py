@@ -2,8 +2,9 @@ import time as time_package
 import numpy as np
 
 from bioptim import Solver, Objective, OdeSolver
-from cocofest import DingModelIntensityFrequency, DingModelFrequencyForceParameterIdentification
-from cocofest.optimization.fes_identification_ocp import OcpFesId
+from ..models.hmed2018 import DingModelIntensityFrequency
+from ..identification.ding2003_force_parameter_identification import DingModelFrequencyForceParameterIdentification
+from ..optimization.fes_identification_ocp import OcpFesId
 
 
 class DingModelPulseIntensityFrequencyForceParameterIdentification(DingModelFrequencyForceParameterIdentification):
