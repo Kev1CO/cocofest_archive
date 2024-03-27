@@ -98,6 +98,19 @@ class DingModelFrequencyWithFatigue(DingModelFrequency):
     def muscle_name(self) -> None | str:
         return self._muscle_name
 
+    @property
+    def identifiable_parameters(self):
+        return {
+            "a_rest": self.a_rest,
+            "tau1_rest": self.tau1_rest,
+            "km_rest": self.km_rest,
+            "tau2": self.tau2,
+            "alpha_a": self.alpha_a,
+            "alpha_tau1": self.alpha_tau1,
+            "alpha_km": self.alpha_km,
+            "tau_fat": self.tau_fat,
+        }
+
     # ---- Model's dynamics ---- #
     def system_dynamics(
         self,

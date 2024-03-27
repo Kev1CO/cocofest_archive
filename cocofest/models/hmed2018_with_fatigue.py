@@ -49,6 +49,23 @@ class DingModelIntensityFrequencyWithFatigue(DingModelIntensityFrequency):
     def nb_state(self) -> int:
         return 5
 
+    @property
+    def identifiable_parameters(self):
+        return {
+            "a_rest": self.a_rest,
+            "tau1_rest": self.tau1_rest,
+            "km_rest": self.km_rest,
+            "tau2": self.tau2,
+            "ar": self.ar,
+            "bs": self.bs,
+            "Is": self.Is,
+            "cr": self.cr,
+            "alpha_a": self.alpha_a,
+            "alpha_tau1": self.alpha_tau1,
+            "alpha_km": self.alpha_km,
+            "tau_fat": self.tau_fat,
+        }
+
     def standard_rest_values(self) -> np.array:
         """
         Returns

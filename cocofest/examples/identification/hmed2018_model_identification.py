@@ -25,12 +25,13 @@ pulse_intensity = [50] * n_stim
 n_shooting = 10
 final_time = 1
 extra_phase_time = 1
+model = DingModelIntensityFrequency()
 
 
 # --- Creating the simulated data to identify on --- #
 # Building the Initial Value Problem
 ivp = IvpFes(
-    model=DingModelIntensityFrequency(),
+    model=model,
     n_stim=n_stim,
     pulse_intensity=pulse_intensity,
     n_shooting=n_shooting,
@@ -72,7 +73,7 @@ with open(pickle_file_name, "wb") as file:
 
 # --- Identifying the model parameters --- #
 ocp = DingModelPulseIntensityFrequencyForceParameterIdentification(
-    model=DingModelIntensityFrequency(),
+    model=model,
     data_path=[pickle_file_name],
     identification_method="full",
     identification_with_average_method_initial_guess=False,
@@ -86,7 +87,15 @@ identified_parameters = ocp.force_model_identification()
 print(identified_parameters)
 
 # --- Plotting noisy simulated data and simulation from model with the identified parameter --- #
-identified_model = ocp.model
+identified_model = model
+identified_model.a_rest = identified_parameters["a_rest"]
+identified_model.km_rest = identified_parameters["km_rest"]
+identified_model.tau1_rest = identified_parameters["tau1_rest"]
+identified_model.tau2 = identified_parameters["tau2"]
+identified_model.ar = identified_parameters["ar"]
+identified_model.bs = identified_parameters["bs"]
+identified_model.Is = identified_parameters["Is"]
+identified_model.cr = identified_parameters["cr"]
 
 identified_force_list = []
 identified_time_list = []

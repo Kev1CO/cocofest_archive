@@ -109,6 +109,10 @@ class DingModelFrequency(FesModel):
     def with_fatigue(self):
         return self._with_fatigue
 
+    @property
+    def identifiable_parameters(self):
+        return {"a_rest": self.a_rest, "tau1_rest": self.tau1_rest, "km_rest": self.km_rest, "tau2": self.tau2}
+
     # ---- Model's dynamics ---- #
     def system_dynamics(
         self,

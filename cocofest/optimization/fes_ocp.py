@@ -295,7 +295,9 @@ class OcpFes:
             if all([pulse_duration, pulse_duration_min, pulse_duration_max]):
                 raise ValueError("Either pulse duration or pulse duration min max bounds need to be set for this model")
 
-            minimum_pulse_duration = model.pd0
+            minimum_pulse_duration = (
+                0 if model.pd0 is None else model.pd0
+            )  # Set it to 0 if used for the identification process
 
             if pulse_duration is not None:
                 if isinstance(pulse_duration, int | float):
@@ -340,7 +342,10 @@ class OcpFes:
                     "Either pulse intensity or pulse intensity min max bounds need to be set for this model"
                 )
 
-            minimum_pulse_intensity = model.min_pulse_intensity()
+            check_for_none_type = [model.cr, model.bs, model.Is]
+            minimum_pulse_intensity = (
+                0 if None in check_for_none_type else model.min_pulse_intensity()
+            )  # Set it to 0 if used for the identification process
 
             if pulse_intensity is not None:
                 if isinstance(pulse_intensity, int | float):
@@ -493,7 +498,7 @@ class OcpFes:
 
         if time_bimapping and time_min and time_max:
             for i in range(n_stim):
-                constraints.add(CustomConstraint.pulse_time_apparition_bimapping, node=Node.START, target=0, phase=i)
+                constraints.add(CustomConstraint.equal_to_first_pulse_interval_time, node=Node.START, target=0, phase=i)
 
         if isinstance(model, DingModelPulseDurationFrequency):
             if pulse_duration:
@@ -537,7 +542,7 @@ class OcpFes:
 
             if pulse_duration_bimapping is True:
                 for i in range(1, n_stim):
-                    constraints.add(CustomConstraint.pulse_duration_bimapping, node=Node.START, target=0, phase=i)
+                    constraints.add(CustomConstraint.equal_to_first_pulse_duration, node=Node.START, target=0, phase=i)
 
         if isinstance(model, DingModelIntensityFrequency):
             if pulse_intensity:
@@ -582,7 +587,7 @@ class OcpFes:
 
             if pulse_intensity_bimapping is True:
                 for i in range(1, n_stim):
-                    constraints.add(CustomConstraint.pulse_intensity_bimapping, node=Node.START, target=0, phase=i)
+                    constraints.add(CustomConstraint.equal_to_first_pulse_intensity, node=Node.START, target=0, phase=i)
 
         return parameters, parameters_bounds, parameters_init, parameter_objectives, constraints
 
@@ -596,7 +601,8 @@ class OcpFes:
                 expand_dynamics=True,
                 expand_continuity=False,
                 phase=i,
-                phase_dynamics=PhaseDynamics.ONE_PER_NODE,
+                # phase_dynamics=PhaseDynamics.ONE_PER_NODE,
+                phase_dynamics=PhaseDynamics.SHARED_DURING_THE_PHASE,
             )
 
         return dynamics

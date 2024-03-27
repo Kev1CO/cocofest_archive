@@ -39,8 +39,19 @@ class DingModelPulseDurationFrequency(DingModelFrequency):
         self.pdt = 0.000194138  # Value from Ding's 2007 article (s)
         self.tau1_rest = 0.060601  # Value from Ding's 2003 article (s)
         self.tau2 = 0.001  # Value from Ding's 2007 article (s)
-        self.km = 0.137  # Value from Ding's 2007 article (unitless)
+        self.km_rest = 0.137  # Value from Ding's 2007 article (unitless)
         self.tauc = 0.011  # Value from Ding's 2007 article (s)
+
+    @property
+    def identifiable_parameters(self):
+        return {
+            "a_scale": self.a_scale,
+            "tau1_rest": self.tau1_rest,
+            "km_rest": self.km_rest,
+            "tau2": self.tau2,
+            "pd0": self.pd0,
+            "pdt": self.pdt,
+        }
 
     def set_a_scale(self, model, a_scale: MX | float):
         # models is required for bioptim compatibility

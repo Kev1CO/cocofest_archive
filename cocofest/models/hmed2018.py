@@ -40,6 +40,19 @@ class DingModelIntensityFrequency(DingModelFrequency):
         self.cr = 0.833  # (-) Translation of axis coordinates.
         self.impulse_intensity = None
 
+    @property
+    def identifiable_parameters(self):
+        return {
+            "a_rest": self.a_rest,
+            "tau1_rest": self.tau1_rest,
+            "km_rest": self.km_rest,
+            "tau2": self.tau2,
+            "ar": self.ar,
+            "bs": self.bs,
+            "Is": self.Is,
+            "cr": self.cr,
+        }
+
     def set_ar(self, model, ar: MX | float):
         # models is required for bioptim compatibility
         self.ar = ar

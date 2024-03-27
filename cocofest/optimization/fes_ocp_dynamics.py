@@ -304,7 +304,7 @@ class OcpFesMsk:
                 expand_dynamics=True,
                 expand_continuity=False,
                 phase=i,
-                phase_dynamics=PhaseDynamics.ONE_PER_NODE,
+                phase_dynamics=PhaseDynamics.SHARED_DURING_THE_PHASE,
             )
         return dynamics
 
@@ -360,7 +360,7 @@ class OcpFesMsk:
 
         if time_bimapping and time_min and time_max:
             for i in range(n_stim):
-                constraints.add(CustomConstraint.pulse_time_apparition_bimapping, node=Node.START, target=0, phase=i)
+                constraints.add(CustomConstraint.equal_to_first_pulse_interval_time, node=Node.START, target=0, phase=i)
 
         for i in range(len(model)):
             if isinstance(model[i], DingModelPulseDurationFrequency):

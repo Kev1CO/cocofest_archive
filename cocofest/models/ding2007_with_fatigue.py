@@ -50,6 +50,21 @@ class DingModelPulseDurationFrequencyWithFatigue(DingModelPulseDurationFrequency
     def nb_state(self) -> int:
         return 5
 
+    @property
+    def identifiable_parameters(self):
+        return {
+            "a_scale": self.a_scale,
+            "tau1_rest": self.tau1_rest,
+            "km_rest": self.km_rest,
+            "tau2": self.tau2,
+            "pd0": self.pd0,
+            "pdt": self.pdt,
+            "alpha_a": self.alpha_a,
+            "alpha_tau1": self.alpha_tau1,
+            "alpha_km": self.alpha_km,
+            "tau_fat": self.tau_fat,
+        }
+
     def standard_rest_values(self) -> np.array:
         """
         Returns

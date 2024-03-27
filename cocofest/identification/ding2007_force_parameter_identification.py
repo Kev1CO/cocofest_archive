@@ -23,14 +23,6 @@ class DingModelPulseDurationFrequencyForceParameterIdentification(DingModelFrequ
          "full" for objective function on all data,
          "average" for objective function on average data,
          "sparse" for objective function at the beginning and end of the data
-    a_rest: float,
-        The a_rest parameter for the fatigue model, mandatory if not identified from force model
-    km_rest: float,
-        The km_rest parameter for the fatigue model, mandatory if not identified from force model
-    tau1_rest: float,
-        The tau1_rest parameter for the fatigue model, mandatory if not identified from force model
-    tau2: float,
-        The tau2 parameter for the fatigue model, mandatory if not identified from force model
     n_shooting: int,
         The number of shooting points for the ocp
     use_sx: bool
@@ -45,12 +37,6 @@ class DingModelPulseDurationFrequencyForceParameterIdentification(DingModelFrequ
         identification_with_average_method_initial_guess: bool = False,
         key_parameter_to_identify: list = None,
         additional_key_settings: dict = None,
-        km_rest: float = None,
-        tau1_rest: float = None,
-        tau2: float = None,
-        a_scale: float = None,
-        pd0: float = None,
-        pdt: float = None,
         n_shooting: int = 5,
         custom_objective: list[Objective] = None,
         use_sx: bool = True,
@@ -58,10 +44,6 @@ class DingModelPulseDurationFrequencyForceParameterIdentification(DingModelFrequ
         n_threads: int = 1,
         **kwargs,
     ):
-        self.a_scale = a_scale
-        self.pd0 = pd0
-        self.pdt = pdt
-
         super(DingModelPulseDurationFrequencyForceParameterIdentification, self).__init__(
             model=model,
             data_path=data_path,
@@ -70,9 +52,6 @@ class DingModelPulseDurationFrequencyForceParameterIdentification(DingModelFrequ
             key_parameter_to_identify=key_parameter_to_identify,
             additional_key_settings=additional_key_settings,
             n_shooting=n_shooting,
-            km_rest=km_rest,
-            tau1_rest=tau1_rest,
-            tau2=tau2,
             custom_objective=custom_objective,
             use_sx=use_sx,
             ode_solver=ode_solver,
@@ -126,23 +105,25 @@ class DingModelPulseDurationFrequencyForceParameterIdentification(DingModelFrequ
         }
 
     def _set_default_parameters_list(self):
-        self.model_parameter_list = [self.tau1_rest, self.tau2, self.km_rest, self.a_scale, self.pd0, self.pdt]
-        self.model_key_parameter_list = ["tau1_rest", "tau2", "km_rest", "a_scale", "pd0", "pdt"]
+        self.numeric_parameters = [
+            self.model.tau1_rest,
+            self.model.tau2,
+            self.model.km_rest,
+            self.model.a_scale,
+            self.model.pd0,
+            self.model.pdt,
+        ]
+        self.key_parameters = ["tau1_rest", "tau2", "km_rest", "a_scale", "pd0", "pdt"]
 
-    def _set_model_parameters(self):
-        if self.tau1_rest:
-            self.model.set_tau1_rest(self.model, self.tau1_rest)
-        if self.tau2:
-            self.model.set_tau2(self.model, self.tau2)
-        if self.km_rest:
-            self.model.set_km_rest(self.model, self.km_rest)
-        if self.a_scale:
-            self.model.set_a_scale(self.model, self.a_scale)
-        if self.pd0:
-            self.model.set_pd0(self.model, self.pd0)
-        if self.pdt:
-            self.model.set_pdt(self.model, self.pdt)
-        return self.model
+    @staticmethod
+    def _set_model_parameters(model, model_parameters_value):
+        model.a_scale = model_parameters_value[0]
+        model.km_rest = model_parameters_value[1]
+        model.tau1_rest = model_parameters_value[2]
+        model.tau2 = model_parameters_value[3]
+        model.pd0 = model_parameters_value[4]
+        model.pdt = model_parameters_value[5]
+        return model
 
     @staticmethod
     def pulse_duration_extraction(data_path: str) -> list[float]:
@@ -272,21 +253,4 @@ class DingModelPulseDurationFrequencyForceParameterIdentification(DingModelFrequ
         for key in self.key_parameter_to_identify:
             identified_parameters[key] = self.force_identification_result.parameters[key][0]
 
-        self.attributing_values_to_parameters(identified_parameters)
-
         return identified_parameters
-
-    def attributing_values_to_parameters(self, identified_parameters):
-        for key in identified_parameters:
-            if key == "tau1_rest":
-                self.model.set_tau1_rest(self.model, identified_parameters[key])
-            elif key == "tau2":
-                self.model.set_tau2(self.model, identified_parameters[key])
-            elif key == "km_rest":
-                self.model.set_km_rest(self.model, identified_parameters[key])
-            elif key == "a_scale":
-                self.model.set_a_scale(self.model, identified_parameters[key])
-            elif key == "pd0":
-                self.model.set_pd0(self.model, identified_parameters[key])
-            elif key == "pdt":
-                self.model.set_pdt(self.model, identified_parameters[key])
