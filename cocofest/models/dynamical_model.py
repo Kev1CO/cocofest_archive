@@ -13,7 +13,7 @@ from bioptim import (
 from ..models.fes_model import FesModel
 from ..models.ding2003 import DingModelFrequency
 from .state_configue import StateConfigure
-from ..optimization.hill_coefficients import HillCoefficient
+from .hill_coefficients import muscle_force_length_coefficient, muscle_force_velocity_coefficient
 
 
 class FesMskModel(BiorbdModel):
@@ -146,7 +146,7 @@ class FesMskModel(BiorbdModel):
             muscle_idx = bio_muscle_names_at_index.index(muscle_model.muscle_name)
 
             muscle_force_length_coeff = (
-                HillCoefficient.muscle_force_length_coefficient(
+                muscle_force_length_coefficient(
                     model=nlp.model.bio_model.model, muscle=nlp.model.bio_model.model.muscle(muscle_idx), q=q
                 )
                 if nlp.model.muscle_force_velocity_relationship
@@ -154,7 +154,7 @@ class FesMskModel(BiorbdModel):
             )
 
             muscle_force_velocity_coeff = (
-                HillCoefficient.muscle_force_velocity_coefficient(
+                muscle_force_velocity_coefficient(
                     model=nlp.model.bio_model.model, muscle=nlp.model.bio_model.model.muscle(muscle_idx), q=q, qdot=qdot
                 )
                 if nlp.model.muscle_force_velocity_relationship

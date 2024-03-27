@@ -5,13 +5,6 @@ from bioptim import NonLinearProgram, OptimalControlProgram
 
 
 class FesModel(ABC):
-    def __init__(self):
-        """
-
-        Returns
-        -------
-
-        """
 
     @abstractmethod
     def set_a_rest(self, model, a_rest: MX | float):

@@ -243,7 +243,12 @@ class OcpFes:
         n_threads=None,
     ):
         if not isinstance(model, FesModel):
-            raise TypeError("model must be a FesModel type")
+            raise TypeError(
+                f"The current model type used is {type(model)}, it must be a FesModel type."
+                f"Current available models are: DingModelFrequency, DingModelFrequencyWithFatigue,"
+                f"DingModelPulseDurationFrequency, DingModelPulseDurationFrequencyWithFatigue,"
+                f"DingModelIntensityFrequency, DingModelIntensityFrequencyWithFatigue"
+            )
 
         if n_stim:
             if isinstance(n_stim, int):
