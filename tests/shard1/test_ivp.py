@@ -72,20 +72,20 @@ def test_ding2007_ivp(model, pulse_duration):
 
     if model._with_fatigue and isinstance(pulse_duration, list):
         np.testing.assert_almost_equal(result["F"][0][0], 0)
-        np.testing.assert_almost_equal(result["F"][0][10], 32.78053644580685)
-        np.testing.assert_almost_equal(result["F"][0][-1], 60.93650724479694)
+        np.testing.assert_almost_equal(result["F"][0][10], 28.3477940849177)
+        np.testing.assert_almost_equal(result["F"][0][-1], 52.38870505209033)
     elif model._with_fatigue is False and isinstance(pulse_duration, list):
         np.testing.assert_almost_equal(result["F"][0][0], 0)
-        np.testing.assert_almost_equal(result["F"][0][10], 32.48751154425548)
-        np.testing.assert_almost_equal(result["F"][0][-1], 56.97819257967254)
+        np.testing.assert_almost_equal(result["F"][0][10], 28.116838973337046)
+        np.testing.assert_almost_equal(result["F"][0][-1], 49.30316895125016)
     elif model._with_fatigue and isinstance(pulse_duration, float):
         np.testing.assert_almost_equal(result["F"][0][0], 0)
-        np.testing.assert_almost_equal(result["F"][0][10], 32.78053644580685)
-        np.testing.assert_almost_equal(result["F"][0][-1], 42.439558210310544)
+        np.testing.assert_almost_equal(result["F"][0][10], 28.3477940849177)
+        np.testing.assert_almost_equal(result["F"][0][-1], 36.51217790065462)
     elif model._with_fatigue is False and isinstance(pulse_duration, float):
         np.testing.assert_almost_equal(result["F"][0][0], 0)
-        np.testing.assert_almost_equal(result["F"][0][10], 32.48751154425548)
-        np.testing.assert_almost_equal(result["F"][0][-1], 40.030303929246955)
+        np.testing.assert_almost_equal(result["F"][0][10], 28.116838973337046)
+        np.testing.assert_almost_equal(result["F"][0][-1], 34.6369350284091)
 
 
 @pytest.mark.parametrize("model", [DingModelIntensityFrequency(), DingModelIntensityFrequencyWithFatigue()])

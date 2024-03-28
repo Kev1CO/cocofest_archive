@@ -4,11 +4,13 @@ from bioptim import Solver, Objective, OdeSolver
 
 from ..models.ding2003 import DingModelFrequency
 from ..optimization.fes_identification_ocp import OcpFesId
-from .identification_method import (full_data_extraction,
-                                    average_data_extraction,
-                                    sparse_data_extraction,
-                                    node_shooting_list_creation,
-                                    force_at_node_in_ocp)
+from .identification_method import (
+    full_data_extraction,
+    average_data_extraction,
+    sparse_data_extraction,
+    node_shooting_list_creation,
+    force_at_node_in_ocp,
+)
 from .identification_abstract_class import ParameterIdentification
 
 
@@ -198,18 +200,6 @@ class DingModelFrequencyForceParameterIdentification(ParameterIdentification):
         self._set_default_parameters_list()
         if not all(isinstance(param, None | int | float) for param in self.numeric_parameters):
             raise ValueError(f"The given model parameters are not valid, only None, int and float are accepted")
-
-        for i in range(len(self.numeric_parameters)):
-            if self.numeric_parameters[i] and self.key_parameters[i] in key_parameter_to_identify:
-                raise ValueError(
-                    f"The given {self.key_parameters[i]} parameter can not be given and identified at the same time."
-                    f"Consider either giving {self.key_parameters[i]} and removing it from the key_parameter_to_identify list"
-                    f" or the other way around"
-                )
-            elif not self.numeric_parameters[i] and self.key_parameters[i] not in key_parameter_to_identify:
-                raise ValueError(
-                    f"The given {self.key_parameters[i]} parameter is not valid, it must be given or identified"
-                )
 
     def key_setting_to_dictionary(self, key_settings):
         """

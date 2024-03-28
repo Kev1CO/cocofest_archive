@@ -23,14 +23,14 @@ class ParameterIdentification(ABC):
 
     @abstractmethod
     def input_sanity(
-            self,
-            model,
-            data_path,
-            identification_method,
-            double_step_identification,
-            key_parameter_to_identify,
-            additional_key_settings,
-            n_shooting,
+        self,
+        model,
+        data_path,
+        identification_method,
+        double_step_identification,
+        key_parameter_to_identify,
+        additional_key_settings,
+        n_shooting,
     ):
         """
 

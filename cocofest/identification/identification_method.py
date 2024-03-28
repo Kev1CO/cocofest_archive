@@ -101,9 +101,9 @@ def average_data_extraction(model_data_path):
         model_time_data = model_time_data[:smallest_list]
         train_duration = 1
 
-        average_stim_apparition = np.linspace(
-            0, train_duration, int(stimulation_temp_frequency * train_duration) + 1
-        )[:-1]
+        average_stim_apparition = np.linspace(0, train_duration, int(stimulation_temp_frequency * train_duration) + 1)[
+            :-1
+        ]
         average_stim_apparition = [time for time in average_stim_apparition]
         if i == len(model_data_path) - 1:
             average_stim_apparition = np.append(average_stim_apparition, model_time_data[-1]).tolist()
@@ -117,9 +117,7 @@ def average_data_extraction(model_data_path):
             )
 
             model_time_data = [(time + global_model_time_data[i - 1][-1]) for time in model_time_data]
-            average_stim_apparition = [
-                (time + global_model_time_data[i - 1][-1]) for time in average_stim_apparition
-            ]
+            average_stim_apparition = [(time + global_model_time_data[i - 1][-1]) for time in average_stim_apparition]
 
         # Storing data into global lists
         global_model_muscle_data.append(model_data)

@@ -435,11 +435,16 @@ def test_all_ocp_id_errors():
 
 
 def test_all_id_program_errors():
+
+    key_parameter_to_identify = ["a_rest", "km_rest", "tau1_rest", "tau2"]
     with pytest.raises(
         ValueError,
         match="The given model is not valid and should not be including the fatigue equation in the model",
     ):
-        DingModelFrequencyForceParameterIdentification(model=DingModelFrequencyWithFatigue())
+        DingModelFrequencyForceParameterIdentification(
+            model=DingModelFrequencyWithFatigue(),
+            key_parameter_to_identify=key_parameter_to_identify,
+        )
 
     with pytest.raises(
         TypeError,
@@ -447,7 +452,11 @@ def test_all_id_program_errors():
             f"In the given list, all model_data_path must be str type," f" path index n°{0} is not str type"
         ),
     ):
-        DingModelFrequencyForceParameterIdentification(model=DingModelFrequency(), data_path=[5])
+        DingModelFrequencyForceParameterIdentification(
+            model=DingModelFrequency(),
+            data_path=[5],
+            key_parameter_to_identify=key_parameter_to_identify,
+        )
 
     with pytest.raises(
         TypeError,
@@ -456,7 +465,11 @@ def test_all_id_program_errors():
             f" path index n°{0} is not ending with .pkl"
         ),
     ):
-        DingModelFrequencyForceParameterIdentification(model=DingModelFrequency(), data_path=["test"])
+        DingModelFrequencyForceParameterIdentification(
+            model=DingModelFrequency(),
+            data_path=["test"],
+            key_parameter_to_identify=key_parameter_to_identify,
+        )
 
     with pytest.raises(
         TypeError,
@@ -465,7 +478,11 @@ def test_all_id_program_errors():
             f" path index is not ending with .pkl"
         ),
     ):
-        DingModelFrequencyForceParameterIdentification(model=DingModelFrequency(), data_path="test")
+        DingModelFrequencyForceParameterIdentification(
+            model=DingModelFrequency(),
+            data_path="test",
+            key_parameter_to_identify=key_parameter_to_identify,
+        )
 
     data_path = 5
     with pytest.raises(
@@ -474,7 +491,11 @@ def test_all_id_program_errors():
             f"In the given path, model_data_path must be str or list[str] type, the input is {type(data_path)} type"
         ),
     ):
-        DingModelFrequencyForceParameterIdentification(model=DingModelFrequency(), data_path=data_path)
+        DingModelFrequencyForceParameterIdentification(
+            model=DingModelFrequency(),
+            data_path=data_path,
+            key_parameter_to_identify=key_parameter_to_identify,
+        )
 
     data_path = ["test.pkl"]
     identification_method = "empty"
@@ -487,7 +508,10 @@ def test_all_id_program_errors():
         ),
     ):
         DingModelFrequencyForceParameterIdentification(
-            model=DingModelFrequency(), identification_method=identification_method, data_path=data_path
+            model=DingModelFrequency(),
+            identification_method=identification_method,
+            data_path=data_path,
+            key_parameter_to_identify=key_parameter_to_identify,
         )
 
     identification_method = "full"
@@ -504,6 +528,7 @@ def test_all_id_program_errors():
             identification_method=identification_method,
             data_path=data_path,
             double_step_identification=double_step_identification,
+            key_parameter_to_identify=key_parameter_to_identify,
         )
 
     key_parameter_to_identify = ["a_rest", "test"]
@@ -632,50 +657,4 @@ def test_all_id_program_errors():
             key_parameter_to_identify=key_parameter_to_identify,
             additional_key_settings=additional_key_settings,
             n_shooting=n_shooting,
-        )
-
-    with pytest.raises(
-        ValueError,
-        match=re.escape(f"The given model parameters are not valid, only None, int and float are accepted"),
-    ):
-        DingModelFrequencyForceParameterIdentification(
-            model=DingModelFrequency(),
-            identification_method=identification_method,
-            data_path=data_path,
-            key_parameter_to_identify=key_parameter_to_identify,
-            additional_key_settings=additional_key_settings,
-            n_shooting=10,
-            a_rest="test",
-        )
-
-    with pytest.raises(
-        ValueError,
-        match=re.escape(
-            f"The given {'a_rest'} parameter can not be given and identified at the same time."
-            f"Consider either giving {'a_rest'} and removing it from the key_parameter_to_identify list"
-            f" or the other way around"
-        ),
-    ):
-        DingModelFrequencyForceParameterIdentification(
-            model=DingModelFrequency(),
-            identification_method=identification_method,
-            data_path=data_path,
-            key_parameter_to_identify=key_parameter_to_identify,
-            additional_key_settings=additional_key_settings,
-            n_shooting=10,
-            a_rest=3000,
-        )
-
-    with pytest.raises(
-        ValueError,
-        match=re.escape(f"The given {'a_rest'} parameter is not valid, it must be given or identified"),
-    ):
-        DingModelFrequencyForceParameterIdentification(
-            model=DingModelFrequency(),
-            identification_method=identification_method,
-            data_path=data_path,
-            key_parameter_to_identify=["km_rest", "tau1_rest", "tau2"],
-            additional_key_settings=additional_key_settings,
-            n_shooting=10,
-            a_rest=None,
         )

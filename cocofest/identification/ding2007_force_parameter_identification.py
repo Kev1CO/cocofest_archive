@@ -5,11 +5,13 @@ from bioptim import Solver, Objective, OdeSolver
 from ..models.ding2007 import DingModelPulseDurationFrequency
 from ..identification.ding2003_force_parameter_identification import DingModelFrequencyForceParameterIdentification
 from ..optimization.fes_identification_ocp import OcpFesId
-from .identification_method import (full_data_extraction,
-                                    average_data_extraction,
-                                    sparse_data_extraction,
-                                    node_shooting_list_creation,
-                                    force_at_node_in_ocp)
+from .identification_method import (
+    full_data_extraction,
+    average_data_extraction,
+    sparse_data_extraction,
+    node_shooting_list_creation,
+    force_at_node_in_ocp,
+)
 
 
 class DingModelPulseDurationFrequencyForceParameterIdentification(DingModelFrequencyForceParameterIdentification):

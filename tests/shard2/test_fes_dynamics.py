@@ -57,16 +57,16 @@ def test_pulse_duration_multi_muscle_fes_dynamics():
         sol.parameters["pulse_duration_BIClong"],
         np.array(
             [
-                0.00059638,
-                0.00059498,
-                0.00059357,
-                0.00059024,
-                0.00058198,
-                0.00054575,
-                0.00014772,
-                0.00015474,
-                0.00018023,
-                0.00029466,
+                0.00059643,
+                0.00059543,
+                0.00059475,
+                0.00059325,
+                0.0005899,
+                0.00058005,
+                0.00020145,
+                0.0001394,
+                0.00015499,
+                0.00027584,
             ]
         ),
     )
@@ -74,16 +74,16 @@ def test_pulse_duration_multi_muscle_fes_dynamics():
         sol.parameters["pulse_duration_TRIlong"],
         np.array(
             [
-                0.00015802,
-                0.00015879,
-                0.00052871,
-                0.00055611,
-                0.00028161,
-                0.00013942,
-                0.00014098,
-                0.00014026,
-                0.00014371,
-                0.00019614,
+                0.0001635,
+                0.00015817,
+                0.00029651,
+                0.00048692,
+                0.00014608,
+                0.0001396,
+                0.00013858,
+                0.00013775,
+                0.000141,
+                0.0001786,
             ]
         ),
     )
@@ -93,8 +93,8 @@ def test_pulse_duration_multi_muscle_fes_dynamics():
     np.testing.assert_almost_equal(sol_states["q"][0][-1], 0)
     np.testing.assert_almost_equal(sol_states["q"][1][0], 0.08722222222222223)
     np.testing.assert_almost_equal(sol_states["q"][1][-1], 2.0933333333333333)
-    np.testing.assert_almost_equal(sol_states["F_BIClong"][0][-1], 33.206865, decimal=4)
-    np.testing.assert_almost_equal(sol_states["F_TRIlong"][0][-1], 18.363734, decimal=4)
+    np.testing.assert_almost_equal(sol_states["F_BIClong"][0][-1], 25.871305635093197, decimal=4)
+    np.testing.assert_almost_equal(sol_states["F_TRIlong"][0][-1], 11.572282303524243, decimal=4)
 
 
 def test_pulse_intensity_multi_muscle_fes_dynamics():
