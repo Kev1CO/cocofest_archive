@@ -5,7 +5,6 @@ The example model is the Ding2003 frequency model.
 
 import numpy as np
 import matplotlib.pyplot as plt
-from bioptim import Solution, Shooting, SolutionIntegrator, SolutionMerge
 from cocofest import DingModelFrequencyWithFatigue, IvpFes
 
 # --- Example n°1 : Single --- #
@@ -24,21 +23,9 @@ ivp = IvpFes(
     use_sx=True,
 )
 
-# Creating the solution from the initial guess
-dt = np.array([final_time / (ns * n_stim)] * n_stim)
-sol_from_initial_guess = Solution.from_initial_guess(ivp, [dt, ivp.x_init, ivp.u_init, ivp.p_init, ivp.s_init])
-
-# Integrating the solution
-result_single, time_single = sol_from_initial_guess.integrate(
-    shooting_type=Shooting.SINGLE,
-    integrator=SolutionIntegrator.OCP,
-    to_merge=[SolutionMerge.NODES, SolutionMerge.PHASES],
-    return_time=True,
-    duplicated_times=False,
-)
-
+result_single, time_single = ivp.integrate()
 force_single = result_single["F"][0]
-stimulation_single = np.concatenate((np.array([0]), np.cumsum(np.array(ivp.phase_time))))
+stimulation_single = np.concatenate((np.array([0]), np.cumsum(np.array(ivp.final_time_phase))))
 
 
 # --- Example n°2 : Doublets --- #
@@ -57,21 +44,9 @@ ivp = IvpFes(
     use_sx=True,
 )
 
-# Creating the solution from the initial guess
-dt = np.array([0.005 / ns, (final_time - (0.005 * n_stim / 2)) / (ns * n_stim / 2)] * int((n_stim / 2)))
-sol_from_initial_guess = Solution.from_initial_guess(ivp, [dt, ivp.x_init, ivp.u_init, ivp.p_init, ivp.s_init])
-
-# Integrating the solution
-result_doublet, time_doublet = sol_from_initial_guess.integrate(
-    shooting_type=Shooting.SINGLE,
-    integrator=SolutionIntegrator.OCP,
-    to_merge=[SolutionMerge.NODES, SolutionMerge.PHASES],
-    return_time=True,
-    duplicated_times=False,
-)
-
+result_doublet, time_doublet = ivp.integrate()
 force_doublet = result_doublet["F"][0]
-stimulation_doublet = np.concatenate((np.array([0]), np.cumsum(np.array(ivp.phase_time))))
+stimulation_doublet = np.concatenate((np.array([0]), np.cumsum(np.array(ivp.final_time_phase))))
 
 
 # --- Example n°3 : Triplets --- #
@@ -87,21 +62,9 @@ ivp = IvpFes(
     use_sx=True,
 )
 
-# Creating the solution from the initial guess
-dt = np.array([0.005 / ns, 0.005 / ns, (final_time - (0.01 * n_stim / 3)) / (ns * n_stim / 3)] * int((n_stim / 3)))
-sol_from_initial_guess = Solution.from_initial_guess(ivp, [dt, ivp.x_init, ivp.u_init, ivp.p_init, ivp.s_init])
-
-# Integrating the solution
-result_triplet, time_triplet = sol_from_initial_guess.integrate(
-    shooting_type=Shooting.SINGLE,
-    integrator=SolutionIntegrator.OCP,
-    to_merge=[SolutionMerge.NODES, SolutionMerge.PHASES],
-    return_time=True,
-    duplicated_times=False,
-)
-
+result_triplet, time_triplet = ivp.integrate()
 force_triplet = result_triplet["F"][0]
-stimulation_triplet = np.concatenate((np.array([0]), np.cumsum(np.array(ivp.phase_time))))
+stimulation_triplet = np.concatenate((np.array([0]), np.cumsum(np.array(ivp.final_time_phase))))
 
 # --- Show results --- #
 plt.title("Force state result for Single, Doublet and Triplet")

@@ -2,7 +2,6 @@ import numpy as np
 import pytest
 import re
 
-from bioptim import Solution, Shooting, SolutionIntegrator, SolutionMerge
 from cocofest import (
     IvpFes,
     DingModelFrequency,
@@ -21,17 +20,8 @@ def test_ding2003_ivp(model):
     n_stim = 3
     ivp = IvpFes(model=model, n_stim=n_stim, n_shooting=ns, final_time=final_time, use_sx=True)
 
-    # Creating the solution from the initial guess
-    dt = np.array([final_time / (ns * n_stim)] * n_stim)
-    sol_from_initial_guess = Solution.from_initial_guess(ivp, [dt, ivp.x_init, ivp.u_init, ivp.p_init, ivp.s_init])
-
     # Integrating the solution
-    result = sol_from_initial_guess.integrate(
-        shooting_type=Shooting.SINGLE,
-        integrator=SolutionIntegrator.OCP,
-        to_merge=[SolutionMerge.NODES, SolutionMerge.PHASES],
-        duplicated_times=False,
-    )
+    result = ivp.integrate(return_time=False)
 
     if model._with_fatigue:
         np.testing.assert_almost_equal(result["F"][0][0], 0)
@@ -58,17 +48,8 @@ def test_ding2007_ivp(model, pulse_duration):
         use_sx=True,
     )
 
-    # Creating the solution from the initial guess
-    dt = np.array([final_time / (ns * n_stim)] * n_stim)
-    sol_from_initial_guess = Solution.from_initial_guess(ivp, [dt, ivp.x_init, ivp.u_init, ivp.p_init, ivp.s_init])
-
     # Integrating the solution
-    result = sol_from_initial_guess.integrate(
-        shooting_type=Shooting.SINGLE,
-        integrator=SolutionIntegrator.OCP,
-        to_merge=[SolutionMerge.NODES, SolutionMerge.PHASES],
-        duplicated_times=False,
-    )
+    result = ivp.integrate(return_time=False)
 
     if model._with_fatigue and isinstance(pulse_duration, list):
         np.testing.assert_almost_equal(result["F"][0][0], 0)
@@ -103,17 +84,8 @@ def test_hmed2018_ivp(model, pulse_intensity):
         use_sx=True,
     )
 
-    # Creating the solution from the initial guess
-    dt = np.array([final_time / (ns * n_stim)] * n_stim)
-    sol_from_initial_guess = Solution.from_initial_guess(ivp, [dt, ivp.x_init, ivp.u_init, ivp.p_init, ivp.s_init])
-
     # Integrating the solution
-    result = sol_from_initial_guess.integrate(
-        shooting_type=Shooting.SINGLE,
-        integrator=SolutionIntegrator.OCP,
-        to_merge=[SolutionMerge.NODES, SolutionMerge.PHASES],
-        duplicated_times=False,
-    )
+    result = ivp.integrate(return_time=False)
 
     if model._with_fatigue and isinstance(pulse_intensity, list):
         np.testing.assert_almost_equal(result["F"][0][0], 0)
@@ -147,17 +119,8 @@ def test_pulse_mode_ivp(pulse_mode):
         use_sx=True,
     )
 
-    # Creating the solution from the initial guess
-    dt = np.array([final_time / (ns * n_stim)] * n_stim)
-    sol_from_initial_guess = Solution.from_initial_guess(ivp, [dt, ivp.x_init, ivp.u_init, ivp.p_init, ivp.s_init])
-
     # Integrating the solution
-    result = sol_from_initial_guess.integrate(
-        shooting_type=Shooting.SINGLE,
-        integrator=SolutionIntegrator.OCP,
-        to_merge=[SolutionMerge.NODES, SolutionMerge.PHASES],
-        duplicated_times=False,
-    )
+    result = ivp.integrate(return_time=False)
 
     if pulse_mode == "Single":
         np.testing.assert_almost_equal(result["F"][0][0], 0)
@@ -165,13 +128,13 @@ def test_pulse_mode_ivp(pulse_mode):
         np.testing.assert_almost_equal(result["F"][0][-1], 138.94556672277545)
     elif pulse_mode == "Doublet":
         np.testing.assert_almost_equal(result["F"][0][0], 0)
-        np.testing.assert_almost_equal(result["F"][0][20], 96.86596842444625)
-        np.testing.assert_almost_equal(result["F"][0][-1], 161.1142206208378)
+        np.testing.assert_almost_equal(result["F"][0][20], 107.1572156700596)
+        np.testing.assert_almost_equal(result["F"][0][-1], 199.51123480749564)
 
     elif pulse_mode == "Triplet":
         np.testing.assert_almost_equal(result["F"][0][0], 0)
-        np.testing.assert_almost_equal(result["F"][0][30], 106.71755997847865)
-        np.testing.assert_almost_equal(result["F"][0][-1], 183.85060889614934)
+        np.testing.assert_almost_equal(result["F"][0][30], 137.72706226851224)
+        np.testing.assert_almost_equal(result["F"][0][-1], 236.04865519419803)
 
 
 def test_ivp_methods():

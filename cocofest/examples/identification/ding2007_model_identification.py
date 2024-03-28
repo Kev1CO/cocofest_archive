@@ -41,18 +41,8 @@ ivp = IvpFes(
     extend_last_phase=extra_phase_time,
 )
 
-# Creating the solution from the initial guess
-dt = np.array([final_time / (n_shooting * n_stim)] * n_stim)
-sol_from_initial_guess = Solution.from_initial_guess(ivp, [dt, ivp.x_init, ivp.u_init, ivp.p_init, ivp.s_init])
-
 # Integrating the solution
-result, time = sol_from_initial_guess.integrate(
-    shooting_type=Shooting.SINGLE,
-    integrator=SolutionIntegrator.OCP,
-    to_merge=[SolutionMerge.NODES, SolutionMerge.PHASES],
-    return_time=True,
-    duplicated_times=False,
-)
+result, time = ivp.integrate()
 
 # Adding noise to the force
 noise = np.random.normal(0, 5, len(result["F"][0]))
@@ -111,26 +101,8 @@ ivp_from_identification = IvpFes(
     extend_last_phase=extra_phase_time,
 )
 
-# Creating the solution from the initial guess
-identified_sol_from_initial_guess = Solution.from_initial_guess(
-    ivp_from_identification,
-    [
-        dt,
-        ivp_from_identification.x_init,
-        ivp_from_identification.u_init,
-        ivp_from_identification.p_init,
-        ivp_from_identification.s_init,
-    ],
-)
-
 # Integrating the solution
-identified_result, identified_time = identified_sol_from_initial_guess.integrate(
-    shooting_type=Shooting.SINGLE,
-    integrator=SolutionIntegrator.OCP,
-    to_merge=[SolutionMerge.NODES, SolutionMerge.PHASES],
-    return_time=True,
-    duplicated_times=False,
-)
+identified_result, identified_time = ivp_from_identification.integrate()
 
 identified_force = identified_result["F"][0]
 

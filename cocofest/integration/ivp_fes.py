@@ -10,6 +10,10 @@ from bioptim import (
     BoundsList,
     InterpolationType,
     VariableScaling,
+    Solution,
+    Shooting,
+    SolutionIntegrator,
+    SolutionMerge,
 )
 
 from ..models.fes_model import FesModel
@@ -21,7 +25,7 @@ from ..models.hmed2018 import DingModelIntensityFrequency
 from ..models.hmed2018_with_fatigue import DingModelIntensityFrequencyWithFatigue
 
 
-class IvpFes(OptimalControlProgram):
+class IvpFes:
     """
     The main class to define an ocp. This class prepares the full program and gives all
     the needed parameters to solve a functional electrical stimulation ocp
@@ -59,7 +63,7 @@ class IvpFes(OptimalControlProgram):
         self,
         model: FesModel,
         n_stim: int = None,
-        n_shooting: int = None,
+        n_shooting: int | list = None,
         final_time: float = None,
         pulse_duration: int | float | list[int] | list[float] = None,
         pulse_intensity: int | float | list[int] | list[float] = None,
@@ -71,6 +75,7 @@ class IvpFes(OptimalControlProgram):
     ):
         self.model = model
         self.n_stim = n_stim
+        self.final_time = final_time
         self.pulse_duration = pulse_duration
         self.pulse_intensity = pulse_intensity
 
@@ -78,72 +83,30 @@ class IvpFes(OptimalControlProgram):
         self.parameters = None
 
         self.models = [model] * n_stim
-        self.n_shooting = [n_shooting] * n_stim
+        self.n_shooting = [n_shooting] * n_stim if isinstance(n_shooting, int) else n_shooting
+        if len(self.n_shooting) != n_stim:
+            raise ValueError("n_shooting must be an int or a list of length n_stim")
 
-        if pulse_mode == "Single":
-            step = final_time / n_stim
-            self.final_time_phase = (step,)
-            for i in range(n_stim - 1):
-                self.final_time_phase = self.final_time_phase + (step,)
-
-        elif pulse_mode == "Doublet":
-            doublet_step = 0.005
-            step = final_time / (n_stim / 2) - doublet_step
-            for i in range(int(n_stim / 2)):
-                self.final_time_phase = (doublet_step,) if i == 0 else self.final_time_phase + (doublet_step,)
-                self.final_time_phase = self.final_time_phase + (step,)
-
-        elif pulse_mode == "Triplet":
-            doublet_step = 0.005
-            triplet_step = 0.005
-            step = final_time / (n_stim / 3) - doublet_step - triplet_step
-            for i in range(int(n_stim / 3)):
-                self.final_time_phase = (doublet_step,) if i == 0 else self.final_time_phase + (doublet_step,)
-                self.final_time_phase = self.final_time_phase + (triplet_step,)
-                self.final_time_phase = self.final_time_phase + (step,)
-
-        else:
-            raise ValueError("Pulse mode not yet implemented")
-
-        if extend_last_phase:
-            self.final_time_phase = self.final_time_phase[:-1] + (self.final_time_phase[-1] + extend_last_phase,)
-            self.n_shooting[-1] = int((extend_last_phase / step) * n_shooting) + self.n_shooting[-1]
+        self.dt = []
+        self.pulse_mode = pulse_mode
+        self.extend_last_phase = extend_last_phase
+        self._pulse_mode_settings()
 
         parameters = ParameterList(use_sx=use_sx)
         parameters_init = InitialGuessList()
         parameters_bounds = BoundsList()
 
-        if pulse_mode == "Single":
-            pulse_apparition_time = [final_time / n_stim * i for i in range(n_stim)]
-        elif pulse_mode == "Doublet":
-            pulse_apparition_time = [
-                [final_time / (n_stim / 2) * i, final_time / (n_stim / 2) * i + 0.005] for i in range(int(n_stim / 2))
-            ]
-            pulse_apparition_time = [item for sublist in pulse_apparition_time for item in sublist]
-        elif pulse_mode == "Triplet":
-            pulse_apparition_time = [
-                [
-                    final_time / (n_stim / 3) * i,
-                    final_time / (n_stim / 3) * i + 0.005,
-                    final_time / (n_stim / 3) * i + 0.010,
-                ]
-                for i in range(int(n_stim / 3))
-            ]
-            pulse_apparition_time = [item for sublist in pulse_apparition_time for item in sublist]
-        else:
-            raise ValueError("Pulse mode not yet implemented")
-
-        pulse_apparition_time = np.round(np.array(pulse_apparition_time), 3).tolist()
+        self.pulse_apparition_time = np.round(np.array(self.pulse_apparition_time), 3).tolist()
         parameters_bounds.add(
             "pulse_apparition_time",
-            min_bound=np.array(pulse_apparition_time),
-            max_bound=np.array(pulse_apparition_time),
+            min_bound=np.array(self.pulse_apparition_time),
+            max_bound=np.array(self.pulse_apparition_time),
             interpolation=InterpolationType.CONSTANT,
         )
 
         parameters_init.add(
             key="pulse_apparition_time",
-            initial_guess=np.array(pulse_apparition_time),
+            initial_guess=np.array(self.pulse_apparition_time),
         )
 
         parameters.add(
@@ -231,6 +194,7 @@ class IvpFes(OptimalControlProgram):
 
         self.parameters = parameters
         self.parameters_init = parameters_init
+        self.parameters_bounds = parameters_bounds
         self.n_stim = n_stim
         self._declare_dynamics()
         self.x_init, self.u_init, self.p_init, self.s_init = self.build_initial_guess_from_ocp(self)
@@ -244,18 +208,111 @@ class IvpFes(OptimalControlProgram):
         if not isinstance(n_threads, int):
             raise ValueError("n_thread must be a int type")
 
-        super().__init__(
+        self.ode_solver = ode_solver
+        self.use_sx = use_sx
+        self.n_threads = n_threads
+
+        self.fake_ocp = self._prepare_fake_ocp()
+        self.initial_guess_solution = self._build_solution_from_initial_guess()
+
+    def _pulse_mode_settings(self):
+        if self.pulse_mode == "Single":
+            step = self.final_time / self.n_stim
+            self.final_time_phase = (step,)
+            for i in range(self.n_stim):
+                self.final_time_phase = self.final_time_phase + (step,)
+                self.dt.append(step / self.n_shooting[i])
+            self.pulse_apparition_time = [self.final_time / self.n_stim * i for i in range(self.n_stim)]
+
+        elif self.pulse_mode == "Doublet":
+            doublet_step = 0.005
+            step = np.round(self.final_time / (self.n_stim / 2) - doublet_step, 3)
+            index = 0
+            for i in range(int(self.n_stim / 2)):
+                self.final_time_phase = (doublet_step,) if i == 0 else self.final_time_phase + (doublet_step,)
+                self.final_time_phase = self.final_time_phase + (step,)
+                self.dt.append(0.005 / self.n_shooting[index])
+                index += 1
+                self.dt.append(step / self.n_shooting[index])
+                index += 1
+
+            self.pulse_apparition_time = [
+                [self.final_time / (self.n_stim / 2) * i, self.final_time / (self.n_stim / 2) * i + 0.005]
+                for i in range(int(self.n_stim / 2))
+            ]
+            self.pulse_apparition_time = [item for sublist in self.pulse_apparition_time for item in sublist]
+
+        elif self.pulse_mode == "Triplet":
+            doublet_step = 0.005
+            triplet_step = 0.005
+            step = np.round(self.final_time / (self.n_stim / 3) - doublet_step - triplet_step, 3)
+            index = 0
+            for i in range(int(self.n_stim / 3)):
+                self.final_time_phase = (doublet_step,) if i == 0 else self.final_time_phase + (doublet_step,)
+                self.final_time_phase = self.final_time_phase + (triplet_step,)
+                self.final_time_phase = self.final_time_phase + (step,)
+                self.dt.append(0.005 / self.n_shooting[index])
+                index += 1
+                self.dt.append(0.005 / self.n_shooting[index])
+                index += 1
+                self.dt.append(step / self.n_shooting[index])
+                index += 1
+
+            self.pulse_apparition_time = [
+                [
+                    self.final_time / (self.n_stim / 3) * i,
+                    self.final_time / (self.n_stim / 3) * i + 0.005,
+                    self.final_time / (self.n_stim / 3) * i + 0.010,
+                ]
+                for i in range(int(self.n_stim / 3))
+            ]
+            self.pulse_apparition_time = [item for sublist in self.pulse_apparition_time for item in sublist]
+
+        else:
+            raise ValueError("Pulse mode not yet implemented")
+
+        self.dt = np.array(self.dt)
+        if self.extend_last_phase:
+            self.final_time_phase = self.final_time_phase[:-1] + (self.final_time_phase[-1] + self.extend_last_phase,)
+            self.n_shooting[-1] = int((self.extend_last_phase / step) * self.n_shooting[-1]) + self.n_shooting[-1]
+            self.dt[-1] = self.final_time_phase[-1] / self.n_shooting[-1]
+
+    def _prepare_fake_ocp(self):
+        """This function creates the initial value problem by hacking Bioptim's OptimalControlProgram.
+        It is not the normal use of bioptim, but it enables a simplified ivp construction."""
+
+        return OptimalControlProgram(
             bio_model=self.models,
             dynamics=self.dynamics,
             n_shooting=self.n_shooting,
             phase_time=self.final_time_phase,
-            ode_solver=ode_solver,
+            ode_solver=self.ode_solver,
             control_type=ControlType.CONSTANT,
-            use_sx=use_sx,
-            parameters=parameters,
-            parameter_init=parameters_init,
-            parameter_bounds=parameters_bounds,
-            n_threads=n_threads,
+            use_sx=self.use_sx,
+            parameters=self.parameters,
+            parameter_init=self.parameters_init,
+            parameter_bounds=self.parameters_bounds,
+            n_threads=self.n_threads,
+        )
+
+    def _build_solution_from_initial_guess(self):
+        return Solution.from_initial_guess(self.fake_ocp, [self.dt, self.x_init, self.u_init, self.p_init, self.s_init])
+
+    def integrate(
+        self,
+        shooting_type=Shooting.SINGLE,
+        integrator=SolutionIntegrator.OCP,
+        to_merge=None,
+        return_time=True,
+        duplicated_times=False,
+    ):
+        to_merge = [SolutionMerge.NODES, SolutionMerge.PHASES] if to_merge is None else to_merge
+        return self.initial_guess_solution.integrate(
+            shooting_type=shooting_type,
+            integrator=integrator,
+            to_merge=to_merge,
+            return_time=return_time,
+            duplicated_times=duplicated_times,
         )
 
     def _declare_dynamics(self):

@@ -1,6 +1,4 @@
 import matplotlib.pyplot as plt
-import numpy as np
-from bioptim import Solution, Shooting, SolutionIntegrator, SolutionMerge
 from cocofest import (
     DingModelFrequencyWithFatigue,
     IvpFes,
@@ -12,26 +10,9 @@ from cocofest import (
 phase = 10
 ns = 20
 final_time = 1
-ivp = IvpFes(
-    model=DingModelFrequencyWithFatigue(),
-    n_stim=phase,
-    n_shooting=ns,
-    final_time=final_time,
-    use_sx=True,
-)
+ivp = IvpFes(model=DingModelFrequencyWithFatigue(), n_stim=phase, n_shooting=ns, final_time=final_time, use_sx=True)
 
-# Creating the solution from the initial guess
-dt = np.array([final_time / (ns * phase)] * phase)
-sol_from_initial_guess = Solution.from_initial_guess(ivp, [dt, ivp.x_init, ivp.u_init, ivp.p_init, ivp.s_init])
-
-# Integrating the solution
-result, time = sol_from_initial_guess.integrate(
-    shooting_type=Shooting.SINGLE,
-    integrator=SolutionIntegrator.OCP,
-    to_merge=[SolutionMerge.NODES, SolutionMerge.PHASES],
-    return_time=True,
-    duplicated_times=False,
-)
+result, time = ivp.integrate()
 
 # Plotting the force state result
 plt.title("Force state result")

@@ -70,19 +70,8 @@ for mode in modes:
             for k in range(repetition):
                 start_time = time.time()
 
-                # Creating the solution from the initial guess
-                dt = np.array([final_time / (node_shooting * n_stim)] * n_stim)
-                sol_from_initial_guess = Solution.from_initial_guess(
-                    ivp, [dt, ivp.x_init, ivp.u_init, ivp.p_init, ivp.s_init]
-                )
-
                 # Integrating the solution
-                result = sol_from_initial_guess.integrate(
-                    shooting_type=Shooting.SINGLE,
-                    integrator=SolutionIntegrator.OCP,
-                    to_merge=[SolutionMerge.NODES, SolutionMerge.PHASES],
-                    duplicated_times=False,
-                )
+                result = ivp.integrate(return_time=False)
 
                 time_computation.append(time.time() - start_time)
 

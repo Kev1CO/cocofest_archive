@@ -2,7 +2,6 @@ import time
 import numpy as np
 import matplotlib.pyplot as plt
 
-from bioptim import Solution, Shooting, SolutionIntegrator, SolutionMerge
 from cocofest import (
     DingModelFrequencyWithFatigue,
     IvpFes,
@@ -27,18 +26,8 @@ for i in range(10):
         use_sx=True,
     )
 
-    # Creating the solution from the initial guess
-    dt = np.array([final_time / (n_shooting * n_stim)] * n_stim)
-    sol_from_initial_guess = Solution.from_initial_guess(ivp, [dt, ivp.x_init, ivp.u_init, ivp.p_init, ivp.s_init])
-
     # Integrating the solution
-    result, sol_time = sol_from_initial_guess.integrate(
-        shooting_type=Shooting.SINGLE,
-        integrator=SolutionIntegrator.OCP,
-        to_merge=[SolutionMerge.NODES, SolutionMerge.PHASES],
-        return_time=True,
-        duplicated_times=False,
-    )
+    result, sol_time = ivp.integrate()
     computations_time.append(time.time() - start_time)
     results.append(result)
 
