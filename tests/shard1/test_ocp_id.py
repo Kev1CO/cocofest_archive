@@ -195,7 +195,7 @@ def test_ocp_id_ding2003():
         model=DingModelFrequency(),
         data_path=[pickle_file_name],
         identification_method="full",
-        identification_with_average_method_initial_guess=False,
+        double_step_identification=False,
         key_parameter_to_identify=["a_rest", "km_rest", "tau1_rest", "tau2"],
         additional_key_settings={},
         n_shooting=10,
@@ -263,7 +263,7 @@ def test_ocp_id_ding2007():
         model=DingModelPulseDurationFrequency(),
         data_path=[pickle_file_name],
         identification_method="full",
-        identification_with_average_method_initial_guess=False,
+        double_step_identification=False,
         key_parameter_to_identify=["tau1_rest", "tau2", "km_rest", "a_scale", "pd0", "pdt"],
         additional_key_settings={},
         n_shooting=10,
@@ -333,7 +333,7 @@ def test_ocp_id_hmed2018():
         model=DingModelIntensityFrequency(),
         data_path=[pickle_file_name],
         identification_method="full",
-        identification_with_average_method_initial_guess=False,
+        double_step_identification=False,
         key_parameter_to_identify=["a_rest", "km_rest", "tau1_rest", "tau2", "ar", "bs", "Is", "cr"],
         additional_key_settings={},
         n_shooting=100,
@@ -491,19 +491,19 @@ def test_all_id_program_errors():
         )
 
     identification_method = "full"
-    identification_with_average_method_initial_guess = "True"
+    double_step_identification = "True"
     with pytest.raises(
         TypeError,
         match=re.escape(
-            f"The given identification_with_average_method_initial_guess must be bool type,"
-            f" the given value is {type(identification_with_average_method_initial_guess)} type"
+            f"The given double_step_identification must be bool type,"
+            f" the given value is {type(double_step_identification)} type"
         ),
     ):
         DingModelFrequencyForceParameterIdentification(
             model=DingModelFrequency(),
             identification_method=identification_method,
             data_path=data_path,
-            identification_with_average_method_initial_guess=identification_with_average_method_initial_guess,
+            double_step_identification=double_step_identification,
         )
 
     key_parameter_to_identify = ["a_rest", "test"]

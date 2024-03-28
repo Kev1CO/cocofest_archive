@@ -267,7 +267,7 @@ class IvpFes(OptimalControlProgram):
                 expand_dynamics=True,
                 expand_continuity=False,
                 phase=i,
-                phase_dynamics=PhaseDynamics.ONE_PER_NODE,
+                phase_dynamics=PhaseDynamics.SHARED_DURING_THE_PHASE,
             )
 
     def build_initial_guess_from_ocp(self, ocp):

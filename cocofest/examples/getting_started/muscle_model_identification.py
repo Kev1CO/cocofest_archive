@@ -9,6 +9,7 @@ from cocofest import (
     DingModelPulseIntensityFrequencyForceParameterIdentification,
     IvpFes,
 )
+from cocofest.identification.identification_method import full_data_extraction
 
 from bioptim import Shooting, SolutionIntegrator, Solution
 import matplotlib.pyplot as plt
@@ -19,7 +20,7 @@ ocp = DingModelFrequencyParameterIdentification(
     model=DingModelFrequency,
     force_model_data_path=["data/biceps_force.pkl"],
     force_model_identification_method="full",
-    force_model_identification_with_average_method_initial_guess=True,
+    force_model_double_step_identification=True,
     use_sx=True,
 )
 
@@ -66,7 +67,7 @@ print("a_rest : ", a_rest, "km_rest : ", km_rest, "tau1_rest : ", tau1_rest, "ta
 # #     model=DingModelFrequency(),
 # #     force_model_data_path=[pickle_file_name],
 # #     force_model_identification_method="full",
-# #     force_model_identification_with_average_method_initial_guess=False,
+# #     force_model_double_step_identification=False,
 # #     n_shooting=100,
 # #     use_sx=True,
 # # )
@@ -75,7 +76,7 @@ print("a_rest : ", a_rest, "km_rest : ", km_rest, "tau1_rest : ", tau1_rest, "ta
 #     model=DingModelFrequency(),
 #     data_path=[pickle_file_name],
 #     identification_method="full",
-#     identification_with_average_method_initial_guess=False,
+#     double_step_identification=False,
 #     key_parameter_to_identify=["km_rest", "tau1_rest", "tau2"],
 #     additional_key_settings={},
 #     n_shooting=10,
@@ -225,7 +226,7 @@ print("alpha_a : ", alpha_a, "alpha_km : ", alpha_km, "alpha_tau1 : ", alpha_tau
 #     model=DingModelPulseDurationFrequency(),
 #     data_path=[pickle_file_name],
 #     identification_method="full",
-#     identification_with_average_method_initial_guess=False,
+#     double_step_identification=False,
 #     key_parameter_to_identify=["tau1_rest", "tau2", "km_rest", "a_scale", "pd0", "pdt"],
 #     additional_key_settings={},
 #     n_shooting=10,
@@ -371,7 +372,7 @@ ocp = DingModelPulseIntensityFrequencyForceParameterIdentification(
     model=DingModelIntensityFrequency(),
     data_path=[pickle_file_name],
     identification_method="full",
-    identification_with_average_method_initial_guess=False,
+    double_step_identification=False,
     key_parameter_to_identify=["a_rest", "km_rest", "tau1_rest", "tau2", "ar", "bs", "Is", "cr"],
     additional_key_settings={},
     n_shooting=10,
@@ -461,7 +462,7 @@ identified_force = identified_result["F"][0].tolist()
     pickle_stim_apparition_time,
     pickle_muscle_data,
     pickle_discontinuity_phase_list,
-) = DingModelPulseIntensityFrequencyForceParameterIdentification.full_data_extraction([pickle_file_name])
+) = full_data_extraction([pickle_file_name])
 
 # Plotting the identification result
 plt.title("Force state result")

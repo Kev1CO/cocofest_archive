@@ -17,6 +17,7 @@ from cocofest import (
     DingModelFrequencyForceParameterIdentification,
     IvpFes,
 )
+from cocofest.identification.identification_method import full_data_extraction
 
 
 # --- Setting simulation parameters --- #
@@ -74,7 +75,7 @@ ocp = DingModelFrequencyForceParameterIdentification(
     model=model,
     data_path=[pickle_file_name],
     identification_method="full",
-    identification_with_average_method_initial_guess=False,
+    double_step_identification=False,
     key_parameter_to_identify=["a_rest", "km_rest", "tau1_rest", "tau2"],
     additional_key_settings={},
     n_shooting=n_shooting,
@@ -131,7 +132,7 @@ identified_force = identified_result["F"][0]
     pickle_stim_apparition_time,
     pickle_muscle_data,
     pickle_discontinuity_phase_list,
-) = DingModelFrequencyForceParameterIdentification.full_data_extraction([pickle_file_name])
+) = full_data_extraction([pickle_file_name])
 
 result_dict = {
     "a_rest": [identified_model.a_rest, DingModelFrequency().a_rest],

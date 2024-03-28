@@ -5,6 +5,11 @@ from bioptim import Solver, Objective, OdeSolver
 from ..models.hmed2018 import DingModelIntensityFrequency
 from ..identification.ding2003_force_parameter_identification import DingModelFrequencyForceParameterIdentification
 from ..optimization.fes_identification_ocp import OcpFesId
+from .identification_method import (full_data_extraction,
+                                    average_data_extraction,
+                                    sparse_data_extraction,
+                                    node_shooting_list_creation,
+                                    force_at_node_in_ocp)
 
 
 class DingModelPulseIntensityFrequencyForceParameterIdentification(DingModelFrequencyForceParameterIdentification):
@@ -34,7 +39,7 @@ class DingModelPulseIntensityFrequencyForceParameterIdentification(DingModelFreq
         model: DingModelIntensityFrequency,
         data_path: str | list[str] = None,
         identification_method: str = "full",
-        identification_with_average_method_initial_guess: bool = False,
+        double_step_identification: bool = False,
         key_parameter_to_identify: list = None,
         additional_key_settings: dict = None,
         n_shooting: int = 5,
@@ -48,7 +53,7 @@ class DingModelPulseIntensityFrequencyForceParameterIdentification(DingModelFreq
             model=model,
             data_path=data_path,
             identification_method=identification_method,
-            identification_with_average_method_initial_guess=identification_with_average_method_initial_guess,
+            double_step_identification=double_step_identification,
             key_parameter_to_identify=key_parameter_to_identify,
             additional_key_settings=additional_key_settings,
             n_shooting=n_shooting,
@@ -56,6 +61,7 @@ class DingModelPulseIntensityFrequencyForceParameterIdentification(DingModelFreq
             use_sx=use_sx,
             ode_solver=ode_solver,
             n_threads=n_threads,
+            **kwargs,
         )
 
     def _set_default_values(self, model):
@@ -154,21 +160,21 @@ class DingModelPulseIntensityFrequencyForceParameterIdentification(DingModelFreq
             self.model,
             self.data_path,
             self.force_model_identification_method,
-            self.identification_with_average_method_initial_guess,
+            self.double_step_identification,
             self.key_parameter_to_identify,
             self.additional_key_settings,
             self.n_shooting,
         )
-        self.data_sanity(self.data_path)
+        self.check_experiment_force_format(self.data_path)
         # --- Data extraction --- #
         # --- Force model --- #
         stimulated_n_shooting = self.n_shooting
         force_curve_number = None
 
-        time, stim, force, discontinuity = self.average_data_extraction(self.data_path)
+        time, stim, force, discontinuity = average_data_extraction(self.data_path)
         pulse_intensity = self.pulse_intensity_extraction(self.data_path)
-        n_shooting, final_time_phase = self.node_shooting_list_creation(stim, stimulated_n_shooting)
-        force_at_node = self.force_at_node_in_ocp(time, force, n_shooting, final_time_phase, force_curve_number)
+        n_shooting, final_time_phase = node_shooting_list_creation(stim, stimulated_n_shooting)
+        force_at_node = force_at_node_in_ocp(time, force, n_shooting, final_time_phase, force_curve_number)
 
         # --- Building force ocp --- #
         self.force_ocp = OcpFesId.prepare_ocp(
@@ -199,17 +205,17 @@ class DingModelPulseIntensityFrequencyForceParameterIdentification(DingModelFreq
         return initial_guess
 
     def force_model_identification(self):
-        if not self.identification_with_average_method_initial_guess:
+        if not self.double_step_identification:
             self.input_sanity(
                 self.model,
                 self.data_path,
                 self.force_model_identification_method,
-                self.identification_with_average_method_initial_guess,
+                self.double_step_identification,
                 self.key_parameter_to_identify,
                 self.additional_key_settings,
                 self.n_shooting,
             )
-            self.data_sanity(self.data_path)
+            self.check_experiment_force_format(self.data_path)
 
         # --- Data extraction --- #
         # --- Force model --- #
@@ -220,22 +226,22 @@ class DingModelPulseIntensityFrequencyForceParameterIdentification(DingModelFreq
         force = None
 
         if self.force_model_identification_method == "full":
-            time, stim, force, discontinuity = self.full_data_extraction(self.data_path)
+            time, stim, force, discontinuity = full_data_extraction(self.data_path)
             pulse_intensity = self.pulse_intensity_extraction(self.data_path)
 
         elif self.force_model_identification_method == "average":
-            time, stim, force, discontinuity = self.average_data_extraction(self.data_path)
+            time, stim, force, discontinuity = average_data_extraction(self.data_path)
             pulse_intensity = np.mean(np.array(self.pulse_intensity_extraction(self.data_path)))
 
         elif self.force_model_identification_method == "sparse":
             force_curve_number = self.kwargs["force_curve_number"] if "force_curve_number" in self.kwargs else 5
-            time, stim, force, discontinuity = self.sparse_data_extraction(self.data_path, force_curve_number)
+            time, stim, force, discontinuity = sparse_data_extraction(self.data_path, force_curve_number)
             pulse_intensity = self.pulse_intensity_extraction(self.data_path)  # TODO : adapt this for sparse data
 
-        n_shooting, final_time_phase = self.node_shooting_list_creation(stim, stimulated_n_shooting)
-        force_at_node = self.force_at_node_in_ocp(time, force, n_shooting, final_time_phase, force_curve_number)
+        n_shooting, final_time_phase = node_shooting_list_creation(stim, stimulated_n_shooting)
+        force_at_node = force_at_node_in_ocp(time, force, n_shooting, final_time_phase, force_curve_number)
 
-        if self.identification_with_average_method_initial_guess:
+        if self.double_step_identification:
             initial_guess = self._force_model_identification_for_initial_guess()
 
             for key in self.key_parameter_to_identify:

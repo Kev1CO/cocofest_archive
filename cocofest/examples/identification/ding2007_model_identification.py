@@ -16,6 +16,7 @@ from cocofest import (
     DingModelPulseDurationFrequencyForceParameterIdentification,
     IvpFes,
 )
+from cocofest.identification.identification_method import full_data_extraction
 
 
 # --- Setting simulation parameters --- #
@@ -78,7 +79,7 @@ ocp = DingModelPulseDurationFrequencyForceParameterIdentification(
     model=model,
     data_path=[pickle_file_name],
     identification_method="full",
-    identification_with_average_method_initial_guess=False,
+    double_step_identification=False,
     key_parameter_to_identify=["tau1_rest", "tau2", "km_rest", "a_scale", "pd0", "pdt"],
     additional_key_settings={},
     n_shooting=n_shooting,
@@ -138,7 +139,7 @@ identified_force = identified_result["F"][0]
     pickle_stim_apparition_time,
     pickle_muscle_data,
     pickle_discontinuity_phase_list,
-) = DingModelPulseDurationFrequencyForceParameterIdentification.full_data_extraction([pickle_file_name])
+) = full_data_extraction([pickle_file_name])
 
 result_dict = {
     "tau1_rest": [identified_model.tau1_rest, DingModelPulseDurationFrequency().tau1_rest],
