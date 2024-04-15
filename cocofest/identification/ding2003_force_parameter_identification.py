@@ -2,6 +2,7 @@ import time as time_package
 
 from bioptim import Solver, Objective, OdeSolver
 
+from ..models.fes_model import FesModel
 from ..models.ding2003 import DingModelFrequency
 from ..optimization.fes_identification_ocp import OcpFesId
 from .identification_method import (
@@ -16,24 +17,8 @@ from .identification_abstract_class import ParameterIdentification
 
 class DingModelFrequencyForceParameterIdentification(ParameterIdentification):
     """
-    The main class to define an ocp. This class prepares the full program and gives all
-    the needed parameters to solve a functional electrical stimulation ocp
-
-    Attributes
-    ----------
-    model: DingModelFrequency,
-        The model to use for the ocp
-    data_path: str | list[str],
-        The path to the force model data
-    force_model_identification_method: str,
-        The method to use for the force model identification,
-         "full" for objective function on all data,
-         "average" for objective function on average data,
-         "sparse" for objective function at the beginning and end of the data
-    n_shooting: int,
-        The number of shooting points for the ocp
-    use_sx: bool
-        The nature of the casadi variables. MX are used if False.
+    This class is responsible for identifying parameters of the Ding model using force data.
+    It supports identification on full data and average data (work in progress : sparse data).
     """
 
     def __init__(
@@ -51,6 +36,37 @@ class DingModelFrequencyForceParameterIdentification(ParameterIdentification):
         n_threads: int = 1,
         **kwargs,
     ):
+        """
+        Attributes
+        ----------
+        model: DingModelFrequency,
+            The model for identification
+        data_path: str | list[str],
+            The path to the force model data
+        identification_method: str,
+            The method to use for the force model identification,
+             "full" for objective function on all data,
+             "average" for objective function on average data,
+             "sparse" for objective function at the beginning and end of the data
+        double_step_identification: bool,
+            If True, the identification will be done in two steps, the first step will be used to set the initial guess
+        key_parameter_to_identify: list,
+            The list of parameters to identify
+        additional_key_settings: dict,
+            additional_key_settings will enable to modify identified parameters default parameters such as initial guess,
+            min_bound, max_bound, function and scaling
+        n_shooting: int,
+            The number of shooting points for the ocp
+        custom_objective: list[Objective],
+            The custom objective to use for the identification
+        use_sx: bool
+            The nature of the casadi variables. MX are used if False.
+        ode_solver: OdeSolver,
+            The ode solver to use for the identification
+        n_threads: int,
+            The number of threads to use for the identification
+        """
+
         self.default_values = self._set_default_values(model=model)
 
         dict_parameter_to_configure = model.identifiable_parameters
@@ -87,6 +103,19 @@ class DingModelFrequencyForceParameterIdentification(ParameterIdentification):
         self.kwargs = kwargs
 
     def _set_default_values(self, model):
+        """
+        This method is used to set the default values for the identified parameters (initial guesses, bounds, scaling and
+        function).
+        If the user does not provide additional_key_settings for a specific parameter, the default value will be used.
+
+        Parameters
+        ----------
+        model
+
+        Returns
+        -------
+
+        """
         return {
             "a_rest": {
                 "initial_guess": 1000,
@@ -119,19 +148,47 @@ class DingModelFrequencyForceParameterIdentification(ParameterIdentification):
         }
 
     def _set_default_parameters_list(self):
+        """
+        This method is used to set the default parameters list for the model.
+        """
         self.numeric_parameters = [self.model.a_rest, self.model.km_rest, self.model.tau1_rest, self.model.tau2]
         self.key_parameters = ["a_rest", "km_rest", "tau1_rest", "tau2"]
 
     def input_sanity(
         self,
-        model,
-        data_path,
-        identification_method,
-        double_step_identification,
-        key_parameter_to_identify,
-        additional_key_settings,
-        n_shooting,
+        model: FesModel = None,
+        data_path: str | list[str] = None,
+        identification_method: str = None,
+        double_step_identification: bool = None,
+        key_parameter_to_identify: list = None,
+        additional_key_settings: dict = None,
+        n_shooting: int = None,
     ):
+        """
+        This method is used to check the input sanity entered from the user.
+
+        Parameters
+        ----------
+        model: FesModel,
+            The model to use for the identification process
+        data_path: str | list[str],
+            The path to the force model data
+        identification_method: str,
+            The method to use for the force model identification,
+             "full" for objective function on all data,
+             "average" for objective function on average data,
+             "sparse" for objective function at the beginning and end of the data
+        double_step_identification: bool,
+            If True, the identification will be done in two steps, the first step will be used to set the initial guess
+        key_parameter_to_identify: list,
+            The list of parameters to identify
+        additional_key_settings: dict,
+            additional_key_settings will enable to modify identified parameters default parameters such as initial guess,
+            min_bound, max_bound, function and scaling
+        n_shooting: int,
+            The number of shooting points for the ocp
+        """
+
         if model._with_fatigue:
             raise ValueError(
                 f"The given model is not valid and should not be including the fatigue equation in the model"

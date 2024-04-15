@@ -27,19 +27,19 @@ from ..models.hmed2018_with_fatigue import DingModelIntensityFrequencyWithFatigu
 
 class IvpFes:
     """
-    The main class to define an ocp. This class prepares the full program and gives all
-    the needed parameters to solve a functional electrical stimulation ocp
+    The main class to define an ivp. This class prepares the ivp and gives all
+    the needed parameters to integrate a functional electrical stimulation problem.
 
     Attributes
     ----------
     model: FesModel
-        The model type used for the ocp
+        The model type used for the ivp
     n_stim: int
-        Number of stimulation that will occur during the ocp, it is as well refer as phases
+        Number of stimulation that will occur during the ivp, it is as well refer as phases
     n_shooting: int
         Number of shooting point for each individual phases
     final_time: float
-        Refers to the final time of the ocp
+        Refers to the final time of the ivp
     pulse_duration: int | float
         Setting a chosen pulse duration among phases
     pulse_intensity: int | float
@@ -61,38 +61,57 @@ class IvpFes:
 
     def __init__(
         self,
-        model: FesModel,
-        n_stim: int = None,
-        n_shooting: int | list = None,
-        final_time: float = None,
-        pulse_duration: int | float | list[int] | list[float] = None,
-        pulse_intensity: int | float | list[int] | list[float] = None,
-        pulse_mode: str = "Single",
-        extend_last_phase: int | float = None,
-        ode_solver: OdeSolver = OdeSolver.RK4(n_integration_steps=1),
-        use_sx: bool = True,
-        n_threads: int = 1,
+
+        fes_parameters: dict = None,
+        ivp_parameters: dict = None,
+
+        # model: FesModel,
+        # n_stim: int = None,
+        # n_shooting: int | list = None,
+        # final_time: float = None,
+        # pulse_duration: int | float | list[int] | list[float] = None,
+        # pulse_intensity: int | float | list[int] | list[float] = None,
+        # pulse_mode: str = "Single",
+        # extend_last_phase: int | float = None,
+        # ode_solver: OdeSolver = OdeSolver.RK4(n_integration_steps=1),
+        # use_sx: bool = True,
+        # n_threads: int = 1,
     ):
-        self.model = model
-        self.n_stim = n_stim
-        self.final_time = final_time
-        self.pulse_duration = pulse_duration
-        self.pulse_intensity = pulse_intensity
+        """
+
+        Parameters
+        ----------
+        fes_parameters
+
+        ivp_parameters
+
+        """
+        self._fill_fes_dict(fes_parameters)
+        self._fill_ivp_dict(ivp_parameters)
+        self.dictionaries_check()
+
+        self.model = self.fes_parameters["model"]
+        self.n_stim = self.fes_parameters["n_stim"]
+        self.final_time = self.fes_parameters["final_time"]
+        self.pulse_duration = self.fes_parameters["pulse_duration"]
+        self.pulse_intensity = self.fes_parameters["pulse_intensity"]
 
         self.parameter_mappings = None
         self.parameters = None
 
-        self.models = [model] * n_stim
-        self.n_shooting = [n_shooting] * n_stim if isinstance(n_shooting, int) else n_shooting
-        if len(self.n_shooting) != n_stim:
+        self.models = [self.model] * self.n_stim
+
+        n_shooting = self.ivp_parameters["n_shooting"]
+        self.n_shooting = [n_shooting] * self.n_stim if isinstance(n_shooting, int) else n_shooting
+        if len(self.n_shooting) != self.n_stim:
             raise ValueError("n_shooting must be an int or a list of length n_stim")
 
         self.dt = []
-        self.pulse_mode = pulse_mode
-        self.extend_last_phase = extend_last_phase
+        self.pulse_mode = self.fes_parameters["pulse_mode"]
+        self.extend_last_phase = self.ivp_parameters["extend_last_phase"]
         self._pulse_mode_settings()
 
-        parameters = ParameterList(use_sx=use_sx)
+        parameters = ParameterList(use_sx=self.ivp_parameters["use_sx"])
         parameters_init = InitialGuessList()
         parameters_bounds = BoundsList()
 
@@ -112,108 +131,161 @@ class IvpFes:
         parameters.add(
             name="pulse_apparition_time",
             function=DingModelFrequency.set_pulse_apparition_time,
-            size=n_stim,
-            scaling=VariableScaling("pulse_apparition_time", [1] * n_stim),
+            size=self.n_stim,
+            scaling=VariableScaling("pulse_apparition_time", [1] * self.n_stim),
         )
 
-        if isinstance(model, DingModelPulseDurationFrequency | DingModelPulseDurationFrequencyWithFatigue):
-            minimum_pulse_duration = model.pd0
-            if isinstance(pulse_duration, bool) or not isinstance(pulse_duration, int | float | list):
-                raise TypeError("pulse_duration must be int, float or list type")
-            elif isinstance(pulse_duration, int | float):
-                if pulse_duration < minimum_pulse_duration:
-                    raise ValueError(
-                        f"The pulse duration set ({pulse_duration})"
-                        f" is lower than minimum duration required."
-                        f" Set a value above {minimum_pulse_duration} seconds"
-                    )
-                parameters_init["pulse_duration"] = np.array([pulse_duration] * n_stim)
+        if isinstance(self.model, DingModelPulseDurationFrequency | DingModelPulseDurationFrequencyWithFatigue):
+            if isinstance(self.pulse_duration, int | float):
+                parameters_init["pulse_duration"] = np.array([self.pulse_duration] * self.n_stim)
                 parameters_bounds.add(
                     "pulse_duration",
-                    min_bound=np.array([pulse_duration] * (n_stim + 1)),
-                    max_bound=np.array([pulse_duration] * (n_stim + 1)),
+                    min_bound=np.array([self.pulse_duration] * (self.n_stim + 1)),
+                    max_bound=np.array([self.pulse_duration] * (self.n_stim + 1)),
                     interpolation=InterpolationType.CONSTANT,
                 )
 
-            elif isinstance(pulse_duration, list):
-                if len(pulse_duration) != n_stim:
-                    raise ValueError("pulse_duration list must have the same length as n_stim")
-                for i in range(len(pulse_duration)):
-                    if pulse_duration[i] < minimum_pulse_duration:
-                        raise ValueError(
-                            f"The pulse duration set ({pulse_duration[i]} at index {i})"
-                            f" is lower than minimum duration required."
-                            f" Set a value above {minimum_pulse_duration} seconds"
-                        )
-                parameters_init["pulse_duration"] = np.array(pulse_duration)
+            else:
+                parameters_init["pulse_duration"] = np.array(self.pulse_duration)
                 parameters_bounds.add(
                     "pulse_duration",
-                    min_bound=np.array(pulse_duration),
-                    max_bound=np.array(pulse_duration),
+                    min_bound=np.array(self.pulse_duration),
+                    max_bound=np.array(self.pulse_duration),
                     interpolation=InterpolationType.CONSTANT,
                 )
 
             parameters.add(
                 name="pulse_duration",
                 function=DingModelPulseDurationFrequency.set_impulse_duration,
-                size=n_stim,
-                scaling=VariableScaling("pulse_duration", [1] * n_stim),
+                size=self.n_stim,
+                scaling=VariableScaling("pulse_duration", [1] * self.n_stim),
             )
 
-        if isinstance(model, DingModelIntensityFrequency | DingModelIntensityFrequencyWithFatigue):
-            minimum_pulse_intensity = model.min_pulse_intensity()
-            if isinstance(pulse_intensity, bool) or not isinstance(pulse_intensity, int | float | list):
-                raise TypeError("pulse_intensity must be int, float or list type")
-            elif isinstance(pulse_intensity, int | float):
-                if pulse_intensity < minimum_pulse_intensity:
-                    raise ValueError(
-                        f"The pulse intensity set ({pulse_intensity})"
-                        f" is lower than minimum intensity required."
-                        f" Set a value above {minimum_pulse_intensity} seconds"
-                    )
-                parameters_init["pulse_intensity"] = np.array([pulse_intensity] * n_stim)
+        if isinstance(self.model, DingModelIntensityFrequency | DingModelIntensityFrequencyWithFatigue):
+            if isinstance(self.pulse_intensity, int | float):
+                parameters_init["pulse_intensity"] = np.array([self.pulse_intensity] * self.n_stim)
 
-            elif isinstance(pulse_intensity, list):
-                if len(pulse_intensity) != n_stim:
-                    raise ValueError("pulse_intensity list must have the same length as n_stim")
-                for i in range(len(pulse_intensity)):
-                    if pulse_intensity[i] < minimum_pulse_intensity:
-                        raise ValueError(
-                            f"The pulse intensity set ({pulse_intensity[i]} at index {i})"
-                            f" is lower than minimum intensity required."
-                            f" Set a value above {minimum_pulse_intensity} mA"
-                        )
-                parameters_init["pulse_intensity"] = np.array(pulse_intensity)
+            else:
+                parameters_init["pulse_intensity"] = np.array(self.pulse_intensity)
 
             parameters.add(
                 name="pulse_intensity",
                 function=DingModelIntensityFrequency.set_impulse_intensity,
-                size=n_stim,
-                scaling=VariableScaling("pulse_intensity", [1] * n_stim),
+                size=self.n_stim,
+                scaling=VariableScaling("pulse_intensity", [1] * self.n_stim),
             )
 
         self.parameters = parameters
         self.parameters_init = parameters_init
         self.parameters_bounds = parameters_bounds
-        self.n_stim = n_stim
+        self.n_stim = self.n_stim
         self._declare_dynamics()
         self.x_init, self.u_init, self.p_init, self.s_init = self.build_initial_guess_from_ocp(self)
 
-        if not isinstance(ode_solver, (OdeSolver.RK1, OdeSolver.RK2, OdeSolver.RK4, OdeSolver.COLLOCATION)):
-            raise ValueError("ode_solver must be a OdeSolver type")
-
-        if not isinstance(use_sx, bool):
-            raise ValueError("use_sx must be a bool type")
-
-        if not isinstance(n_threads, int):
-            raise ValueError("n_thread must be a int type")
-
-        self.ode_solver = ode_solver
-        self.use_sx = use_sx
-        self.n_threads = n_threads
+        self.ode_solver = self.ivp_parameters["ode_solver"]
+        self.use_sx = self.ivp_parameters["use_sx"]
+        self.n_threads = self.ivp_parameters["n_threads"]
 
         self.fake_ocp = self._prepare_fake_ocp()
         self.initial_guess_solution = self._build_solution_from_initial_guess()
+
+    def _fill_fes_dict(self, fes_parameters):
+        default_fes_dict = {"model": None,
+                            "n_stim": None,
+                            "pulse_duration": None,
+                            "pulse_intensity": None,
+                            "pulse_mode": None}
+
+        if fes_parameters is None:
+            fes_parameters = {}
+
+        for key in default_fes_dict:
+            if key not in fes_parameters:
+                fes_parameters[key] = default_fes_dict[key]
+
+        self.fes_parameters = fes_parameters
+
+    def _fill_ivp_dict(self, ivp_parameters):
+        default_ivp_dict = {"n_shooting": None,
+                            "final_time": None,
+                            "extend_last_phase": False,
+                            "ode_solver": OdeSolver.RK4(n_integration_steps=1),
+                            "use_sx": True,
+                            "n_threads": 1}
+
+        if ivp_parameters is None:
+            ivp_parameters = {}
+
+        for key in default_ivp_dict:
+            if key not in ivp_parameters:
+                ivp_parameters[key] = default_ivp_dict[key]
+
+        self.ivp_parameters = ivp_parameters
+
+    def dictionaries_check(self):
+        if not isinstance(self.fes_parameters, dict):
+            raise ValueError("fes_parameters must be a dictionary")
+
+        if not isinstance(self.ivp_parameters, dict):
+            raise ValueError("ivp_parameters must be a dictionary")
+
+        if not isinstance(self.fes_parameters["model"], FesModel):
+            raise ValueError("model must be a FesModel type")
+
+        if not isinstance(self.fes_parameters["n_stim"], int):
+            raise ValueError("n_stim must be an int type")
+
+        if isinstance(self.fes_parameters["model"], DingModelPulseDurationFrequencyWithFatigue):
+            pulse_duration_format = isinstance(self.fes_parameters["pulse_duration"], int | float | list)
+            pulse_duration_format = all([isinstance(pulse_duration, int) for pulse_duration in self.fes_parameters[
+                "pulse_duration"]]) if pulse_duration_format == list else pulse_duration_format
+
+            minimum_pulse_duration = self.model.pd0
+            min_pulse_duration_check = all([pulse_duration >= minimum_pulse_duration for pulse_duration in
+                                            self.fes_parameters[
+                                                "pulse_duration"]]) if pulse_duration_format == list else \
+            self.fes_parameters["pulse_duration"] >= minimum_pulse_duration
+
+            if pulse_duration_format is False:
+                raise ValueError("pulse_duration must be int, float or list type")
+            if min_pulse_duration_check is False:
+                raise ValueError("Pulse duration must be greater than minimum pulse duration")
+
+        if isinstance(self.fes_parameters["model"], DingModelIntensityFrequencyWithFatigue):
+            pulse_intensity_format = isinstance(self.fes_parameters["pulse_intensity"], int | float | list)
+            pulse_intensity_format = all([isinstance(pulse_intensity, int) for pulse_intensity in self.fes_parameters[
+                "pulse_intensity"]]) if pulse_intensity_format == list else pulse_intensity_format
+
+            minimum_pulse_intensity = all([pulse_duration >= self.model.min_pulse_intensity() for pulse_duration in
+                                            self.fes_parameters[
+                                                "pulse_intensity"]]) if self.model.min_pulse_intensity() == list else \
+            self.fes_parameters["pulse_intensity"] >= self.model.min_pulse_intensity()
+
+            if pulse_intensity_format is False:
+                raise ValueError("pulse_intensity must be int, float or list type")
+            if minimum_pulse_intensity is False:
+                raise ValueError("Pulse intensity must be greater than minimum pulse intensity")
+
+        if not isinstance(self.fes_parameters["pulse_mode"], str):
+            raise ValueError("pulse_mode must be a string type")
+
+        if not isinstance(self.ivp_parameters["n_shooting"], int | list | None):
+            raise ValueError("n_shooting must be an int or a list type")
+
+        if not isinstance(self.ivp_parameters["final_time"], float):
+            raise ValueError("final_time must be a float type")
+
+        if not isinstance(self.ivp_parameters["extend_last_phase"], int | float | None):
+            raise ValueError("extend_last_phase must be an int or float type")
+
+        if not isinstance(self.ivp_parameters["ode_solver"], (OdeSolver.RK1, OdeSolver.RK2, OdeSolver.RK4, OdeSolver.COLLOCATION)):
+            raise ValueError("ode_solver must be a OdeSolver type")
+
+        if not isinstance(self.ivp_parameters["use_sx"], bool):
+            raise ValueError("use_sx must be a bool type")
+
+        if not isinstance(self.ivp_parameters["n_threads"], int):
+            raise ValueError("n_thread must be a int type")
 
     def _pulse_mode_settings(self):
         if self.pulse_mode == "Single":
