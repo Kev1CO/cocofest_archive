@@ -2,7 +2,6 @@ from abc import ABC, abstractmethod
 
 
 class ParameterIdentification(ABC):
-
     @abstractmethod
     def _set_default_values(self, model):
         """

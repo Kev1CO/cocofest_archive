@@ -241,7 +241,11 @@ def test_ocp_output(model, force_tracking, use_sx, min_pulse_duration, min_pulse
             n_shooting=20,
             n_stim=10,
             final_time=1,
-            pulse_duration_dict={"pulse_duration_min": min_pulse_duration, "pulse_duration_max": 0.0006, "pulse_duration_bimapping": False},
+            pulse_duration_dict={
+                "pulse_duration_min": min_pulse_duration,
+                "pulse_duration_max": 0.0006,
+                "pulse_duration_bimapping": False,
+            },
             objective_dict={"force_tracking": force_tracking},
             use_sx=use_sx,
         )
@@ -258,7 +262,11 @@ def test_ocp_output(model, force_tracking, use_sx, min_pulse_duration, min_pulse
             n_shooting=20,
             n_stim=10,
             final_time=1,
-            pulse_intensity_dict={"pulse_intensity_min": min_pulse_intensity, "pulse_intensity_max": 130, "pulse_intensity_bimapping": False},
+            pulse_intensity_dict={
+                "pulse_intensity_min": min_pulse_intensity,
+                "pulse_intensity_max": 130,
+                "pulse_intensity_bimapping": False,
+            },
             objective_dict={"force_tracking": force_tracking},
             use_sx=use_sx,
         )
@@ -1032,11 +1040,7 @@ def test_time_dependent_ocp_output(use_sx, bimapped):
 
 def test_single_phase_time_dependent_ocp_output():
     ocp = OcpFes().prepare_ocp(
-        model=DingModelFrequencyWithFatigue(),
-        n_stim=1,
-        n_shooting=10,
-        final_time=0.1,
-        use_sx=True,
+        model=DingModelFrequencyWithFatigue(), n_stim=1, n_shooting=10, final_time=0.1, use_sx=True,
     )
 
     sol = ocp.solve(Solver.IPOPT(show_online_optim=False, _max_iter=1000))

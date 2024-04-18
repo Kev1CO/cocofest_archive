@@ -64,11 +64,7 @@ for i in range(2):
 
         else:
             plt.setp(
-                axs[i][j],
-                xticks=[0, 0.5, 1, 1.5],
-                xticklabels=[],
-                yticks=[0, 75, 150, 225],
-                yticklabels=[],
+                axs[i][j], xticks=[0, 0.5, 1, 1.5], xticklabels=[], yticks=[0, 75, 150, 225], yticklabels=[],
             )
 
         if i == 0 and j == 0:
@@ -134,24 +130,14 @@ for i in range(2):
 
     else:
         plt.setp(
-            axs[2][i],
-            xticks=[0, 0.5, 1, 1.5],
-            xticklabels=[0, 0.5, 1, 1.5],
-            yticks=[-1, 0, 1, 2],
-            yticklabels=[],
+            axs[2][i], xticks=[0, 0.5, 1, 1.5], xticklabels=[0, 0.5, 1, 1.5], yticks=[-1, 0, 1, 2], yticklabels=[],
         )
 
     axs[2][i].plot(
-        data_minimize_force["time"],
-        data_minimize_force["states"]["q"][i],
-        ms=4,
-        linewidth=5.0,
+        data_minimize_force["time"], data_minimize_force["states"]["q"][i], ms=4, linewidth=5.0,
     )
     axs[2][i].plot(
-        data_minimize_fatigue["time"],
-        data_minimize_fatigue["states"]["q"][i],
-        ms=4,
-        linewidth=5.0,
+        data_minimize_fatigue["time"], data_minimize_fatigue["states"]["q"][i], ms=4, linewidth=5.0,
     )
 
 # fatigue across time
@@ -204,19 +190,11 @@ axs[2][2].plot(
 )
 
 axs[2][2].text(
-    0,
-    1.15,
-    f"{'%'}",
-    transform=axs[2][2].transAxes,
-    ha="left",
-    va="top",
-    fontsize=10,
+    0, 1.15, f"{'%'}", transform=axs[2][2].transAxes, ha="left", va="top", fontsize=10,
 )
 
 plt.setp(
-    axs[2][2],
-    xticks=[0, 0.5, 1, 1.5],
-    xticklabels=[0, 0.5, 1, 1.5],
+    axs[2][2], xticks=[0, 0.5, 1, 1.5], xticklabels=[0, 0.5, 1, 1.5],
 )
 
 # Figure labels

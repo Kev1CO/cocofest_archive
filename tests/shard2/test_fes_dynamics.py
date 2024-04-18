@@ -40,7 +40,11 @@ def test_pulse_duration_multi_muscle_fes_dynamics():
         n_stim=n_stim,
         n_shooting=10,
         final_time=1,
-        pulse_duration_dict={"pulse_duration_min": minimum_pulse_duration, "pulse_duration_max": 0.0006, "pulse_duration_bimapping": False},
+        pulse_duration_dict={
+            "pulse_duration_min": minimum_pulse_duration,
+            "pulse_duration_max": 0.0006,
+            "pulse_duration_bimapping": False,
+        },
         objective_dict={"custom_objective": objective_functions},
         with_residual_torque=True,
         activate_force_length_relationship=True,
@@ -116,7 +120,11 @@ def test_pulse_intensity_multi_muscle_fes_dynamics():
         n_stim=n_stim,
         n_shooting=5,
         final_time=1,
-        pulse_intensity_dict={"pulse_intensity_min": minimum_pulse_intensity, "pulse_intensity_max": 130, "pulse_intensity_bimapping": False},
+        pulse_intensity_dict={
+            "pulse_intensity_min": minimum_pulse_intensity,
+            "pulse_intensity_max": 130,
+            "pulse_intensity_bimapping": False,
+        },
         objective_dict={"force_tracking": track_forces},
         with_residual_torque=False,
         activate_force_length_relationship=True,
@@ -173,8 +181,7 @@ def test_pulse_intensity_multi_muscle_fes_dynamics():
 
 def test_fes_models_inputs_sanity_check_errors():
     with pytest.raises(
-        TypeError,
-        match=re.escape("biorbd_model_path should be a string"),
+        TypeError, match=re.escape("biorbd_model_path should be a string"),
     ):
         ocp = OcpFesMsk.prepare_ocp(
             biorbd_model_path=5,
@@ -191,8 +198,7 @@ def test_fes_models_inputs_sanity_check_errors():
         )
 
     with pytest.raises(
-        ValueError,
-        match=re.escape("bound_type should be a string and should be equal to start, end or start_end"),
+        ValueError, match=re.escape("bound_type should be a string and should be equal to start, end or start_end"),
     ):
         ocp = OcpFesMsk.prepare_ocp(
             biorbd_model_path=biorbd_model_path,
@@ -209,8 +215,7 @@ def test_fes_models_inputs_sanity_check_errors():
         )
 
     with pytest.raises(
-        TypeError,
-        match=re.escape("bound_data should be a list"),
+        TypeError, match=re.escape("bound_data should be a list"),
     ):
         ocp = OcpFesMsk.prepare_ocp(
             biorbd_model_path=biorbd_model_path,
@@ -227,8 +232,7 @@ def test_fes_models_inputs_sanity_check_errors():
         )
 
     with pytest.raises(
-        ValueError,
-        match=re.escape(f"bound_data should be a list of {2} elements"),
+        ValueError, match=re.escape(f"bound_data should be a list of {2} elements"),
     ):
         ocp = OcpFesMsk.prepare_ocp(
             biorbd_model_path=biorbd_model_path,
@@ -245,8 +249,7 @@ def test_fes_models_inputs_sanity_check_errors():
         )
 
     with pytest.raises(
-        TypeError,
-        match=re.escape(f"bound_data should be a list of two list"),
+        TypeError, match=re.escape(f"bound_data should be a list of two list"),
     ):
         ocp = OcpFesMsk.prepare_ocp(
             biorbd_model_path=biorbd_model_path,
@@ -263,8 +266,7 @@ def test_fes_models_inputs_sanity_check_errors():
         )
 
     with pytest.raises(
-        ValueError,
-        match=re.escape(f"bound_data should be a list of {2} elements"),
+        ValueError, match=re.escape(f"bound_data should be a list of {2} elements"),
     ):
         ocp = OcpFesMsk.prepare_ocp(
             biorbd_model_path=biorbd_model_path,
@@ -281,8 +283,7 @@ def test_fes_models_inputs_sanity_check_errors():
         )
 
     with pytest.raises(
-        TypeError,
-        match=re.escape(f"bound data index {1}: {5} and {'120'} should be an int or float"),
+        TypeError, match=re.escape(f"bound data index {1}: {5} and {'120'} should be an int or float"),
     ):
         ocp = OcpFesMsk.prepare_ocp(
             biorbd_model_path=biorbd_model_path,
@@ -299,8 +300,7 @@ def test_fes_models_inputs_sanity_check_errors():
         )
 
     with pytest.raises(
-        ValueError,
-        match=re.escape(f"bound_data should be a list of {2} element"),
+        ValueError, match=re.escape(f"bound_data should be a list of {2} element"),
     ):
         ocp = OcpFesMsk.prepare_ocp(
             biorbd_model_path=biorbd_model_path,
@@ -317,8 +317,7 @@ def test_fes_models_inputs_sanity_check_errors():
         )
 
     with pytest.raises(
-        TypeError,
-        match=re.escape(f"bound data index {1}: {'5'} should be an int or float"),
+        TypeError, match=re.escape(f"bound data index {1}: {'5'} should be an int or float"),
     ):
         ocp = OcpFesMsk.prepare_ocp(
             biorbd_model_path=biorbd_model_path,
@@ -335,8 +334,7 @@ def test_fes_models_inputs_sanity_check_errors():
         )
 
     with pytest.raises(
-        TypeError,
-        match="model must be a FesModel type",
+        TypeError, match="model must be a FesModel type",
     ):
         ocp = OcpFesMsk.prepare_ocp(
             biorbd_model_path=biorbd_model_path,
@@ -353,8 +351,7 @@ def test_fes_models_inputs_sanity_check_errors():
         )
 
     with pytest.raises(
-        TypeError,
-        match=re.escape(f"force_tracking: {'hello'} must be list type"),
+        TypeError, match=re.escape(f"force_tracking: {'hello'} must be list type"),
     ):
         ocp = OcpFesMsk.prepare_ocp(
             biorbd_model_path=biorbd_model_path,
@@ -372,8 +369,7 @@ def test_fes_models_inputs_sanity_check_errors():
         )
 
     with pytest.raises(
-        ValueError,
-        match=re.escape("force_tracking must of size 2"),
+        ValueError, match=re.escape("force_tracking must of size 2"),
     ):
         ocp = OcpFesMsk.prepare_ocp(
             biorbd_model_path=biorbd_model_path,
@@ -391,8 +387,7 @@ def test_fes_models_inputs_sanity_check_errors():
         )
 
     with pytest.raises(
-        TypeError,
-        match=re.escape(f"force_tracking index 0: {'hello'} must be np.ndarray type"),
+        TypeError, match=re.escape(f"force_tracking index 0: {'hello'} must be np.ndarray type"),
     ):
         ocp = OcpFesMsk.prepare_ocp(
             biorbd_model_path=biorbd_model_path,
@@ -410,8 +405,7 @@ def test_fes_models_inputs_sanity_check_errors():
         )
 
     with pytest.raises(
-        TypeError,
-        match=re.escape(f"force_tracking index 1: {'[1, 2, 3]'} must be list type"),
+        TypeError, match=re.escape(f"force_tracking index 1: {'[1, 2, 3]'} must be list type"),
     ):
         ocp = OcpFesMsk.prepare_ocp(
             biorbd_model_path=biorbd_model_path,
@@ -450,8 +444,7 @@ def test_fes_models_inputs_sanity_check_errors():
         )
 
     with pytest.raises(
-        ValueError,
-        match=re.escape("force_tracking time and force argument must be the same length"),
+        ValueError, match=re.escape("force_tracking time and force argument must be the same length"),
     ):
         ocp = OcpFesMsk.prepare_ocp(
             biorbd_model_path=biorbd_model_path,
@@ -469,8 +462,7 @@ def test_fes_models_inputs_sanity_check_errors():
         )
 
     with pytest.raises(
-        TypeError,
-        match=re.escape(f"force_tracking: {'hello'} must be list type"),
+        TypeError, match=re.escape(f"force_tracking: {'hello'} must be list type"),
     ):
         ocp = OcpFesMsk.prepare_ocp(
             biorbd_model_path=biorbd_model_path,
@@ -507,8 +499,7 @@ def test_fes_models_inputs_sanity_check_errors():
         )
 
     with pytest.raises(
-        TypeError,
-        match=re.escape(f"end_node_tracking index {1}: {'hello'} must be int or float type"),
+        TypeError, match=re.escape(f"end_node_tracking index {1}: {'hello'} must be int or float type"),
     ):
         ocp = OcpFesMsk.prepare_ocp(
             biorbd_model_path=biorbd_model_path,
@@ -526,8 +517,7 @@ def test_fes_models_inputs_sanity_check_errors():
         )
 
     with pytest.raises(
-        TypeError,
-        match=re.escape("q_tracking should be a list of size 2"),
+        TypeError, match=re.escape("q_tracking should be a list of size 2"),
     ):
         ocp = OcpFesMsk.prepare_ocp(
             biorbd_model_path=biorbd_model_path,
@@ -545,8 +535,7 @@ def test_fes_models_inputs_sanity_check_errors():
         )
 
     with pytest.raises(
-        ValueError,
-        match=re.escape("q_tracking[0] should be a list"),
+        ValueError, match=re.escape("q_tracking[0] should be a list"),
     ):
         ocp = OcpFesMsk.prepare_ocp(
             biorbd_model_path=biorbd_model_path,
@@ -564,8 +553,7 @@ def test_fes_models_inputs_sanity_check_errors():
         )
 
     with pytest.raises(
-        ValueError,
-        match=re.escape("q_tracking[1] should have the same size as the number of generalized coordinates"),
+        ValueError, match=re.escape("q_tracking[1] should have the same size as the number of generalized coordinates"),
     ):
         ocp = OcpFesMsk.prepare_ocp(
             biorbd_model_path=biorbd_model_path,
@@ -583,8 +571,7 @@ def test_fes_models_inputs_sanity_check_errors():
         )
 
     with pytest.raises(
-        ValueError,
-        match=re.escape("q_tracking[0] and q_tracking[1] should have the same size"),
+        ValueError, match=re.escape("q_tracking[0] and q_tracking[1] should have the same size"),
     ):
         ocp = OcpFesMsk.prepare_ocp(
             biorbd_model_path=biorbd_model_path,
@@ -602,8 +589,7 @@ def test_fes_models_inputs_sanity_check_errors():
         )
 
     with pytest.raises(
-        TypeError,
-        match=re.escape(f"{'with_residual_torque'} should be a boolean"),
+        TypeError, match=re.escape(f"{'with_residual_torque'} should be a boolean"),
     ):
         ocp = OcpFesMsk.prepare_ocp(
             biorbd_model_path=biorbd_model_path,

@@ -116,20 +116,8 @@ force_at_node = [
 ]
 
 additional_key_settings = {
-    "a_rest": {
-        "initial_guess": 1000,
-        "min_bound": 1,
-        "max_bound": 10000,
-        "function": model.set_a_rest,
-        "scaling": 1,
-    },
-    "km_rest": {
-        "initial_guess": 0.5,
-        "min_bound": 0.001,
-        "max_bound": 1,
-        "function": model.set_km_rest,
-        "scaling": 1,
-    },
+    "a_rest": {"initial_guess": 1000, "min_bound": 1, "max_bound": 10000, "function": model.set_a_rest, "scaling": 1,},
+    "km_rest": {"initial_guess": 0.5, "min_bound": 0.001, "max_bound": 1, "function": model.set_km_rest, "scaling": 1,},
     "tau1_rest": {
         "initial_guess": 0.5,
         "min_bound": 0.0001,
@@ -137,13 +125,7 @@ additional_key_settings = {
         "function": model.set_tau1_rest,
         "scaling": 1,
     },
-    "tau2": {
-        "initial_guess": 0.5,
-        "min_bound": 0.0001,
-        "max_bound": 1,
-        "function": model.set_tau2,
-        "scaling": 1,
-    },
+    "tau2": {"initial_guess": 0.5, "min_bound": 0.0001, "max_bound": 1, "function": model.set_tau2, "scaling": 1,},
 }
 
 
@@ -151,7 +133,7 @@ def test_ocp_id_ding2003():
     # --- Creating the simulated data to identify on --- #
     # Building the Initial Value Problem
     ivp = IvpFes(
-        fes_parameters={"model": DingModelFrequency(), "n_stim": 10, },
+        fes_parameters={"model": DingModelFrequency(), "n_stim": 10,},
         ivp_parameters={"n_shooting": 10, "final_time": 1, "use_sx": True, "extend_last_phase": 1},
     )
 
@@ -384,12 +366,10 @@ def test_all_id_program_errors():
 
     key_parameter_to_identify = ["a_rest", "km_rest", "tau1_rest", "tau2"]
     with pytest.raises(
-        ValueError,
-        match="The given model is not valid and should not be including the fatigue equation in the model",
+        ValueError, match="The given model is not valid and should not be including the fatigue equation in the model",
     ):
         DingModelFrequencyForceParameterIdentification(
-            model=DingModelFrequencyWithFatigue(),
-            key_parameter_to_identify=key_parameter_to_identify,
+            model=DingModelFrequencyWithFatigue(), key_parameter_to_identify=key_parameter_to_identify,
         )
 
     with pytest.raises(
@@ -399,9 +379,7 @@ def test_all_id_program_errors():
         ),
     ):
         DingModelFrequencyForceParameterIdentification(
-            model=DingModelFrequency(),
-            data_path=[5],
-            key_parameter_to_identify=key_parameter_to_identify,
+            model=DingModelFrequency(), data_path=[5], key_parameter_to_identify=key_parameter_to_identify,
         )
 
     with pytest.raises(
@@ -412,9 +390,7 @@ def test_all_id_program_errors():
         ),
     ):
         DingModelFrequencyForceParameterIdentification(
-            model=DingModelFrequency(),
-            data_path=["test"],
-            key_parameter_to_identify=key_parameter_to_identify,
+            model=DingModelFrequency(), data_path=["test"], key_parameter_to_identify=key_parameter_to_identify,
         )
 
     with pytest.raises(
@@ -425,9 +401,7 @@ def test_all_id_program_errors():
         ),
     ):
         DingModelFrequencyForceParameterIdentification(
-            model=DingModelFrequency(),
-            data_path="test",
-            key_parameter_to_identify=key_parameter_to_identify,
+            model=DingModelFrequency(), data_path="test", key_parameter_to_identify=key_parameter_to_identify,
         )
 
     data_path = 5
@@ -438,9 +412,7 @@ def test_all_id_program_errors():
         ),
     ):
         DingModelFrequencyForceParameterIdentification(
-            model=DingModelFrequency(),
-            data_path=data_path,
-            key_parameter_to_identify=key_parameter_to_identify,
+            model=DingModelFrequency(), data_path=data_path, key_parameter_to_identify=key_parameter_to_identify,
         )
 
     data_path = ["test.pkl"]

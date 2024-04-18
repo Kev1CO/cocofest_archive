@@ -35,10 +35,7 @@ ivp_parameters = {
 
 # --- Creating the simulated data to identify on --- #
 # Building the Initial Value Problem
-ivp = IvpFes(
-    fes_parameters,
-    ivp_parameters,
-)
+ivp = IvpFes(fes_parameters, ivp_parameters,)
 
 # Integrating the solution
 result, time = ivp.integrate()
@@ -94,10 +91,7 @@ ivp_parameters = {
     "extend_last_phase": extra_phase_time,
     "use_sx": True,
 }
-ivp_from_identification = IvpFes(
-    fes_parameters,
-    ivp_parameters,
-)
+ivp_from_identification = IvpFes(fes_parameters, ivp_parameters,)
 
 # Integrating the solution
 identified_result, identified_time = ivp_from_identification.integrate()

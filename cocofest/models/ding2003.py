@@ -30,10 +30,7 @@ class DingModelFrequency(FesModel):
     """
 
     def __init__(
-        self,
-        model_name: str = "ding2003",
-        muscle_name: str = None,
-        sum_stim_truncation: int = None,
+        self, model_name: str = "ding2003", muscle_name: str = None, sum_stim_truncation: int = None,
     ):
         super().__init__()
         self._model_name = model_name

@@ -327,8 +327,7 @@ class OcpFesId(OcpFes):
             interpolation=InterpolationType.CONSTANT,
         )
         parameters_init.add(
-            key="pulse_apparition_time",
-            initial_guess=np.array(stim_apparition_time),
+            key="pulse_apparition_time", initial_guess=np.array(stim_apparition_time),
         )
 
         for i in range(len(parameter_to_identify)):

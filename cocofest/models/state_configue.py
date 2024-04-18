@@ -6,7 +6,6 @@ from bioptim import (
 
 
 class StateConfigure:
-
     def __init__(self):
 
         self.state_dictionary = {
@@ -48,13 +47,7 @@ class StateConfigure:
         name = "Cn" + muscle_name
         name_cn = [name]
         ConfigureProblem.configure_new_variable(
-            name,
-            name_cn,
-            ocp,
-            nlp,
-            as_states,
-            as_controls,
-            as_states_dot,
+            name, name_cn, ocp, nlp, as_states, as_controls, as_states_dot,
         )
 
     @staticmethod
@@ -88,13 +81,7 @@ class StateConfigure:
         name = "F" + muscle_name
         name_f = [name]
         ConfigureProblem.configure_new_variable(
-            name,
-            name_f,
-            ocp,
-            nlp,
-            as_states,
-            as_controls,
-            as_states_dot,
+            name, name_f, ocp, nlp, as_states, as_controls, as_states_dot,
         )
 
     @staticmethod
@@ -127,15 +114,7 @@ class StateConfigure:
         muscle_name = "_" + muscle_name if muscle_name else ""
         name = "A" + muscle_name
         name_a = [name]
-        return ConfigureProblem.configure_new_variable(
-            name,
-            name_a,
-            ocp,
-            nlp,
-            as_states,
-            as_controls,
-            as_states_dot,
-        )
+        return ConfigureProblem.configure_new_variable(name, name_a, ocp, nlp, as_states, as_controls, as_states_dot,)
 
     @staticmethod
     def configure_time_state_force_no_cross_bridge(
@@ -168,13 +147,7 @@ class StateConfigure:
         name = "Tau1" + muscle_name
         name_tau1 = [name]
         return ConfigureProblem.configure_new_variable(
-            name,
-            name_tau1,
-            ocp,
-            nlp,
-            as_states,
-            as_controls,
-            as_states_dot,
+            name, name_tau1, ocp, nlp, as_states, as_controls, as_states_dot,
         )
 
     @staticmethod
@@ -207,15 +180,7 @@ class StateConfigure:
         muscle_name = "_" + muscle_name if muscle_name else ""
         name = "Km" + muscle_name
         name_km = [name]
-        return ConfigureProblem.configure_new_variable(
-            name,
-            name_km,
-            ocp,
-            nlp,
-            as_states,
-            as_controls,
-            as_states_dot,
-        )
+        return ConfigureProblem.configure_new_variable(name, name_km, ocp, nlp, as_states, as_controls, as_states_dot,)
 
     def configure_all_muscle_states(self, muscles_dynamics_model, ocp, nlp):
         state_name_list = []

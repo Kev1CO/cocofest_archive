@@ -256,17 +256,7 @@ minimum_pulse_intensity = (
         (DingModelFrequencyWithFatigue(), None, None, None, None, None, None, None, None),
         (DingModelPulseDurationFrequency(), 0.0002, None, None, None, None, None, None, None),
         (DingModelPulseDurationFrequencyWithFatigue(), 0.0002, None, None, None, None, None, None, None),
-        (
-            DingModelPulseDurationFrequency(),
-            None,
-            minimum_pulse_duration,
-            0.0006,
-            False,
-            None,
-            None,
-            None,
-            None,
-        ),
+        (DingModelPulseDurationFrequency(), None, minimum_pulse_duration, 0.0006, False, None, None, None, None,),
         (
             DingModelPulseDurationFrequencyWithFatigue(),
             None,
@@ -281,38 +271,13 @@ minimum_pulse_intensity = (
         # (DingModelPulseDurationFrequency(), None, minimum_pulse_duration, 0.0006, True, None, None, None, None), parameter mapping not yet implemented
         (DingModelIntensityFrequency(), None, None, None, None, 20, None, None, None),
         (DingModelIntensityFrequencyWithFatigue(), None, None, None, None, 20, None, None, None),
-        (
-            DingModelIntensityFrequency(),
-            None,
-            None,
-            None,
-            None,
-            None,
-            minimum_pulse_intensity,
-            130,
-            False,
-        ),
-        (
-            DingModelIntensityFrequencyWithFatigue(),
-            None,
-            None,
-            None,
-            None,
-            None,
-            minimum_pulse_intensity,
-            130,
-            False,
-        ),
+        (DingModelIntensityFrequency(), None, None, None, None, None, minimum_pulse_intensity, 130, False,),
+        (DingModelIntensityFrequencyWithFatigue(), None, None, None, None, None, minimum_pulse_intensity, 130, False,),
         # (DingModelIntensityFrequency(), None, None, None, None, None, minimum_pulse_intensity, 130, True), parameter mapping not yet implemented
     ],
 )
 @pytest.mark.parametrize(
-    "time_min, time_max, time_bimapping",
-    [
-        (None, None, False),
-        (0.01, 0.1, False),
-        (0.01, 0.1, True),
-    ],
+    "time_min, time_max, time_bimapping", [(None, None, False), (0.01, 0.1, False), (0.01, 0.1, True),],
 )
 @pytest.mark.parametrize("use_sx", [True])  # Later add False
 @pytest.mark.parametrize(
@@ -357,19 +322,25 @@ def test_ocp_building(
         model=model,
         n_shooting=n_shooting,
         final_time=final_time,
-        pulse_apparition_dict={"time_min": time_min,
-                               "time_max": time_max,
-                               "time_bimapping": time_bimapping,
-                               "frequency": frequency,
-                               "round_down": True},
-        pulse_duration_dict={"pulse_duration": pulse_duration,
-                             "pulse_duration_min": pulse_duration_min,
-                             "pulse_duration_max": pulse_duration_max,
-                             "pulse_duration_bimapping": pulse_duration_bimapping},
-        pulse_intensity_dict={"pulse_intensity": pulse_intensity,
-                              "pulse_intensity_min": pulse_intensity_min,
-                              "pulse_intensity_max": pulse_intensity_max,
-                              "pulse_intensity_bimapping": pulse_intensity_bimapping},
+        pulse_apparition_dict={
+            "time_min": time_min,
+            "time_max": time_max,
+            "time_bimapping": time_bimapping,
+            "frequency": frequency,
+            "round_down": True,
+        },
+        pulse_duration_dict={
+            "pulse_duration": pulse_duration,
+            "pulse_duration_min": pulse_duration_min,
+            "pulse_duration_max": pulse_duration_max,
+            "pulse_duration_bimapping": pulse_duration_bimapping,
+        },
+        pulse_intensity_dict={
+            "pulse_intensity": pulse_intensity,
+            "pulse_intensity_min": pulse_intensity_min,
+            "pulse_intensity_max": pulse_intensity_max,
+            "pulse_intensity_bimapping": pulse_intensity_bimapping,
+        },
         objective_dict={"force_tracking": force_tracking, "end_node_tracking": end_node_tracking},
         use_sx=use_sx,
     )
@@ -378,19 +349,25 @@ def test_ocp_building(
         model=model,
         n_shooting=n_shooting,
         n_stim=n_stim,
-        pulse_apparition_dict={"time_min": time_min,
-                               "time_max": time_max,
-                               "time_bimapping": time_bimapping,
-                               "frequency": 10,
-                               "round_down": True},
-        pulse_duration_dict={"pulse_duration": pulse_duration,
-                             "pulse_duration_min": pulse_duration_min,
-                             "pulse_duration_max": pulse_duration_max,
-                             "pulse_duration_bimapping": pulse_duration_bimapping},
-        pulse_intensity_dict={"pulse_intensity": pulse_intensity,
-                              "pulse_intensity_min": pulse_intensity_min,
-                              "pulse_intensity_max": pulse_intensity_max,
-                              "pulse_intensity_bimapping": pulse_intensity_bimapping},
+        pulse_apparition_dict={
+            "time_min": time_min,
+            "time_max": time_max,
+            "time_bimapping": time_bimapping,
+            "frequency": 10,
+            "round_down": True,
+        },
+        pulse_duration_dict={
+            "pulse_duration": pulse_duration,
+            "pulse_duration_min": pulse_duration_min,
+            "pulse_duration_max": pulse_duration_max,
+            "pulse_duration_bimapping": pulse_duration_bimapping,
+        },
+        pulse_intensity_dict={
+            "pulse_intensity": pulse_intensity,
+            "pulse_intensity_min": pulse_intensity_min,
+            "pulse_intensity_max": pulse_intensity_max,
+            "pulse_intensity_bimapping": pulse_intensity_bimapping,
+        },
         objective_dict={"force_tracking": force_tracking, "end_node_tracking": end_node_tracking},
         use_sx=use_sx,
     )
@@ -400,17 +377,19 @@ def test_ocp_building(
         n_shooting=n_shooting,
         n_stim=n_stim,
         final_time=0.3,
-        pulse_apparition_dict={"time_min": time_min,
-                               "time_max": time_max,
-                               "time_bimapping": time_bimapping},
-        pulse_duration_dict={"pulse_duration": pulse_duration,
-                             "pulse_duration_min": pulse_duration_min,
-                             "pulse_duration_max": pulse_duration_max,
-                             "pulse_duration_bimapping": pulse_duration_bimapping},
-        pulse_intensity_dict={"pulse_intensity": pulse_intensity,
-                              "pulse_intensity_min": pulse_intensity_min,
-                              "pulse_intensity_max": pulse_intensity_max,
-                              "pulse_intensity_bimapping": pulse_intensity_bimapping},
+        pulse_apparition_dict={"time_min": time_min, "time_max": time_max, "time_bimapping": time_bimapping},
+        pulse_duration_dict={
+            "pulse_duration": pulse_duration,
+            "pulse_duration_min": pulse_duration_min,
+            "pulse_duration_max": pulse_duration_max,
+            "pulse_duration_bimapping": pulse_duration_bimapping,
+        },
+        pulse_intensity_dict={
+            "pulse_intensity": pulse_intensity,
+            "pulse_intensity_min": pulse_intensity_min,
+            "pulse_intensity_max": pulse_intensity_max,
+            "pulse_intensity_bimapping": pulse_intensity_bimapping,
+        },
         objective_dict={"force_tracking": force_tracking, "end_node_tracking": end_node_tracking},
         use_sx=use_sx,
     )
@@ -477,26 +456,44 @@ def test_all_ocp_fes_errors():
 
     pulse_mode = "Doublet"
     with pytest.raises(NotImplementedError, match=re.escape(f"Pulse mode '{pulse_mode}' is not yet implemented")):
-        OcpFes.prepare_ocp(model=DingModelFrequency(), n_stim=3, n_shooting=10, final_time=0.3, pulse_apparition_dict={"pulse_mode": pulse_mode})
+        OcpFes.prepare_ocp(
+            model=DingModelFrequency(),
+            n_stim=3,
+            n_shooting=10,
+            final_time=0.3,
+            pulse_apparition_dict={"pulse_mode": pulse_mode},
+        )
 
     with pytest.raises(TypeError, match="frequency must be int or float type"):
-        OcpFes.prepare_ocp(model=DingModelFrequency(), n_stim=3, n_shooting=10, pulse_apparition_dict={"frequency": "10"})
+        OcpFes.prepare_ocp(
+            model=DingModelFrequency(), n_stim=3, n_shooting=10, pulse_apparition_dict={"frequency": "10"}
+        )
 
     with pytest.raises(ValueError, match="frequency must be positive"):
-        OcpFes.prepare_ocp(model=DingModelFrequency(), n_stim=3, n_shooting=10, pulse_apparition_dict={"frequency": -10})
+        OcpFes.prepare_ocp(
+            model=DingModelFrequency(), n_stim=3, n_shooting=10, pulse_apparition_dict={"frequency": -10}
+        )
 
     with pytest.raises(ValueError, match="time_min and time_max must be both entered or none of them in order to work"):
         OcpFes.prepare_ocp(model=DingModelFrequency(), n_stim=3, n_shooting=10, pulse_apparition_dict={"time_min": 0.1})
 
     with pytest.raises(TypeError, match="time_bimapping must be bool type"):
         OcpFes.prepare_ocp(
-            model=DingModelFrequency(), n_stim=3, n_shooting=10, pulse_apparition_dict={"time_min": 0.01, "time_max": 0.1, "time_bimapping": "True"})
+            model=DingModelFrequency(),
+            n_stim=3,
+            n_shooting=10,
+            pulse_apparition_dict={"time_min": 0.01, "time_max": 0.1, "time_bimapping": "True"},
+        )
 
     with pytest.raises(
         ValueError, match="pulse duration or pulse duration min max bounds need to be set for this model"
     ):
         OcpFes.prepare_ocp(
-            model=DingModelPulseDurationFrequency(), n_stim=3, n_shooting=10, final_time=0.3, pulse_duration_dict={"pulse_duration_min": 0.001}
+            model=DingModelPulseDurationFrequency(),
+            n_stim=3,
+            n_shooting=10,
+            final_time=0.3,
+            pulse_duration_dict={"pulse_duration_min": 0.001},
         )
 
     with pytest.raises(
@@ -507,9 +504,7 @@ def test_all_ocp_fes_errors():
             n_stim=3,
             n_shooting=10,
             final_time=0.3,
-            pulse_duration_dict={"pulse_duration_min": 0.001,
-                                 "pulse_duration_max": 0.005,
-                                 "pulse_duration": 0.003},
+            pulse_duration_dict={"pulse_duration_min": 0.001, "pulse_duration_max": 0.005, "pulse_duration": 0.003},
         )
 
     minimum_pulse_duration = DingModelPulseDurationFrequency().pd0
@@ -532,7 +527,11 @@ def test_all_ocp_fes_errors():
 
     with pytest.raises(TypeError, match="Wrong pulse_duration type, only int or float accepted"):
         OcpFes.prepare_ocp(
-            model=DingModelPulseDurationFrequency(), n_stim=3, n_shooting=10, final_time=0.3, pulse_duration_dict={"pulse_duration": "0.001"}
+            model=DingModelPulseDurationFrequency(),
+            n_stim=3,
+            n_shooting=10,
+            final_time=0.3,
+            pulse_duration_dict={"pulse_duration": "0.001"},
         )
 
     with pytest.raises(TypeError, match="pulse_duration_min and pulse_duration_max must be int or float type"):
@@ -590,7 +589,11 @@ def test_all_ocp_fes_errors():
         ValueError, match="Pulse intensity or pulse intensity min max bounds need to be set for this model"
     ):
         OcpFes.prepare_ocp(
-            model=DingModelIntensityFrequency(), n_stim=3, n_shooting=10, final_time=0.3, pulse_intensity_dict={"pulse_intensity_min": 20}
+            model=DingModelIntensityFrequency(),
+            n_stim=3,
+            n_shooting=10,
+            final_time=0.3,
+            pulse_intensity_dict={"pulse_intensity_min": 20},
         )
 
     minimum_pulse_intensity = DingModelIntensityFrequency().min_pulse_intensity()
@@ -613,7 +616,11 @@ def test_all_ocp_fes_errors():
 
     with pytest.raises(TypeError, match="pulse_intensity must be int or float type"):
         OcpFes.prepare_ocp(
-            model=DingModelIntensityFrequency(), n_stim=3, n_shooting=10, final_time=0.3, pulse_intensity_dict={"pulse_intensity": "20"}
+            model=DingModelIntensityFrequency(),
+            n_stim=3,
+            n_shooting=10,
+            final_time=0.3,
+            pulse_intensity_dict={"pulse_intensity": "20"},
         )
 
     with pytest.raises(TypeError, match="pulse_intensity_min and pulse_intensity_max must be int or float type"):
@@ -681,7 +688,13 @@ def test_all_ocp_fes_errors():
         )
 
     with pytest.raises(TypeError, match="end_node_tracking must be int or float type"):
-        OcpFes.prepare_ocp(model=DingModelFrequency(), n_stim=3, n_shooting=10, final_time=0.3, objective_dict={"end_node_tracking": "10"})
+        OcpFes.prepare_ocp(
+            model=DingModelFrequency(),
+            n_stim=3,
+            n_shooting=10,
+            final_time=0.3,
+            objective_dict={"end_node_tracking": "10"},
+        )
 
     objective_functions = ObjectiveList()
     objective_functions.add(ObjectiveFcn.Lagrange.MINIMIZE_STATE, key="q", weight=10, multi_thread=False)
@@ -689,11 +702,20 @@ def test_all_ocp_fes_errors():
     objective_functions[0].append("objective_function")
     with pytest.raises(TypeError, match="custom_objective must be a ObjectiveList type"):
         OcpFes.prepare_ocp(
-            model=DingModelFrequency(), n_stim=3, n_shooting=10, final_time=0.3, objective_dict={"custom_objective": "objective_functions"})
+            model=DingModelFrequency(),
+            n_stim=3,
+            n_shooting=10,
+            final_time=0.3,
+            objective_dict={"custom_objective": "objective_functions"},
+        )
 
     with pytest.raises(TypeError, match="All elements in ObjectiveList must be an Objective type"):
         OcpFes.prepare_ocp(
-            model=DingModelFrequency(), n_stim=3, n_shooting=10, final_time=0.3, objective_dict={"custom_objective": objective_functions}
+            model=DingModelFrequency(),
+            n_stim=3,
+            n_shooting=10,
+            final_time=0.3,
+            objective_dict={"custom_objective": objective_functions},
         )
 
     with pytest.raises(TypeError, match="ode_solver must be a OdeSolver type"):
@@ -715,10 +737,14 @@ def test_all_ocp_fes_errors():
             "Consider setting only two of the three parameters"
         ),
     ):
-        OcpFes.prepare_ocp(model=DingModelFrequency(), n_stim=3, final_time=0.3, pulse_apparition_dict={"frequency": 20})
+        OcpFes.prepare_ocp(
+            model=DingModelFrequency(), n_stim=3, final_time=0.3, pulse_apparition_dict={"frequency": 20}
+        )
 
     with pytest.raises(TypeError, match="round_down must be bool type"):
-        OcpFes.prepare_ocp(model=DingModelFrequency(), final_time=0.3, pulse_apparition_dict={"frequency": 20, "round_down": "True"})
+        OcpFes.prepare_ocp(
+            model=DingModelFrequency(), final_time=0.3, pulse_apparition_dict={"frequency": 20, "round_down": "True"}
+        )
 
     with pytest.raises(
         ValueError,

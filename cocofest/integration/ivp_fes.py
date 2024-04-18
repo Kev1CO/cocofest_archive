@@ -38,9 +38,7 @@ class IvpFes:
     """
 
     def __init__(
-        self,
-        fes_parameters: dict = None,
-        ivp_parameters: dict = None,
+        self, fes_parameters: dict = None, ivp_parameters: dict = None,
     ):
         """
         Enables the creation of an ivp problem
@@ -92,8 +90,7 @@ class IvpFes:
         )
 
         parameters_init.add(
-            key="pulse_apparition_time",
-            initial_guess=np.array(self.pulse_apparition_time),
+            key="pulse_apparition_time", initial_guess=np.array(self.pulse_apparition_time),
         )
 
         parameters.add(
@@ -431,9 +428,7 @@ class IvpFes:
 
     @classmethod
     def from_frequency_and_final_time(
-        cls,
-        fes_parameters: dict = None,
-        ivp_parameters: dict = None,
+        cls, fes_parameters: dict = None, ivp_parameters: dict = None,
     ):
         """
         Enables the creation of an ivp problem from final time and frequency information instead of the stimulation
@@ -469,16 +464,11 @@ class IvpFes:
                 "The number of stimulation needs to be integer within the final time t, set round down "
                 "to True or set final_time * frequency to make the result an integer."
             )
-        return cls(
-            fes_parameters,
-            ivp_parameters,
-        )
+        return cls(fes_parameters, ivp_parameters,)
 
     @classmethod
     def from_frequency_and_n_stim(
-        cls,
-        fes_parameters: dict = None,
-        ivp_parameters: dict = None,
+        cls, fes_parameters: dict = None, ivp_parameters: dict = None,
     ):
         """
         Enables the creation of an ivp problem from stimulation number and frequency information instead of the final
@@ -502,7 +492,4 @@ class IvpFes:
             raise ValueError("Frequency must be an int")
 
         ivp_parameters["final_time"] = n_stim / frequency
-        return cls(
-            fes_parameters,
-            ivp_parameters,
-        )
+        return cls(fes_parameters, ivp_parameters,)

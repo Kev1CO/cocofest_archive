@@ -120,15 +120,11 @@ def test_pulse_mode_ivp(pulse_mode):
 def test_ivp_methods():
     fes_parameters = {"model": DingModelFrequency(), "frequency": 30, "round_down": True}
     ivp_parameters = {"n_shooting": 10, "final_time": 1.25, "use_sx": True}
-    ivp = IvpFes.from_frequency_and_final_time(
-        fes_parameters, ivp_parameters
-    )
+    ivp = IvpFes.from_frequency_and_final_time(fes_parameters, ivp_parameters)
 
     fes_parameters = {"model": DingModelFrequency(), "n_stim": 3, "frequency": 10}
     ivp_parameters = {"n_shooting": 10, "use_sx": True}
-    ivp = IvpFes.from_frequency_and_n_stim(
-        fes_parameters, ivp_parameters
-    )
+    ivp = IvpFes.from_frequency_and_n_stim(fes_parameters, ivp_parameters)
 
 
 def test_all_ivp_errors():
@@ -152,10 +148,7 @@ def test_all_ivp_errors():
 
     pulse_duration = 0.00001
     with pytest.raises(
-        ValueError,
-        match=re.escape(
-            "Pulse duration must be greater than minimum pulse duration"
-        ),
+        ValueError, match=re.escape("Pulse duration must be greater than minimum pulse duration"),
     ):
         IvpFes(
             fes_parameters={"model": DingModelPulseDurationFrequency(), "n_stim": 3, "pulse_duration": pulse_duration},
@@ -164,16 +157,17 @@ def test_all_ivp_errors():
 
     with pytest.raises(ValueError, match="pulse_duration list must have the same length as n_stim"):
         IvpFes(
-            fes_parameters={"model": DingModelPulseDurationFrequency(), "n_stim": 3, "pulse_duration": [0.0003, 0.0004]},
+            fes_parameters={
+                "model": DingModelPulseDurationFrequency(),
+                "n_stim": 3,
+                "pulse_duration": [0.0003, 0.0004],
+            },
             ivp_parameters={"n_shooting": 10, "final_time": 0.3},
         )
 
     pulse_duration = [0.001, 0.0001, 0.003]
     with pytest.raises(
-        ValueError,
-        match=re.escape(
-            "Pulse duration must be greater than minimum pulse duration"
-        ),
+        ValueError, match=re.escape("Pulse duration must be greater than minimum pulse duration"),
     ):
         IvpFes(
             fes_parameters={"model": DingModelPulseDurationFrequency(), "n_stim": 3, "pulse_duration": pulse_duration},
@@ -188,8 +182,7 @@ def test_all_ivp_errors():
 
     pulse_intensity = 0.1
     with pytest.raises(
-        ValueError,
-        match=re.escape("Pulse intensity must be greater than minimum pulse intensity"),
+        ValueError, match=re.escape("Pulse intensity must be greater than minimum pulse intensity"),
     ):
         IvpFes(
             fes_parameters={"model": DingModelIntensityFrequency(), "n_stim": 3, "pulse_intensity": pulse_intensity},
@@ -204,8 +197,7 @@ def test_all_ivp_errors():
 
     pulse_intensity = [20, 30, 0.1]
     with pytest.raises(
-        ValueError,
-        match=re.escape("Pulse intensity must be greater than minimum pulse intensity"),
+        ValueError, match=re.escape("Pulse intensity must be greater than minimum pulse intensity"),
     ):
         IvpFes(
             fes_parameters={"model": DingModelIntensityFrequency(), "n_stim": 3, "pulse_intensity": pulse_intensity},
