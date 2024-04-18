@@ -579,7 +579,7 @@ def test_fes_models_inputs_sanity_check_errors():
             n_shooting=10,
             final_time=1,
             pulse_duration_dict={"pulse_duration_min": 0.0003, "pulse_duration_max": 0.0006},
-            objective_dict={"q_tracking": [[1, 2, 3], [1, 2]]},
+            objective_dict={"q_tracking": [[1, 2, 3], [1, 2, 3, 4]]},
         )
 
     with pytest.raises(
