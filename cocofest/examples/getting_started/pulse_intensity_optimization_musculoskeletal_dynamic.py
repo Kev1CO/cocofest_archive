@@ -1,5 +1,5 @@
 """
-This example will do a 10 stimulation example with Ding's 2003 frequency model associated to Bakir's 2022 work.
+This example will do a 10 stimulation example with Ding's 2003 frequency model associated to Hmed's 2018 work.
 This ocp was build to produce a elbow motion from 5 to 120 degrees.
 The stimulation frequency will be optimized between 10 and 100 Hz and pulse intensity between minimal sensitivity
 threshold and 130mA to satisfy the flexion and minimizing required elbow torque control.

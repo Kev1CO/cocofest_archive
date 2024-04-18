@@ -180,7 +180,7 @@ class DingModelIntensityFrequency(DingModelFrequency):
         if enough_stim_to_truncate:
             t_stim_prev = t_stim_prev[-self._sum_stim_truncation :]
         for i in range(len(t_stim_prev)):  # Eq from [1]
-            if i == 0 and len(t_stim_prev) == 1:  # Eq from Bakir et al.
+            if i == 0 and len(t_stim_prev) == 1:  # Eq from Hmed et al.
                 ri = 1
             else:
                 previous_phase_time = t_stim_prev[i] - t_stim_prev[i - 1]

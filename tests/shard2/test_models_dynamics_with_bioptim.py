@@ -241,10 +241,8 @@ def test_ocp_output(model, force_tracking, use_sx, min_pulse_duration, min_pulse
             n_shooting=20,
             n_stim=10,
             final_time=1,
-            force_tracking=force_tracking,
-            pulse_duration_min=min_pulse_duration,
-            pulse_duration_max=0.0006,
-            pulse_duration_bimapping=False,
+            pulse_duration_dict={"pulse_duration_min": min_pulse_duration, "pulse_duration_max": 0.0006, "pulse_duration_bimapping": False},
+            objective_dict={"force_tracking": force_tracking},
             use_sx=use_sx,
         )
 
@@ -260,10 +258,8 @@ def test_ocp_output(model, force_tracking, use_sx, min_pulse_duration, min_pulse
             n_shooting=20,
             n_stim=10,
             final_time=1,
-            force_tracking=force_tracking,
-            pulse_intensity_min=min_pulse_intensity,
-            pulse_intensity_max=130,
-            pulse_intensity_bimapping=False,
+            pulse_intensity_dict={"pulse_intensity_min": min_pulse_intensity, "pulse_intensity_max": 130, "pulse_intensity_bimapping": False},
+            objective_dict={"force_tracking": force_tracking},
             use_sx=use_sx,
         )
 
@@ -279,10 +275,8 @@ def test_ocp_output(model, force_tracking, use_sx, min_pulse_duration, min_pulse
             n_shooting=20,
             n_stim=10,
             final_time=1,
-            end_node_tracking=50,
-            time_min=0.01,
-            time_max=1,
-            time_bimapping=True,
+            pulse_apparition_dict={"time_min": 0.01, "time_max": 1, "time_bimapping": False},
+            objective_dict={"end_node_tracking": 50},
             use_sx=use_sx,
         )
 
@@ -304,10 +298,8 @@ def test_time_dependent_ocp_output(use_sx, bimapped):
         n_stim=10,
         n_shooting=20,
         final_time=1,
-        end_node_tracking=270,
-        time_min=0.01,
-        time_max=0.1,
-        time_bimapping=bimapped,
+        pulse_apparition_dict={"time_min": 0.01, "time_max": 0.1, "time_bimapping": bimapped},
+        objective_dict={"end_node_tracking": 270},
         use_sx=use_sx,
     )
 

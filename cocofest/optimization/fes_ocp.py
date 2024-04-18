@@ -54,75 +54,75 @@ class OcpFes:
         n_stim: int = None,
         n_shooting: int = None,
         final_time: int | float = None,
-        pulse_mode: str = "Single",
-        frequency: int | float = None,
-        round_down: bool = False,
-        time_min: int | float = None,
-        time_max: int | float = None,
-        time_bimapping: bool = False,
-        pulse_duration: int | float = None,
-        pulse_duration_min: int | float = None,
-        pulse_duration_max: int | float = None,
-        pulse_duration_bimapping: bool = False,
-        pulse_intensity: int | float = None,
-        pulse_intensity_min: int | float = None,
-        pulse_intensity_max: int | float = None,
-        pulse_intensity_bimapping: bool = False,
-        force_tracking: list = None,
-        end_node_tracking: int | float = None,
-        custom_objective: ObjectiveList = None,
+        pulse_apparition_dict: dict = None,
+        pulse_duration_dict: dict = None,
+        pulse_intensity_dict: dict = None,
+        objective_dict: dict = None,
         use_sx: bool = True,
         ode_solver: OdeSolver = OdeSolver.RK4(n_integration_steps=1),
         n_threads: int = 1,
     ):
         """
-        This definition prepares the ocp to be solved
-        .
-        Attributes
+        Prepares the Optimal Control Program (OCP) to be solved.
+
+        Parameters
         ----------
-            model: FesModel
-                The model type used for the ocp
-            n_stim: int
-                Number of stimulation that will occur during the ocp, it is as well refer as phases
-            n_shooting: int
-                Number of shooting point for each individual phases
-            final_time: float
-                Refers to the final time of the ocp
-            force_tracking: list[np.ndarray, np.ndarray]
-                List of time and associated force to track during ocp optimisation
-            end_node_tracking: int | float
-                Force objective value to reach at the last node
-            time_min: int | float
-                Minimum time for a phase
-            time_max: int | float
-                Maximum time for a phase
-            time_bimapping: bool
-                Set phase time constant
-            pulse_duration: int | float
-                Setting a chosen pulse time among phases
-            pulse_duration_min: int | float
-                Minimum pulse time for a phase
-            pulse_duration_max: int | float
-                Maximum pulse time for a phase
-            pulse_duration_bimapping: bool
-                Set pulse time constant among phases
-            pulse_intensity: int | float
-                Setting a chosen pulse intensity among phases
-            pulse_intensity_min: int | float
-                Minimum pulse intensity for a phase
-            pulse_intensity_max: int | float
-                Maximum pulse intensity for a phase
-            pulse_intensity_bimapping: bool
-                Set pulse intensity constant among phases
-            custom_objective: list[Objective]
-                Additional objective for the system
-            ode_solver: OdeSolver
-                The ode solver to use
-            use_sx: bool
-                The nature of the casadi variables. MX are used if False.
-            n_threads: int
-                The number of thread to use while solving (multi-threading if > 1)
+        model : FesModel
+            The model type used for the OCP.
+        n_stim : int
+            Number of stimulations that will occur during the OCP, also referred to as phases.
+        n_shooting : int
+            Number of shooting points for each individual phase.
+        final_time : int | float
+            The final time of the OCP.
+        pulse_apparition_dict : dict
+            Dictionary containing parameters related to the appearance of the pulse.
+        pulse_duration_dict : dict
+            Dictionary containing parameters related to the duration of the pulse.
+            Optional if not using DingModelPulseDurationFrequency or DingModelPulseDurationFrequencyWithFatigue.
+        pulse_intensity_dict : dict
+            Dictionary containing parameters related to the intensity of the pulse.
+            Optional if not using DingModelIntensityFrequency or DingModelIntensityFrequencyWithFatigue.
+        objective_dict : dict
+            Dictionary containing parameters related to the optimization objective.
+        use_sx : bool
+            The nature of the CasADi variables. MX are used if False.
+        ode_solver : OdeSolver
+            The ODE solver to use.
+        n_threads : int
+            The number of threads to use while solving (multi-threading if > 1).
+
+        Returns
+        -------
+        OptimalControlProgram
+            The prepared Optimal Control Program.
+
         """
+
+        (pulse_apparition_dict, pulse_duration_dict, pulse_intensity_dict, objective_dict) = OcpFes._fill_dict(
+            pulse_apparition_dict, pulse_duration_dict, pulse_intensity_dict, objective_dict
+        )
+
+        time_min = pulse_apparition_dict["time_min"]
+        time_max = pulse_apparition_dict["time_max"]
+        time_bimapping = pulse_apparition_dict["time_bimapping"]
+        frequency = pulse_apparition_dict["frequency"]
+        round_down = pulse_apparition_dict["round_down"]
+        pulse_mode = pulse_apparition_dict["pulse_mode"]
+
+        pulse_duration = pulse_duration_dict["pulse_duration"]
+        pulse_duration_min = pulse_duration_dict["pulse_duration_min"]
+        pulse_duration_max = pulse_duration_dict["pulse_duration_max"]
+        pulse_duration_bimapping = pulse_duration_dict["pulse_duration_bimapping"]
+
+        pulse_intensity = pulse_intensity_dict["pulse_intensity"]
+        pulse_intensity_min = pulse_intensity_dict["pulse_intensity_min"]
+        pulse_intensity_max = pulse_intensity_dict["pulse_intensity_max"]
+        pulse_intensity_bimapping = pulse_intensity_dict["pulse_intensity_bimapping"]
+
+        force_tracking = objective_dict["force_tracking"]
+        end_node_tracking = objective_dict["end_node_tracking"]
+        custom_objective = objective_dict["custom_objective"]
 
         OcpFes._sanity_check(
             model=model,
@@ -156,7 +156,9 @@ class OcpFes:
             n_stim=n_stim, final_time=final_time, frequency=frequency, pulse_mode=pulse_mode, round_down=round_down
         )
 
-        force_fourier_coef = None if force_tracking is None else OcpFes._build_fourier_coeff(force_tracking)
+        force_fourier_coefficient = (
+            None if force_tracking is None else OcpFes._build_fourier_coefficient(force_tracking)
+        )
         end_node_tracking = end_node_tracking
         models = [model] * n_stim
         n_shooting = [n_shooting] * n_stim
@@ -194,7 +196,7 @@ class OcpFes:
         dynamics = OcpFes._declare_dynamics(models, n_stim)
         x_bounds, x_init = OcpFes._set_bounds(model, n_stim)
         objective_functions = OcpFes._set_objective(
-            n_stim, n_shooting, force_fourier_coef, end_node_tracking, custom_objective, time_min, time_max
+            n_stim, n_shooting, force_fourier_coefficient, end_node_tracking, custom_objective, time_min, time_max
         )
 
         return OptimalControlProgram(
@@ -215,6 +217,82 @@ class OcpFes:
             ode_solver=ode_solver,
             n_threads=n_threads,
         )
+
+    @staticmethod
+    def _fill_dict(pulse_apparition_dict, pulse_duration_dict, pulse_intensity_dict, objective_dict):
+        """
+        This method fills the provided dictionaries with default values if they are not set.
+
+        Parameters
+        ----------
+        pulse_apparition_dict : dict
+            Dictionary containing parameters related to the appearance of the pulse.
+            Expected keys are 'time_min', 'time_max', 'time_bimapping', 'frequency', 'round_down', and 'pulse_mode'.
+
+        pulse_duration_dict : dict
+            Dictionary containing parameters related to the duration of the pulse.
+            Expected keys are 'pulse_duration', 'pulse_duration_min', 'pulse_duration_max', and 'pulse_duration_bimapping'.
+
+        pulse_intensity_dict : dict
+            Dictionary containing parameters related to the intensity of the pulse.
+            Expected keys are 'pulse_intensity', 'pulse_intensity_min', 'pulse_intensity_max', and 'pulse_intensity_bimapping'.
+
+        objective_dict : dict
+            Dictionary containing parameters related to the objective of the optimization.
+            Expected keys are 'force_tracking', 'end_node_tracking', and 'custom_objective'.
+
+        Returns
+        -------
+        Returns four dictionaries: pulse_apparition_dict, pulse_duration_dict, pulse_intensity_dict, and objective_dict.
+        Each dictionary is filled with default values for any keys that were not initially set.
+        """
+
+        default_pulse_apparition_dict = {
+            "time_min": None,
+            "time_max": None,
+            "time_bimapping": False,
+            "frequency": None,
+            "round_down": False,
+            "pulse_mode": "Single",
+        }
+
+        default_pulse_duration_dict = {
+            "pulse_duration": None,
+            "pulse_duration_min": None,
+            "pulse_duration_max": None,
+            "pulse_duration_bimapping": False,
+        }
+
+        default_pulse_intensity_dict = {
+            "pulse_intensity": None,
+            "pulse_intensity_min": None,
+            "pulse_intensity_max": None,
+            "pulse_intensity_bimapping": False,
+        }
+
+        default_objective_dict = {
+            "force_tracking": None,
+            "end_node_tracking": None,
+            "custom_objective": None,
+        }
+        dict_list = [pulse_apparition_dict, pulse_duration_dict, pulse_intensity_dict, objective_dict]
+        default_dict_list = [
+            default_pulse_apparition_dict,
+            default_pulse_duration_dict,
+            default_pulse_intensity_dict,
+            default_objective_dict,
+        ]
+
+        for i in range(len(dict_list)):
+            if dict_list[i] is None:
+                dict_list[i] = {}
+
+        for i in range(len(dict_list)):
+            for key in default_dict_list[i]:
+                if key not in dict_list[i]:
+                    dict_list[i][key] = default_dict_list[i][key]
+
+        return dict_list[0], dict_list[1], dict_list[2], dict_list[3]
 
     @staticmethod
     def _sanity_check(
@@ -431,7 +509,7 @@ class OcpFes:
                 raise TypeError("round_down must be bool type")
 
     @staticmethod
-    def _build_fourier_coeff(force_tracking):
+    def _build_fourier_coefficient(force_tracking):
         return FourierSeries().compute_real_fourier_coeffs(force_tracking[0], force_tracking[1], 50)
 
     @staticmethod
@@ -669,21 +747,23 @@ class OcpFes:
         return x_bounds, x_init
 
     @staticmethod
-    def _set_objective(n_stim, n_shooting, force_fourier_coef, end_node_tracking, custom_objective, time_min, time_max):
+    def _set_objective(
+        n_stim, n_shooting, force_fourier_coefficient, end_node_tracking, custom_objective, time_min, time_max
+    ):
         # Creates the objective for our problem
         objective_functions = ObjectiveList()
         if custom_objective:
             for i in range(len(custom_objective)):
                 objective_functions.add(custom_objective[0][i])
 
-        if force_fourier_coef is not None:
+        if force_fourier_coefficient is not None:
             for phase in range(n_stim):
                 for i in range(n_shooting[phase]):
                     objective_functions.add(
                         CustomObjective.track_state_from_time,
                         custom_type=ObjectiveFcn.Mayer,
                         node=i,
-                        fourier_coeff=force_fourier_coef,
+                        fourier_coeff=force_fourier_coefficient,
                         key="F",
                         quadratic=True,
                         weight=1,

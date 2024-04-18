@@ -190,12 +190,12 @@ class OcpFesMsk:
         force_fourier_coef = [] if force_tracking else None
         if force_tracking:
             for i in range(len(force_tracking[1])):
-                force_fourier_coef.append(OcpFes._build_fourier_coeff([force_tracking[0], force_tracking[1][i]]))
+                force_fourier_coef.append(OcpFes._build_fourier_coefficient([force_tracking[0], force_tracking[1][i]]))
 
         q_fourier_coef = [] if q_tracking else None
         if q_tracking:
             for i in range(len(q_tracking[1])):
-                q_fourier_coef.append(OcpFes._build_fourier_coeff([q_tracking[0], q_tracking[1][i]]))
+                q_fourier_coef.append(OcpFes._build_fourier_coefficient([q_tracking[0], q_tracking[1][i]]))
 
         n_shooting = [n_shooting] * n_stim
         final_time_phase = OcpFes._build_phase_time(
