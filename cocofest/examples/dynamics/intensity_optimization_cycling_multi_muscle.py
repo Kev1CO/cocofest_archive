@@ -48,15 +48,14 @@ ocp = OcpFesMsk.prepare_ocp(
     n_stim=n_stim,
     n_shooting=5,
     final_time=1,
-    time_min=0.05,
-    time_max=1,
-    time_bimapping=True,
-    pulse_intensity_min=minimum_pulse_intensity,
-    pulse_intensity_max=130,
-    pulse_intensity_bimapping=False,
+    pulse_apparition_dict={"time_min": 0.05, "time_max": 1, "time_bimapping": True},
+    pulse_intensity_dict={
+        "pulse_intensity_min": minimum_pulse_intensity,
+        "pulse_intensity_max": 130,
+        "pulse_intensity_bimapping": False,
+    },
     with_residual_torque=True,
-    custom_objective=objective_functions,
-    q_tracking=track_q,
+    objective_dict={"custom_objective": objective_functions, "q_tracking": track_q},
     use_sx=True,
 )
 

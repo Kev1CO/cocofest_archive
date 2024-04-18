@@ -40,26 +40,10 @@ class OcpFesMsk:
         n_stim: int = None,
         n_shooting: int = None,
         final_time: int | float = None,
-        pulse_mode: str = "Single",
-        frequency: int | float = None,
-        round_down: bool = False,
-        time_min: float = None,
-        time_max: float = None,
-        time_bimapping: bool = False,
-        pulse_duration: int | float = None,
-        pulse_duration_min: int | float = None,
-        pulse_duration_max: int | float = None,
-        pulse_duration_bimapping: bool = False,
-        pulse_duration_similar_for_all_muscles: bool = False,
-        pulse_intensity: int | float = None,
-        pulse_intensity_min: int | float = None,
-        pulse_intensity_max: int | float = None,
-        pulse_intensity_bimapping: bool = False,
-        pulse_intensity_similar_for_all_muscles: bool = False,
-        force_tracking: list = None,
-        end_node_tracking: list = None,
-        q_tracking: list = None,
-        custom_objective: ObjectiveList = None,
+        pulse_apparition_dict: dict = None,
+        pulse_duration_dict: dict = None,
+        pulse_intensity_dict: dict = None,
+        objective_dict: dict = None,
         custom_constraint: ConstraintList = None,
         with_residual_torque: bool = False,
         muscle_force_length_relationship: bool = False,
@@ -72,73 +56,98 @@ class OcpFesMsk:
         n_threads: int = 1,
     ):
         """
-        This definition prepares the dynamics ocp to be solved
-        .
-        Attributes
+        Prepares the Optimal Control Program (OCP) with a musculoskeletal model for a movement to be solved.
+
+        Parameters
         ----------
-            biorbd_model_path: str
-                The bioMod file path
-            bound_type: str
-                The bound type to use (start, end, start_end)
-            bound_data: list
-                The data to use for the bound
-            fes_muscle_models: list[FesModel]
-                The fes model type used for the ocp
-            n_stim: int
-                Number of stimulation that will occur during the ocp, it is as well refer as phases
-            n_shooting: int
-                Number of shooting point for each individual phases
-            final_time: float
-                Refers to the final time of the ocp
-            time_min: int | float
-                Minimum time for a phase
-            time_max: int | float
-                Maximum time for a phase
-            time_bimapping: bool
-                Set phase time constant
-            pulse_duration: int | float
-                Setting a chosen pulse time among phases
-            pulse_duration_min: int | float
-                Minimum pulse time for a phase
-            pulse_duration_max: int | float
-                Maximum pulse time for a phase
-            pulse_duration_bimapping: bool
-                Set pulse time constant among phases
-            pulse_intensity: int | float
-                Setting a chosen pulse intensity among phases
-            pulse_intensity_min: int | float
-                Minimum pulse intensity for a phase
-            pulse_intensity_max: int | float
-                Maximum pulse intensity for a phase
-            pulse_intensity_bimapping: bool
-                Set pulse intensity constant among phases
-            force_tracking: list[np.ndarray, np.ndarray]
-                List of time and associated force to track during ocp optimisation
-            end_node_tracking: int | float
-                Force objective value to reach at the last node
-            q_tracking: list
-                List of time and associated q to track during ocp optimisation
-            custom_objective: list[Objective]
-                Additional objective for the system
-            with_residual_torque: bool
-                If residual torque is used
-            muscle_force_length_relationship: bool
-                If the force length relationship is used
-            muscle_force_velocity_relationship: bool
-                If the force velocity relationship is used
-            minimize_muscle_fatigue: bool
-                Minimize the muscle fatigue
-            minimize_muscle_force: bool
-                Minimize the muscle force
-            use_sx: bool
-                The nature of the casadi variables. MX are used if False.
-            ode_solver: OdeSolver
-                The ode solver to use
-            control_type: ControlType
-                The type of control to use
-            n_threads: int
-                The number of thread to use while solving (multi-threading if > 1)
+        biorbd_model_path : str
+            The path to the bioMod file.
+        bound_type : str
+            The type of bound to use (start, end, start_end).
+        bound_data : list
+            The data to use for the bound.
+        fes_muscle_models : list[FesModel]
+            The FES model type used for the OCP.
+        n_stim : int
+            Number of stimulations that will occur during the OCP, also referred to as phases.
+        n_shooting : int
+            Number of shooting points for each individual phase.
+        final_time : int | float
+            The final time of the OCP.
+        pulse_apparition_dict : dict
+            Dictionary containing parameters related to the appearance of the pulse.
+            It should contain the following keys: "time_min", "time_max", "time_bimapping", "frequency", "round_down", "pulse_mode".
+        pulse_duration_dict : dict
+            Dictionary containing parameters related to the duration of the pulse.
+            It should contain the following keys: "pulse_duration", "pulse_duration_min", "pulse_duration_max", "pulse_duration_bimapping", "pulse_duration_similar_for_all_muscles".
+            Optional if not using the Ding2007 models
+        pulse_intensity_dict : dict
+            Dictionary containing parameters related to the intensity of the pulse.
+            It should contain the following keys: "pulse_intensity", "pulse_intensity_min", "pulse_intensity_max", "pulse_intensity_bimapping", "pulse_intensity_similar_for_all_muscles".
+            Optional if not using the Hmed2018 models
+        objective_dict : dict
+            Dictionary containing parameters related to the objective of the optimization.
+        custom_constraint : ConstraintList, optional
+            Custom constraints for the OCP.
+        with_residual_torque : bool, optional
+            If residual torque is used.
+        muscle_force_length_relationship : bool, optional
+            If the force length relationship is used.
+        muscle_force_velocity_relationship : bool, optional
+            If the force velocity relationship is used.
+        minimize_muscle_fatigue : bool, optional
+            Minimize the muscle fatigue.
+        minimize_muscle_force : bool, optional
+            Minimize the muscle force.
+        use_sx : bool, optional
+            The nature of the CasADi variables. MX are used if False.
+        ode_solver : OdeSolverBase, optional
+            The ODE solver to use.
+        control_type : ControlType, optional
+            The type of control to use.
+        n_threads : int, optional
+            The number of threads to use while solving (multi-threading if > 1).
+
+        Returns
+        -------
+        OptimalControlProgram
+            The prepared Optimal Control Program.
         """
+
+        (pulse_apparition_dict, pulse_duration_dict, pulse_intensity_dict, objective_dict) = OcpFes._fill_dict(
+            pulse_apparition_dict, pulse_duration_dict, pulse_intensity_dict, objective_dict
+        )
+
+        time_min = pulse_apparition_dict["time_min"]
+        time_max = pulse_apparition_dict["time_max"]
+        time_bimapping = pulse_apparition_dict["time_bimapping"]
+        frequency = pulse_apparition_dict["frequency"]
+        round_down = pulse_apparition_dict["round_down"]
+        pulse_mode = pulse_apparition_dict["pulse_mode"]
+
+        pulse_duration = pulse_duration_dict["pulse_duration"]
+        pulse_duration_min = pulse_duration_dict["pulse_duration_min"]
+        pulse_duration_max = pulse_duration_dict["pulse_duration_max"]
+        pulse_duration_bimapping = pulse_duration_dict["pulse_duration_bimapping"]
+        key_in_dict = "pulse_duration_similar_for_all_muscles" in pulse_duration_dict
+        pulse_duration_similar_for_all_muscles = (
+            pulse_duration_dict["pulse_duration_similar_for_all_muscles"] if key_in_dict else False
+        )
+
+        pulse_intensity = pulse_intensity_dict["pulse_intensity"]
+        pulse_intensity_min = pulse_intensity_dict["pulse_intensity_min"]
+        pulse_intensity_max = pulse_intensity_dict["pulse_intensity_max"]
+        pulse_intensity_bimapping = pulse_intensity_dict["pulse_intensity_bimapping"]
+        key_in_dict = "pulse_intensity_similar_for_all_muscles" in pulse_intensity_dict
+        pulse_intensity_similar_for_all_muscles = (
+            pulse_intensity_dict["pulse_intensity_similar_for_all_muscles"] if key_in_dict else False
+        )
+
+        force_tracking = objective_dict["force_tracking"]
+        end_node_tracking = objective_dict["end_node_tracking"]
+        custom_objective = objective_dict["custom_objective"]
+        key_in_dict = "q_tracking" in objective_dict
+        q_tracking = objective_dict["q_tracking"] if key_in_dict else None
 
         OcpFes._sanity_check(
             model=fes_muscle_models[0],

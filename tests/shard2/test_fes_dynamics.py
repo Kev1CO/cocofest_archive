@@ -40,10 +40,8 @@ def test_pulse_duration_multi_muscle_fes_dynamics():
         n_stim=n_stim,
         n_shooting=10,
         final_time=1,
-        pulse_duration_min=minimum_pulse_duration,
-        pulse_duration_max=0.0006,
-        pulse_duration_bimapping=False,
-        custom_objective=objective_functions,
+        pulse_duration_dict={"pulse_duration_min": minimum_pulse_duration, "pulse_duration_max": 0.0006, "pulse_duration_bimapping": False},
+        objective_dict={"custom_objective": objective_functions},
         with_residual_torque=True,
         muscle_force_length_relationship=True,
         muscle_force_velocity_relationship=True,
@@ -118,10 +116,8 @@ def test_pulse_intensity_multi_muscle_fes_dynamics():
         n_stim=n_stim,
         n_shooting=5,
         final_time=1,
-        pulse_intensity_min=minimum_pulse_intensity,
-        pulse_intensity_max=130,
-        pulse_intensity_bimapping=False,
-        force_tracking=track_forces,
+        pulse_intensity_dict={"pulse_intensity_min": minimum_pulse_intensity, "pulse_intensity_max": 130, "pulse_intensity_bimapping": False},
+        objective_dict={"force_tracking": track_forces},
         with_residual_torque=False,
         muscle_force_length_relationship=True,
         muscle_force_velocity_relationship=True,
@@ -191,8 +187,7 @@ def test_fes_models_inputs_sanity_check_errors():
             n_stim=1,
             n_shooting=10,
             final_time=1,
-            pulse_duration_min=0.0003,
-            pulse_duration_max=0.0006,
+            pulse_duration_dict={"pulse_duration_min": 0.0003, "pulse_duration_max": 0.0006},
         )
 
     with pytest.raises(
@@ -210,8 +205,7 @@ def test_fes_models_inputs_sanity_check_errors():
             n_stim=1,
             n_shooting=10,
             final_time=1,
-            pulse_duration_min=0.0003,
-            pulse_duration_max=0.0006,
+            pulse_duration_dict={"pulse_duration_min": 0.0003, "pulse_duration_max": 0.0006},
         )
 
     with pytest.raises(
@@ -229,8 +223,7 @@ def test_fes_models_inputs_sanity_check_errors():
             n_stim=1,
             n_shooting=10,
             final_time=1,
-            pulse_duration_min=0.0003,
-            pulse_duration_max=0.0006,
+            pulse_duration_dict={"pulse_duration_min": 0.0003, "pulse_duration_max": 0.0006},
         )
 
     with pytest.raises(
@@ -248,8 +241,7 @@ def test_fes_models_inputs_sanity_check_errors():
             n_stim=1,
             n_shooting=10,
             final_time=1,
-            pulse_duration_min=0.0003,
-            pulse_duration_max=0.0006,
+            pulse_duration_dict={"pulse_duration_min": 0.0003, "pulse_duration_max": 0.0006},
         )
 
     with pytest.raises(
@@ -267,8 +259,7 @@ def test_fes_models_inputs_sanity_check_errors():
             n_stim=1,
             n_shooting=10,
             final_time=1,
-            pulse_duration_min=0.0003,
-            pulse_duration_max=0.0006,
+            pulse_duration_dict={"pulse_duration_min": 0.0003, "pulse_duration_max": 0.0006},
         )
 
     with pytest.raises(
@@ -286,8 +277,7 @@ def test_fes_models_inputs_sanity_check_errors():
             n_stim=1,
             n_shooting=10,
             final_time=1,
-            pulse_duration_min=0.0003,
-            pulse_duration_max=0.0006,
+            pulse_duration_dict={"pulse_duration_min": 0.0003, "pulse_duration_max": 0.0006},
         )
 
     with pytest.raises(
@@ -305,8 +295,7 @@ def test_fes_models_inputs_sanity_check_errors():
             n_stim=1,
             n_shooting=10,
             final_time=1,
-            pulse_duration_min=0.0003,
-            pulse_duration_max=0.0006,
+            pulse_duration_dict={"pulse_duration_min": 0.0003, "pulse_duration_max": 0.0006},
         )
 
     with pytest.raises(
@@ -324,8 +313,7 @@ def test_fes_models_inputs_sanity_check_errors():
             n_stim=1,
             n_shooting=10,
             final_time=1,
-            pulse_duration_min=0.0003,
-            pulse_duration_max=0.0006,
+            pulse_duration_dict={"pulse_duration_min": 0.0003, "pulse_duration_max": 0.0006},
         )
 
     with pytest.raises(
@@ -343,8 +331,7 @@ def test_fes_models_inputs_sanity_check_errors():
             n_stim=1,
             n_shooting=10,
             final_time=1,
-            pulse_duration_min=0.0003,
-            pulse_duration_max=0.0006,
+            pulse_duration_dict={"pulse_duration_min": 0.0003, "pulse_duration_max": 0.0006},
         )
 
     with pytest.raises(
@@ -362,8 +349,7 @@ def test_fes_models_inputs_sanity_check_errors():
             n_stim=1,
             n_shooting=10,
             final_time=1,
-            pulse_duration_min=0.0003,
-            pulse_duration_max=0.0006,
+            pulse_duration_dict={"pulse_duration_min": 0.0003, "pulse_duration_max": 0.0006},
         )
 
     with pytest.raises(
@@ -381,9 +367,8 @@ def test_fes_models_inputs_sanity_check_errors():
             n_stim=1,
             n_shooting=10,
             final_time=1,
-            pulse_duration_min=0.0003,
-            pulse_duration_max=0.0006,
-            force_tracking="hello",
+            pulse_duration_dict={"pulse_duration_min": 0.0003, "pulse_duration_max": 0.0006},
+            objective_dict={"force_tracking": "hello"},
         )
 
     with pytest.raises(
@@ -401,9 +386,8 @@ def test_fes_models_inputs_sanity_check_errors():
             n_stim=1,
             n_shooting=10,
             final_time=1,
-            pulse_duration_min=0.0003,
-            pulse_duration_max=0.0006,
-            force_tracking=["hello"],
+            pulse_duration_dict={"pulse_duration_min": 0.0003, "pulse_duration_max": 0.0006},
+            objective_dict={"force_tracking": ["hello"]},
         )
 
     with pytest.raises(
@@ -421,9 +405,8 @@ def test_fes_models_inputs_sanity_check_errors():
             n_stim=1,
             n_shooting=10,
             final_time=1,
-            pulse_duration_min=0.0003,
-            pulse_duration_max=0.0006,
-            force_tracking=["hello", [1, 2, 3]],
+            pulse_duration_dict={"pulse_duration_min": 0.0003, "pulse_duration_max": 0.0006},
+            objective_dict={"force_tracking": ["hello", [1, 2, 3]]},
         )
 
     with pytest.raises(
@@ -441,9 +424,8 @@ def test_fes_models_inputs_sanity_check_errors():
             n_stim=1,
             n_shooting=10,
             final_time=1,
-            pulse_duration_min=0.0003,
-            pulse_duration_max=0.0006,
-            force_tracking=[np.array([1, 2, 3]), "[1, 2, 3]"],
+            pulse_duration_dict={"pulse_duration_min": 0.0003, "pulse_duration_max": 0.0006},
+            objective_dict={"force_tracking": [np.array([1, 2, 3]), "[1, 2, 3]"]},
         )
 
     with pytest.raises(
@@ -463,9 +445,8 @@ def test_fes_models_inputs_sanity_check_errors():
             n_stim=1,
             n_shooting=10,
             final_time=1,
-            pulse_duration_min=0.0003,
-            pulse_duration_max=0.0006,
-            force_tracking=[np.array([1, 2, 3]), [[1, 2, 3], [1, 2, 3], [1, 2, 3]]],
+            pulse_duration_dict={"pulse_duration_min": 0.0003, "pulse_duration_max": 0.0006},
+            objective_dict={"force_tracking": [np.array([1, 2, 3]), [[1, 2, 3], [1, 2, 3], [1, 2, 3]]]},
         )
 
     with pytest.raises(
@@ -483,9 +464,8 @@ def test_fes_models_inputs_sanity_check_errors():
             n_stim=1,
             n_shooting=10,
             final_time=1,
-            pulse_duration_min=0.0003,
-            pulse_duration_max=0.0006,
-            force_tracking=[np.array([1, 2, 3]), [[1, 2, 3], [1, 2]]],
+            pulse_duration_dict={"pulse_duration_min": 0.0003, "pulse_duration_max": 0.0006},
+            objective_dict={"force_tracking": [np.array([1, 2, 3]), [[1, 2, 3], [1, 2]]]},
         )
 
     with pytest.raises(
@@ -503,9 +483,8 @@ def test_fes_models_inputs_sanity_check_errors():
             n_stim=1,
             n_shooting=10,
             final_time=1,
-            pulse_duration_min=0.0003,
-            pulse_duration_max=0.0006,
-            end_node_tracking="hello",
+            pulse_duration_dict={"pulse_duration_min": 0.0003, "pulse_duration_max": 0.0006},
+            objective_dict={"end_node_tracking": "hello"},
         )
 
     with pytest.raises(
@@ -523,9 +502,8 @@ def test_fes_models_inputs_sanity_check_errors():
             n_stim=1,
             n_shooting=10,
             final_time=1,
-            pulse_duration_min=0.0003,
-            pulse_duration_max=0.0006,
-            end_node_tracking=[2, 3, 4],
+            pulse_duration_dict={"pulse_duration_min": 0.0003, "pulse_duration_max": 0.0006},
+            objective_dict={"end_node_tracking": [2, 3, 4]},
         )
 
     with pytest.raises(
@@ -543,9 +521,8 @@ def test_fes_models_inputs_sanity_check_errors():
             n_stim=1,
             n_shooting=10,
             final_time=1,
-            pulse_duration_min=0.0003,
-            pulse_duration_max=0.0006,
-            end_node_tracking=[2, "hello"],
+            pulse_duration_dict={"pulse_duration_min": 0.0003, "pulse_duration_max": 0.0006},
+            objective_dict={"end_node_tracking": [2, "hello"]},
         )
 
     with pytest.raises(
@@ -563,9 +540,8 @@ def test_fes_models_inputs_sanity_check_errors():
             n_stim=1,
             n_shooting=10,
             final_time=1,
-            pulse_duration_min=0.0003,
-            pulse_duration_max=0.0006,
-            q_tracking="hello",
+            pulse_duration_dict={"pulse_duration_min": 0.0003, "pulse_duration_max": 0.0006},
+            objective_dict={"q_tracking": "hello"},
         )
 
     with pytest.raises(
@@ -583,9 +559,8 @@ def test_fes_models_inputs_sanity_check_errors():
             n_stim=1,
             n_shooting=10,
             final_time=1,
-            pulse_duration_min=0.0003,
-            pulse_duration_max=0.0006,
-            q_tracking=["hello", [1, 2, 3]],
+            pulse_duration_dict={"pulse_duration_min": 0.0003, "pulse_duration_max": 0.0006},
+            objective_dict={"q_tracking": ["hello", [1, 2, 3]]},
         )
 
     with pytest.raises(
@@ -603,9 +578,8 @@ def test_fes_models_inputs_sanity_check_errors():
             n_stim=1,
             n_shooting=10,
             final_time=1,
-            pulse_duration_min=0.0003,
-            pulse_duration_max=0.0006,
-            q_tracking=[[1, 2, 3], [1, 2, 3]],
+            pulse_duration_dict={"pulse_duration_min": 0.0003, "pulse_duration_max": 0.0006},
+            objective_dict={"q_tracking": [[1, 2, 3], [1, 2]]},
         )
 
     with pytest.raises(
@@ -623,9 +597,8 @@ def test_fes_models_inputs_sanity_check_errors():
             n_stim=1,
             n_shooting=10,
             final_time=1,
-            pulse_duration_min=0.0003,
-            pulse_duration_max=0.0006,
-            q_tracking=[[1, 2, 3], [[1, 2, 3], [4, 5]]],
+            pulse_duration_dict={"pulse_duration_min": 0.0003, "pulse_duration_max": 0.0006},
+            objective_dict={"q_tracking": [[1, 2, 3], [[1, 2, 3], [4, 5]]]},
         )
 
     with pytest.raises(
@@ -643,8 +616,7 @@ def test_fes_models_inputs_sanity_check_errors():
             n_stim=1,
             n_shooting=10,
             final_time=1,
-            pulse_duration_min=0.0003,
-            pulse_duration_max=0.0006,
+            pulse_duration_dict={"pulse_duration_min": 0.0003, "pulse_duration_max": 0.0006},
             with_residual_torque="hello",
         )
 
@@ -666,6 +638,5 @@ def test_fes_muscle_models_sanity_check_errors():
             n_stim=1,
             n_shooting=10,
             final_time=1,
-            pulse_duration_min=0.0003,
-            pulse_duration_max=0.0006,
+            pulse_duration_dict={"pulse_duration_min": 0.0003, "pulse_duration_max": 0.0006},
         )
