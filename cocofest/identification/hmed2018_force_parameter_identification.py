@@ -16,24 +16,8 @@ from .identification_method import (
 
 class DingModelPulseIntensityFrequencyForceParameterIdentification(DingModelFrequencyForceParameterIdentification):
     """
-    The main class to define an ocp. This class prepares the full program and gives all
-    the needed parameters to solve a functional electrical stimulation ocp
-
-    Attributes
-    ----------
-    model: DingModelFrequency,
-        The model to use for the ocp
-    data_path: str | list[str],
-        The path to the force model data
-    force_model_identification_method: str,
-        The method to use for the force model identification,
-         "full" for objective function on all data,
-         "average" for objective function on average data,
-         "sparse" for objective function at the beginning and end of the data
-    n_shooting: int,
-        The number of shooting points for the ocp
-    use_sx: bool
-        The nature of the casadi variables. MX are used if False.
+    This class extends the DingModelFrequencyForceParameterIdentification class and is used to define an optimal control problem (OCP).
+    It prepares the full program and provides all the necessary parameters to solve a functional electrical stimulation OCP.
     """
 
     def __init__(
@@ -51,6 +35,37 @@ class DingModelPulseIntensityFrequencyForceParameterIdentification(DingModelFreq
         n_threads: int = 1,
         **kwargs,
     ):
+        """
+        Initializes the DingModelPulseIntensityFrequencyForceParameterIdentification class.
+
+        Parameters
+        ----------
+        model: DingModelPulseDurationFrequency
+            The model to use for the OCP.
+        data_path: str | list[str]
+            The path to the force model data.
+        identification_method: str
+            The method to use for the force model identification. Options are "full" for objective function on all data,
+            "average" for objective function on average data, and "sparse" for objective function at the beginning and end of the data.
+        double_step_identification: bool
+            If True, the identification process will be performed in two steps.
+        key_parameter_to_identify: list
+            List of keys of the parameters to identify.
+        additional_key_settings: dict
+            Additional settings for the keys.
+        n_shooting: int
+            The number of shooting points for the OCP.
+        custom_objective: list[Objective]
+            List of custom objectives.
+        use_sx: bool
+            The nature of the CasADi variables. MX are used if False.
+        ode_solver: OdeSolver
+            The ODE solver to use.
+        n_threads: int
+            The number of threads to use while solving (multi-threading if > 1).
+        **kwargs: dict
+            Additional keyword arguments.
+        """
         super(DingModelPulseIntensityFrequencyForceParameterIdentification, self).__init__(
             model=model,
             data_path=data_path,
@@ -67,6 +82,20 @@ class DingModelPulseIntensityFrequencyForceParameterIdentification(DingModelFreq
         )
 
     def _set_default_values(self, model):
+        """
+        Sets the default values for the identified parameters (initial guesses, bounds, scaling and function).
+        If the user does not provide additional_key_settings for a specific parameter, the default value will be used.
+
+        Parameters
+        ----------
+        model: FesModel
+            The model to use for the OCP.
+
+        Returns
+        -------
+        dict
+            A dictionary of default values for the identified parameters.
+        """
         return {
             "a_rest": {
                 "initial_guess": 1000,
@@ -121,6 +150,9 @@ class DingModelPulseIntensityFrequencyForceParameterIdentification(DingModelFreq
         }
 
     def _set_default_parameters_list(self):
+        """
+        Sets the default parameters list for the model.
+        """
         self.numeric_parameters = [
             self.model.a_rest,
             self.model.km_rest,
@@ -135,6 +167,21 @@ class DingModelPulseIntensityFrequencyForceParameterIdentification(DingModelFreq
 
     @staticmethod
     def _set_model_parameters(model, model_parameters_value):
+        """
+        Sets the model parameters.
+
+        Parameters
+        ----------
+        model: FesModel
+            The model to use for the OCP.
+        model_parameters_value: list
+            List of values for the model parameters.
+
+        Returns
+        -------
+        FesModel
+            The model with updated parameters.
+        """
         model.a_rest = model_parameters_value[0]
         model.km_rest = model_parameters_value[1]
         model.tau1_rest = model_parameters_value[2]
@@ -147,6 +194,19 @@ class DingModelPulseIntensityFrequencyForceParameterIdentification(DingModelFreq
 
     @staticmethod
     def pulse_intensity_extraction(data_path: str) -> list[float]:
+        """
+        Extracts the pulse intensity from the data.
+
+        Parameters
+        ----------
+        data_path: str
+            The path to the data.
+
+        Returns
+        -------
+        list[float]
+            A list of pulse intensity.
+        """
         import pickle
 
         pulse_intensity = []
@@ -158,6 +218,14 @@ class DingModelPulseIntensityFrequencyForceParameterIdentification(DingModelFreq
         return pulse_intensity
 
     def _force_model_identification_for_initial_guess(self):
+        """
+        Performs the force model identification for the initial guess.
+
+        Returns
+        -------
+        dict
+            A dictionary of initial guesses for the parameters.
+        """
         self.input_sanity(
             self.model,
             self.data_path,
@@ -207,6 +275,14 @@ class DingModelPulseIntensityFrequencyForceParameterIdentification(DingModelFreq
         return initial_guess
 
     def force_model_identification(self):
+        """
+        Performs the force model identification.
+
+        Returns
+        -------
+        dict
+            A dictionary of identified parameters.
+        """
         if not self.double_step_identification:
             self.input_sanity(
                 self.model,

@@ -13,6 +13,7 @@ from bioptim import (
     ConstraintList,
     Node,
     Solver,
+    SolutionMerge,
 )
 
 from cocofest import DingModelFrequencyWithFatigue, OcpFesMsk
@@ -98,11 +99,12 @@ for i in range(len(pickle_file_list)):
         use_sx=False,
     )
 
-    sol = ocp.solve(Solver.IPOPT(_max_iter=10000)).merge_phases()
-    time = sol.time
-    states = sol.states
-    controls = sol.controls
-    parameters = sol.parameters
+    sol = ocp.solve(Solver.IPOPT(_max_iter=10000))
+
+    time = sol.decision_time(to_merge=[SolutionMerge.PHASES, SolutionMerge.NODES])
+    states = sol.decision_states(to_merge=[SolutionMerge.PHASES, SolutionMerge.NODES])
+    controls = sol.decision_controls(to_merge=[SolutionMerge.PHASES, SolutionMerge.NODES])
+    parameters = sol.decision_parameters()
 
     dictionary = {
         "time": time,
