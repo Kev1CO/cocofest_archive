@@ -1,14 +1,10 @@
 import time
-
-import numpy as np
 import pickle
 
-from bioptim import Solution, Shooting, SolutionIntegrator, SolutionMerge
 from cocofest import (
     DingModelFrequencyWithFatigue,
     IvpFes,
 )
-
 
 # This is a sensitivity analysis, the associated graphs are available in the summation_truncation_graph example.
 
@@ -57,13 +53,15 @@ for mode in modes:
             temp_node_shooting = int(node_shooting / n_stim)
 
             ocp_start_time = time.time()
+            fes_parameters = {
+                "model": DingModelFrequencyWithFatigue(sum_stim_truncation=j),
+                "n_stim": n_stim,
+                "pulse_mode": mode,
+            }
+            ivp_parameters = {"n_shooting": temp_node_shooting, "final_time": 1, "use_sx": True}
             ivp = IvpFes(
-                model=DingModelFrequencyWithFatigue(sum_stim_truncation=j),
-                n_stim=n_stim,
-                n_shooting=temp_node_shooting,
-                final_time=1,
-                pulse_mode=mode,
-                use_sx=True,
+                fes_parameters=fes_parameters,
+                ivp_parameters=ivp_parameters,
             )
             ocp_end_time = time.time()
 

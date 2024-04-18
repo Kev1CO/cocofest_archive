@@ -1,5 +1,5 @@
 """
-This example demonstrates the way of identifying the Ding 2007 model parameter using noisy simulated data.
+This example demonstrates the way of identifying the Hmed2018 model parameter using noisy simulated data.
 First we integrate the model with a given parameter set. Then we add noise to the previously calculated force output.
 Finally, we use the noisy data to identify the model parameters.
 """
@@ -8,8 +8,6 @@ import pickle
 import os
 import matplotlib.pyplot as plt
 import numpy as np
-
-from bioptim import Solution, Shooting, SolutionIntegrator, SolutionMerge
 
 from cocofest import (
     DingModelIntensityFrequency,
@@ -27,25 +25,26 @@ n_shooting = 10
 final_time = 1
 extra_phase_time = 1
 model = DingModelIntensityFrequency()
-
+fes_parameters = {"model": model, "n_stim": n_stim, "pulse_intensity": pulse_intensity}
+ivp_parameters = {
+    "n_shooting": n_shooting,
+    "final_time": final_time,
+    "use_sx": True,
+    "extend_last_phase": extra_phase_time,
+}
 
 # --- Creating the simulated data to identify on --- #
 # Building the Initial Value Problem
 ivp = IvpFes(
-    model=model,
-    n_stim=n_stim,
-    pulse_intensity=pulse_intensity,
-    n_shooting=n_shooting,
-    final_time=final_time,
-    use_sx=True,
-    extend_last_phase=extra_phase_time,
+    fes_parameters,
+    ivp_parameters,
 )
 
 # Integrating the solution
 result, time = ivp.integrate()
 
 # Adding noise to the force
-noise = np.random.normal(0, 1, len(result["F"][0]))
+noise = np.random.normal(0, 0.5, len(result["F"][0]))
 force = result["F"][0] + noise
 
 stim = [final_time / n_stim * i for i in range(n_stim)]
@@ -91,14 +90,18 @@ identified_model.cr = identified_parameters["cr"]
 identified_force_list = []
 identified_time_list = []
 
+# Building the Initial Value Problem
+fes_parameters = {"model": identified_model, "n_stim": n_stim, "pulse_intensity": pulse_intensity}
+ivp_parameters = {
+    "n_shooting": n_shooting,
+    "final_time": final_time,
+    "use_sx": True,
+    "extend_last_phase": extra_phase_time,
+}
+
 ivp_from_identification = IvpFes(
-    model=identified_model,
-    n_stim=n_stim,
-    pulse_intensity=pulse_intensity,
-    n_shooting=n_shooting,
-    final_time=final_time,
-    use_sx=True,
-    extend_last_phase=extra_phase_time,
+    fes_parameters,
+    ivp_parameters,
 )
 
 # Integrating the solution

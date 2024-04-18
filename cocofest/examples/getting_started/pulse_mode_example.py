@@ -14,13 +14,13 @@ from cocofest import DingModelFrequencyWithFatigue, IvpFes
 ns = 10
 n_stim = 10
 final_time = 1
+
+fes_parameters = {"model": DingModelFrequencyWithFatigue(), "n_stim": n_stim, "pulse_mode": "Single"}
+ivp_parameters = {"n_shooting": ns, "final_time": final_time, "use_sx": True}
+
 ivp = IvpFes(
-    model=DingModelFrequencyWithFatigue(),
-    n_stim=n_stim,
-    n_shooting=ns,
-    final_time=final_time,
-    pulse_mode="Single",
-    use_sx=True,
+    fes_parameters,
+    ivp_parameters,
 )
 
 result_single, time_single = ivp.integrate()
@@ -35,13 +35,11 @@ stimulation_single = np.concatenate((np.array([0]), np.cumsum(np.array(ivp.final
 ns = 10
 n_stim = 20
 final_time = 1
+fes_parameters = {"model": DingModelFrequencyWithFatigue(), "n_stim": n_stim, "pulse_mode": "Doublet"}
+ivp_parameters = {"n_shooting": ns, "final_time": final_time, "use_sx": True}
 ivp = IvpFes(
-    model=DingModelFrequencyWithFatigue(),
-    n_stim=n_stim,
-    n_shooting=ns,
-    final_time=final_time,
-    pulse_mode="Doublet",
-    use_sx=True,
+    fes_parameters,
+    ivp_parameters,
 )
 
 result_doublet, time_doublet = ivp.integrate()
@@ -53,13 +51,11 @@ stimulation_doublet = np.concatenate((np.array([0]), np.cumsum(np.array(ivp.fina
 # --- Build ocp --- #
 # This example shows how to create a problem with triplet pulses.
 n_stim = 30
+fes_parameters = {"model": DingModelFrequencyWithFatigue(), "n_stim": n_stim, "pulse_mode": "Triplet"}
+ivp_parameters = {"n_shooting": 10, "final_time": 1, "use_sx": True}
 ivp = IvpFes(
-    model=DingModelFrequencyWithFatigue(),
-    n_stim=n_stim,
-    n_shooting=10,
-    final_time=1,
-    pulse_mode="Triplet",
-    use_sx=True,
+    fes_parameters,
+    ivp_parameters,
 )
 
 result_triplet, time_triplet = ivp.integrate()

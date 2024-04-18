@@ -5,7 +5,6 @@ import os
 import numpy as np
 import pytest
 
-from bioptim import Shooting, SolutionIntegrator, Solution, SolutionMerge
 from cocofest import (
     OcpFesId,
     IvpFes,
@@ -151,16 +150,9 @@ additional_key_settings = {
 def test_ocp_id_ding2003():
     # --- Creating the simulated data to identify on --- #
     # Building the Initial Value Problem
-    final_time = 1
-    ns = 10
-    n_stim = 10
     ivp = IvpFes(
-        model=DingModelFrequency(),
-        n_stim=n_stim,
-        n_shooting=ns,
-        final_time=final_time,
-        use_sx=True,
-        extend_last_phase=1,
+        fes_parameters={"model": DingModelFrequency(), "n_stim": 10, },
+        ivp_parameters={"n_shooting": 10, "final_time": 1, "use_sx": True, "extend_last_phase": 1},
     )
 
     # Integrating the solution
@@ -207,17 +199,9 @@ def test_ocp_id_ding2003():
 def test_ocp_id_ding2007():
     # --- Creating the simulated data to identify on --- #
     # Building the Initial Value Problem
-    final_time = 1
-    ns = 10
-    n_stim = 10
     ivp = IvpFes(
-        model=DingModelPulseDurationFrequency(),
-        n_stim=n_stim,
-        pulse_duration=[0.003] * 10,
-        n_shooting=ns,
-        final_time=final_time,
-        use_sx=True,
-        extend_last_phase=1,
+        fes_parameters={"model": DingModelPulseDurationFrequency(), "n_stim": 10, "pulse_duration": [0.003] * 10},
+        ivp_parameters={"n_shooting": 10, "final_time": 1, "use_sx": True, "extend_last_phase": 1},
     )
 
     # Integrating the solution
@@ -267,17 +251,9 @@ def test_ocp_id_ding2007():
 def test_ocp_id_hmed2018():
     # --- Creating the simulated data to identify on --- #
     # Building the Initial Value Problem
-    final_time = 1
-    ns = 100
-    n_stim = 10
     ivp = IvpFes(
-        model=DingModelIntensityFrequency(),
-        n_stim=n_stim,
-        pulse_intensity=[50] * 10,
-        n_shooting=ns,
-        final_time=final_time,
-        use_sx=True,
-        extend_last_phase=1,
+        fes_parameters={"model": DingModelIntensityFrequency(), "n_stim": 10, "pulse_intensity": [50] * 10},
+        ivp_parameters={"n_shooting": 10, "final_time": 1, "use_sx": True, "extend_last_phase": 1},
     )
 
     # Integrating the solution
@@ -306,7 +282,7 @@ def test_ocp_id_hmed2018():
         double_step_identification=False,
         key_parameter_to_identify=["a_rest", "km_rest", "tau1_rest", "tau2", "ar", "bs", "Is", "cr"],
         additional_key_settings={},
-        n_shooting=100,
+        n_shooting=10,
         use_sx=True,
     )
 

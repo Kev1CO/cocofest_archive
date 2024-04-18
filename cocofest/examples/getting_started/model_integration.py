@@ -7,10 +7,11 @@ from cocofest import (
 
 # --- Build ocp --- #
 # This problem was build to be integrated and has no objectives nor parameter to optimize.
-phase = 10
-ns = 20
-final_time = 1
-ivp = IvpFes(model=DingModelFrequencyWithFatigue(), n_stim=phase, n_shooting=ns, final_time=final_time, use_sx=True)
+
+fes_parameters = {"model": DingModelFrequencyWithFatigue(), "n_stim": 10}
+ivp_parameters = {"n_shooting": 20, "final_time": 1}
+
+ivp = IvpFes(fes_parameters, ivp_parameters)
 
 result, time = ivp.integrate()
 

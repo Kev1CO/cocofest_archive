@@ -1,5 +1,4 @@
 import time
-import numpy as np
 import matplotlib.pyplot as plt
 
 from cocofest import (
@@ -18,13 +17,13 @@ n_shooting = 100
 n_stim = 10
 for i in range(10):
     start_time = time.time()
-    ivp = IvpFes(
-        model=DingModelFrequencyWithFatigue(sum_stim_truncation=i if i != 0 else None),
-        n_stim=n_stim,
-        n_shooting=n_shooting,
-        final_time=final_time,
-        use_sx=True,
-    )
+    fes_parameters = {
+        "model": DingModelFrequencyWithFatigue(sum_stim_truncation=i if i != 0 else None),
+        "n_stim": n_stim,
+    }
+    ivp_parameters = {"n_shooting": n_shooting, "final_time": final_time, "use_sx": True}
+
+    ivp = IvpFes(fes_parameters, ivp_parameters)
 
     # Integrating the solution
     result, sol_time = ivp.integrate()

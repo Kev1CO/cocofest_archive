@@ -1,17 +1,12 @@
 import pickle
 import os
 from cocofest import (
-    DingModelFrequency,
-    DingModelFrequencyForceParameterIdentification,
-    DingModelPulseDurationFrequency,
-    DingModelPulseDurationFrequencyForceParameterIdentification,
     DingModelIntensityFrequency,
     DingModelPulseIntensityFrequencyForceParameterIdentification,
     IvpFes,
 )
 from cocofest.identification.identification_method import full_data_extraction
 
-from bioptim import Shooting, SolutionIntegrator, Solution
 import matplotlib.pyplot as plt
 
 # Example n°1 : Identification of the parameters of the Ding model with the frequency method for experimental data
@@ -328,13 +323,11 @@ print("alpha_a : ", alpha_a, "alpha_km : ", alpha_km, "alpha_tau1 : ", alpha_tau
 # --- Simulating data --- #
 # This problem was build to be integrated and has no objectives nor parameter to optimize.
 pulse_intensity_values = [20, 20, 30, 40, 50, 60, 70, 80, 90, 100]
+fes_parameters = {"model": DingModelIntensityFrequency(), "n_stim": 10, "pulse_intensity": pulse_intensity_values}
+ivp_parameters = {"n_shooting": 10, "final_time": 1, "use_sx": True}
 ivp = IvpFes(
-    model=DingModelIntensityFrequency(),
-    n_stim=10,
-    n_shooting=10,
-    final_time=1,
-    use_sx=True,
-    pulse_intensity=pulse_intensity_values,
+    fes_parameters,
+    ivp_parameters,
 )
 
 # Integrating the solution
@@ -414,13 +407,11 @@ identified_model.cr = cr
 identified_force_list = []
 identified_time_list = []
 
+fes_parameters = {"model": identified_model, "n_stim": 10, "pulse_intensity": pulse_intensity_values}
+ivp_parameters = {"n_shooting": 10, "final_time": 1, "use_sx": True}
 ivp_from_identification = IvpFes(
-    model=identified_model,
-    n_stim=10,
-    n_shooting=10,
-    final_time=1,
-    use_sx=True,
-    pulse_intensity=pulse_intensity_values,
+    fes_parameters,
+    ivp_parameters,
 )
 
 # Integrating the solution

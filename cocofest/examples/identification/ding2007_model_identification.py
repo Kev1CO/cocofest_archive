@@ -9,8 +9,6 @@ import os
 import matplotlib.pyplot as plt
 import numpy as np
 
-from bioptim import Solution, Shooting, SolutionIntegrator, SolutionMerge
-
 from cocofest import (
     DingModelPulseDurationFrequency,
     DingModelPulseDurationFrequencyForceParameterIdentification,
@@ -27,18 +25,19 @@ n_shooting = 10
 final_time = 1
 extra_phase_time = 1
 model = DingModelPulseDurationFrequency()
-
+fes_parameters = {"model": model, "n_stim": n_stim, "pulse_duration": pulse_duration}
+ivp_parameters = {
+    "n_shooting": n_shooting,
+    "final_time": final_time,
+    "extend_last_phase": extra_phase_time,
+    "use_sx": True,
+}
 
 # --- Creating the simulated data to identify on --- #
 # Building the Initial Value Problem
 ivp = IvpFes(
-    model=model,
-    n_stim=n_stim,
-    pulse_duration=pulse_duration,
-    n_shooting=n_shooting,
-    final_time=final_time,
-    use_sx=True,
-    extend_last_phase=extra_phase_time,
+    fes_parameters,
+    ivp_parameters,
 )
 
 # Integrating the solution
@@ -91,14 +90,16 @@ identified_model.pdt = identified_parameters["pdt"]
 identified_force_list = []
 identified_time_list = []
 
+fes_parameters = {"model": identified_model, "n_stim": n_stim, "pulse_duration": pulse_duration}
+ivp_parameters = {
+    "n_shooting": n_shooting,
+    "final_time": final_time,
+    "extend_last_phase": extra_phase_time,
+    "use_sx": True,
+}
 ivp_from_identification = IvpFes(
-    model=identified_model,
-    n_stim=n_stim,
-    pulse_duration=pulse_duration,
-    n_shooting=n_shooting,
-    final_time=final_time,
-    use_sx=True,
-    extend_last_phase=extra_phase_time,
+    fes_parameters,
+    ivp_parameters,
 )
 
 # Integrating the solution
