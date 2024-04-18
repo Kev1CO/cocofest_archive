@@ -46,8 +46,8 @@ class OcpFesMsk:
         objective_dict: dict = None,
         custom_constraint: ConstraintList = None,
         with_residual_torque: bool = False,
-        muscle_force_length_relationship: bool = False,
-        muscle_force_velocity_relationship: bool = False,
+        activate_force_length_relationship: bool = False,
+        activate_force_velocity_relationship: bool = False,
         minimize_muscle_fatigue: bool = False,
         minimize_muscle_force: bool = False,
         use_sx: bool = True,
@@ -87,25 +87,25 @@ class OcpFesMsk:
             Optional if not using the Hmed2018 models
         objective_dict : dict
             Dictionary containing parameters related to the objective of the optimization.
-        custom_constraint : ConstraintList, optional
+        custom_constraint : ConstraintList,
             Custom constraints for the OCP.
-        with_residual_torque : bool, optional
+        with_residual_torque : bool
             If residual torque is used.
-        muscle_force_length_relationship : bool, optional
+        activate_force_length_relationship : bool
             If the force length relationship is used.
-        muscle_force_velocity_relationship : bool, optional
+        activate_force_velocity_relationship : bool
             If the force velocity relationship is used.
-        minimize_muscle_fatigue : bool, optional
+        minimize_muscle_fatigue : bool
             Minimize the muscle fatigue.
-        minimize_muscle_force : bool, optional
+        minimize_muscle_force : bool
             Minimize the muscle force.
-        use_sx : bool, optional
+        use_sx : bool
             The nature of the CasADi variables. MX are used if False.
-        ode_solver : OdeSolverBase, optional
+        ode_solver : OdeSolverBase
             The ODE solver to use.
-        control_type : ControlType, optional
+        control_type : ControlType
             The type of control to use.
-        n_threads : int, optional
+        n_threads : int
             The number of threads to use while solving (multi-threading if > 1).
 
         Returns
@@ -182,8 +182,8 @@ class OcpFesMsk:
             end_node_tracking=end_node_tracking,
             q_tracking=q_tracking,
             with_residual_torque=with_residual_torque,
-            muscle_force_length_relationship=muscle_force_length_relationship,
-            muscle_force_velocity_relationship=muscle_force_velocity_relationship,
+            activate_force_length_relationship=activate_force_length_relationship,
+            activate_force_velocity_relationship=activate_force_velocity_relationship,
             minimize_muscle_fatigue=minimize_muscle_fatigue,
             minimize_muscle_force=minimize_muscle_force,
         )
@@ -252,8 +252,8 @@ class OcpFesMsk:
                 name=None,
                 biorbd_path=biorbd_model_path,
                 muscles_model=fes_muscle_models,
-                muscle_force_length_relationship=muscle_force_length_relationship,
-                muscle_force_velocity_relationship=muscle_force_velocity_relationship,
+                activate_force_length_relationship=activate_force_length_relationship,
+                activate_force_velocity_relationship=activate_force_velocity_relationship,
             )
             for i in range(n_stim)
         ]
@@ -754,8 +754,8 @@ class OcpFesMsk:
         end_node_tracking,
         q_tracking,
         with_residual_torque,
-        muscle_force_length_relationship,
-        muscle_force_velocity_relationship,
+        activate_force_length_relationship,
+        activate_force_velocity_relationship,
         minimize_muscle_fatigue,
         minimize_muscle_force,
     ):
@@ -832,16 +832,16 @@ class OcpFesMsk:
 
         list_to_check = [
             with_residual_torque,
-            muscle_force_length_relationship,
-            muscle_force_velocity_relationship,
+            activate_force_length_relationship,
+            activate_force_velocity_relationship,
             minimize_muscle_fatigue,
             minimize_muscle_force,
         ]
 
         list_to_check_name = [
             "with_residual_torque",
-            "muscle_force_length_relationship",
-            "muscle_force_velocity_relationship",
+            "activate_force_length_relationship",
+            "activate_force_velocity_relationship",
             "minimize_muscle_fatigue",
             "minimize_muscle_force",
         ]

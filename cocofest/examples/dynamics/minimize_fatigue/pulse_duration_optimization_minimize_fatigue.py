@@ -50,8 +50,8 @@ ocp = OcpFesMsk.prepare_ocp(
     },
     with_residual_torque=False,
     objective_dict={"custom_objective": objective_functions},
-    muscle_force_length_relationship=True,
-    muscle_force_velocity_relationship=False,
+    activate_force_length_relationship=True,
+    activate_force_velocity_relationship=False,
     minimize_muscle_fatigue=True,
 )
 

@@ -50,8 +50,8 @@ ocp = OcpFesMsk.prepare_ocp(
     pulse_apparition_dict={"time_min": 0.01, "time_max": 1, "time_bimapping": False},
     with_residual_torque=True,
     objective_dict={"custom_objective": objective_functions},
-    muscle_force_length_relationship=True,
-    muscle_force_velocity_relationship=False,
+    activate_force_length_relationship=True,
+    activate_force_velocity_relationship=False,
     minimize_muscle_fatigue=True,
 )
 

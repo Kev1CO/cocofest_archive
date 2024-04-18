@@ -35,8 +35,8 @@ ocp = OcpFesMsk.prepare_ocp(
     pulse_intensity_dict={"intensity_min": minimum_pulse_intensity, "intensity_max": 130, "intensity_bimapping": False},
     objective_dict={"custom_objective": objective_functions},
     with_residual_torque=True,
-    muscle_force_length_relationship=True,
-    muscle_force_velocity_relationship=True,
+    activate_force_length_relationship=True,
+    activate_force_velocity_relationship=True,
 )
 
 sol = ocp.solve(Solver.IPOPT(_max_iter=1000))

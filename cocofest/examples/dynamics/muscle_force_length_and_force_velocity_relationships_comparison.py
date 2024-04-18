@@ -17,7 +17,7 @@ minimum_pulse_duration = DingModelPulseDurationFrequencyWithFatigue().pd0
 
 sol_list = []
 sol_time = []
-muscle_force_length_relationship = [False, True]
+activate_force_length_relationship = [False, True]
 
 for i in range(2):
     ocp = OcpFesMsk.prepare_ocp(
@@ -30,8 +30,8 @@ for i in range(2):
         final_time=1,
         pulse_duration_dict={"pulse_duration": 0.00025},
         with_residual_torque=False,
-        muscle_force_length_relationship=muscle_force_length_relationship[i],
-        muscle_force_velocity_relationship=muscle_force_length_relationship[i],
+        activate_force_length_relationship=activate_force_length_relationship[i],
+        activate_force_velocity_relationship=activate_force_length_relationship[i],
         use_sx=False,
     )
     sol = ocp.solve(Solver.IPOPT(_max_iter=1000))

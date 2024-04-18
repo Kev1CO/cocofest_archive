@@ -21,21 +21,36 @@ class FesMskModel(BiorbdModel):
         self,
         name: str = None,
         biorbd_path: str = None,
-        muscles_model: DingModelFrequency() = None,
-        muscle_force_length_relationship: bool = False,
-        muscle_force_velocity_relationship: bool = False,
+        muscles_model: list[FesModel] = None,
+        activate_force_length_relationship: bool = False,
+        activate_force_velocity_relationship: bool = False,
     ):
+        """
+        The custom model that will be used in the optimal control program for the FES-MSK models
+
+        Parameters
+        ----------
+        name: str
+            The model name
+        biorbd_path: str
+            The path to the biorbd model
+        muscles_model: DingModelFrequency
+            The muscle model that will be used in the model
+        activate_force_length_relationship: bool
+            If the force-length relationship should be activated
+        activate_force_velocity_relationship: bool
+            If the force-velocity relationship should be activated
+        """
+
         super().__init__(biorbd_path)
         self._name = name
         self.bio_model = BiorbdModel(biorbd_path)
-        self.bounds_from_ranges_q = self.bio_model.bounds_from_ranges("q")
-        self.bounds_from_ranges_qdot = self.bio_model.bounds_from_ranges("qdot")
 
         self.muscles_dynamics_model = muscles_model
         self.bio_stim_model = [self.bio_model] + self.muscles_dynamics_model
 
-        self.muscle_force_length_relationship = muscle_force_length_relationship
-        self.muscle_force_velocity_relationship = muscle_force_velocity_relationship
+        self.activate_force_length_relationship = activate_force_length_relationship
+        self.activate_force_velocity_relationship = activate_force_velocity_relationship
 
     # ---- Absolutely needed methods ---- #
     def serialize(self, index: int = 0) -> tuple[Callable, dict]:
@@ -149,7 +164,7 @@ class FesMskModel(BiorbdModel):
                 muscle_force_length_coefficient(
                     model=nlp.model.bio_model.model, muscle=nlp.model.bio_model.model.muscle(muscle_idx), q=q
                 )
-                if nlp.model.muscle_force_velocity_relationship
+                if nlp.model.activate_force_velocity_relationship
                 else 1
             )
 
@@ -157,7 +172,7 @@ class FesMskModel(BiorbdModel):
                 muscle_force_velocity_coefficient(
                     model=nlp.model.bio_model.model, muscle=nlp.model.bio_model.model.muscle(muscle_idx), q=q, qdot=qdot
                 )
-                if nlp.model.muscle_force_velocity_relationship
+                if nlp.model.activate_force_velocity_relationship
                 else 1
             )
 

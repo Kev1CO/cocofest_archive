@@ -29,27 +29,6 @@ class IvpFes:
     The main class to define an ivp. This class prepares the ivp and gives all
     the needed parameters to integrate a functional electrical stimulation problem.
 
-    Attributes
-    ----------
-    model: FesModel
-        The model type used for the ivp
-    n_stim: int
-        Number of stimulation that will occur during the ivp, it is as well refer as phases
-    n_shooting: int
-        Number of shooting point for each individual phases
-    final_time: float
-        Refers to the final time of the ivp
-    pulse_duration: int | float
-        Setting a chosen pulse duration among phases
-    pulse_intensity: int | float
-        Setting a chosen pulse intensity among phases
-    ode_solver: OdeSolver
-        The ode solver to use
-    use_sx: bool
-        The nature of the casadi variables. MX are used if False.
-    n_threads: int
-        The number of thread to use while solving (multi-threading if > 1)
-
     Methods
     -------
     from_frequency_and_final_time(self, frequency: int | float, final_time: float, round_down: bool)
@@ -70,10 +49,10 @@ class IvpFes:
         ----------
         fes_parameters: dict
             The parameters for the fes configuration including :
-            model, n_stim, pulse_duration, pulse_intensity, pulse_mode
+            model (FesModel type), n_stim (int type), pulse_duration (float type), pulse_intensity (int | float type), pulse_mode (str type)
         ivp_parameters: dict
             The parameters for the ivp problem including :
-            n_shooting, final_time, extend_last_phase, ode_solver, use_sx, n_threads
+            n_shooting (int type), final_time (int | float type), extend_last_phase (int | float type), ode_solver (OdeSolver type), use_sx (bool type), n_threads (int type)
         """
 
         self._fill_fes_dict(fes_parameters)

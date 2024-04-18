@@ -43,8 +43,8 @@ def test_pulse_duration_multi_muscle_fes_dynamics():
         pulse_duration_dict={"pulse_duration_min": minimum_pulse_duration, "pulse_duration_max": 0.0006, "pulse_duration_bimapping": False},
         objective_dict={"custom_objective": objective_functions},
         with_residual_torque=True,
-        muscle_force_length_relationship=True,
-        muscle_force_velocity_relationship=True,
+        activate_force_length_relationship=True,
+        activate_force_velocity_relationship=True,
         use_sx=False,
     )
 
@@ -119,8 +119,8 @@ def test_pulse_intensity_multi_muscle_fes_dynamics():
         pulse_intensity_dict={"pulse_intensity_min": minimum_pulse_intensity, "pulse_intensity_max": 130, "pulse_intensity_bimapping": False},
         objective_dict={"force_tracking": track_forces},
         with_residual_torque=False,
-        muscle_force_length_relationship=True,
-        muscle_force_velocity_relationship=True,
+        activate_force_length_relationship=True,
+        activate_force_velocity_relationship=True,
         use_sx=False,
     )
 
