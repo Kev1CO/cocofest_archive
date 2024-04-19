@@ -256,7 +256,17 @@ minimum_pulse_intensity = (
         (DingModelFrequencyWithFatigue(), None, None, None, None, None, None, None, None),
         (DingModelPulseDurationFrequency(), 0.0002, None, None, None, None, None, None, None),
         (DingModelPulseDurationFrequencyWithFatigue(), 0.0002, None, None, None, None, None, None, None),
-        (DingModelPulseDurationFrequency(), None, minimum_pulse_duration, 0.0006, False, None, None, None, None,),
+        (
+            DingModelPulseDurationFrequency(),
+            None,
+            minimum_pulse_duration,
+            0.0006,
+            False,
+            None,
+            None,
+            None,
+            None,
+        ),
         (
             DingModelPulseDurationFrequencyWithFatigue(),
             None,
@@ -271,13 +281,38 @@ minimum_pulse_intensity = (
         # (DingModelPulseDurationFrequency(), None, minimum_pulse_duration, 0.0006, True, None, None, None, None), parameter mapping not yet implemented
         (DingModelIntensityFrequency(), None, None, None, None, 20, None, None, None),
         (DingModelIntensityFrequencyWithFatigue(), None, None, None, None, 20, None, None, None),
-        (DingModelIntensityFrequency(), None, None, None, None, None, minimum_pulse_intensity, 130, False,),
-        (DingModelIntensityFrequencyWithFatigue(), None, None, None, None, None, minimum_pulse_intensity, 130, False,),
+        (
+            DingModelIntensityFrequency(),
+            None,
+            None,
+            None,
+            None,
+            None,
+            minimum_pulse_intensity,
+            130,
+            False,
+        ),
+        (
+            DingModelIntensityFrequencyWithFatigue(),
+            None,
+            None,
+            None,
+            None,
+            None,
+            minimum_pulse_intensity,
+            130,
+            False,
+        ),
         # (DingModelIntensityFrequency(), None, None, None, None, None, minimum_pulse_intensity, 130, True), parameter mapping not yet implemented
     ],
 )
 @pytest.mark.parametrize(
-    "time_min, time_max, time_bimapping", [(None, None, False), (0.01, 0.1, False), (0.01, 0.1, True),],
+    "time_min, time_max, time_bimapping",
+    [
+        (None, None, False),
+        (0.01, 0.1, False),
+        (0.01, 0.1, True),
+    ],
 )
 @pytest.mark.parametrize("use_sx", [True])  # Later add False
 @pytest.mark.parametrize(

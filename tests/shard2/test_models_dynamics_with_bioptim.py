@@ -1040,7 +1040,11 @@ def test_time_dependent_ocp_output(use_sx, bimapped):
 
 def test_single_phase_time_dependent_ocp_output():
     ocp = OcpFes().prepare_ocp(
-        model=DingModelFrequencyWithFatigue(), n_stim=1, n_shooting=10, final_time=0.1, use_sx=True,
+        model=DingModelFrequencyWithFatigue(),
+        n_stim=1,
+        n_shooting=10,
+        final_time=0.1,
+        use_sx=True,
     )
 
     sol = ocp.solve(Solver.IPOPT(show_online_optim=False, _max_iter=1000))

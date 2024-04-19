@@ -28,7 +28,10 @@ class DingModelFrequencyWithFatigue(DingModelFrequency):
     """
 
     def __init__(
-        self, model_name: str = "ding2003_with_fatigue", muscle_name: str = None, sum_stim_truncation: int = None,
+        self,
+        model_name: str = "ding2003_with_fatigue",
+        muscle_name: str = None,
+        sum_stim_truncation: int = None,
     ):
         super().__init__(model_name=model_name, muscle_name=muscle_name, sum_stim_truncation=sum_stim_truncation)
         self._with_fatigue = True

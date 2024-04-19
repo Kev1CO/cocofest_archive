@@ -59,7 +59,10 @@ for mode in modes:
                 "pulse_mode": mode,
             }
             ivp_parameters = {"n_shooting": temp_node_shooting, "final_time": 1, "use_sx": True}
-            ivp = IvpFes(fes_parameters=fes_parameters, ivp_parameters=ivp_parameters,)
+            ivp = IvpFes(
+                fes_parameters=fes_parameters,
+                ivp_parameters=ivp_parameters,
+            )
             ocp_end_time = time.time()
 
             for k in range(repetition):

@@ -150,7 +150,13 @@ im2 = axs.scatter(
     color="black",
 )
 
-cbar1 = fig.colorbar(im1, ax=axs, extend="min", ticks=[1e-12, 1e-10, 1e-8, 1e-6, 1e-4, 1e-2, 1, max_error], cmap=cmap,)
+cbar1 = fig.colorbar(
+    im1,
+    ax=axs,
+    extend="min",
+    ticks=[1e-12, 1e-10, 1e-8, 1e-6, 1e-4, 1e-2, 1, max_error],
+    cmap=cmap,
+)
 cbar1.set_label(label="Force absolute error (N)", size=25, fontname="Times New Roman")
 
 cbar1.ax.set_yticklabels(

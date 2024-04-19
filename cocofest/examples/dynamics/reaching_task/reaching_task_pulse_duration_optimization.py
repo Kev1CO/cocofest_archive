@@ -77,7 +77,6 @@ constraint.add(
 )
 
 for i in range(len(pickle_file_list)):
-
     ocp = OcpFesMsk.prepare_ocp(
         biorbd_model_path="../../msk_models/arm26.bioMod",
         bound_type="start_end",

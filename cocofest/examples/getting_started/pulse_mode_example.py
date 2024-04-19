@@ -18,7 +18,10 @@ final_time = 1
 fes_parameters = {"model": DingModelFrequencyWithFatigue(), "n_stim": n_stim, "pulse_mode": "Single"}
 ivp_parameters = {"n_shooting": ns, "final_time": final_time, "use_sx": True}
 
-ivp = IvpFes(fes_parameters, ivp_parameters,)
+ivp = IvpFes(
+    fes_parameters,
+    ivp_parameters,
+)
 
 result_single, time_single = ivp.integrate()
 force_single = result_single["F"][0]
@@ -34,7 +37,10 @@ n_stim = 20
 final_time = 1
 fes_parameters = {"model": DingModelFrequencyWithFatigue(), "n_stim": n_stim, "pulse_mode": "Doublet"}
 ivp_parameters = {"n_shooting": ns, "final_time": final_time, "use_sx": True}
-ivp = IvpFes(fes_parameters, ivp_parameters,)
+ivp = IvpFes(
+    fes_parameters,
+    ivp_parameters,
+)
 
 result_doublet, time_doublet = ivp.integrate()
 force_doublet = result_doublet["F"][0]
@@ -47,7 +53,10 @@ stimulation_doublet = np.concatenate((np.array([0]), np.cumsum(np.array(ivp.fina
 n_stim = 30
 fes_parameters = {"model": DingModelFrequencyWithFatigue(), "n_stim": n_stim, "pulse_mode": "Triplet"}
 ivp_parameters = {"n_shooting": 10, "final_time": 1, "use_sx": True}
-ivp = IvpFes(fes_parameters, ivp_parameters,)
+ivp = IvpFes(
+    fes_parameters,
+    ivp_parameters,
+)
 
 result_triplet, time_triplet = ivp.integrate()
 force_triplet = result_triplet["F"][0]

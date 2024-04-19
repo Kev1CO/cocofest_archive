@@ -164,7 +164,11 @@ class OcpFes:
         n_shooting = [n_shooting] * n_stim
 
         final_time_phase = OcpFes._build_phase_time(
-            final_time=final_time, n_stim=n_stim, pulse_mode=pulse_mode, time_min=time_min, time_max=time_max,
+            final_time=final_time,
+            n_stim=n_stim,
+            pulse_mode=pulse_mode,
+            time_min=time_min,
+            time_max=time_max,
         )
         parameters, parameters_bounds, parameters_init, parameter_objectives, constraints = OcpFes._build_parameters(
             model=model,

@@ -208,7 +208,11 @@ class OcpFesMsk:
 
         n_shooting = [n_shooting] * n_stim
         final_time_phase = OcpFes._build_phase_time(
-            final_time=final_time, n_stim=n_stim, pulse_mode=pulse_mode, time_min=time_min, time_max=time_max,
+            final_time=final_time,
+            n_stim=n_stim,
+            pulse_mode=pulse_mode,
+            time_min=time_min,
+            time_max=time_max,
         )
         (
             parameters,
@@ -255,7 +259,13 @@ class OcpFesMsk:
         ]
 
         dynamics = OcpFesMsk._declare_dynamics(bio_models, n_stim)
-        x_bounds, x_init = OcpFesMsk._set_bounds(bio_models, fes_muscle_models, bound_type, bound_data, n_stim,)
+        x_bounds, x_init = OcpFesMsk._set_bounds(
+            bio_models,
+            fes_muscle_models,
+            bound_type,
+            bound_data,
+            n_stim,
+        )
         u_bounds, u_init = OcpFesMsk._set_controls(bio_models, n_stim, with_residual_torque)
         muscle_force_key = ["F_" + fes_muscle_models[i].muscle_name for i in range(len(fes_muscle_models))]
         objective_functions = OcpFesMsk._set_objective(

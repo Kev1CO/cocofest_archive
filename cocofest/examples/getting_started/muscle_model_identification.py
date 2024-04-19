@@ -325,7 +325,10 @@ print("alpha_a : ", alpha_a, "alpha_km : ", alpha_km, "alpha_tau1 : ", alpha_tau
 pulse_intensity_values = [20, 20, 30, 40, 50, 60, 70, 80, 90, 100]
 fes_parameters = {"model": DingModelIntensityFrequency(), "n_stim": 10, "pulse_intensity": pulse_intensity_values}
 ivp_parameters = {"n_shooting": 10, "final_time": 1, "use_sx": True}
-ivp = IvpFes(fes_parameters, ivp_parameters,)
+ivp = IvpFes(
+    fes_parameters,
+    ivp_parameters,
+)
 
 # Integrating the solution
 result, time = ivp.integrate()
@@ -406,7 +409,10 @@ identified_time_list = []
 
 fes_parameters = {"model": identified_model, "n_stim": 10, "pulse_intensity": pulse_intensity_values}
 ivp_parameters = {"n_shooting": 10, "final_time": 1, "use_sx": True}
-ivp_from_identification = IvpFes(fes_parameters, ivp_parameters,)
+ivp_from_identification = IvpFes(
+    fes_parameters,
+    ivp_parameters,
+)
 
 # Integrating the solution
 identified_result, identified_time = ivp_from_identification.integrate()

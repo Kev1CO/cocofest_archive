@@ -142,7 +142,6 @@ class FesMskModel(BiorbdModel):
         q: MX | SX = None,
         qdot: MX | SX = None,
     ):
-
         muscle_joint_torques = 0
         dxdt_muscle_list = vertcat()
 
