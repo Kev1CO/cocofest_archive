@@ -27,8 +27,8 @@ ocp = OcpFesMsk.prepare_ocp(
     n_stim=n_stim,
     n_shooting=10,
     final_time=1,
-    pulse_apparition_dict={"time_min": 0.01, "time_max": 0.1, "time_bimapping": True},
-    objective_dict={"custom_objective": objective_functions},
+    pulse_event={"min": 0.01, "max": 0.1, "bimapping": True},
+    objective={"custom": objective_functions},
     with_residual_torque=True,
 )
 

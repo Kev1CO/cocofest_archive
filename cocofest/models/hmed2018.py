@@ -339,5 +339,6 @@ class DingModelIntensityFrequency(DingModelFrequency):
         Returns
         -------
         The minimum pulse intensity threshold of the model
+        For lambda_i = ar * (tanh(bs * (intensity_stim - Is)) + cr) > 0
         """
         return (np.arctanh(-self.cr) / self.bs) + self.Is

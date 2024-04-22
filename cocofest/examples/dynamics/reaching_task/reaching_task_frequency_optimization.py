@@ -89,7 +89,7 @@ for i in range(len(pickle_file_list)):
         n_stim=n_stim,
         n_shooting=n_shooting,
         final_time=1,
-        pulse_apparition_dict={"time_min": 0.01, "time_max": 0.1, "time_bimapping": False},
+        pulse_event={"min": 0.01, "max": 0.1, "bimapping": False},
         with_residual_torque=False,
         custom_constraint=constraint,
         activate_force_length_relationship=True,

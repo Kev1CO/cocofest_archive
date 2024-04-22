@@ -14,8 +14,8 @@ ocp = OcpFes().prepare_ocp(
     n_stim=10,
     n_shooting=20,
     final_time=1,
-    pulse_apparition_dict={"time_min": 0.01, "time_max": 0.1, "time_bimapping": True},
-    objective_dict={"end_node_tracking": 270},
+    pulse_event={"min": 0.01, "max": 0.1, "bimapping": True},
+    objective={"end_node_tracking": 270},
     use_sx=True,
 )
 

@@ -6,7 +6,6 @@ from bioptim import (
     ConstraintList,
     DynamicsList,
     InitialGuessList,
-    Objective,
     ObjectiveList,
     OdeSolver,
     OptimalControlProgram,
@@ -40,10 +39,10 @@ class OcpFesMsk:
         n_stim: int = None,
         n_shooting: int = None,
         final_time: int | float = None,
-        pulse_apparition_dict: dict = None,
-        pulse_duration_dict: dict = None,
-        pulse_intensity_dict: dict = None,
-        objective_dict: dict = None,
+        pulse_event: dict = None,
+        pulse_duration: dict = None,
+        pulse_intensity: dict = None,
+        objective: dict = None,
         custom_constraint: ConstraintList = None,
         with_residual_torque: bool = False,
         activate_force_length_relationship: bool = False,
@@ -74,18 +73,18 @@ class OcpFesMsk:
             Number of shooting points for each individual phase.
         final_time : int | float
             The final time of the OCP.
-        pulse_apparition_dict : dict
+        pulse_event : dict
             Dictionary containing parameters related to the appearance of the pulse.
-            It should contain the following keys: "time_min", "time_max", "time_bimapping", "frequency", "round_down", "pulse_mode".
-        pulse_duration_dict : dict
+            It should contain the following keys: "min", "max", "bimapping", "frequency", "round_down", "pulse_mode".
+        pulse_duration : dict
             Dictionary containing parameters related to the duration of the pulse.
-            It should contain the following keys: "pulse_duration", "pulse_duration_min", "pulse_duration_max", "pulse_duration_bimapping", "pulse_duration_similar_for_all_muscles".
+            It should contain the following keys: "fixed", "min", "max", "bimapping", "similar_for_all_muscles".
             Optional if not using the Ding2007 models
-        pulse_intensity_dict : dict
+        pulse_intensity : dict
             Dictionary containing parameters related to the intensity of the pulse.
-            It should contain the following keys: "pulse_intensity", "pulse_intensity_min", "pulse_intensity_max", "pulse_intensity_bimapping", "pulse_intensity_similar_for_all_muscles".
+            It should contain the following keys: "fixed", "min", "max", "bimapping", "similar_for_all_muscles".
             Optional if not using the Hmed2018 models
-        objective_dict : dict
+        objective : dict
             Dictionary containing parameters related to the objective of the optimization.
         custom_constraint : ConstraintList,
             Custom constraints for the OCP.
@@ -114,40 +113,36 @@ class OcpFesMsk:
             The prepared Optimal Control Program.
         """
 
-        (pulse_apparition_dict, pulse_duration_dict, pulse_intensity_dict, objective_dict) = OcpFes._fill_dict(
-            pulse_apparition_dict, pulse_duration_dict, pulse_intensity_dict, objective_dict
+        (pulse_event, pulse_duration, pulse_intensity, objective) = OcpFes._fill_dict(
+            pulse_event, pulse_duration, pulse_intensity, objective
         )
 
-        time_min = pulse_apparition_dict["time_min"]
-        time_max = pulse_apparition_dict["time_max"]
-        time_bimapping = pulse_apparition_dict["time_bimapping"]
-        frequency = pulse_apparition_dict["frequency"]
-        round_down = pulse_apparition_dict["round_down"]
-        pulse_mode = pulse_apparition_dict["pulse_mode"]
+        time_min = pulse_event["min"]
+        time_max = pulse_event["max"]
+        time_bimapping = pulse_event["bimapping"]
+        frequency = pulse_event["frequency"]
+        round_down = pulse_event["round_down"]
+        pulse_mode = pulse_event["pulse_mode"]
 
-        pulse_duration = pulse_duration_dict["pulse_duration"]
-        pulse_duration_min = pulse_duration_dict["pulse_duration_min"]
-        pulse_duration_max = pulse_duration_dict["pulse_duration_max"]
-        pulse_duration_bimapping = pulse_duration_dict["pulse_duration_bimapping"]
-        key_in_dict = "pulse_duration_similar_for_all_muscles" in pulse_duration_dict
-        pulse_duration_similar_for_all_muscles = (
-            pulse_duration_dict["pulse_duration_similar_for_all_muscles"] if key_in_dict else False
-        )
+        fixed_pulse_duration = pulse_duration["fixed"]
+        pulse_duration_min = pulse_duration["min"]
+        pulse_duration_max = pulse_duration["max"]
+        pulse_duration_bimapping = pulse_duration["bimapping"]
+        key_in_dict = "similar_for_all_muscles" in pulse_duration
+        pulse_duration_similar_for_all_muscles = pulse_duration["similar_for_all_muscles"] if key_in_dict else False
 
-        pulse_intensity = pulse_intensity_dict["pulse_intensity"]
-        pulse_intensity_min = pulse_intensity_dict["pulse_intensity_min"]
-        pulse_intensity_max = pulse_intensity_dict["pulse_intensity_max"]
-        pulse_intensity_bimapping = pulse_intensity_dict["pulse_intensity_bimapping"]
-        key_in_dict = "pulse_intensity_similar_for_all_muscles" in pulse_intensity_dict
-        pulse_intensity_similar_for_all_muscles = (
-            pulse_intensity_dict["pulse_intensity_similar_for_all_muscles"] if key_in_dict else False
-        )
+        fixed_pulse_intensity = pulse_intensity["fixed"]
+        pulse_intensity_min = pulse_intensity["min"]
+        pulse_intensity_max = pulse_intensity["max"]
+        pulse_intensity_bimapping = pulse_intensity["bimapping"]
+        key_in_dict = "similar_for_all_muscles" in pulse_intensity
+        pulse_intensity_similar_for_all_muscles = pulse_intensity["similar_for_all_muscles"] if key_in_dict else False
 
-        force_tracking = objective_dict["force_tracking"]
-        end_node_tracking = objective_dict["end_node_tracking"]
-        custom_objective = objective_dict["custom_objective"]
-        key_in_dict = "q_tracking" in objective_dict
-        q_tracking = objective_dict["q_tracking"] if key_in_dict else None
+        force_tracking = objective["force_tracking"]
+        end_node_tracking = objective["end_node_tracking"]
+        custom_objective = objective["custom"]
+        key_in_dict = "q_tracking" in objective
+        q_tracking = objective["q_tracking"] if key_in_dict else None
 
         OcpFes._sanity_check(
             model=fes_muscle_models[0],
@@ -159,11 +154,11 @@ class OcpFesMsk:
             time_min=time_min,
             time_max=time_max,
             time_bimapping=time_bimapping,
-            pulse_duration=pulse_duration,
+            fixed_pulse_duration=fixed_pulse_duration,
             pulse_duration_min=pulse_duration_min,
             pulse_duration_max=pulse_duration_max,
             pulse_duration_bimapping=pulse_duration_bimapping,
-            pulse_intensity=pulse_intensity,
+            fixed_pulse_intensity=fixed_pulse_intensity,
             pulse_intensity_min=pulse_intensity_min,
             pulse_intensity_max=pulse_intensity_max,
             pulse_intensity_bimapping=pulse_intensity_bimapping,
@@ -226,12 +221,12 @@ class OcpFesMsk:
             time_min=time_min,
             time_max=time_max,
             time_bimapping=time_bimapping,
-            pulse_duration=pulse_duration,
+            fixed_pulse_duration=fixed_pulse_duration,
             pulse_duration_min=pulse_duration_min,
             pulse_duration_max=pulse_duration_max,
             pulse_duration_bimapping=pulse_duration_bimapping,
             pulse_duration_similar_for_all_muscles=pulse_duration_similar_for_all_muscles,
-            pulse_intensity=pulse_intensity,
+            fixed_pulse_intensity=fixed_pulse_intensity,
             pulse_intensity_min=pulse_intensity_min,
             pulse_intensity_max=pulse_intensity_max,
             pulse_intensity_bimapping=pulse_intensity_bimapping,
@@ -324,12 +319,12 @@ class OcpFesMsk:
         time_min,
         time_max,
         time_bimapping,
-        pulse_duration,
+        fixed_pulse_duration,
         pulse_duration_min,
         pulse_duration_max,
         pulse_duration_bimapping,
         pulse_duration_similar_for_all_muscles,
-        pulse_intensity,
+        fixed_pulse_intensity,
         pulse_intensity_min,
         pulse_intensity_max,
         pulse_intensity_bimapping,
@@ -378,7 +373,7 @@ class OcpFesMsk:
                     if pulse_duration_similar_for_all_muscles
                     else "pulse_duration" + "_" + model[i].muscle_name
                 )
-                if pulse_duration:  # TODO : ADD SEVERAL INDIVIDUAL FIXED PULSE DURATION FOR EACH MUSCLE
+                if fixed_pulse_duration:  # TODO : ADD SEVERAL INDIVIDUAL FIXED PULSE DURATION FOR EACH MUSCLE
                     if (
                         pulse_duration_similar_for_all_muscles and i == 0
                     ) or not pulse_duration_similar_for_all_muscles:
@@ -388,22 +383,22 @@ class OcpFesMsk:
                             size=n_stim,
                             scaling=VariableScaling(parameter_name, [1] * n_stim),
                         )
-                        if isinstance(pulse_duration, list):
+                        if isinstance(fixed_pulse_duration, list):
                             parameters_bounds.add(
                                 parameter_name,
-                                min_bound=np.array(pulse_duration),
-                                max_bound=np.array(pulse_duration),
+                                min_bound=np.array(fixed_pulse_duration),
+                                max_bound=np.array(fixed_pulse_duration),
                                 interpolation=InterpolationType.CONSTANT,
                             )
-                            parameters_init.add(key=parameter_name, initial_guess=np.array(pulse_duration))
+                            parameters_init.add(key=parameter_name, initial_guess=np.array(fixed_pulse_duration))
                         else:
                             parameters_bounds.add(
                                 parameter_name,
-                                min_bound=np.array([pulse_duration] * n_stim),
-                                max_bound=np.array([pulse_duration] * n_stim),
+                                min_bound=np.array([fixed_pulse_duration] * n_stim),
+                                max_bound=np.array([fixed_pulse_duration] * n_stim),
                                 interpolation=InterpolationType.CONSTANT,
                             )
-                            parameters_init[parameter_name] = np.array([pulse_duration] * n_stim)
+                            parameters_init[parameter_name] = np.array([fixed_pulse_duration] * n_stim)
 
                 elif (
                     pulse_duration_min and pulse_duration_max
@@ -437,7 +432,7 @@ class OcpFesMsk:
                     if pulse_intensity_similar_for_all_muscles
                     else "pulse_intensity" + "_" + model[i].muscle_name
                 )
-                if pulse_intensity:  # TODO : ADD SEVERAL INDIVIDUAL FIXED PULSE INTENSITY FOR EACH MUSCLE
+                if fixed_pulse_intensity:  # TODO : ADD SEVERAL INDIVIDUAL FIXED PULSE INTENSITY FOR EACH MUSCLE
                     if (
                         pulse_intensity_similar_for_all_muscles and i == 0
                     ) or not pulse_intensity_similar_for_all_muscles:
@@ -447,22 +442,22 @@ class OcpFesMsk:
                             size=n_stim,
                             scaling=VariableScaling(parameter_name, [1] * n_stim),
                         )
-                        if isinstance(pulse_intensity, list):
+                        if isinstance(fixed_pulse_intensity, list):
                             parameters_bounds.add(
                                 parameter_name,
-                                min_bound=np.array(pulse_intensity),
-                                max_bound=np.array(pulse_intensity),
+                                min_bound=np.array(fixed_pulse_intensity),
+                                max_bound=np.array(fixed_pulse_intensity),
                                 interpolation=InterpolationType.CONSTANT,
                             )
-                            parameters_init.add(key=parameter_name, initial_guess=np.array(pulse_intensity))
+                            parameters_init.add(key=parameter_name, initial_guess=np.array(fixed_pulse_intensity))
                         else:
                             parameters_bounds.add(
                                 parameter_name,
-                                min_bound=np.array([pulse_intensity] * n_stim),
-                                max_bound=np.array([pulse_intensity] * n_stim),
+                                min_bound=np.array([fixed_pulse_intensity] * n_stim),
+                                max_bound=np.array([fixed_pulse_intensity] * n_stim),
                                 interpolation=InterpolationType.CONSTANT,
                             )
-                            parameters_init[parameter_name] = np.array([pulse_intensity] * n_stim)
+                            parameters_init[parameter_name] = np.array([fixed_pulse_intensity] * n_stim)
 
                 elif (
                     pulse_intensity_min and pulse_intensity_max

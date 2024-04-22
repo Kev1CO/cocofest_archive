@@ -261,13 +261,13 @@ class DingModelPulseDurationFrequencyForceParameterIdentification(DingModelFrequ
 
         return initial_guess
 
-    def force_model_identification(self):
+    def force_model_identification(self) -> dict[str, np.ndarray]:
         """
         Performs the force model identification.
 
         Returns
         -------
-        dict
+        dict[str, np.ndarray]
             A dictionary of identified parameters.
         """
 

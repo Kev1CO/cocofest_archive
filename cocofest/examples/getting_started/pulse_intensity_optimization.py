@@ -15,12 +15,12 @@ ocp = OcpFes().prepare_ocp(
     n_stim=10,
     n_shooting=20,
     final_time=1,
-    pulse_intensity_dict={
-        "pulse_intensity_min": minimum_pulse_intensity,
-        "pulse_intensity_max": 130,
-        "pulse_intensity_bimapping": False,
+    pulse_intensity={
+        "min": minimum_pulse_intensity,
+        "max": 130,
+        "bimapping": False,
     },
-    objective_dict={"end_node_tracking": 130},
+    objective={"end_node_tracking": 130},
     use_sx=True,
 )
 

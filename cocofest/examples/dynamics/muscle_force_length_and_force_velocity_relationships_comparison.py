@@ -28,7 +28,7 @@ for i in range(2):
         n_stim=10,
         n_shooting=10,
         final_time=1,
-        pulse_duration_dict={"pulse_duration": 0.00025},
+        pulse_duration={"fixed": 0.00025},
         with_residual_torque=False,
         activate_force_length_relationship=activate_force_length_relationship[i],
         activate_force_velocity_relationship=activate_force_length_relationship[i],

@@ -16,13 +16,13 @@ ocp = OcpFes().prepare_ocp(
     n_stim=10,
     n_shooting=20,
     final_time=1,
-    pulse_apparition_dict={"time_min": 0.01, "time_max": 0.1, "time_bimapping": True},
-    pulse_duration_dict={
-        "pulse_duration_min": minimum_pulse_duration,
-        "pulse_duration_max": 0.0006,
-        "pulse_duration_bimapping": False,
+    pulse_event={"min": 0.01, "max": 0.1, "bimapping": True},
+    pulse_duration={
+        "min": minimum_pulse_duration,
+        "max": 0.0006,
+        "bimapping": False,
     },
-    objective_dict={"end_node_tracking": 200},
+    objective={"end_node_tracking": 200},
     use_sx=True,
 )
 

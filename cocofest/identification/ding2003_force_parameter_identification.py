@@ -37,7 +37,7 @@ class DingModelFrequencyForceParameterIdentification(ParameterIdentification):
         **kwargs,
     ):
         """
-        Attributes
+        Parameters
         ----------
         model: DingModelFrequency,
             The model for identification

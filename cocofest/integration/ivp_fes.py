@@ -49,10 +49,10 @@ class IvpFes:
         ----------
         fes_parameters: dict
             The parameters for the fes configuration including :
-            model (FesModel type), n_stim (int type), pulse_duration (float type), pulse_intensity (int | float type), pulse_mode (str type)
+            model (FesModel type), n_stim (int type), pulse_duration (float type), pulse_intensity (int | float type), pulse_mode (str type), frequency (int | float type), round_down (bool type)
         ivp_parameters: dict
             The parameters for the ivp problem including :
-            n_shooting (int type), final_time (int | float type), extend_last_phase (int | float type), ode_solver (OdeSolver type), use_sx (bool type), n_threads (int type)
+            n_shooting (int type), final_time (int | float type), extend_last_phase_time (int | float type), ode_solver (OdeSolver type), use_sx (bool type), n_threads (int type)
         """
 
         self._fill_fes_dict(fes_parameters)
@@ -76,7 +76,7 @@ class IvpFes:
 
         self.dt = []
         self.pulse_mode = self.fes_parameters["pulse_mode"]
-        self.extend_last_phase = self.ivp_parameters["extend_last_phase"]
+        self.extend_last_phase_time = self.ivp_parameters["extend_last_phase_time"]
         self._pulse_mode_settings()
 
         parameters = ParameterList(use_sx=self.ivp_parameters["use_sx"])
@@ -169,7 +169,7 @@ class IvpFes:
             "n_stim": 1,
             "pulse_duration": 0.0003,
             "pulse_intensity": 50,
-            "pulse_mode": "Single",
+            "pulse_mode": "single",
         }
 
         if fes_parameters is None:
@@ -185,7 +185,7 @@ class IvpFes:
         default_ivp_dict = {
             "n_shooting": None,
             "final_time": None,
-            "extend_last_phase": False,
+            "extend_last_phase_time": False,
             "ode_solver": OdeSolver.RK4(n_integration_steps=1),
             "use_sx": True,
             "n_threads": 1,
@@ -285,8 +285,8 @@ class IvpFes:
         if not isinstance(self.ivp_parameters["final_time"], int | float):
             raise ValueError("final_time must be an int or float type")
 
-        if not isinstance(self.ivp_parameters["extend_last_phase"], int | float | None):
-            raise ValueError("extend_last_phase must be an int or float type")
+        if not isinstance(self.ivp_parameters["extend_last_phase_time"], int | float | None):
+            raise ValueError("extend_last_phase_time must be an int or float type")
 
         if not isinstance(
             self.ivp_parameters["ode_solver"], (OdeSolver.RK1, OdeSolver.RK2, OdeSolver.RK4, OdeSolver.COLLOCATION)
@@ -300,7 +300,7 @@ class IvpFes:
             raise ValueError("n_thread must be a int type")
 
     def _pulse_mode_settings(self):
-        if self.pulse_mode == "Single":
+        if self.pulse_mode == "single":
             step = self.final_time / self.n_stim
             self.final_time_phase = (step,)
             for i in range(self.n_stim):
@@ -308,7 +308,7 @@ class IvpFes:
                 self.dt.append(step / self.n_shooting[i])
             self.pulse_apparition_time = [self.final_time / self.n_stim * i for i in range(self.n_stim)]
 
-        elif self.pulse_mode == "Doublet":
+        elif self.pulse_mode == "doublet":
             doublet_step = 0.005
             step = np.round(self.final_time / (self.n_stim / 2) - doublet_step, 3)
             index = 0
@@ -326,7 +326,7 @@ class IvpFes:
             ]
             self.pulse_apparition_time = [item for sublist in self.pulse_apparition_time for item in sublist]
 
-        elif self.pulse_mode == "Triplet":
+        elif self.pulse_mode == "triplet":
             doublet_step = 0.005
             triplet_step = 0.005
             step = np.round(self.final_time / (self.n_stim / 3) - doublet_step - triplet_step, 3)
@@ -356,9 +356,11 @@ class IvpFes:
             raise ValueError("Pulse mode not yet implemented")
 
         self.dt = np.array(self.dt)
-        if self.extend_last_phase:
-            self.final_time_phase = self.final_time_phase[:-1] + (self.final_time_phase[-1] + self.extend_last_phase,)
-            self.n_shooting[-1] = int((self.extend_last_phase / step) * self.n_shooting[-1]) + self.n_shooting[-1]
+        if self.extend_last_phase_time:
+            self.final_time_phase = self.final_time_phase[:-1] + (
+                self.final_time_phase[-1] + self.extend_last_phase_time,
+            )
+            self.n_shooting[-1] = int((self.extend_last_phase_time / step) * self.n_shooting[-1]) + self.n_shooting[-1]
             self.dt[-1] = self.final_time_phase[-1] / self.n_shooting[-1]
 
     def _prepare_fake_ocp(self):
@@ -447,7 +449,7 @@ class IvpFes:
            model, pulse_duration, pulse_intensity, pulse_mode, frequency, round_down
         ivp_parameters: dict
            The parameters for the ivp problem including :
-           n_shooting, final_time, extend_last_phase, ode_solver, use_sx, n_threads
+           n_shooting, final_time, extend_last_phase_time, ode_solver, use_sx, n_threads
         """
 
         frequency = fes_parameters["frequency"]
@@ -491,7 +493,7 @@ class IvpFes:
            model, n_stim, pulse_duration, pulse_intensity, pulse_mode
         ivp_parameters: dict
            The parameters for the ivp problem including :
-           n_shooting, extend_last_phase, ode_solver, use_sx, n_threads
+           n_shooting, extend_last_phase_time, ode_solver, use_sx, n_threads
         """
 
         n_stim = fes_parameters["n_stim"]

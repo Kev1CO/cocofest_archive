@@ -155,7 +155,7 @@ def test_ocp_id_ding2003():
             "model": DingModelFrequency(),
             "n_stim": 10,
         },
-        ivp_parameters={"n_shooting": 10, "final_time": 1, "use_sx": True, "extend_last_phase": 1},
+        ivp_parameters={"n_shooting": 10, "final_time": 1, "use_sx": True, "extend_last_phase_time": 1},
     )
 
     # Integrating the solution
@@ -204,7 +204,7 @@ def test_ocp_id_ding2007():
     # Building the Initial Value Problem
     ivp = IvpFes(
         fes_parameters={"model": DingModelPulseDurationFrequency(), "n_stim": 10, "pulse_duration": [0.003] * 10},
-        ivp_parameters={"n_shooting": 10, "final_time": 1, "use_sx": True, "extend_last_phase": 1},
+        ivp_parameters={"n_shooting": 10, "final_time": 1, "use_sx": True, "extend_last_phase_time": 1},
     )
 
     # Integrating the solution
@@ -256,7 +256,7 @@ def test_ocp_id_hmed2018():
     # Building the Initial Value Problem
     ivp = IvpFes(
         fes_parameters={"model": DingModelIntensityFrequency(), "n_stim": 10, "pulse_intensity": [50] * 10},
-        ivp_parameters={"n_shooting": 10, "final_time": 1, "use_sx": True, "extend_last_phase": 1},
+        ivp_parameters={"n_shooting": 10, "final_time": 1, "use_sx": True, "extend_last_phase_time": 1},
     )
 
     # Integrating the solution

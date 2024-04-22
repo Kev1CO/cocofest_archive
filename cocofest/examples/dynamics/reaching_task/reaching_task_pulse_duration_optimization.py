@@ -85,10 +85,10 @@ for i in range(len(pickle_file_list)):
         n_stim=n_stim,
         n_shooting=n_shooting,
         final_time=1.5,
-        pulse_duration_dict={
-            "pulse_duration_min": minimum_pulse_duration,
-            "pulse_duration_max": 0.0006,
-            "pulse_duration_bimapping": False,
+        pulse_duration={
+            "min": minimum_pulse_duration,
+            "max": 0.0006,
+            "bimapping": False,
         },
         with_residual_torque=False,
         custom_constraint=constraint,

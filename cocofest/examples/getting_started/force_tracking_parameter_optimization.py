@@ -22,19 +22,20 @@ force_tracking = [time, force]
 # This ocp was build to track a force curve along the problem.
 # The stimulation won't be optimized and is already set to one pulse every 0.1 seconds (n_stim/final_time).
 # Plus the pulsation intensity will be optimized between 0 and 130 mA and are not the same across the problem.
-minimum_pulse_intensity = DingModelIntensityFrequency().min_pulse_intensity()
+model = DingModelIntensityFrequency()
+minimum_pulse_intensity = model.min_pulse_intensity()
 
 ocp = OcpFes().prepare_ocp(
-    model=DingModelIntensityFrequency(),
+    model=model,
     n_stim=10,
     n_shooting=20,
     final_time=1,
-    pulse_intensity_dict={
-        "pulse_intensity_min": minimum_pulse_intensity,
-        "pulse_intensity_max": 130,
-        "pulse_intensity_bimapping": False,
+    pulse_intensity={
+        "min": minimum_pulse_intensity,
+        "max": 130,
+        "bimapping": False,
     },
-    objective_dict={"force_tracking": force_tracking},
+    objective={"force_tracking": force_tracking},
     use_sx=True,
 )
 

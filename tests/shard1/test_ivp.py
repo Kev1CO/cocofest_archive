@@ -91,9 +91,9 @@ def test_hmed2018_ivp(model, pulse_intensity):
         np.testing.assert_almost_equal(result["F"][0][-1], 55.57471909903151)
 
 
-@pytest.mark.parametrize("pulse_mode", ["Single", "Doublet", "Triplet"])
+@pytest.mark.parametrize("pulse_mode", ["single", "doublet", "triplet"])
 def test_pulse_mode_ivp(pulse_mode):
-    n_stim = 3 if pulse_mode == "Single" else 6 if pulse_mode == "Doublet" else 9
+    n_stim = 3 if pulse_mode == "single" else 6 if pulse_mode == "doublet" else 9
     fes_parameters = {"model": DingModelFrequencyWithFatigue(), "n_stim": n_stim, "pulse_mode": pulse_mode}
     ivp_parameters = {"n_shooting": 10, "final_time": 0.3, "use_sx": True}
 
@@ -102,16 +102,16 @@ def test_pulse_mode_ivp(pulse_mode):
     # Integrating the solution
     result = ivp.integrate(return_time=False)
 
-    if pulse_mode == "Single":
+    if pulse_mode == "single":
         np.testing.assert_almost_equal(result["F"][0][0], 0)
         np.testing.assert_almost_equal(result["F"][0][10], 92.06532561584642)
         np.testing.assert_almost_equal(result["F"][0][-1], 138.94556672277545)
-    elif pulse_mode == "Doublet":
+    elif pulse_mode == "doublet":
         np.testing.assert_almost_equal(result["F"][0][0], 0)
         np.testing.assert_almost_equal(result["F"][0][20], 107.1572156700596)
         np.testing.assert_almost_equal(result["F"][0][-1], 199.51123480749564)
 
-    elif pulse_mode == "Triplet":
+    elif pulse_mode == "triplet":
         np.testing.assert_almost_equal(result["F"][0][0], 0)
         np.testing.assert_almost_equal(result["F"][0][30], 137.72706226851224)
         np.testing.assert_almost_equal(result["F"][0][-1], 236.04865519419803)

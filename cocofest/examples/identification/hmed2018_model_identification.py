@@ -30,7 +30,7 @@ ivp_parameters = {
     "n_shooting": n_shooting,
     "final_time": final_time,
     "use_sx": True,
-    "extend_last_phase": extra_phase_time,
+    "extend_last_phase_time": extra_phase_time,
 }
 
 # --- Creating the simulated data to identify on --- #
@@ -96,7 +96,7 @@ ivp_parameters = {
     "n_shooting": n_shooting,
     "final_time": final_time,
     "use_sx": True,
-    "extend_last_phase": extra_phase_time,
+    "extend_last_phase_time": extra_phase_time,
 }
 
 ivp_from_identification = IvpFes(

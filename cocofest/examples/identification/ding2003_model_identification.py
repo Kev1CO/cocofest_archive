@@ -28,7 +28,7 @@ fes_parameters = {"model": model, "n_stim": n_stim}
 ivp_parameters = {
     "n_shooting": n_shooting,
     "final_time": final_time,
-    "extend_last_phase": extra_phase_time,
+    "extend_last_phase_time": extra_phase_time,
     "use_sx": True,
 }
 
@@ -91,7 +91,7 @@ fes_parameters = {"model": identified_model, "n_stim": n_stim}
 ivp_parameters = {
     "n_shooting": n_shooting,
     "final_time": final_time,
-    "extend_last_phase": extra_phase_time,
+    "extend_last_phase_time": extra_phase_time,
     "use_sx": True,
 }
 ivp_from_identification = IvpFes(

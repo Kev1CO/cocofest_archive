@@ -15,7 +15,7 @@ ns = 10
 n_stim = 10
 final_time = 1
 
-fes_parameters = {"model": DingModelFrequencyWithFatigue(), "n_stim": n_stim, "pulse_mode": "Single"}
+fes_parameters = {"model": DingModelFrequencyWithFatigue(), "n_stim": n_stim, "pulse_mode": "single"}
 ivp_parameters = {"n_shooting": ns, "final_time": final_time, "use_sx": True}
 
 ivp = IvpFes(
@@ -35,7 +35,7 @@ stimulation_single = np.concatenate((np.array([0]), np.cumsum(np.array(ivp.final
 ns = 10
 n_stim = 20
 final_time = 1
-fes_parameters = {"model": DingModelFrequencyWithFatigue(), "n_stim": n_stim, "pulse_mode": "Doublet"}
+fes_parameters = {"model": DingModelFrequencyWithFatigue(), "n_stim": n_stim, "pulse_mode": "doublet"}
 ivp_parameters = {"n_shooting": ns, "final_time": final_time, "use_sx": True}
 ivp = IvpFes(
     fes_parameters,
@@ -51,7 +51,7 @@ stimulation_doublet = np.concatenate((np.array([0]), np.cumsum(np.array(ivp.fina
 # --- Build ocp --- #
 # This example shows how to create a problem with triplet pulses.
 n_stim = 30
-fes_parameters = {"model": DingModelFrequencyWithFatigue(), "n_stim": n_stim, "pulse_mode": "Triplet"}
+fes_parameters = {"model": DingModelFrequencyWithFatigue(), "n_stim": n_stim, "pulse_mode": "triplet"}
 ivp_parameters = {"n_shooting": 10, "final_time": 1, "use_sx": True}
 ivp = IvpFes(
     fes_parameters,
@@ -63,7 +63,7 @@ force_triplet = result_triplet["F"][0]
 stimulation_triplet = np.concatenate((np.array([0]), np.cumsum(np.array(ivp.final_time_phase))))
 
 # --- Show results --- #
-plt.title("Force state result for Single, Doublet and Triplet")
+plt.title("Force state result for single, doublet and triplet")
 
 plt.plot(time_single, force_single, color="blue", label="force single")
 plt.plot(time_doublet, force_doublet, color="red", label="force doublet")

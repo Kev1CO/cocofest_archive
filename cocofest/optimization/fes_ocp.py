@@ -4,7 +4,6 @@ from bioptim import (
     BiMapping,
     # BiMappingList, parameter mapping not yet implemented
     BoundsList,
-    ConstraintFcn,
     ConstraintList,
     ControlType,
     DynamicsList,
@@ -54,10 +53,10 @@ class OcpFes:
         n_stim: int = None,
         n_shooting: int = None,
         final_time: int | float = None,
-        pulse_apparition_dict: dict = None,
-        pulse_duration_dict: dict = None,
-        pulse_intensity_dict: dict = None,
-        objective_dict: dict = None,
+        pulse_event: dict = None,
+        pulse_duration: dict = None,
+        pulse_intensity: dict = None,
+        objective: dict = None,
         use_sx: bool = True,
         ode_solver: OdeSolver = OdeSolver.RK4(n_integration_steps=1),
         n_threads: int = 1,
@@ -75,15 +74,15 @@ class OcpFes:
             Number of shooting points for each individual phase.
         final_time : int | float
             The final time of the OCP.
-        pulse_apparition_dict : dict
+        pulse_event : dict
             Dictionary containing parameters related to the appearance of the pulse.
-        pulse_duration_dict : dict
+        pulse_duration : dict
             Dictionary containing parameters related to the duration of the pulse.
             Optional if not using DingModelPulseDurationFrequency or DingModelPulseDurationFrequencyWithFatigue.
-        pulse_intensity_dict : dict
+        pulse_intensity : dict
             Dictionary containing parameters related to the intensity of the pulse.
             Optional if not using DingModelIntensityFrequency or DingModelIntensityFrequencyWithFatigue.
-        objective_dict : dict
+        objective : dict
             Dictionary containing parameters related to the optimization objective.
         use_sx : bool
             The nature of the CasADi variables. MX are used if False.
@@ -99,30 +98,30 @@ class OcpFes:
 
         """
 
-        (pulse_apparition_dict, pulse_duration_dict, pulse_intensity_dict, objective_dict) = OcpFes._fill_dict(
-            pulse_apparition_dict, pulse_duration_dict, pulse_intensity_dict, objective_dict
+        (pulse_event, pulse_duration, pulse_intensity, objective) = OcpFes._fill_dict(
+            pulse_event, pulse_duration, pulse_intensity, objective
         )
 
-        time_min = pulse_apparition_dict["time_min"]
-        time_max = pulse_apparition_dict["time_max"]
-        time_bimapping = pulse_apparition_dict["time_bimapping"]
-        frequency = pulse_apparition_dict["frequency"]
-        round_down = pulse_apparition_dict["round_down"]
-        pulse_mode = pulse_apparition_dict["pulse_mode"]
+        time_min = pulse_event["min"]
+        time_max = pulse_event["max"]
+        time_bimapping = pulse_event["bimapping"]
+        frequency = pulse_event["frequency"]
+        round_down = pulse_event["round_down"]
+        pulse_mode = pulse_event["pulse_mode"]
 
-        pulse_duration = pulse_duration_dict["pulse_duration"]
-        pulse_duration_min = pulse_duration_dict["pulse_duration_min"]
-        pulse_duration_max = pulse_duration_dict["pulse_duration_max"]
-        pulse_duration_bimapping = pulse_duration_dict["pulse_duration_bimapping"]
+        fixed_pulse_duration = pulse_duration["fixed"]
+        pulse_duration_min = pulse_duration["min"]
+        pulse_duration_max = pulse_duration["max"]
+        pulse_duration_bimapping = pulse_duration["bimapping"]
 
-        pulse_intensity = pulse_intensity_dict["pulse_intensity"]
-        pulse_intensity_min = pulse_intensity_dict["pulse_intensity_min"]
-        pulse_intensity_max = pulse_intensity_dict["pulse_intensity_max"]
-        pulse_intensity_bimapping = pulse_intensity_dict["pulse_intensity_bimapping"]
+        fixed_pulse_intensity = pulse_intensity["fixed"]
+        pulse_intensity_min = pulse_intensity["min"]
+        pulse_intensity_max = pulse_intensity["max"]
+        pulse_intensity_bimapping = pulse_intensity["bimapping"]
 
-        force_tracking = objective_dict["force_tracking"]
-        end_node_tracking = objective_dict["end_node_tracking"]
-        custom_objective = objective_dict["custom_objective"]
+        force_tracking = objective["force_tracking"]
+        end_node_tracking = objective["end_node_tracking"]
+        custom_objective = objective["custom"]
 
         OcpFes._sanity_check(
             model=model,
@@ -134,11 +133,11 @@ class OcpFes:
             time_min=time_min,
             time_max=time_max,
             time_bimapping=time_bimapping,
-            pulse_duration=pulse_duration,
+            fixed_pulse_duration=fixed_pulse_duration,
             pulse_duration_min=pulse_duration_min,
             pulse_duration_max=pulse_duration_max,
             pulse_duration_bimapping=pulse_duration_bimapping,
-            pulse_intensity=pulse_intensity,
+            fixed_pulse_intensity=fixed_pulse_intensity,
             pulse_intensity_min=pulse_intensity_min,
             pulse_intensity_max=pulse_intensity_max,
             pulse_intensity_bimapping=pulse_intensity_bimapping,
@@ -176,11 +175,11 @@ class OcpFes:
             time_min=time_min,
             time_max=time_max,
             time_bimapping=time_bimapping,
-            pulse_duration=pulse_duration,
+            fixed_pulse_duration=fixed_pulse_duration,
             pulse_duration_min=pulse_duration_min,
             pulse_duration_max=pulse_duration_max,
             pulse_duration_bimapping=pulse_duration_bimapping,
-            pulse_intensity=pulse_intensity,
+            fixed_pulse_intensity=fixed_pulse_intensity,
             pulse_intensity_min=pulse_intensity_min,
             pulse_intensity_max=pulse_intensity_max,
             pulse_intensity_bimapping=pulse_intensity_bimapping,
@@ -219,68 +218,68 @@ class OcpFes:
         )
 
     @staticmethod
-    def _fill_dict(pulse_apparition_dict, pulse_duration_dict, pulse_intensity_dict, objective_dict):
+    def _fill_dict(pulse_event, pulse_duration, pulse_intensity, objective):
         """
         This method fills the provided dictionaries with default values if they are not set.
 
         Parameters
         ----------
-        pulse_apparition_dict : dict
+        pulse_event : dict
             Dictionary containing parameters related to the appearance of the pulse.
-            Expected keys are 'time_min', 'time_max', 'time_bimapping', 'frequency', 'round_down', and 'pulse_mode'.
+            Expected keys are 'min', 'max', 'bimapping', 'frequency', 'round_down', and 'pulse_mode'.
 
-        pulse_duration_dict : dict
+        pulse_duration : dict
             Dictionary containing parameters related to the duration of the pulse.
-            Expected keys are 'pulse_duration', 'pulse_duration_min', 'pulse_duration_max', and 'pulse_duration_bimapping'.
+            Expected keys are 'fixed', 'min', 'max', and 'bimapping'.
 
-        pulse_intensity_dict : dict
+        pulse_intensity : dict
             Dictionary containing parameters related to the intensity of the pulse.
-            Expected keys are 'pulse_intensity', 'pulse_intensity_min', 'pulse_intensity_max', and 'pulse_intensity_bimapping'.
+            Expected keys are 'fixed', 'min', 'max', and 'bimapping'.
 
-        objective_dict : dict
+        objective : dict
             Dictionary containing parameters related to the objective of the optimization.
-            Expected keys are 'force_tracking', 'end_node_tracking', and 'custom_objective'.
+            Expected keys are 'force_tracking', 'end_node_tracking', and 'custom'.
 
         Returns
         -------
-        Returns four dictionaries: pulse_apparition_dict, pulse_duration_dict, pulse_intensity_dict, and objective_dict.
+        Returns four dictionaries: pulse_event, pulse_duration, pulse_intensity, and objective.
         Each dictionary is filled with default values for any keys that were not initially set.
         """
 
-        default_pulse_apparition_dict = {
-            "time_min": None,
-            "time_max": None,
-            "time_bimapping": False,
+        default_pulse_event = {
+            "min": None,
+            "max": None,
+            "bimapping": False,
             "frequency": None,
             "round_down": False,
-            "pulse_mode": "Single",
+            "pulse_mode": "single",
         }
 
-        default_pulse_duration_dict = {
-            "pulse_duration": None,
-            "pulse_duration_min": None,
-            "pulse_duration_max": None,
-            "pulse_duration_bimapping": False,
+        default_pulse_duration = {
+            "fixed": None,
+            "min": None,
+            "max": None,
+            "bimapping": False,
         }
 
-        default_pulse_intensity_dict = {
-            "pulse_intensity": None,
-            "pulse_intensity_min": None,
-            "pulse_intensity_max": None,
-            "pulse_intensity_bimapping": False,
+        default_pulse_intensity = {
+            "fixed": None,
+            "min": None,
+            "max": None,
+            "bimapping": False,
         }
 
-        default_objective_dict = {
+        default_objective = {
             "force_tracking": None,
             "end_node_tracking": None,
-            "custom_objective": None,
+            "custom": None,
         }
-        dict_list = [pulse_apparition_dict, pulse_duration_dict, pulse_intensity_dict, objective_dict]
+        dict_list = [pulse_event, pulse_duration, pulse_intensity, objective]
         default_dict_list = [
-            default_pulse_apparition_dict,
-            default_pulse_duration_dict,
-            default_pulse_intensity_dict,
-            default_objective_dict,
+            default_pulse_event,
+            default_pulse_duration,
+            default_pulse_intensity,
+            default_objective,
         ]
 
         for i in range(len(dict_list)):
@@ -305,11 +304,11 @@ class OcpFes:
         time_min=None,
         time_max=None,
         time_bimapping=None,
-        pulse_duration=None,
+        fixed_pulse_duration=None,
         pulse_duration_min=None,
         pulse_duration_max=None,
         pulse_duration_bimapping=None,
-        pulse_intensity=None,
+        fixed_pulse_intensity=None,
         pulse_intensity_min=None,
         pulse_intensity_max=None,
         pulse_intensity_bimapping=None,
@@ -350,7 +349,7 @@ class OcpFes:
                 raise TypeError("final_time must be int or float type")
 
         if pulse_mode:
-            if pulse_mode != "Single":
+            if pulse_mode != "single":
                 raise NotImplementedError(f"Pulse mode '{pulse_mode}' is not yet implemented")
 
         if frequency:
@@ -368,29 +367,29 @@ class OcpFes:
                 raise TypeError("time_bimapping must be bool type")
 
         if isinstance(model, DingModelPulseDurationFrequency | DingModelPulseDurationFrequencyWithFatigue):
-            if pulse_duration is None and [pulse_duration_min, pulse_duration_max].count(None) != 0:
+            if fixed_pulse_duration is None and [pulse_duration_min, pulse_duration_max].count(None) != 0:
                 raise ValueError("pulse duration or pulse duration min max bounds need to be set for this model")
-            if all([pulse_duration, pulse_duration_min, pulse_duration_max]):
+            if all([fixed_pulse_duration, pulse_duration_min, pulse_duration_max]):
                 raise ValueError("Either pulse duration or pulse duration min max bounds need to be set for this model")
 
             minimum_pulse_duration = (
                 0 if model.pd0 is None else model.pd0
             )  # Set it to 0 if used for the identification process
 
-            if pulse_duration is not None:
-                if isinstance(pulse_duration, int | float):
-                    if pulse_duration < minimum_pulse_duration:
+            if fixed_pulse_duration is not None:
+                if isinstance(fixed_pulse_duration, int | float):
+                    if fixed_pulse_duration < minimum_pulse_duration:
                         raise ValueError(
-                            f"The pulse duration set ({pulse_duration})"
+                            f"The pulse duration set ({fixed_pulse_duration})"
                             f" is lower than minimum duration required."
                             f" Set a value above {minimum_pulse_duration} seconds "
                         )
-                elif isinstance(pulse_duration, list):
-                    if not all(isinstance(x, int | float) for x in pulse_duration):
+                elif isinstance(fixed_pulse_duration, list):
+                    if not all(isinstance(x, int | float) for x in fixed_pulse_duration):
                         raise TypeError("pulse_duration must be int or float type")
-                    if not all(x >= minimum_pulse_duration for x in pulse_duration):
+                    if not all(x >= minimum_pulse_duration for x in fixed_pulse_duration):
                         raise ValueError(
-                            f"The pulse duration set ({pulse_duration})"
+                            f"The pulse duration set ({fixed_pulse_duration})"
                             f" is lower than minimum duration required."
                             f" Set a value above {minimum_pulse_duration} seconds "
                         )
@@ -413,9 +412,9 @@ class OcpFes:
                 raise NotImplementedError("If added, pulse duration parameter mapping must be a bool type")
 
         if isinstance(model, DingModelIntensityFrequency | DingModelIntensityFrequencyWithFatigue):
-            if pulse_intensity is None and [pulse_intensity_min, pulse_intensity_max].count(None) != 0:
+            if fixed_pulse_intensity is None and [pulse_intensity_min, pulse_intensity_max].count(None) != 0:
                 raise ValueError("Pulse intensity or pulse intensity min max bounds need to be set for this model")
-            if all([pulse_intensity, pulse_intensity_min, pulse_intensity_max]):
+            if all([fixed_pulse_intensity, pulse_intensity_min, pulse_intensity_max]):
                 raise ValueError(
                     "Either pulse intensity or pulse intensity min max bounds need to be set for this model"
                 )
@@ -425,20 +424,20 @@ class OcpFes:
                 0 if None in check_for_none_type else model.min_pulse_intensity()
             )  # Set it to 0 if used for the identification process
 
-            if pulse_intensity is not None:
-                if isinstance(pulse_intensity, int | float):
-                    if pulse_intensity < minimum_pulse_intensity:
+            if fixed_pulse_intensity is not None:
+                if isinstance(fixed_pulse_intensity, int | float):
+                    if fixed_pulse_intensity < minimum_pulse_intensity:
                         raise ValueError(
-                            f"The pulse intensity set ({pulse_intensity})"
+                            f"The pulse intensity set ({fixed_pulse_intensity})"
                             f" is lower than minimum intensity required."
                             f" Set a value above {minimum_pulse_intensity} mA "
                         )
-                elif isinstance(pulse_intensity, list):
-                    if not all(isinstance(x, int | float) for x in pulse_intensity):
+                elif isinstance(fixed_pulse_intensity, list):
+                    if not all(isinstance(x, int | float) for x in fixed_pulse_intensity):
                         raise TypeError("pulse_intensity must be int or float type")
-                    if not all(x >= minimum_pulse_intensity for x in pulse_intensity):
+                    if not all(x >= minimum_pulse_intensity for x in fixed_pulse_intensity):
                         raise ValueError(
-                            f"The pulse intensity set ({pulse_intensity})"
+                            f"The pulse intensity set ({fixed_pulse_intensity})"
                             f" is lower than minimum intensity required."
                             f" Set a value above {minimum_pulse_intensity} seconds "
                         )
@@ -516,7 +515,7 @@ class OcpFes:
     def _build_phase_time(final_time, n_stim, pulse_mode, time_min, time_max):
         final_time_phase = None
         if time_min is None and time_max is None:
-            if pulse_mode == "Single":
+            if pulse_mode == "single":
                 step = final_time / n_stim
                 final_time_phase = (step,)
                 for i in range(n_stim - 1):
@@ -533,11 +532,11 @@ class OcpFes:
         time_min,
         time_max,
         time_bimapping,
-        pulse_duration,
+        fixed_pulse_duration,
         pulse_duration_min,
         pulse_duration_max,
         pulse_duration_bimapping,
-        pulse_intensity,
+        fixed_pulse_intensity,
         pulse_intensity_min,
         pulse_intensity_max,
         pulse_intensity_bimapping,
@@ -579,29 +578,29 @@ class OcpFes:
                 constraints.add(CustomConstraint.equal_to_first_pulse_interval_time, node=Node.START, target=0, phase=i)
 
         if isinstance(model, DingModelPulseDurationFrequency):
-            if pulse_duration:
+            if fixed_pulse_duration:
                 parameters.add(
                     name="pulse_duration",
                     function=DingModelPulseDurationFrequency.set_impulse_duration,
                     size=n_stim,
                     scaling=VariableScaling("pulse_duration", [1] * n_stim),
                 )
-                if isinstance(pulse_duration, list):
+                if isinstance(fixed_pulse_duration, list):
                     parameters_bounds.add(
                         "pulse_duration",
-                        min_bound=np.array(pulse_duration),
-                        max_bound=np.array(pulse_duration),
+                        min_bound=np.array(fixed_pulse_duration),
+                        max_bound=np.array(fixed_pulse_duration),
                         interpolation=InterpolationType.CONSTANT,
                     )
-                    parameters_init.add(key="pulse_duration", initial_guess=np.array(pulse_duration))
+                    parameters_init.add(key="pulse_duration", initial_guess=np.array(fixed_pulse_duration))
                 else:
                     parameters_bounds.add(
                         "pulse_duration",
-                        min_bound=np.array([pulse_duration] * n_stim),
-                        max_bound=np.array([pulse_duration] * n_stim),
+                        min_bound=np.array([fixed_pulse_duration] * n_stim),
+                        max_bound=np.array([fixed_pulse_duration] * n_stim),
                         interpolation=InterpolationType.CONSTANT,
                     )
-                    parameters_init["pulse_duration"] = np.array([pulse_duration] * n_stim)
+                    parameters_init["pulse_duration"] = np.array([fixed_pulse_duration] * n_stim)
 
             elif pulse_duration_min is not None and pulse_duration_max is not None:
                 parameters_bounds.add(
@@ -623,29 +622,29 @@ class OcpFes:
                     constraints.add(CustomConstraint.equal_to_first_pulse_duration, node=Node.START, target=0, phase=i)
 
         if isinstance(model, DingModelIntensityFrequency):
-            if pulse_intensity:
+            if fixed_pulse_intensity:
                 parameters.add(
                     name="pulse_intensity",
                     function=DingModelIntensityFrequency.set_impulse_intensity,
                     size=n_stim,
                     scaling=VariableScaling("pulse_intensity", [1] * n_stim),
                 )
-                if isinstance(pulse_intensity, list):
+                if isinstance(fixed_pulse_intensity, list):
                     parameters_bounds.add(
                         "pulse_intensity",
-                        min_bound=np.array(pulse_intensity),
-                        max_bound=np.array(pulse_intensity),
+                        min_bound=np.array(fixed_pulse_intensity),
+                        max_bound=np.array(fixed_pulse_intensity),
                         interpolation=InterpolationType.CONSTANT,
                     )
-                    parameters_init.add(key="pulse_intensity", initial_guess=np.array(pulse_intensity))
+                    parameters_init.add(key="pulse_intensity", initial_guess=np.array(fixed_pulse_intensity))
                 else:
                     parameters_bounds.add(
                         "pulse_intensity",
-                        min_bound=np.array([pulse_intensity] * n_stim),
-                        max_bound=np.array([pulse_intensity] * n_stim),
+                        min_bound=np.array([fixed_pulse_intensity] * n_stim),
+                        max_bound=np.array([fixed_pulse_intensity] * n_stim),
                         interpolation=InterpolationType.CONSTANT,
                     )
-                    parameters_init["pulse_intensity"] = np.array([pulse_intensity] * n_stim)
+                    parameters_init["pulse_intensity"] = np.array([fixed_pulse_intensity] * n_stim)
 
             elif pulse_intensity_min is not None and pulse_intensity_max is not None:
                 parameters_bounds.add(
@@ -679,7 +678,6 @@ class OcpFes:
                 expand_dynamics=True,
                 expand_continuity=False,
                 phase=i,
-                # phase_dynamics=PhaseDynamics.ONE_PER_NODE,
                 phase_dynamics=PhaseDynamics.SHARED_DURING_THE_PHASE,
             )
 
@@ -796,8 +794,8 @@ class OcpFes:
         return objective_functions
 
     @staticmethod
-    def _build_phase_parameter(n_stim, final_time, frequency=None, pulse_mode="Single", round_down=False):
-        pulse_mode_multiplier = 1 if pulse_mode == "Single" else 2 if pulse_mode == "Doublet" else 3
+    def _build_phase_parameter(n_stim, final_time, frequency=None, pulse_mode="single", round_down=False):
+        pulse_mode_multiplier = 1 if pulse_mode == "single" else 2 if pulse_mode == "doublet" else 3
         if n_stim and frequency:
             final_time = n_stim / frequency / pulse_mode_multiplier
 

@@ -43,13 +43,13 @@ ocp = OcpFesMsk.prepare_ocp(
     n_stim=n_stim,
     n_shooting=10,
     final_time=1,
-    pulse_duration_dict={
-        "pulse_duration_min": minimum_pulse_duration,
-        "pulse_duration_max": 0.0006,
-        "pulse_duration_bimapping": False,
+    pulse_duration={
+        "min": minimum_pulse_duration,
+        "max": 0.0006,
+        "bimapping": False,
     },
     with_residual_torque=False,
-    objective_dict={"custom_objective": objective_functions},
+    objective={"custom": objective_functions},
     activate_force_length_relationship=True,
     activate_force_velocity_relationship=False,
     minimize_muscle_fatigue=True,

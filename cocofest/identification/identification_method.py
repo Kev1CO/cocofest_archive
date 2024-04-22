@@ -3,6 +3,20 @@ import numpy as np
 
 
 def full_data_extraction(model_data_path):
+    """
+    Extracts full data from the provided path.
+
+    Parameters
+    ----------
+    model_data_path : list
+        List of paths to the data files.
+
+    Returns
+    -------
+    tuple
+        A tuple containing the time data, stim apparition time, muscle data, and discontinuity phase list.
+    """
+
     global_model_muscle_data = []
     global_model_stim_apparition_time = []
     global_model_time_data = []
@@ -63,6 +77,20 @@ def full_data_extraction(model_data_path):
 
 
 def average_data_extraction(model_data_path):
+    """
+    Extracts average data from the provided path.
+
+    Parameters
+    ----------
+    model_data_path : list
+        List of paths to the data files.
+
+    Returns
+    -------
+    tuple
+        A tuple containing the time data, stim apparition time, muscle data, and discontinuity phase list.
+    """
+
     global_model_muscle_data = []
     global_model_stim_apparition_time = []
     global_model_time_data = []
@@ -137,6 +165,22 @@ def average_data_extraction(model_data_path):
 
 
 def sparse_data_extraction(model_data_path, force_curve_number=5):
+    """
+    Extracts sparse data from the provided path.
+
+    Parameters
+    ----------
+    model_data_path : list
+        List of paths to the data files.
+    force_curve_number : int
+        Number of force curves to extract, by default 5.
+
+    Returns
+    -------
+    tuple
+        A tuple containing the time data, stim apparition time, muscle data, and discontinuity phase list.
+    """
+
     raise NotImplementedError("This method has not been tested yet")
 
     # global_model_muscle_data = []
@@ -209,6 +253,28 @@ def sparse_data_extraction(model_data_path, force_curve_number=5):
 
 
 def force_at_node_in_ocp(time, force, n_shooting, final_time_phase, sparse=None):
+    """
+    Interpolates the force at each node in the optimal control problem (OCP).
+
+    Parameters
+    ----------
+    time : list
+        List of time data.
+    force : list
+        List of force data.
+    n_shooting : list
+        List of number of shooting points for each phase.
+    final_time_phase : list
+        List of final time for each phase.
+    sparse : int, optional
+        Number of sparse points, by default None.
+
+    Returns
+    -------
+    list
+        List of force at each node in the OCP.
+    """
+
     temp_time = []
     for i in range(len(final_time_phase)):
         for j in range(n_shooting[i]):
@@ -220,6 +286,22 @@ def force_at_node_in_ocp(time, force, n_shooting, final_time_phase, sparse=None)
 
 
 def node_shooting_list_creation(stim, stimulated_n_shooting):
+    """
+    Creates a list of node shooting points.
+
+    Parameters
+    ----------
+    stim : list
+        List of stimulation times.
+    stimulated_n_shooting : int
+        Number of shooting points for stimulated phase.
+
+    Returns
+    -------
+    tuple
+        A tuple containing the list of number of shooting points for each phase and the final time for each phase.
+    """
+
     first_final_time = stim[1] if stim[0] == 0 else stim[0]
     final_time_phase = (first_final_time,)
     for i in range(1, len(stim)):

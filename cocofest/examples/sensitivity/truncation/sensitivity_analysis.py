@@ -12,7 +12,7 @@ counter = 0
 min_stim = 1
 max_stim = 101
 repetition = 100
-modes = ["Single", "Doublet", "Triplet"]
+modes = ["single", "doublet", "triplet"]
 nb = int((max_stim - min_stim) ** 2 / 2 + (max_stim - min_stim) / 2) * len(modes) * repetition
 node_shooting = 1000
 final_time = 1
@@ -27,11 +27,11 @@ for mode in modes:
     computations_time_avg = []
     creation_ocp_time = []
     parameter_list = []
-    if mode == "Single":
+    if mode == "single":
         coefficient = 1
-    elif mode == "Doublet":
+    elif mode == "doublet":
         coefficient = 2
-    elif mode == "Triplet":
+    elif mode == "triplet":
         coefficient = 3
     else:
         raise RuntimeError("Mode not recognized")
@@ -118,12 +118,12 @@ for mode in modes:
         "repetition": repetition,
     }
 
-    if mode == "Single":
+    if mode == "single":
         with open("truncation_single.pkl", "wb") as file:
             pickle.dump(dictionary, file)
-    elif mode == "Doublet":
+    elif mode == "doublet":
         with open("truncation_doublet.pkl", "wb") as file:
             pickle.dump(dictionary, file)
-    elif mode == "Triplet":
+    elif mode == "triplet":
         with open("truncation_triplet.pkl", "wb") as file:
             pickle.dump(dictionary, file)
