@@ -83,8 +83,8 @@ class OcpFesId(OcpFes):
             use_sx=use_sx,
             ode_solver=ode_solver,
             n_threads=n_threads,
-            pulse_duration=pulse_duration,
-            pulse_intensity=pulse_intensity,
+            fixed_pulse_duration=pulse_duration,
+            fixed_pulse_intensity=pulse_intensity,
         )
 
         OcpFesId._sanity_check_id(

@@ -737,7 +737,7 @@ def test_all_ocp_fes_errors():
             n_stim=3,
             n_shooting=10,
             final_time=0.3,
-            objective={"custom_objective": "objective_functions"},
+            objective={"custom": "objective_functions"},
         )
 
     with pytest.raises(TypeError, match="All elements in ObjectiveList must be an Objective type"):
@@ -746,7 +746,7 @@ def test_all_ocp_fes_errors():
             n_stim=3,
             n_shooting=10,
             final_time=0.3,
-            objective={"custom_objective": objective_functions},
+            objective={"custom": objective_functions},
         )
 
     with pytest.raises(TypeError, match="ode_solver must be a OdeSolver type"):
