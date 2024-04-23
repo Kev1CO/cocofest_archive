@@ -41,5 +41,5 @@ ocp = OcpFesMsk.prepare_ocp(
 )
 
 sol = ocp.solve(Solver.IPOPT(_max_iter=2000))
-sol.animate()
+# sol.animate()
 sol.graphs(show_bounds=False)
