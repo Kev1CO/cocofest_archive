@@ -6,7 +6,6 @@ from bioptim import (
     ConstraintList,
     DynamicsList,
     InitialGuessList,
-    Objective,
     ObjectiveList,
     OdeSolver,
     OptimalControlProgram,
@@ -20,18 +19,14 @@ from bioptim import (
     VariableScaling,
 )
 
-from cocofest import (
-    CustomConstraint,
-    DingModelFrequency,
-    DingModelFrequencyWithFatigue,
-    DingModelPulseDurationFrequency,
-    DingModelPulseDurationFrequencyWithFatigue,
-    DingModelIntensityFrequency,
-    DingModelIntensityFrequencyWithFatigue,
-    OcpFes,
-    FesMskModel,
-    CustomObjective,
-)
+from ..custom_constraints import CustomConstraint
+from ..custom_objectives import CustomObjective
+from ..models.fes_model import FesModel
+from ..models.ding2003 import DingModelFrequency
+from ..models.ding2007 import DingModelPulseDurationFrequency
+from ..models.hmed2018 import DingModelIntensityFrequency
+from ..models.dynamical_model import FesMskModel
+from ..optimization.fes_ocp import OcpFes
 
 
 class OcpFesMsk:
@@ -40,41 +35,18 @@ class OcpFesMsk:
         biorbd_model_path: str,
         bound_type: str = None,
         bound_data: list = None,
-        fes_muscle_models: (
-            list[DingModelFrequency]
-            | list[DingModelFrequencyWithFatigue]
-            | list[DingModelPulseDurationFrequency]
-            | list[DingModelPulseDurationFrequencyWithFatigue]
-            | list[DingModelIntensityFrequency]
-            | list[DingModelIntensityFrequencyWithFatigue]
-        ) = None,
+        fes_muscle_models: list[FesModel] = None,
         n_stim: int = None,
         n_shooting: int = None,
         final_time: int | float = None,
-        pulse_mode: str = "Single",
-        frequency: int | float = None,
-        round_down: bool = False,
-        time_min: float = None,
-        time_max: float = None,
-        time_bimapping: bool = False,
-        pulse_duration: int | float = None,
-        pulse_duration_min: int | float = None,
-        pulse_duration_max: int | float = None,
-        pulse_duration_bimapping: bool = False,
-        pulse_duration_similar_for_all_muscles: bool = False,
-        pulse_intensity: int | float = None,
-        pulse_intensity_min: int | float = None,
-        pulse_intensity_max: int | float = None,
-        pulse_intensity_bimapping: bool = False,
-        pulse_intensity_similar_for_all_muscles: bool = False,
-        force_tracking: list = None,
-        end_node_tracking: list = None,
-        q_tracking: list = None,
-        custom_objective: ObjectiveList = None,
+        pulse_event: dict = None,
+        pulse_duration: dict = None,
+        pulse_intensity: dict = None,
+        objective: dict = None,
         custom_constraint: ConstraintList = None,
         with_residual_torque: bool = False,
-        muscle_force_length_relationship: bool = False,
-        muscle_force_velocity_relationship: bool = False,
+        activate_force_length_relationship: bool = False,
+        activate_force_velocity_relationship: bool = False,
         minimize_muscle_fatigue: bool = False,
         minimize_muscle_force: bool = False,
         use_sx: bool = True,
@@ -83,78 +55,94 @@ class OcpFesMsk:
         n_threads: int = 1,
     ):
         """
-        This definition prepares the dynamics ocp to be solved
-        .
-        Attributes
+        Prepares the Optimal Control Program (OCP) with a musculoskeletal model for a movement to be solved.
+
+        Parameters
         ----------
-            biorbd_model_path: str
-                The bioMod file path
-            bound_type: str
-                The bound type to use (start, end, start_end)
-            bound_data: list
-                The data to use for the bound
-            fes_muscle_models: list[DingModelFrequency]
-                             | list[DingModelFrequencyWithFatigue]
-                             | list[DingModelPulseDurationFrequency]
-                             | list[DingModelPulseDurationFrequencyWithFatigue]
-                             | list[DingModelIntensityFrequency]
-                             | list[DingModelIntensityFrequencyWithFatigue]
-                The fes model type used for the ocp
-            n_stim: int
-                Number of stimulation that will occur during the ocp, it is as well refer as phases
-            n_shooting: int
-                Number of shooting point for each individual phases
-            final_time: float
-                Refers to the final time of the ocp
-            time_min: int | float
-                Minimum time for a phase
-            time_max: int | float
-                Maximum time for a phase
-            time_bimapping: bool
-                Set phase time constant
-            pulse_duration: int | float
-                Setting a chosen pulse time among phases
-            pulse_duration_min: int | float
-                Minimum pulse time for a phase
-            pulse_duration_max: int | float
-                Maximum pulse time for a phase
-            pulse_duration_bimapping: bool
-                Set pulse time constant among phases
-            pulse_intensity: int | float
-                Setting a chosen pulse intensity among phases
-            pulse_intensity_min: int | float
-                Minimum pulse intensity for a phase
-            pulse_intensity_max: int | float
-                Maximum pulse intensity for a phase
-            pulse_intensity_bimapping: bool
-                Set pulse intensity constant among phases
-            force_tracking: list[np.ndarray, np.ndarray]
-                List of time and associated force to track during ocp optimisation
-            end_node_tracking: int | float
-                Force objective value to reach at the last node
-            q_tracking: list
-                List of time and associated q to track during ocp optimisation
-            custom_objective: list[Objective]
-                Additional objective for the system
-            with_residual_torque: bool
-                If residual torque is used
-            muscle_force_length_relationship: bool
-                If the force length relationship is used
-            muscle_force_velocity_relationship: bool
-                If the force velocity relationship is used
-            minimize_muscle_fatigue: bool
-                Minimize the muscle fatigue
-            minimize_muscle_force: bool
-                Minimize the muscle force
-            use_sx: bool
-                The nature of the casadi variables. MX are used if False.
-            ode_solver: OdeSolver
-                The ode solver to use
-            control_type: ControlType
-                The type of control to use
-            n_threads: int
-                The number of thread to use while solving (multi-threading if > 1)
+        biorbd_model_path : str
+            The path to the bioMod file.
+        bound_type : str
+            The type of bound to use (start, end, start_end).
+        bound_data : list
+            The data to use for the bound.
+        fes_muscle_models : list[FesModel]
+            The FES model type used for the OCP.
+        n_stim : int
+            Number of stimulations that will occur during the OCP, also referred to as phases.
+        n_shooting : int
+            Number of shooting points for each individual phase.
+        final_time : int | float
+            The final time of the OCP.
+        pulse_event : dict
+            Dictionary containing parameters related to the appearance of the pulse.
+            It should contain the following keys: "min", "max", "bimapping", "frequency", "round_down", "pulse_mode".
+        pulse_duration : dict
+            Dictionary containing parameters related to the duration of the pulse.
+            It should contain the following keys: "fixed", "min", "max", "bimapping", "similar_for_all_muscles".
+            Optional if not using the Ding2007 models
+        pulse_intensity : dict
+            Dictionary containing parameters related to the intensity of the pulse.
+            It should contain the following keys: "fixed", "min", "max", "bimapping", "similar_for_all_muscles".
+            Optional if not using the Hmed2018 models
+        objective : dict
+            Dictionary containing parameters related to the objective of the optimization.
+        custom_constraint : ConstraintList,
+            Custom constraints for the OCP.
+        with_residual_torque : bool
+            If residual torque is used.
+        activate_force_length_relationship : bool
+            If the force length relationship is used.
+        activate_force_velocity_relationship : bool
+            If the force velocity relationship is used.
+        minimize_muscle_fatigue : bool
+            Minimize the muscle fatigue.
+        minimize_muscle_force : bool
+            Minimize the muscle force.
+        use_sx : bool
+            The nature of the CasADi variables. MX are used if False.
+        ode_solver : OdeSolverBase
+            The ODE solver to use.
+        control_type : ControlType
+            The type of control to use.
+        n_threads : int
+            The number of threads to use while solving (multi-threading if > 1).
+
+        Returns
+        -------
+        OptimalControlProgram
+            The prepared Optimal Control Program.
         """
+
+        (pulse_event, pulse_duration, pulse_intensity, objective) = OcpFes._fill_dict(
+            pulse_event, pulse_duration, pulse_intensity, objective
+        )
+
+        time_min = pulse_event["min"]
+        time_max = pulse_event["max"]
+        time_bimapping = pulse_event["bimapping"]
+        frequency = pulse_event["frequency"]
+        round_down = pulse_event["round_down"]
+        pulse_mode = pulse_event["pulse_mode"]
+
+        fixed_pulse_duration = pulse_duration["fixed"]
+        pulse_duration_min = pulse_duration["min"]
+        pulse_duration_max = pulse_duration["max"]
+        pulse_duration_bimapping = pulse_duration["bimapping"]
+        key_in_dict = "similar_for_all_muscles" in pulse_duration
+        pulse_duration_similar_for_all_muscles = pulse_duration["similar_for_all_muscles"] if key_in_dict else False
+
+        fixed_pulse_intensity = pulse_intensity["fixed"]
+        pulse_intensity_min = pulse_intensity["min"]
+        pulse_intensity_max = pulse_intensity["max"]
+        pulse_intensity_bimapping = pulse_intensity["bimapping"]
+        key_in_dict = "similar_for_all_muscles" in pulse_intensity
+        pulse_intensity_similar_for_all_muscles = pulse_intensity["similar_for_all_muscles"] if key_in_dict else False
+
+        force_tracking = objective["force_tracking"]
+        end_node_tracking = objective["end_node_tracking"]
+        custom_objective = objective["custom"]
+        key_in_dict = "q_tracking" in objective
+        q_tracking = objective["q_tracking"] if key_in_dict else None
 
         OcpFes._sanity_check(
             model=fes_muscle_models[0],
@@ -166,11 +154,11 @@ class OcpFesMsk:
             time_min=time_min,
             time_max=time_max,
             time_bimapping=time_bimapping,
-            pulse_duration=pulse_duration,
+            fixed_pulse_duration=fixed_pulse_duration,
             pulse_duration_min=pulse_duration_min,
             pulse_duration_max=pulse_duration_max,
             pulse_duration_bimapping=pulse_duration_bimapping,
-            pulse_intensity=pulse_intensity,
+            fixed_pulse_intensity=fixed_pulse_intensity,
             pulse_intensity_min=pulse_intensity_min,
             pulse_intensity_max=pulse_intensity_max,
             pulse_intensity_bimapping=pulse_intensity_bimapping,
@@ -189,8 +177,8 @@ class OcpFesMsk:
             end_node_tracking=end_node_tracking,
             q_tracking=q_tracking,
             with_residual_torque=with_residual_torque,
-            muscle_force_length_relationship=muscle_force_length_relationship,
-            muscle_force_velocity_relationship=muscle_force_velocity_relationship,
+            activate_force_length_relationship=activate_force_length_relationship,
+            activate_force_velocity_relationship=activate_force_velocity_relationship,
             minimize_muscle_fatigue=minimize_muscle_fatigue,
             minimize_muscle_force=minimize_muscle_force,
         )
@@ -206,12 +194,12 @@ class OcpFesMsk:
         force_fourier_coef = [] if force_tracking else None
         if force_tracking:
             for i in range(len(force_tracking[1])):
-                force_fourier_coef.append(OcpFes._build_fourier_coeff([force_tracking[0], force_tracking[1][i]]))
+                force_fourier_coef.append(OcpFes._build_fourier_coefficient([force_tracking[0], force_tracking[1][i]]))
 
         q_fourier_coef = [] if q_tracking else None
         if q_tracking:
             for i in range(len(q_tracking[1])):
-                q_fourier_coef.append(OcpFes._build_fourier_coeff([q_tracking[0], q_tracking[1][i]]))
+                q_fourier_coef.append(OcpFes._build_fourier_coefficient([q_tracking[0], q_tracking[1][i]]))
 
         n_shooting = [n_shooting] * n_stim
         final_time_phase = OcpFes._build_phase_time(
@@ -233,12 +221,12 @@ class OcpFesMsk:
             time_min=time_min,
             time_max=time_max,
             time_bimapping=time_bimapping,
-            pulse_duration=pulse_duration,
+            fixed_pulse_duration=fixed_pulse_duration,
             pulse_duration_min=pulse_duration_min,
             pulse_duration_max=pulse_duration_max,
             pulse_duration_bimapping=pulse_duration_bimapping,
             pulse_duration_similar_for_all_muscles=pulse_duration_similar_for_all_muscles,
-            pulse_intensity=pulse_intensity,
+            fixed_pulse_intensity=fixed_pulse_intensity,
             pulse_intensity_min=pulse_intensity_min,
             pulse_intensity_max=pulse_intensity_max,
             pulse_intensity_bimapping=pulse_intensity_bimapping,
@@ -259,8 +247,8 @@ class OcpFesMsk:
                 name=None,
                 biorbd_path=biorbd_model_path,
                 muscles_model=fes_muscle_models,
-                muscle_force_length_relationship=muscle_force_length_relationship,
-                muscle_force_velocity_relationship=muscle_force_velocity_relationship,
+                activate_force_length_relationship=activate_force_length_relationship,
+                activate_force_velocity_relationship=activate_force_velocity_relationship,
             )
             for i in range(n_stim)
         ]
@@ -320,7 +308,7 @@ class OcpFesMsk:
                 expand_dynamics=True,
                 expand_continuity=False,
                 phase=i,
-                phase_dynamics=PhaseDynamics.ONE_PER_NODE,
+                phase_dynamics=PhaseDynamics.SHARED_DURING_THE_PHASE,
             )
         return dynamics
 
@@ -331,12 +319,12 @@ class OcpFesMsk:
         time_min,
         time_max,
         time_bimapping,
-        pulse_duration,
+        fixed_pulse_duration,
         pulse_duration_min,
         pulse_duration_max,
         pulse_duration_bimapping,
         pulse_duration_similar_for_all_muscles,
-        pulse_intensity,
+        fixed_pulse_intensity,
         pulse_intensity_min,
         pulse_intensity_max,
         pulse_intensity_bimapping,
@@ -376,7 +364,7 @@ class OcpFesMsk:
 
         if time_bimapping and time_min and time_max:
             for i in range(n_stim):
-                constraints.add(CustomConstraint.pulse_time_apparition_bimapping, node=Node.START, target=0, phase=i)
+                constraints.add(CustomConstraint.equal_to_first_pulse_interval_time, node=Node.START, target=0, phase=i)
 
         for i in range(len(model)):
             if isinstance(model[i], DingModelPulseDurationFrequency):
@@ -385,7 +373,7 @@ class OcpFesMsk:
                     if pulse_duration_similar_for_all_muscles
                     else "pulse_duration" + "_" + model[i].muscle_name
                 )
-                if pulse_duration:  # TODO : ADD SEVERAL INDIVIDUAL FIXED PULSE DURATION FOR EACH MUSCLE
+                if fixed_pulse_duration:  # TODO : ADD SEVERAL INDIVIDUAL FIXED PULSE DURATION FOR EACH MUSCLE
                     if (
                         pulse_duration_similar_for_all_muscles and i == 0
                     ) or not pulse_duration_similar_for_all_muscles:
@@ -395,22 +383,22 @@ class OcpFesMsk:
                             size=n_stim,
                             scaling=VariableScaling(parameter_name, [1] * n_stim),
                         )
-                        if isinstance(pulse_duration, list):
+                        if isinstance(fixed_pulse_duration, list):
                             parameters_bounds.add(
                                 parameter_name,
-                                min_bound=np.array(pulse_duration),
-                                max_bound=np.array(pulse_duration),
+                                min_bound=np.array(fixed_pulse_duration),
+                                max_bound=np.array(fixed_pulse_duration),
                                 interpolation=InterpolationType.CONSTANT,
                             )
-                            parameters_init.add(key=parameter_name, initial_guess=np.array(pulse_duration))
+                            parameters_init.add(key=parameter_name, initial_guess=np.array(fixed_pulse_duration))
                         else:
                             parameters_bounds.add(
                                 parameter_name,
-                                min_bound=np.array([pulse_duration] * n_stim),
-                                max_bound=np.array([pulse_duration] * n_stim),
+                                min_bound=np.array([fixed_pulse_duration] * n_stim),
+                                max_bound=np.array([fixed_pulse_duration] * n_stim),
                                 interpolation=InterpolationType.CONSTANT,
                             )
-                            parameters_init[parameter_name] = np.array([pulse_duration] * n_stim)
+                            parameters_init[parameter_name] = np.array([fixed_pulse_duration] * n_stim)
 
                 elif (
                     pulse_duration_min and pulse_duration_max
@@ -444,7 +432,7 @@ class OcpFesMsk:
                     if pulse_intensity_similar_for_all_muscles
                     else "pulse_intensity" + "_" + model[i].muscle_name
                 )
-                if pulse_intensity:  # TODO : ADD SEVERAL INDIVIDUAL FIXED PULSE INTENSITY FOR EACH MUSCLE
+                if fixed_pulse_intensity:  # TODO : ADD SEVERAL INDIVIDUAL FIXED PULSE INTENSITY FOR EACH MUSCLE
                     if (
                         pulse_intensity_similar_for_all_muscles and i == 0
                     ) or not pulse_intensity_similar_for_all_muscles:
@@ -454,22 +442,22 @@ class OcpFesMsk:
                             size=n_stim,
                             scaling=VariableScaling(parameter_name, [1] * n_stim),
                         )
-                        if isinstance(pulse_intensity, list):
+                        if isinstance(fixed_pulse_intensity, list):
                             parameters_bounds.add(
                                 parameter_name,
-                                min_bound=np.array(pulse_intensity),
-                                max_bound=np.array(pulse_intensity),
+                                min_bound=np.array(fixed_pulse_intensity),
+                                max_bound=np.array(fixed_pulse_intensity),
                                 interpolation=InterpolationType.CONSTANT,
                             )
-                            parameters_init.add(key=parameter_name, initial_guess=np.array(pulse_intensity))
+                            parameters_init.add(key=parameter_name, initial_guess=np.array(fixed_pulse_intensity))
                         else:
                             parameters_bounds.add(
                                 parameter_name,
-                                min_bound=np.array([pulse_intensity] * n_stim),
-                                max_bound=np.array([pulse_intensity] * n_stim),
+                                min_bound=np.array([fixed_pulse_intensity] * n_stim),
+                                max_bound=np.array([fixed_pulse_intensity] * n_stim),
                                 interpolation=InterpolationType.CONSTANT,
                             )
-                            parameters_init[parameter_name] = np.array([pulse_intensity] * n_stim)
+                            parameters_init[parameter_name] = np.array([fixed_pulse_intensity] * n_stim)
 
                 elif (
                     pulse_intensity_min and pulse_intensity_max
@@ -527,13 +515,15 @@ class OcpFesMsk:
         x_bounds = BoundsList()
         x_init = InitialGuessList()
         for model in fes_muscle_models:
-            variable_bound_list = model.name_dof
+            muscle_name = model.muscle_name
+            variable_bound_list = [model.name_dof[i] + "_" + muscle_name for i in range(len(model.name_dof))]
+
             starting_bounds, min_bounds, max_bounds = (
                 model.standard_rest_values(),
                 model.standard_rest_values(),
                 model.standard_rest_values(),
             )
-            muscle_name = model.muscle_name
+
             for i in range(len(variable_bound_list)):
                 if variable_bound_list[i] == "Cn_" + muscle_name:
                     max_bounds[i] = 10
@@ -759,8 +749,8 @@ class OcpFesMsk:
         end_node_tracking,
         q_tracking,
         with_residual_torque,
-        muscle_force_length_relationship,
-        muscle_force_velocity_relationship,
+        activate_force_length_relationship,
+        activate_force_velocity_relationship,
         minimize_muscle_fatigue,
         minimize_muscle_force,
     ):
@@ -791,23 +781,8 @@ class OcpFesMsk:
                         raise TypeError(f"bound data index {i}: {bound_data[i]} should be an int or float")
 
         for i in range(len(fes_muscle_models)):
-            if not isinstance(
-                fes_muscle_models[i],
-                DingModelFrequency
-                | DingModelFrequencyWithFatigue
-                | DingModelPulseDurationFrequency
-                | DingModelPulseDurationFrequencyWithFatigue
-                | DingModelIntensityFrequency
-                | DingModelIntensityFrequencyWithFatigue,
-            ):
-                raise TypeError(
-                    "model must be a DingModelFrequency,"
-                    " DingModelFrequencyWithFatigue,"
-                    " DingModelPulseDurationFrequency,"
-                    " DingModelPulseDurationFrequencyWithFatigue,"
-                    " DingModelIntensityFrequency,"
-                    " DingModelIntensityFrequencyWithFatigue type"
-                )
+            if not isinstance(fes_muscle_models[i], FesModel):
+                raise TypeError("model must be a FesModel type")
 
         if force_tracking:
             if isinstance(force_tracking, list):
@@ -852,16 +827,16 @@ class OcpFesMsk:
 
         list_to_check = [
             with_residual_torque,
-            muscle_force_length_relationship,
-            muscle_force_velocity_relationship,
+            activate_force_length_relationship,
+            activate_force_velocity_relationship,
             minimize_muscle_fatigue,
             minimize_muscle_force,
         ]
 
         list_to_check_name = [
             "with_residual_torque",
-            "muscle_force_length_relationship",
-            "muscle_force_velocity_relationship",
+            "activate_force_length_relationship",
+            "activate_force_velocity_relationship",
             "minimize_muscle_fatigue",
             "minimize_muscle_force",
         ]

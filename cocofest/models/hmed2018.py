@@ -11,6 +11,7 @@ from bioptim import (
     ParameterList,
 )
 from .ding2003 import DingModelFrequency
+from .state_configue import StateConfigure
 
 
 class DingModelIntensityFrequency(DingModelFrequency):
@@ -38,6 +39,19 @@ class DingModelIntensityFrequency(DingModelFrequency):
         self.Is = 63.1  # (mA) Muscle saturation intensity.
         self.cr = 0.833  # (-) Translation of axis coordinates.
         self.impulse_intensity = None
+
+    @property
+    def identifiable_parameters(self):
+        return {
+            "a_rest": self.a_rest,
+            "tau1_rest": self.tau1_rest,
+            "km_rest": self.km_rest,
+            "tau2": self.tau2,
+            "ar": self.ar,
+            "bs": self.bs,
+            "Is": self.Is,
+            "cr": self.cr,
+        }
 
     def set_ar(self, model, ar: MX | float):
         # models is required for bioptim compatibility
@@ -166,7 +180,7 @@ class DingModelIntensityFrequency(DingModelFrequency):
         if enough_stim_to_truncate:
             t_stim_prev = t_stim_prev[-self._sum_stim_truncation :]
         for i in range(len(t_stim_prev)):  # Eq from [1]
-            if i == 0 and len(t_stim_prev) == 1:  # Eq from Bakir et al.
+            if i == 0 and len(t_stim_prev) == 1:  # Eq from Hmed et al.
                 ri = 1
             else:
                 previous_phase_time = t_stim_prev[i] - t_stim_prev[i - 1]
@@ -317,16 +331,14 @@ class DingModelIntensityFrequency(DingModelFrequency):
         nlp: NonLinearProgram
             A reference to the phase
         """
-        self.configure_ca_troponin_complex(
-            ocp=ocp, nlp=nlp, as_states=True, as_controls=False, muscle_name=self.muscle_name
-        )
-        self.configure_force(ocp=ocp, nlp=nlp, as_states=True, as_controls=False, muscle_name=self.muscle_name)
+        StateConfigure().configure_all_fes_model_states(ocp, nlp, fes_model=self)
         ConfigureProblem.configure_dynamics_function(ocp, nlp, dyn_func=self.dynamics)
 
     def min_pulse_intensity(self):
         """
         Returns
         -------
-        The minimum pulse intensity
+        The minimum pulse intensity threshold of the model
+        For lambda_i = ar * (tanh(bs * (intensity_stim - Is)) + cr) > 0
         """
         return (np.arctanh(-self.cr) / self.bs) + self.Is

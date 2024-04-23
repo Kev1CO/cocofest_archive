@@ -5,7 +5,6 @@ import os
 import numpy as np
 import pytest
 
-from bioptim import Shooting, SolutionIntegrator, Solution, SolutionMerge
 from cocofest import (
     OcpFesId,
     IvpFes,
@@ -151,30 +150,16 @@ additional_key_settings = {
 def test_ocp_id_ding2003():
     # --- Creating the simulated data to identify on --- #
     # Building the Initial Value Problem
-    final_time = 1
-    ns = 10
-    n_stim = 10
     ivp = IvpFes(
-        model=DingModelFrequency(),
-        n_stim=n_stim,
-        n_shooting=ns,
-        final_time=final_time,
-        use_sx=True,
-        extend_last_phase=1,
+        fes_parameters={
+            "model": DingModelFrequency(),
+            "n_stim": 10,
+        },
+        ivp_parameters={"n_shooting": 10, "final_time": 1, "use_sx": True, "extend_last_phase_time": 1},
     )
-
-    # Creating the solution from the initial guess
-    dt = np.array([final_time / (ns * n_stim)] * n_stim)
-    sol_from_initial_guess = Solution.from_initial_guess(ivp, [dt, ivp.x_init, ivp.u_init, ivp.p_init, ivp.s_init])
 
     # Integrating the solution
-    result, time = sol_from_initial_guess.integrate(
-        shooting_type=Shooting.SINGLE,
-        integrator=SolutionIntegrator.OCP,
-        to_merge=[SolutionMerge.NODES, SolutionMerge.PHASES],
-        return_time=True,
-        duplicated_times=False,
-    )
+    result, time = ivp.integrate()
 
     force = result["F"][0].tolist()
     time = [float(time) for time in time]
@@ -195,7 +180,7 @@ def test_ocp_id_ding2003():
         model=DingModelFrequency(),
         data_path=[pickle_file_name],
         identification_method="full",
-        identification_with_average_method_initial_guess=False,
+        double_step_identification=False,
         key_parameter_to_identify=["a_rest", "km_rest", "tau1_rest", "tau2"],
         additional_key_settings={},
         n_shooting=10,
@@ -217,31 +202,13 @@ def test_ocp_id_ding2003():
 def test_ocp_id_ding2007():
     # --- Creating the simulated data to identify on --- #
     # Building the Initial Value Problem
-    final_time = 1
-    ns = 10
-    n_stim = 10
     ivp = IvpFes(
-        model=DingModelPulseDurationFrequency(),
-        n_stim=n_stim,
-        pulse_duration=[0.003] * 10,
-        n_shooting=ns,
-        final_time=final_time,
-        use_sx=True,
-        extend_last_phase=1,
+        fes_parameters={"model": DingModelPulseDurationFrequency(), "n_stim": 10, "pulse_duration": [0.003] * 10},
+        ivp_parameters={"n_shooting": 10, "final_time": 1, "use_sx": True, "extend_last_phase_time": 1},
     )
-
-    # Creating the solution from the initial guess
-    dt = np.array([final_time / (ns * n_stim)] * n_stim)
-    sol_from_initial_guess = Solution.from_initial_guess(ivp, [dt, ivp.x_init, ivp.u_init, ivp.p_init, ivp.s_init])
 
     # Integrating the solution
-    result, time = sol_from_initial_guess.integrate(
-        shooting_type=Shooting.SINGLE,
-        integrator=SolutionIntegrator.OCP,
-        to_merge=[SolutionMerge.NODES, SolutionMerge.PHASES],
-        return_time=True,
-        duplicated_times=False,
-    )
+    result, time = ivp.integrate()
 
     force = result["F"][0].tolist()
     time = [float(time) for time in time]
@@ -263,7 +230,7 @@ def test_ocp_id_ding2007():
         model=DingModelPulseDurationFrequency(),
         data_path=[pickle_file_name],
         identification_method="full",
-        identification_with_average_method_initial_guess=False,
+        double_step_identification=False,
         key_parameter_to_identify=["tau1_rest", "tau2", "km_rest", "a_scale", "pd0", "pdt"],
         additional_key_settings={},
         n_shooting=10,
@@ -287,31 +254,13 @@ def test_ocp_id_ding2007():
 def test_ocp_id_hmed2018():
     # --- Creating the simulated data to identify on --- #
     # Building the Initial Value Problem
-    final_time = 1
-    ns = 100
-    n_stim = 10
     ivp = IvpFes(
-        model=DingModelIntensityFrequency(),
-        n_stim=n_stim,
-        pulse_intensity=[50] * 10,
-        n_shooting=ns,
-        final_time=final_time,
-        use_sx=True,
-        extend_last_phase=1,
+        fes_parameters={"model": DingModelIntensityFrequency(), "n_stim": 10, "pulse_intensity": [50] * 10},
+        ivp_parameters={"n_shooting": 10, "final_time": 1, "use_sx": True, "extend_last_phase_time": 1},
     )
-
-    # Creating the solution from the initial guess
-    dt = np.array([final_time / (ns * n_stim)] * n_stim)
-    sol_from_initial_guess = Solution.from_initial_guess(ivp, [dt, ivp.x_init, ivp.u_init, ivp.p_init, ivp.s_init])
 
     # Integrating the solution
-    result, time = sol_from_initial_guess.integrate(
-        shooting_type=Shooting.SINGLE,
-        integrator=SolutionIntegrator.OCP,
-        to_merge=[SolutionMerge.NODES, SolutionMerge.PHASES],
-        return_time=True,
-        duplicated_times=False,
-    )
+    result, time = ivp.integrate()
 
     force = result["F"][0].tolist()
     time = [float(time) for time in time]
@@ -333,10 +282,10 @@ def test_ocp_id_hmed2018():
         model=DingModelIntensityFrequency(),
         data_path=[pickle_file_name],
         identification_method="full",
-        identification_with_average_method_initial_guess=False,
+        double_step_identification=False,
         key_parameter_to_identify=["a_rest", "km_rest", "tau1_rest", "tau2", "ar", "bs", "Is", "cr"],
         additional_key_settings={},
-        n_shooting=100,
+        n_shooting=10,
         use_sx=True,
     )
 
@@ -435,11 +384,15 @@ def test_all_ocp_id_errors():
 
 
 def test_all_id_program_errors():
+    key_parameter_to_identify = ["a_rest", "km_rest", "tau1_rest", "tau2"]
     with pytest.raises(
         ValueError,
         match="The given model is not valid and should not be including the fatigue equation in the model",
     ):
-        DingModelFrequencyForceParameterIdentification(model=DingModelFrequencyWithFatigue())
+        DingModelFrequencyForceParameterIdentification(
+            model=DingModelFrequencyWithFatigue(),
+            key_parameter_to_identify=key_parameter_to_identify,
+        )
 
     with pytest.raises(
         TypeError,
@@ -447,7 +400,11 @@ def test_all_id_program_errors():
             f"In the given list, all model_data_path must be str type," f" path index n°{0} is not str type"
         ),
     ):
-        DingModelFrequencyForceParameterIdentification(model=DingModelFrequency(), data_path=[5])
+        DingModelFrequencyForceParameterIdentification(
+            model=DingModelFrequency(),
+            data_path=[5],
+            key_parameter_to_identify=key_parameter_to_identify,
+        )
 
     with pytest.raises(
         TypeError,
@@ -456,7 +413,11 @@ def test_all_id_program_errors():
             f" path index n°{0} is not ending with .pkl"
         ),
     ):
-        DingModelFrequencyForceParameterIdentification(model=DingModelFrequency(), data_path=["test"])
+        DingModelFrequencyForceParameterIdentification(
+            model=DingModelFrequency(),
+            data_path=["test"],
+            key_parameter_to_identify=key_parameter_to_identify,
+        )
 
     with pytest.raises(
         TypeError,
@@ -465,7 +426,11 @@ def test_all_id_program_errors():
             f" path index is not ending with .pkl"
         ),
     ):
-        DingModelFrequencyForceParameterIdentification(model=DingModelFrequency(), data_path="test")
+        DingModelFrequencyForceParameterIdentification(
+            model=DingModelFrequency(),
+            data_path="test",
+            key_parameter_to_identify=key_parameter_to_identify,
+        )
 
     data_path = 5
     with pytest.raises(
@@ -474,7 +439,11 @@ def test_all_id_program_errors():
             f"In the given path, model_data_path must be str or list[str] type, the input is {type(data_path)} type"
         ),
     ):
-        DingModelFrequencyForceParameterIdentification(model=DingModelFrequency(), data_path=data_path)
+        DingModelFrequencyForceParameterIdentification(
+            model=DingModelFrequency(),
+            data_path=data_path,
+            key_parameter_to_identify=key_parameter_to_identify,
+        )
 
     data_path = ["test.pkl"]
     identification_method = "empty"
@@ -487,23 +456,27 @@ def test_all_id_program_errors():
         ),
     ):
         DingModelFrequencyForceParameterIdentification(
-            model=DingModelFrequency(), identification_method=identification_method, data_path=data_path
+            model=DingModelFrequency(),
+            identification_method=identification_method,
+            data_path=data_path,
+            key_parameter_to_identify=key_parameter_to_identify,
         )
 
     identification_method = "full"
-    identification_with_average_method_initial_guess = "True"
+    double_step_identification = "True"
     with pytest.raises(
         TypeError,
         match=re.escape(
-            f"The given identification_with_average_method_initial_guess must be bool type,"
-            f" the given value is {type(identification_with_average_method_initial_guess)} type"
+            f"The given double_step_identification must be bool type,"
+            f" the given value is {type(double_step_identification)} type"
         ),
     ):
         DingModelFrequencyForceParameterIdentification(
             model=DingModelFrequency(),
             identification_method=identification_method,
             data_path=data_path,
-            identification_with_average_method_initial_guess=identification_with_average_method_initial_guess,
+            double_step_identification=double_step_identification,
+            key_parameter_to_identify=key_parameter_to_identify,
         )
 
     key_parameter_to_identify = ["a_rest", "test"]
@@ -632,50 +605,4 @@ def test_all_id_program_errors():
             key_parameter_to_identify=key_parameter_to_identify,
             additional_key_settings=additional_key_settings,
             n_shooting=n_shooting,
-        )
-
-    with pytest.raises(
-        ValueError,
-        match=re.escape(f"The given model parameters are not valid, only None, int and float are accepted"),
-    ):
-        DingModelFrequencyForceParameterIdentification(
-            model=DingModelFrequency(),
-            identification_method=identification_method,
-            data_path=data_path,
-            key_parameter_to_identify=key_parameter_to_identify,
-            additional_key_settings=additional_key_settings,
-            n_shooting=10,
-            a_rest="test",
-        )
-
-    with pytest.raises(
-        ValueError,
-        match=re.escape(
-            f"The given {'a_rest'} parameter can not be given and identified at the same time."
-            f"Consider either giving {'a_rest'} and removing it from the key_parameter_to_identify list"
-            f" or the other way around"
-        ),
-    ):
-        DingModelFrequencyForceParameterIdentification(
-            model=DingModelFrequency(),
-            identification_method=identification_method,
-            data_path=data_path,
-            key_parameter_to_identify=key_parameter_to_identify,
-            additional_key_settings=additional_key_settings,
-            n_shooting=10,
-            a_rest=3000,
-        )
-
-    with pytest.raises(
-        ValueError,
-        match=re.escape(f"The given {'a_rest'} parameter is not valid, it must be given or identified"),
-    ):
-        DingModelFrequencyForceParameterIdentification(
-            model=DingModelFrequency(),
-            identification_method=identification_method,
-            data_path=data_path,
-            key_parameter_to_identify=["km_rest", "tau1_rest", "tau2"],
-            additional_key_settings=additional_key_settings,
-            n_shooting=10,
-            a_rest=None,
         )

@@ -10,6 +10,7 @@ from bioptim import (
     OptimalControlProgram,
 )
 from .ding2007 import DingModelPulseDurationFrequency
+from .state_configue import StateConfigure
 
 
 class DingModelPulseDurationFrequencyWithFatigue(DingModelPulseDurationFrequency):
@@ -41,13 +42,28 @@ class DingModelPulseDurationFrequencyWithFatigue(DingModelPulseDurationFrequency
 
     # ---- Absolutely needed methods ---- #
     @property
-    def name_dof(self) -> list[str]:
-        muscle_name = "_" + self.muscle_name if self.muscle_name else ""
+    def name_dof(self, with_muscle_name: bool = False) -> list[str]:
+        muscle_name = "_" + self.muscle_name if self.muscle_name and with_muscle_name else ""
         return ["Cn" + muscle_name, "F" + muscle_name, "A" + muscle_name, "Tau1" + muscle_name, "Km" + muscle_name]
 
     @property
     def nb_state(self) -> int:
         return 5
+
+    @property
+    def identifiable_parameters(self):
+        return {
+            "a_scale": self.a_scale,
+            "tau1_rest": self.tau1_rest,
+            "km_rest": self.km_rest,
+            "tau2": self.tau2,
+            "pd0": self.pd0,
+            "pdt": self.pdt,
+            "alpha_a": self.alpha_a,
+            "alpha_tau1": self.alpha_tau1,
+            "alpha_km": self.alpha_km,
+            "tau_fat": self.tau_fat,
+        }
 
     def standard_rest_values(self) -> np.array:
         """
@@ -270,133 +286,5 @@ class DingModelPulseDurationFrequencyWithFatigue(DingModelPulseDurationFrequency
         nlp: NonLinearProgram
             A reference to the phase
         """
-        self.configure_ca_troponin_complex(
-            ocp=ocp, nlp=nlp, as_states=True, as_controls=False, muscle_name=self.muscle_name
-        )
-        self.configure_force(ocp=ocp, nlp=nlp, as_states=True, as_controls=False, muscle_name=self.muscle_name)
-        self.configure_scaling_factor(ocp=ocp, nlp=nlp, as_states=True, as_controls=False, muscle_name=self.muscle_name)
-        self.configure_time_state_force_no_cross_bridge(
-            ocp=ocp, nlp=nlp, as_states=True, as_controls=False, muscle_name=self.muscle_name
-        )
-        self.configure_cross_bridges(ocp=ocp, nlp=nlp, as_states=True, as_controls=False, muscle_name=self.muscle_name)
+        StateConfigure().configure_all_fes_model_states(ocp, nlp, fes_model=self)
         ConfigureProblem.configure_dynamics_function(ocp, nlp, dyn_func=self.dynamics)
-
-    @staticmethod
-    def configure_scaling_factor(
-        ocp: OptimalControlProgram,
-        nlp: NonLinearProgram,
-        as_states: bool,
-        as_controls: bool,
-        as_states_dot: bool = False,
-        muscle_name: str = None,
-    ):
-        """
-        Configure a new variable of the scaling factor (N/ms)
-
-        Parameters
-        ----------
-        ocp: OptimalControlProgram
-            A reference to the ocp
-        nlp: NonLinearProgram
-            A reference to the phase
-        as_states: bool
-            If the generalized coordinates should be a state
-        as_controls: bool
-            If the generalized coordinates should be a control
-        as_states_dot: bool
-            If the generalized velocities should be a state_dot
-        muscle_name: str
-            The muscle name
-        """
-        muscle_name = "_" + muscle_name if muscle_name else ""
-        name = "A" + muscle_name
-        name_a = [name]
-        ConfigureProblem.configure_new_variable(
-            name,
-            name_a,
-            ocp,
-            nlp,
-            as_states,
-            as_controls,
-            as_states_dot,
-        )
-
-    @staticmethod
-    def configure_time_state_force_no_cross_bridge(
-        ocp: OptimalControlProgram,
-        nlp: NonLinearProgram,
-        as_states: bool,
-        as_controls: bool,
-        as_states_dot: bool = False,
-        muscle_name: str = None,
-    ):
-        """
-        Configure a new variable for time constant of force decline at the absence of strongly bound cross-bridges (ms)
-
-        Parameters
-        ----------
-        ocp: OptimalControlProgram
-            A reference to the ocp
-        nlp: NonLinearProgram
-            A reference to the phase
-        as_states: bool
-            If the generalized coordinates should be a state
-        as_controls: bool
-            If the generalized coordinates should be a control
-        as_states_dot: bool
-            If the generalized velocities should be a state_dot
-        muscle_name: str
-            The muscle name
-        """
-        muscle_name = "_" + muscle_name if muscle_name else ""
-        name = "Tau1" + muscle_name
-        name_tau1 = [name]
-        ConfigureProblem.configure_new_variable(
-            name,
-            name_tau1,
-            ocp,
-            nlp,
-            as_states,
-            as_controls,
-            as_states_dot,
-        )
-
-    @staticmethod
-    def configure_cross_bridges(
-        ocp: OptimalControlProgram,
-        nlp: NonLinearProgram,
-        as_states: bool,
-        as_controls: bool,
-        as_states_dot: bool = False,
-        muscle_name: str = None,
-    ):
-        """
-        Configure a new variable for sensitivity of strongly bound cross-bridges to Cn (unitless)
-
-        Parameters
-        ----------
-        ocp: OptimalControlProgram
-            A reference to the ocp
-        nlp: NonLinearProgram
-            A reference to the phase
-        as_states: bool
-            If the generalized coordinates should be a state
-        as_controls: bool
-            If the generalized coordinates should be a control
-        as_states_dot: bool
-            If the generalized velocities should be a state_dot
-        muscle_name: str
-            The muscle name
-        """
-        muscle_name = "_" + muscle_name if muscle_name else ""
-        name = "Km" + muscle_name
-        name_km = [name]
-        ConfigureProblem.configure_new_variable(
-            name,
-            name_km,
-            ocp,
-            nlp,
-            as_states,
-            as_controls,
-            as_states_dot,
-        )

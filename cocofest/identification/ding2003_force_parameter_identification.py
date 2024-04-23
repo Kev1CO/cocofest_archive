@@ -1,41 +1,24 @@
 import time as time_package
 
-import numpy as np
-import pickle
-
 from bioptim import Solver, Objective, OdeSolver
-from cocofest import DingModelFrequency
-from cocofest.optimization.fes_identification_ocp import OcpFesId
+
+from ..models.fes_model import FesModel
+from ..models.ding2003 import DingModelFrequency
+from ..optimization.fes_identification_ocp import OcpFesId
+from .identification_method import (
+    full_data_extraction,
+    average_data_extraction,
+    sparse_data_extraction,
+    node_shooting_list_creation,
+    force_at_node_in_ocp,
+)
+from .identification_abstract_class import ParameterIdentification
 
 
-class DingModelFrequencyForceParameterIdentification:
+class DingModelFrequencyForceParameterIdentification(ParameterIdentification):
     """
-    The main class to define an ocp. This class prepares the full program and gives all
-    the needed parameters to solve a functional electrical stimulation ocp
-
-    Attributes
-    ----------
-    model: DingModelFrequency,
-        The model to use for the ocp
-    data_path: str | list[str],
-        The path to the force model data
-    force_model_identification_method: str,
-        The method to use for the force model identification,
-         "full" for objective function on all data,
-         "average" for objective function on average data,
-         "sparse" for objective function at the beginning and end of the data
-    a_rest: float,
-        The a_rest parameter for the fatigue model, mandatory if not identified from force model
-    km_rest: float,
-        The km_rest parameter for the fatigue model, mandatory if not identified from force model
-    tau1_rest: float,
-        The tau1_rest parameter for the fatigue model, mandatory if not identified from force model
-    tau2: float,
-        The tau2 parameter for the fatigue model, mandatory if not identified from force model
-    n_shooting: int,
-        The number of shooting points for the ocp
-    use_sx: bool
-        The nature of the casadi variables. MX are used if False.
+    This class is responsible for identifying parameters of the Ding model using force data.
+    It supports identification on full data and average data (work in progress : sparse data).
     """
 
     def __init__(
@@ -43,13 +26,9 @@ class DingModelFrequencyForceParameterIdentification:
         model: DingModelFrequency,
         data_path: str | list[str] = None,
         identification_method: str = "full",
-        identification_with_average_method_initial_guess: bool = False,
+        double_step_identification: bool = False,
         key_parameter_to_identify: list = None,
         additional_key_settings: dict = None,
-        a_rest: float = None,
-        km_rest: float = None,
-        tau1_rest: float = None,
-        tau2: float = None,
         n_shooting: int = 5,
         custom_objective: list[Objective] = None,
         use_sx: bool = True,
@@ -57,31 +36,62 @@ class DingModelFrequencyForceParameterIdentification:
         n_threads: int = 1,
         **kwargs,
     ):
+        """
+        Parameters
+        ----------
+        model: DingModelFrequency,
+            The model for identification
+        data_path: str | list[str],
+            The path to the force model data
+        identification_method: str,
+            The method to use for the force model identification,
+             "full" for objective function on all data,
+             "average" for objective function on average data,
+             "sparse" for objective function at the beginning and end of the data
+        double_step_identification: bool,
+            If True, the identification will be done in two steps, the first step will be used to set the initial guess
+        key_parameter_to_identify: list,
+            The list of parameters to identify
+        additional_key_settings: dict,
+            additional_key_settings will enable to modify identified parameters default parameters such as initial guess,
+            min_bound, max_bound, function and scaling
+        n_shooting: int,
+            The number of shooting points for the ocp
+        custom_objective: list[Objective],
+            The custom objective to use for the identification
+        use_sx: bool
+            The nature of the casadi variables. MX are used if False.
+        ode_solver: OdeSolver,
+            The ode solver to use for the identification
+        n_threads: int,
+            The number of threads to use for the identification
+        """
+
         self.default_values = self._set_default_values(model=model)
-        self.a_rest = a_rest
-        self.km_rest = km_rest
-        self.tau1_rest = tau1_rest
-        self.tau2 = tau2
+
+        dict_parameter_to_configure = model.identifiable_parameters
+        model_parameters_value = [
+            None if key in key_parameter_to_identify else dict_parameter_to_configure[key]
+            for key in dict_parameter_to_configure
+        ]
+        self.model = self._set_model_parameters(model, model_parameters_value)
 
         self.input_sanity(
             model,
             data_path,
             identification_method,
-            identification_with_average_method_initial_guess,
+            double_step_identification,
             key_parameter_to_identify,
             additional_key_settings,
             n_shooting,
         )
-
-        self.model = model
-        self.model = self._set_model_parameters()
 
         self.key_parameter_to_identify = key_parameter_to_identify
         self.additional_key_settings = self.key_setting_to_dictionary(key_settings=additional_key_settings)
 
         self.data_path = data_path
         self.force_model_identification_method = identification_method
-        self.identification_with_average_method_initial_guess = identification_with_average_method_initial_guess
+        self.double_step_identification = double_step_identification
 
         self.force_ocp = None
         self.force_identification_result = None
@@ -93,6 +103,19 @@ class DingModelFrequencyForceParameterIdentification:
         self.kwargs = kwargs
 
     def _set_default_values(self, model):
+        """
+        This method is used to set the default values for the identified parameters (initial guesses, bounds, scaling and
+        function).
+        If the user does not provide additional_key_settings for a specific parameter, the default value will be used.
+
+        Parameters
+        ----------
+        model
+
+        Returns
+        -------
+
+        """
         return {
             "a_rest": {
                 "initial_guess": 1000,
@@ -125,24 +148,52 @@ class DingModelFrequencyForceParameterIdentification:
         }
 
     def _set_default_parameters_list(self):
-        self.model_parameter_list = [self.a_rest, self.km_rest, self.tau1_rest, self.tau2]
-        self.model_key_parameter_list = ["a_rest", "km_rest", "tau1_rest", "tau2"]
+        """
+        This method is used to set the default parameters list for the model.
+        """
+        self.numeric_parameters = [self.model.a_rest, self.model.km_rest, self.model.tau1_rest, self.model.tau2]
+        self.key_parameters = ["a_rest", "km_rest", "tau1_rest", "tau2"]
 
     def input_sanity(
         self,
-        model,
-        data_path,
-        identification_method,
-        identification_with_average_method_initial_guess,
-        key_parameter_to_identify,
-        additional_key_settings,
-        n_shooting,
+        model: FesModel = None,
+        data_path: str | list[str] = None,
+        identification_method: str = None,
+        double_step_identification: bool = None,
+        key_parameter_to_identify: list = None,
+        additional_key_settings: dict = None,
+        n_shooting: int = None,
     ):
+        """
+        This method is used to check the input sanity entered from the user.
+
+        Parameters
+        ----------
+        model: FesModel,
+            The model to use for the identification process
+        data_path: str | list[str],
+            The path to the force model data
+        identification_method: str,
+            The method to use for the force model identification,
+             "full" for objective function on all data,
+             "average" for objective function on average data,
+             "sparse" for objective function at the beginning and end of the data
+        double_step_identification: bool,
+            If True, the identification will be done in two steps, the first step will be used to set the initial guess
+        key_parameter_to_identify: list,
+            The list of parameters to identify
+        additional_key_settings: dict,
+            additional_key_settings will enable to modify identified parameters default parameters such as initial guess,
+            min_bound, max_bound, function and scaling
+        n_shooting: int,
+            The number of shooting points for the ocp
+        """
+
         if model._with_fatigue:
             raise ValueError(
                 f"The given model is not valid and should not be including the fatigue equation in the model"
             )
-        self.data_sanity(data_path)
+        self.check_experiment_force_format(data_path)
 
         if identification_method not in ["full", "average", "sparse"]:
             raise ValueError(
@@ -151,10 +202,10 @@ class DingModelFrequencyForceParameterIdentification:
                 f" the given value is {identification_method}"
             )
 
-        if not isinstance(identification_with_average_method_initial_guess, bool):
+        if not isinstance(double_step_identification, bool):
             raise TypeError(
-                f"The given identification_with_average_method_initial_guess must be bool type,"
-                f" the given value is {type(identification_with_average_method_initial_guess)} type"
+                f"The given double_step_identification must be bool type,"
+                f" the given value is {type(double_step_identification)} type"
             )
 
         if isinstance(key_parameter_to_identify, list):
@@ -204,22 +255,25 @@ class DingModelFrequencyForceParameterIdentification:
             raise TypeError(f"The given n_shooting must be int type," f" the given value is {type(n_shooting)} type")
 
         self._set_default_parameters_list()
-        if not all(isinstance(param, None | int | float) for param in self.model_parameter_list):
+        if not all(isinstance(param, None | int | float) for param in self.numeric_parameters):
             raise ValueError(f"The given model parameters are not valid, only None, int and float are accepted")
 
-        for i in range(len(self.model_parameter_list)):
-            if self.model_parameter_list[i] and self.model_key_parameter_list[i] in key_parameter_to_identify:
-                raise ValueError(
-                    f"The given {self.model_key_parameter_list[i]} parameter can not be given and identified at the same time."
-                    f"Consider either giving {self.model_key_parameter_list[i]} and removing it from the key_parameter_to_identify list"
-                    f" or the other way around"
-                )
-            elif not self.model_parameter_list[i] and self.model_key_parameter_list[i] not in key_parameter_to_identify:
-                raise ValueError(
-                    f"The given {self.model_key_parameter_list[i]} parameter is not valid, it must be given or identified"
-                )
-
     def key_setting_to_dictionary(self, key_settings):
+        """
+        This method is used to set the identified parameter optimization values (initial guesses, bounds,
+        scaling and function). The default values can be modified by the user when sending the "additional_key_settings"
+        input into class. If the user does not provide a value for a specific parameter, the default value will be used.
+
+        Parameters
+        ----------
+        key_settings: dict,
+            The settings attributed from user for parameter to identify
+
+        Returns
+        -------
+        This function will return a dictionary of dictionaries which contains the identified keys with its associated settings.
+
+        """
         settings_dict = {}
         for key in self.key_parameter_to_identify:
             settings_dict[key] = {}
@@ -232,7 +286,7 @@ class DingModelFrequencyForceParameterIdentification:
         return settings_dict
 
     @staticmethod
-    def data_sanity(data_path):
+    def check_experiment_force_format(data_path):
         if isinstance(data_path, list):
             for i in range(len(data_path)):
                 if not isinstance(data_path[i], str):
@@ -256,280 +310,33 @@ class DingModelFrequencyForceParameterIdentification:
                 f"In the given path, model_data_path must be str or list[str] type, the input is {type(data_path)} type"
             )
 
-    def _set_model_parameters(self):
-        if self.a_rest:
-            self.model.set_a_rest(self.model, self.a_rest)
-        if self.km_rest:
-            self.model.set_km_rest(self.model, self.km_rest)
-        if self.tau1_rest:
-            self.model.set_tau1_rest(self.model, self.tau1_rest)
-        if self.tau2:
-            self.model.set_tau2(self.model, self.tau2)
-        return self.model
-
     @staticmethod
-    def full_data_extraction(model_data_path):
-        global_model_muscle_data = []
-        global_model_stim_apparition_time = []
-        global_model_time_data = []
-
-        discontinuity_phase_list = []
-        for i in range(len(model_data_path)):
-            with open(model_data_path[i], "rb") as f:
-                data = pickle.load(f)
-            model_data = data["force"]
-
-            # Arranging the data to have the beginning time starting at 0 second for all data
-            model_stim_apparition_time = (
-                data["stim_time"]
-                if data["stim_time"][0] == 0
-                else [stim_time - data["stim_time"][0] for stim_time in data["stim_time"]]
-            )
-
-            model_time_data = (
-                data["time"]
-                if data["stim_time"][0] == 0
-                else [[(time - data["stim_time"][0]) for time in row] for row in data["time"]]
-            )
-
-            # model_data = [item for sublist in model_data for item in sublist]
-            # model_time_data = [item for sublist in model_time_data for item in sublist]
-
-            # Indexing the current data time on the previous one to ensure time continuity
-            if i != 0:
-                discontinuity_phase_list.append(
-                    len(global_model_stim_apparition_time[-1])
-                    if discontinuity_phase_list == []
-                    else discontinuity_phase_list[-1] + len(global_model_stim_apparition_time[-1])
-                )
-
-                model_stim_apparition_time = [
-                    stim_time + global_model_time_data[i - 1][-1] for stim_time in model_stim_apparition_time
-                ]
-
-                model_time_data = [(time + global_model_time_data[i - 1][-1]) for time in model_time_data]
-                model_stim_apparition_time = [
-                    (time + global_model_time_data[i - 1][-1]) for time in model_stim_apparition_time
-                ]
-
-            # Storing data into global lists
-            global_model_muscle_data.append(model_data)
-            global_model_stim_apparition_time.append(model_stim_apparition_time)
-            global_model_time_data.append(model_time_data)
-        # Expending global lists
-        global_model_muscle_data = [item for sublist in global_model_muscle_data for item in sublist]
-        global_model_stim_apparition_time = [item for sublist in global_model_stim_apparition_time for item in sublist]
-        global_model_time_data = [item for sublist in global_model_time_data for item in sublist]
-        return (
-            global_model_time_data,
-            global_model_stim_apparition_time,
-            global_model_muscle_data,
-            discontinuity_phase_list,
-        )
-
-    @staticmethod
-    def average_data_extraction(model_data_path):
-        global_model_muscle_data = []
-        global_model_stim_apparition_time = []
-        global_model_time_data = []
-
-        discontinuity_phase_list = []
-        for i in range(len(model_data_path)):
-            with open(model_data_path[i], "rb") as f:
-                data = pickle.load(f)
-            model_data = data["force"]
-
-            temp_stimulation_instant = []
-            stim_threshold = data["stim_time"][1] - data["stim_time"][0]
-            for j in range(1, len(data["stim_time"])):
-                stim_interval = data["stim_time"][j] - data["stim_time"][j - 1]
-                if stim_interval < stim_threshold * 1.5:
-                    temp_stimulation_instant.append(data["stim_time"][j] - data["stim_time"][j - 1])
-            stimulation_temp_frequency = round(1 / np.mean(temp_stimulation_instant), 0)
-
-            model_time_data = (
-                data["time"]
-                if data["stim_time"][0] == 0
-                else [[(time - data["stim_time"][0]) for time in row] for row in data["time"]]
-            )
-
-            # Average on each force curve
-            smallest_list = 0
-            for j in range(len(model_data)):
-                if j == 0:
-                    smallest_list = len(model_data[j])
-                if len(model_data[j]) < smallest_list:
-                    smallest_list = len(model_data[j])
-
-            model_data = np.mean([row[:smallest_list] for row in model_data], axis=0).tolist()
-            model_time_data = [item for sublist in model_time_data for item in sublist]
-
-            model_time_data = model_time_data[:smallest_list]
-            train_duration = 1
-
-            average_stim_apparition = np.linspace(
-                0, train_duration, int(stimulation_temp_frequency * train_duration) + 1
-            )[:-1]
-            average_stim_apparition = [time for time in average_stim_apparition]
-            if i == len(model_data_path) - 1:
-                average_stim_apparition = np.append(average_stim_apparition, model_time_data[-1]).tolist()
-
-            # Indexing the current data time on the previous one to ensure time continuity
-            if i != 0:
-                discontinuity_phase_list.append(
-                    len(global_model_stim_apparition_time[-1])
-                    if discontinuity_phase_list == []
-                    else discontinuity_phase_list[-1] + len(global_model_stim_apparition_time[-1])
-                )
-
-                model_time_data = [(time + global_model_time_data[i - 1][-1]) for time in model_time_data]
-                average_stim_apparition = [
-                    (time + global_model_time_data[i - 1][-1]) for time in average_stim_apparition
-                ]
-
-            # Storing data into global lists
-            global_model_muscle_data.append(model_data)
-            global_model_stim_apparition_time.append(average_stim_apparition)
-            global_model_time_data.append(model_time_data)
-
-        # Expending global lists
-        global_model_muscle_data = [item for sublist in global_model_muscle_data for item in sublist]
-        global_model_stim_apparition_time = [item for sublist in global_model_stim_apparition_time for item in sublist]
-        global_model_time_data = [item for sublist in global_model_time_data for item in sublist]
-        return (
-            global_model_time_data,
-            global_model_stim_apparition_time,
-            global_model_muscle_data,
-            discontinuity_phase_list,
-        )
-
-    @staticmethod
-    def sparse_data_extraction(model_data_path, force_curve_number=5):
-        raise NotImplementedError("This method has not been tested yet")
-
-        # global_model_muscle_data = []
-        # global_model_stim_apparition_time = []
-        # global_model_time_data = []
-        #
-        # discontinuity_phase_list = []
-        # for i in range(len(model_data_path)):
-        #     with open(model_data_path[i], "rb") as f:
-        #         data = pickle.load(f)
-        #     model_data = data["force"]
-        #
-        #     # Arranging the data to have the beginning time starting at 0 second for all data
-        #     model_stim_apparition_time = (
-        #         data["stim_time"]
-        #         if data["stim_time"][0] == 0
-        #         else [stim_time - data["stim_time"][0] for stim_time in data["stim_time"]]
-        #     )
-        #
-        #     model_time_data = (
-        #         data["time"]
-        #         if data["stim_time"][0] == 0
-        #         else [[(time - data["stim_time"][0]) for time in row] for row in data["time"]]
-        #     )
-        #
-        #     # TODO : check this part
-        #     model_data = model_data[0:force_curve_number] + model_data[:-force_curve_number]
-        #     model_time_data = model_time_data[0:force_curve_number] + model_time_data[:-force_curve_number]
-        #
-        #     # TODO correct this part
-        #     model_stim_apparition_time = (
-        #         model_stim_apparition_time[0:force_curve_number] + model_stim_apparition_time[:-force_curve_number]
-        #     )
-        #
-        #     model_data = [item for sublist in model_data for item in sublist]
-        #     model_time_data = [item for sublist in model_time_data for item in sublist]
-        #
-        #     # Indexing the current data time on the previous one to ensure time continuity
-        #     if i != 0:
-        #         discontinuity_phase_list.append(
-        #             len(global_model_stim_apparition_time[-1]) - 1
-        #             if discontinuity_phase_list == []
-        #             else discontinuity_phase_list[-1] + len(global_model_stim_apparition_time[-1])
-        #         )
-        #
-        #         model_stim_apparition_time = [
-        #             stim_time + global_model_time_data[i - 1][-1] for stim_time in model_stim_apparition_time
-        #         ]
-        #
-        #         model_time_data = [(time + global_model_time_data[i - 1][-1]) for time in model_time_data]
-        #         model_stim_apparition_time = [
-        #             (time + global_model_time_data[i - 1][-1]) for time in model_stim_apparition_time
-        #         ]
-        #
-        #     # Storing data into global lists
-        #     global_model_muscle_data.append(model_data)
-        #     global_model_stim_apparition_time.append(model_stim_apparition_time)
-        #     global_model_time_data.append(model_time_data)
-        # # Expending global lists
-        # global_model_muscle_data = [item for sublist in global_model_muscle_data for item in sublist]
-        # global_model_stim_apparition_time = [item for sublist in global_model_stim_apparition_time for item in sublist]
-        # global_model_time_data = [item for sublist in global_model_time_data for item in sublist]
-        #
-        # return (
-        #     global_model_time_data,
-        #     global_model_stim_apparition_time,
-        #     global_model_muscle_data,
-        #     discontinuity_phase_list,
-        # )
-
-    @staticmethod
-    def force_at_node_in_ocp(time, force, n_shooting, final_time_phase, sparse=None):
-        temp_time = []
-        for i in range(len(final_time_phase)):
-            for j in range(n_shooting[i]):
-                temp_time.append(sum(final_time_phase[:i]) + j * final_time_phase[i] / (n_shooting[i]))
-        force_at_node = np.interp(temp_time, time, force).tolist()
-        # if sparse:  # TODO check this part
-        #     force_at_node = force_at_node[0:sparse] + force_at_node[:-sparse]
-        return force_at_node
-
-    @staticmethod
-    def node_shooting_list_creation(stim, stimulated_n_shooting):
-        first_final_time = stim[1] if stim[0] == 0 else stim[0]
-        final_time_phase = (first_final_time,)
-        for i in range(1, len(stim)):
-            final_time_phase = final_time_phase + (stim[i] - stim[i - 1],)
-
-        threshold_stimulation_interval = np.mean(final_time_phase)
-        stimulation_interval_average_without_rest_time = np.delete(
-            np.array(final_time_phase),
-            np.where(np.logical_or(final_time_phase > threshold_stimulation_interval, np.array(final_time_phase) == 0)),
-        )
-        stimulation_interval_average = np.mean(stimulation_interval_average_without_rest_time)
-        n_shooting = []
-
-        for i in range(len(final_time_phase)):
-            if final_time_phase[i] > threshold_stimulation_interval:
-                temp_final_time = final_time_phase[i]
-                rest_n_shooting = int((temp_final_time / stimulation_interval_average) * stimulated_n_shooting)
-                n_shooting.append(rest_n_shooting)
-            else:
-                n_shooting.append(stimulated_n_shooting)
-
-        return n_shooting, final_time_phase
+    def _set_model_parameters(model, model_parameters_value):
+        model.a_rest = model_parameters_value[0]
+        model.km_rest = model_parameters_value[1]
+        model.tau1_rest = model_parameters_value[2]
+        model.tau2 = model_parameters_value[3]
+        return model
 
     def _force_model_identification_for_initial_guess(self):
         self.input_sanity(
             self.model,
             self.data_path,
             self.force_model_identification_method,
-            self.identification_with_average_method_initial_guess,
+            self.double_step_identification,
             self.key_parameter_to_identify,
             self.additional_key_settings,
             self.n_shooting,
         )
-        self.data_sanity(self.data_path)
+        self.check_experiment_force_format(self.data_path)
         # --- Data extraction --- #
         # --- Force model --- #
         stimulated_n_shooting = self.n_shooting
         force_curve_number = None
 
-        time, stim, force, discontinuity = self.average_data_extraction(self.data_path)
-        n_shooting, final_time_phase = self.node_shooting_list_creation(stim, stimulated_n_shooting)
-        force_at_node = self.force_at_node_in_ocp(time, force, n_shooting, final_time_phase, force_curve_number)
+        time, stim, force, discontinuity = average_data_extraction(self.data_path)
+        n_shooting, final_time_phase = node_shooting_list_creation(stim, stimulated_n_shooting)
+        force_at_node = force_at_node_in_ocp(time, force, n_shooting, final_time_phase, force_curve_number)
 
         # --- Building force ocp --- #
         self.force_ocp = OcpFesId.prepare_ocp(
@@ -541,10 +348,6 @@ class DingModelFrequencyForceParameterIdentification:
             additional_key_settings=self.additional_key_settings,
             custom_objective=self.custom_objective,
             discontinuity_in_ocp=discontinuity,
-            a_rest=self.a_rest,
-            km_rest=self.km_rest,
-            tau1_rest=self.tau1_rest,
-            tau2=self.tau2,
             use_sx=self.use_sx,
             ode_solver=self.ode_solver,
             n_threads=self.n_threads,
@@ -561,17 +364,17 @@ class DingModelFrequencyForceParameterIdentification:
         return initial_guess
 
     def force_model_identification(self):
-        if not self.identification_with_average_method_initial_guess:
+        if not self.double_step_identification:
             self.input_sanity(
                 self.model,
                 self.data_path,
                 self.force_model_identification_method,
-                self.identification_with_average_method_initial_guess,
+                self.double_step_identification,
                 self.key_parameter_to_identify,
                 self.additional_key_settings,
                 self.n_shooting,
             )
-            self.data_sanity(self.data_path)
+            self.check_experiment_force_format(self.data_path)
 
         # --- Data extraction --- #
         # --- Force model --- #
@@ -580,19 +383,19 @@ class DingModelFrequencyForceParameterIdentification:
         time, stim, force, discontinuity = None, None, None, None
 
         if self.force_model_identification_method == "full":
-            time, stim, force, discontinuity = self.full_data_extraction(self.data_path)
+            time, stim, force, discontinuity = full_data_extraction(self.data_path)
 
         elif self.force_model_identification_method == "average":
-            time, stim, force, discontinuity = self.average_data_extraction(self.data_path)
+            time, stim, force, discontinuity = average_data_extraction(self.data_path)
 
         elif self.force_model_identification_method == "sparse":
             force_curve_number = self.kwargs["force_curve_number"] if "force_curve_number" in self.kwargs else 5
-            time, stim, force, discontinuity = self.sparse_data_extraction(self.data_path, force_curve_number)
+            time, stim, force, discontinuity = sparse_data_extraction(self.data_path, force_curve_number)
 
-        n_shooting, final_time_phase = self.node_shooting_list_creation(stim, stimulated_n_shooting)
-        force_at_node = self.force_at_node_in_ocp(time, force, n_shooting, final_time_phase, force_curve_number)
+        n_shooting, final_time_phase = node_shooting_list_creation(stim, stimulated_n_shooting)
+        force_at_node = force_at_node_in_ocp(time, force, n_shooting, final_time_phase, force_curve_number)
 
-        if self.identification_with_average_method_initial_guess:
+        if self.double_step_identification:
             initial_guess = self._force_model_identification_for_initial_guess()
 
             for key in self.key_parameter_to_identify:
@@ -609,10 +412,6 @@ class DingModelFrequencyForceParameterIdentification:
             additional_key_settings=self.additional_key_settings,
             custom_objective=self.custom_objective,
             discontinuity_in_ocp=discontinuity,
-            a_rest=self.a_rest,
-            km_rest=self.km_rest,
-            tau1_rest=self.tau1_rest,
-            tau2=self.tau2,
             use_sx=self.use_sx,
             ode_solver=self.ode_solver,
             n_threads=self.n_threads,
@@ -626,17 +425,4 @@ class DingModelFrequencyForceParameterIdentification:
         for key in self.key_parameter_to_identify:
             identified_parameters[key] = self.force_identification_result.parameters[key][0]
 
-        self.attributing_values_to_parameters(identified_parameters)
-
         return identified_parameters
-
-    def attributing_values_to_parameters(self, identified_parameters):
-        for key in identified_parameters:
-            if key == "a_rest":
-                self.model.set_a_rest(self.model, identified_parameters[key])
-            elif key == "km_rest":
-                self.model.set_km_rest(self.model, identified_parameters[key])
-            elif key == "tau1_rest":
-                self.model.set_tau1_rest(self.model, identified_parameters[key])
-            elif key == "tau2":
-                self.model.set_tau2(self.model, identified_parameters[key])

@@ -17,16 +17,15 @@ from bioptim import (
     VariableScaling,
 )
 
-from cocofest.custom_objectives import CustomObjective
-from cocofest import (
-    DingModelFrequency,
-    DingModelFrequencyWithFatigue,
-    DingModelPulseDurationFrequency,
-    DingModelPulseDurationFrequencyWithFatigue,
-    DingModelIntensityFrequency,
-    DingModelIntensityFrequencyWithFatigue,
-)
-from cocofest.optimization.fes_ocp import OcpFes
+from ..custom_objectives import CustomObjective
+from ..models.fes_model import FesModel
+from ..models.ding2007 import DingModelPulseDurationFrequency
+from ..models.ding2007_with_fatigue import DingModelPulseDurationFrequencyWithFatigue
+from ..models.ding2003 import DingModelFrequency
+from ..models.ding2003_with_fatigue import DingModelFrequencyWithFatigue
+from ..models.hmed2018 import DingModelIntensityFrequency
+from ..models.hmed2018_with_fatigue import DingModelIntensityFrequencyWithFatigue
+from ..optimization.fes_ocp import OcpFes
 
 
 class OcpFesId(OcpFes):
@@ -35,14 +34,7 @@ class OcpFesId(OcpFes):
 
     @staticmethod
     def prepare_ocp(
-        model: (
-            DingModelFrequency
-            | DingModelFrequencyWithFatigue
-            | DingModelPulseDurationFrequency
-            | DingModelPulseDurationFrequencyWithFatigue
-            | DingModelIntensityFrequency
-            | DingModelIntensityFrequencyWithFatigue
-        ) = None,
+        model: FesModel = None,
         n_shooting: list[int] = None,
         final_time_phase: tuple | list = None,
         pulse_duration: int | float | list = None,
@@ -63,7 +55,7 @@ class OcpFesId(OcpFes):
 
         Attributes
         ----------
-        model: DingModelFrequency | DingModelFrequencyWithFatigue | DingModelPulseDurationFrequency | DingModelPulseDurationFrequencyWithFatigue | DingModelIntensityFrequency | DingModelIntensityFrequencyWithFatigue,
+        model:  FesModel
             The model used to solve the ocp
         final_time_phase: tuple, list
             The final time of each phase, it corresponds to the stimulation apparition time
@@ -91,8 +83,8 @@ class OcpFesId(OcpFes):
             use_sx=use_sx,
             ode_solver=ode_solver,
             n_threads=n_threads,
-            pulse_duration=pulse_duration,
-            pulse_intensity=pulse_intensity,
+            fixed_pulse_duration=pulse_duration,
+            fixed_pulse_intensity=pulse_intensity,
         )
 
         OcpFesId._sanity_check_id(

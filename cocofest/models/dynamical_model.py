@@ -1,6 +1,6 @@
 from typing import Callable
 
-from casadi import vertcat, MX, SX, exp, log, sqrt
+from casadi import vertcat, MX, SX
 from bioptim import (
     BiorbdModel,
     OptimalControlProgram,
@@ -8,17 +8,12 @@ from bioptim import (
     ConfigureProblem,
     DynamicsFunctions,
     DynamicsEvaluation,
-    FatigueList,
 )
 
-from cocofest import (
-    DingModelFrequency,
-    DingModelFrequencyWithFatigue,
-    DingModelPulseDurationFrequency,
-    DingModelPulseDurationFrequencyWithFatigue,
-    DingModelIntensityFrequency,
-    DingModelIntensityFrequencyWithFatigue,
-)
+from ..models.fes_model import FesModel
+from ..models.ding2003 import DingModelFrequency
+from .state_configue import StateConfigure
+from .hill_coefficients import muscle_force_length_coefficient, muscle_force_velocity_coefficient
 
 
 class FesMskModel(BiorbdModel):
@@ -26,21 +21,36 @@ class FesMskModel(BiorbdModel):
         self,
         name: str = None,
         biorbd_path: str = None,
-        muscles_model: DingModelFrequency() = None,
-        muscle_force_length_relationship: bool = False,
-        muscle_force_velocity_relationship: bool = False,
+        muscles_model: list[FesModel] = None,
+        activate_force_length_relationship: bool = False,
+        activate_force_velocity_relationship: bool = False,
     ):
+        """
+        The custom model that will be used in the optimal control program for the FES-MSK models
+
+        Parameters
+        ----------
+        name: str
+            The model name
+        biorbd_path: str
+            The path to the biorbd model
+        muscles_model: DingModelFrequency
+            The muscle model that will be used in the model
+        activate_force_length_relationship: bool
+            If the force-length relationship should be activated
+        activate_force_velocity_relationship: bool
+            If the force-velocity relationship should be activated
+        """
+
         super().__init__(biorbd_path)
         self._name = name
         self.bio_model = BiorbdModel(biorbd_path)
-        self.bounds_from_ranges_q = self.bio_model.bounds_from_ranges("q")
-        self.bounds_from_ranges_qdot = self.bio_model.bounds_from_ranges("qdot")
 
         self.muscles_dynamics_model = muscles_model
         self.bio_stim_model = [self.bio_model] + self.muscles_dynamics_model
 
-        self.muscle_force_length_relationship = muscle_force_length_relationship
-        self.muscle_force_velocity_relationship = muscle_force_velocity_relationship
+        self.activate_force_length_relationship = activate_force_length_relationship
+        self.activate_force_velocity_relationship = activate_force_velocity_relationship
 
     # ---- Absolutely needed methods ---- #
     def serialize(self, index: int = 0) -> tuple[Callable, dict]:
@@ -52,7 +62,7 @@ class FesMskModel(BiorbdModel):
         return self.bio_model.name_dof
 
     def muscle_name_dof(self, index: int = 0) -> list[str]:
-        return self.muscles_dynamics_model[index].name_dof
+        return self.muscles_dynamics_model[index].name_dof(with_muscle_name=True)
 
     @property
     def nb_state(self) -> int:
@@ -66,23 +76,15 @@ class FesMskModel(BiorbdModel):
     def name(self) -> None | str:
         return self._name
 
-    @staticmethod
     def muscle_dynamic(
+        self,
         time: MX | SX,
         states: MX | SX,
         controls: MX | SX,
         parameters: MX | SX,
         stochastic_variables: MX | SX,
         nlp: NonLinearProgram,
-        muscle_models: (
-            list[DingModelFrequency]
-            | list[DingModelFrequencyWithFatigue]
-            | list[DingModelPulseDurationFrequency]
-            | list[DingModelPulseDurationFrequencyWithFatigue]
-            | list[DingModelIntensityFrequency]
-            | list[DingModelIntensityFrequencyWithFatigue]
-        ),
-        stim_apparition=None,
+        muscle_models: list[FesModel],
         state_name_list=None,
     ) -> DynamicsEvaluation:
         """
@@ -102,10 +104,8 @@ class FesMskModel(BiorbdModel):
             The stochastic variables of the system
         nlp: NonLinearProgram
             A reference to the phase
-        muscle_models: list[DingModelFrequency] | list[DingModelIntensityFrequency] | list[DingModelPulseDurationFrequency] | list[DingModelFrequencyWithFatigue] | list[DingModelIntensityFrequencyWithFatigue] | list[DingModelPulseDurationFrequencyWithFatigue]
+        muscle_models: list[FesModel]
             The list of the muscle models
-        stim_apparition: list[float]
-            The stimulations apparition time list  (s)
         state_name_list: list[str]
             The states names list
         Returns
@@ -117,7 +117,32 @@ class FesMskModel(BiorbdModel):
         qdot = DynamicsFunctions.get(nlp.states["qdot"], states)
         tau = DynamicsFunctions.get(nlp.controls["tau"], controls)
 
-        muscles_tau = 0
+        muscles_tau, dxdt_muscle_list = self.muscles_joint_torque(
+            time, states, controls, parameters, stochastic_variables, nlp, muscle_models, state_name_list, q, qdot
+        )
+
+        # You can directly call biorbd function (as for ddq) or call bioptim accessor (as for dq)
+        dq = DynamicsFunctions.compute_qdot(nlp, q, qdot)
+        ddq = nlp.model.forward_dynamics(q, qdot, muscles_tau + tau)
+
+        dxdt = vertcat(dxdt_muscle_list, dq, ddq)
+
+        return DynamicsEvaluation(dxdt=dxdt, defects=None)
+
+    @staticmethod
+    def muscles_joint_torque(
+        time: MX | SX,
+        states: MX | SX,
+        controls: MX | SX,
+        parameters: MX | SX,
+        stochastic_variables: MX | SX,
+        nlp: NonLinearProgram,
+        muscle_models: list[FesModel],
+        state_name_list=None,
+        q: MX | SX = None,
+        qdot: MX | SX = None,
+    ):
+        muscle_joint_torques = 0
         dxdt_muscle_list = vertcat()
 
         bio_muscle_names_at_index = []
@@ -134,16 +159,21 @@ class FesMskModel(BiorbdModel):
 
             muscle_idx = bio_muscle_names_at_index.index(muscle_model.muscle_name)
 
-            muscle_force_length_coeff = 1
-            muscle_force_velocity_coeff = 1
-            if nlp.model.muscle_force_length_relationship:
-                muscle_force_length_coeff = FesMskModel.muscle_force_length_coefficient(
+            muscle_force_length_coeff = (
+                muscle_force_length_coefficient(
                     model=nlp.model.bio_model.model, muscle=nlp.model.bio_model.model.muscle(muscle_idx), q=q
                 )
-            if nlp.model.muscle_force_velocity_relationship:
-                muscle_force_velocity_coeff = FesMskModel.muscle_force_velocity_coefficient(
+                if nlp.model.activate_force_velocity_relationship
+                else 1
+            )
+
+            muscle_force_velocity_coeff = (
+                muscle_force_velocity_coefficient(
                     model=nlp.model.bio_model.model, muscle=nlp.model.bio_model.model.muscle(muscle_idx), q=q, qdot=qdot
                 )
+                if nlp.model.activate_force_velocity_relationship
+                else 1
+            )
 
             muscle_dxdt = muscle_model.dynamics(
                 time,
@@ -159,20 +189,12 @@ class FesMskModel(BiorbdModel):
 
             muscle_forces = DynamicsFunctions.get(nlp.states["F_" + muscle_model.muscle_name], states)
 
-            moment_arm_matrix_for_the_muscle_and_joint = (
-                -nlp.model.bio_model.model.musclesLengthJacobian(q).to_mx()[muscle_idx, :].T
-            )
-            muscles_tau += moment_arm_matrix_for_the_muscle_and_joint @ muscle_forces
+            muscle_moment_arm_matrix = -nlp.model.bio_model.model.musclesLengthJacobian(q).to_mx()[muscle_idx, :].T
+            muscle_joint_torques += muscle_moment_arm_matrix @ muscle_forces
 
             dxdt_muscle_list = vertcat(dxdt_muscle_list, muscle_dxdt)
 
-        # You can directly call biorbd function (as for ddq) or call bioptim accessor (as for dq)
-        dq = DynamicsFunctions.compute_qdot(nlp, q, qdot)
-        ddq = nlp.model.forward_dynamics(q, qdot, muscles_tau + tau)
-
-        dxdt = vertcat(dxdt_muscle_list, dq, ddq)
-
-        return DynamicsEvaluation(dxdt=dxdt, defects=None)
+        return muscle_joint_torques, dxdt_muscle_list
 
     def declare_model_variables(self, ocp: OptimalControlProgram, nlp: NonLinearProgram):
         """
@@ -185,38 +207,12 @@ class FesMskModel(BiorbdModel):
         nlp: NonLinearProgram
             A reference to the phase
         """
-        state_name_list = []
-        for muscle_dynamics_model in self.muscles_dynamics_model:
-            muscle_dynamics_model.configure_ca_troponin_complex(
-                ocp=ocp, nlp=nlp, as_states=True, as_controls=False, muscle_name=muscle_dynamics_model.muscle_name
-            )
-            state_name_list.append("CN_" + muscle_dynamics_model.muscle_name)
-            muscle_dynamics_model.configure_force(
-                ocp=ocp, nlp=nlp, as_states=True, as_controls=False, muscle_name=muscle_dynamics_model.muscle_name
-            )
-            state_name_list.append("F_" + muscle_dynamics_model.muscle_name)
-            if "A_" + muscle_dynamics_model.muscle_name in muscle_dynamics_model.name_dof:
-                muscle_dynamics_model.configure_scaling_factor(
-                    ocp=ocp, nlp=nlp, as_states=True, as_controls=False, muscle_name=muscle_dynamics_model.muscle_name
-                )
-                state_name_list.append("A_" + muscle_dynamics_model.muscle_name)
-            if "Tau1_" + muscle_dynamics_model.muscle_name in muscle_dynamics_model.name_dof:
-                muscle_dynamics_model.configure_time_state_force_no_cross_bridge(
-                    ocp=ocp, nlp=nlp, as_states=True, as_controls=False, muscle_name=muscle_dynamics_model.muscle_name
-                )
-                state_name_list.append("Tau1_" + muscle_dynamics_model.muscle_name)
-            if "Km_" + muscle_dynamics_model.muscle_name in muscle_dynamics_model.name_dof:
-                muscle_dynamics_model.configure_cross_bridges(
-                    ocp=ocp, nlp=nlp, as_states=True, as_controls=False, muscle_name=muscle_dynamics_model.muscle_name
-                )
-                state_name_list.append("Km_" + muscle_dynamics_model.muscle_name)
-
+        state_name_list = StateConfigure().configure_all_muscle_states(self.muscles_dynamics_model, ocp, nlp)
         ConfigureProblem.configure_q(ocp, nlp, as_states=True, as_controls=False)
         state_name_list.append("q")
         ConfigureProblem.configure_qdot(ocp, nlp, as_states=True, as_controls=False)
         state_name_list.append("qdot")
         ConfigureProblem.configure_tau(ocp, nlp, as_states=False, as_controls=True)
-
         ConfigureProblem.configure_dynamics_function(
             ocp,
             nlp,
@@ -224,153 +220,3 @@ class FesMskModel(BiorbdModel):
             muscle_models=self.muscles_dynamics_model,
             state_name_list=state_name_list,
         )
-
-    @staticmethod
-    def configure_q(ocp, nlp, as_states: bool, as_controls: bool, as_states_dot: bool = False):
-        """
-        Configure the generalized coordinates
-
-        Parameters
-        ----------
-        nlp: NonLinearProgram
-            A reference to the phase
-        as_states: bool
-            If the generalized coordinates should be a state
-        as_controls: bool
-            If the generalized coordinates should be a control
-        as_states_dot: bool
-            If the generalized velocities should be a state_dot
-        """
-        name = "q"
-        name_q = [name]
-        ConfigureProblem.configure_new_variable(name, name_q, ocp, nlp, as_states, as_controls, as_states_dot)
-
-    @staticmethod
-    def configure_qdot(ocp, nlp, as_states: bool, as_controls: bool, as_states_dot: bool = False):
-        """
-        Configure the generalized velocities
-
-        Parameters
-        ----------
-        nlp: NonLinearProgram
-            A reference to the phase
-        as_states: bool
-            If the generalized velocities should be a state
-        as_controls: bool
-            If the generalized velocities should be a control
-        as_states_dot: bool
-            If the generalized velocities should be a state_dot
-        """
-
-        name = "qdot"
-        name_qdot = [name]
-        ConfigureProblem.configure_new_variable(name, name_qdot, ocp, nlp, as_states, as_controls, as_states_dot)
-
-    @staticmethod
-    def configure_tau(ocp, nlp, as_states: bool, as_controls: bool, fatigue: FatigueList = None):
-        """
-        Configure the generalized forces
-
-        Parameters
-        ----------
-        nlp: NonLinearProgram
-            A reference to the phase
-        as_states: bool
-            If the generalized forces should be a state
-        as_controls: bool
-            If the generalized forces should be a control
-        fatigue: FatigueList
-            If the dynamics with fatigue should be declared
-        """
-
-        name = "tau"
-        name_tau = ["tau"]
-        ConfigureProblem.configure_new_variable(name, name_tau, ocp, nlp, as_states, as_controls, fatigue=fatigue)
-
-    @staticmethod
-    def muscle_force_length_coefficient(model, muscle, q):
-        """
-        Muscle force length coefficient from HillDeGroote
-
-        Parameters
-        ----------
-        model: BiorbdModel
-            The biorbd model
-        muscle: MX
-            The muscle
-        q: MX
-            The generalized coordinates
-
-        Returns
-        -------
-        The muscle force length coefficient
-        """
-        b11 = 0.815
-        b21 = 1.055
-        b31 = 0.162
-        b41 = 0.063
-        b12 = 0.433
-        b22 = 0.717
-        b32 = -0.030
-        b42 = 0.200
-        b13 = 0.100
-        b23 = 1.000
-        b33 = 0.354
-        b43 = 0.0
-
-        muscle_length = muscle.length(model, q).to_mx()
-        muscle_optimal_length = muscle.characteristics().optimalLength().to_mx()
-        norm_length = muscle_length / muscle_optimal_length
-
-        m_FlCE = (
-            b11
-            * exp(
-                (-0.5 * ((norm_length - b21) * (norm_length - b21)))
-                / ((b31 + b41 * norm_length) * (b31 + b41 * norm_length))
-            )
-            + b12
-            * exp(
-                (-0.5 * ((norm_length - b22) * (norm_length - b22)))
-                / ((b32 + b42 * norm_length) * (b32 + b42 * norm_length))
-            )
-            + b13
-            * exp(
-                (-0.5 * ((norm_length - b23) * (norm_length - b23)))
-                / ((b33 + b43 * norm_length) * (b33 + b43 * norm_length))
-            )
-        )
-
-        return m_FlCE
-
-    @staticmethod
-    def muscle_force_velocity_coefficient(model, muscle, q, qdot):
-        """
-        Muscle force velocity coefficient from HillDeGroote
-
-        Parameters
-        ----------
-        model: BiorbdModel
-            The biorbd model
-        muscle: MX
-            The muscle
-        q: MX
-            The generalized coordinates
-        qdot: MX
-            The generalized velocities
-
-        Returns
-        -------
-        The muscle force velocity coefficient
-        """
-        muscle_velocity = muscle.velocity(model, q, qdot).to_mx()
-        m_cste_maxShorteningSpeed = 10
-        norm_v = muscle_velocity / m_cste_maxShorteningSpeed
-
-        d1 = -0.318
-        d2 = -8.149
-        d3 = -0.374
-        d4 = 0.886
-
-        m_FvCE = d1 * log((d2 * norm_v + d3) + sqrt((d2 * norm_v + d3) * (d2 * norm_v + d3) + 1)) + d4
-
-        return m_FvCE

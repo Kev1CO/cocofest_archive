@@ -1,7 +1,7 @@
 from typing import Callable
 
-from casadi import MX, exp, vertcat
 import numpy as np
+from casadi import MX, exp, vertcat
 
 from bioptim import (
     ConfigureProblem,
@@ -10,8 +10,11 @@ from bioptim import (
     OptimalControlProgram,
 )
 
+from .state_configue import StateConfigure
+from .fes_model import FesModel
 
-class DingModelFrequency:
+
+class DingModelFrequency(FesModel):
     """
     This is a custom model of the Bioptim package. As CustomModel, some methods are mandatory and must be implemented.
     to make it work with bioptim.
@@ -32,6 +35,7 @@ class DingModelFrequency:
         muscle_name: str = None,
         sum_stim_truncation: int = None,
     ):
+        super().__init__()
         self._model_name = model_name
         self._muscle_name = muscle_name
         self._sum_stim_truncation = sum_stim_truncation
@@ -85,8 +89,8 @@ class DingModelFrequency:
 
     # ---- Needed for the example ---- #
     @property
-    def name_dof(self) -> list[str]:
-        muscle_name = "_" + self.muscle_name if self.muscle_name else ""
+    def name_dof(self, with_muscle_name: bool = False) -> list[str]:
+        muscle_name = "_" + self.muscle_name if self.muscle_name and with_muscle_name else ""
         return ["Cn" + muscle_name, "F" + muscle_name]
 
     @property
@@ -104,6 +108,10 @@ class DingModelFrequency:
     @property
     def with_fatigue(self):
         return self._with_fatigue
+
+    @property
+    def identifiable_parameters(self):
+        return {"a_rest": self.a_rest, "tau1_rest": self.tau1_rest, "km_rest": self.km_rest, "tau2": self.tau2}
 
     # ---- Model's dynamics ---- #
     def system_dynamics(
@@ -339,91 +347,8 @@ class DingModelFrequency:
         nlp: NonLinearProgram
             A reference to the phase
         """
-        self.configure_ca_troponin_complex(
-            ocp=ocp, nlp=nlp, as_states=True, as_controls=False, muscle_name=self.muscle_name
-        )
-        self.configure_force(ocp=ocp, nlp=nlp, as_states=True, as_controls=False, muscle_name=self.muscle_name)
+        StateConfigure().configure_all_fes_model_states(ocp, nlp, fes_model=self)
         ConfigureProblem.configure_dynamics_function(ocp, nlp, dyn_func=self.dynamics)
-
-    @staticmethod
-    def configure_ca_troponin_complex(
-        ocp: OptimalControlProgram,
-        nlp: NonLinearProgram,
-        as_states: bool,
-        as_controls: bool,
-        as_states_dot: bool = False,
-        muscle_name: str = None,
-    ):
-        """
-        Configure a new variable of the Ca+ troponin complex (unitless)
-
-        Parameters
-        ----------
-        ocp: OptimalControlProgram
-            A reference to the ocp
-        nlp: NonLinearProgram
-            A reference to the phase
-        as_states: bool
-            If the generalized coordinates should be a state
-        as_controls: bool
-            If the generalized coordinates should be a control
-        as_states_dot: bool
-            If the generalized velocities should be a state_dot
-        muscle_name: str
-            The muscle name
-        """
-        muscle_name = "_" + muscle_name if muscle_name else ""
-        name = "Cn" + muscle_name
-        name_cn = [name]
-        ConfigureProblem.configure_new_variable(
-            name,
-            name_cn,
-            ocp,
-            nlp,
-            as_states,
-            as_controls,
-            as_states_dot,
-        )
-
-    @staticmethod
-    def configure_force(
-        ocp: OptimalControlProgram,
-        nlp: NonLinearProgram,
-        as_states: bool,
-        as_controls: bool,
-        as_states_dot: bool = False,
-        muscle_name: str = None,
-    ):
-        """
-        Configure a new variable of the force (N)
-
-        Parameters
-        ----------
-        ocp: OptimalControlProgram
-            A reference to the ocp
-        nlp: NonLinearProgram
-            A reference to the phase
-        as_states: bool
-            If the generalized coordinates should be a state
-        as_controls: bool
-            If the generalized coordinates should be a control
-        as_states_dot: bool
-            If the generalized velocities should be a state_dot
-        muscle_name: str
-            The muscle name
-        """
-        muscle_name = "_" + muscle_name if muscle_name else ""
-        name = "F" + muscle_name
-        name_f = [name]
-        ConfigureProblem.configure_new_variable(
-            name,
-            name_f,
-            ocp,
-            nlp,
-            as_states,
-            as_controls,
-            as_states_dot,
-        )
 
     @staticmethod
     def get_stim_prev(nlp: NonLinearProgram, parameters: MX, idx: int) -> list[float]:
@@ -445,7 +370,6 @@ class DingModelFrequency:
         """
         t_stim_prev = []
         for j in range(parameters.shape[0]):
-            # if "pulse_apparition_time" in str(nlp.parameters.cx[j].name()):
             if "pulse_apparition_time" in nlp.parameters.cx[j].str():
                 t_stim_prev.append(parameters[j])
             if len(t_stim_prev) > idx:

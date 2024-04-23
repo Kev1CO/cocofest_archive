@@ -2,7 +2,6 @@ import numpy as np
 import pytest
 import re
 
-from bioptim import Solution, Shooting, SolutionIntegrator, SolutionMerge
 from cocofest import (
     IvpFes,
     DingModelFrequency,
@@ -16,22 +15,13 @@ from cocofest import (
 
 @pytest.mark.parametrize("model", [DingModelFrequency(), DingModelFrequencyWithFatigue()])
 def test_ding2003_ivp(model):
-    final_time = 0.3
-    ns = 10
-    n_stim = 3
-    ivp = IvpFes(model=model, n_stim=n_stim, n_shooting=ns, final_time=final_time, use_sx=True)
+    fes_parameters = {"model": model, "n_stim": 3}
+    ivp_parameters = {"n_shooting": 10, "final_time": 0.3, "use_sx": True}
 
-    # Creating the solution from the initial guess
-    dt = np.array([final_time / (ns * n_stim)] * n_stim)
-    sol_from_initial_guess = Solution.from_initial_guess(ivp, [dt, ivp.x_init, ivp.u_init, ivp.p_init, ivp.s_init])
+    ivp = IvpFes(fes_parameters, ivp_parameters)
 
     # Integrating the solution
-    result = sol_from_initial_guess.integrate(
-        shooting_type=Shooting.SINGLE,
-        integrator=SolutionIntegrator.OCP,
-        to_merge=[SolutionMerge.NODES, SolutionMerge.PHASES],
-        duplicated_times=False,
-    )
+    result = ivp.integrate(return_time=False)
 
     if model._with_fatigue:
         np.testing.assert_almost_equal(result["F"][0][0], 0)
@@ -46,74 +36,42 @@ def test_ding2003_ivp(model):
 @pytest.mark.parametrize("model", [DingModelPulseDurationFrequency(), DingModelPulseDurationFrequencyWithFatigue()])
 @pytest.mark.parametrize("pulse_duration", [0.0003, [0.0003, 0.0004, 0.0005]])
 def test_ding2007_ivp(model, pulse_duration):
-    final_time = 0.3
-    ns = 10
-    n_stim = 3
-    ivp = IvpFes(
-        model=model,
-        n_stim=n_stim,
-        n_shooting=ns,
-        final_time=final_time,
-        pulse_duration=pulse_duration,
-        use_sx=True,
-    )
+    fes_parameters = {"model": model, "n_stim": 3, "pulse_duration": pulse_duration}
+    ivp_parameters = {"n_shooting": 10, "final_time": 0.3, "use_sx": True}
 
-    # Creating the solution from the initial guess
-    dt = np.array([final_time / (ns * n_stim)] * n_stim)
-    sol_from_initial_guess = Solution.from_initial_guess(ivp, [dt, ivp.x_init, ivp.u_init, ivp.p_init, ivp.s_init])
+    ivp = IvpFes(fes_parameters, ivp_parameters)
 
     # Integrating the solution
-    result = sol_from_initial_guess.integrate(
-        shooting_type=Shooting.SINGLE,
-        integrator=SolutionIntegrator.OCP,
-        to_merge=[SolutionMerge.NODES, SolutionMerge.PHASES],
-        duplicated_times=False,
-    )
+    result = ivp.integrate(return_time=False)
 
     if model._with_fatigue and isinstance(pulse_duration, list):
         np.testing.assert_almost_equal(result["F"][0][0], 0)
-        np.testing.assert_almost_equal(result["F"][0][10], 32.78053644580685)
-        np.testing.assert_almost_equal(result["F"][0][-1], 60.93650724479694)
+        np.testing.assert_almost_equal(result["F"][0][10], 28.3477940849177)
+        np.testing.assert_almost_equal(result["F"][0][-1], 52.38870505209033)
     elif model._with_fatigue is False and isinstance(pulse_duration, list):
         np.testing.assert_almost_equal(result["F"][0][0], 0)
-        np.testing.assert_almost_equal(result["F"][0][10], 32.48751154425548)
-        np.testing.assert_almost_equal(result["F"][0][-1], 56.97819257967254)
+        np.testing.assert_almost_equal(result["F"][0][10], 28.116838973337046)
+        np.testing.assert_almost_equal(result["F"][0][-1], 49.30316895125016)
     elif model._with_fatigue and isinstance(pulse_duration, float):
         np.testing.assert_almost_equal(result["F"][0][0], 0)
-        np.testing.assert_almost_equal(result["F"][0][10], 32.78053644580685)
-        np.testing.assert_almost_equal(result["F"][0][-1], 42.439558210310544)
+        np.testing.assert_almost_equal(result["F"][0][10], 28.3477940849177)
+        np.testing.assert_almost_equal(result["F"][0][-1], 36.51217790065462)
     elif model._with_fatigue is False and isinstance(pulse_duration, float):
         np.testing.assert_almost_equal(result["F"][0][0], 0)
-        np.testing.assert_almost_equal(result["F"][0][10], 32.48751154425548)
-        np.testing.assert_almost_equal(result["F"][0][-1], 40.030303929246955)
+        np.testing.assert_almost_equal(result["F"][0][10], 28.116838973337046)
+        np.testing.assert_almost_equal(result["F"][0][-1], 34.6369350284091)
 
 
 @pytest.mark.parametrize("model", [DingModelIntensityFrequency(), DingModelIntensityFrequencyWithFatigue()])
 @pytest.mark.parametrize("pulse_intensity", [50, [50, 60, 70]])
 def test_hmed2018_ivp(model, pulse_intensity):
-    final_time = 0.3
-    ns = 10
-    n_stim = 3
-    ivp = IvpFes(
-        model=model,
-        n_stim=n_stim,
-        n_shooting=ns,
-        final_time=final_time,
-        pulse_intensity=pulse_intensity,
-        use_sx=True,
-    )
+    fes_parameters = {"model": model, "n_stim": 3, "pulse_intensity": pulse_intensity}
+    ivp_parameters = {"n_shooting": 10, "final_time": 0.3, "use_sx": True}
 
-    # Creating the solution from the initial guess
-    dt = np.array([final_time / (ns * n_stim)] * n_stim)
-    sol_from_initial_guess = Solution.from_initial_guess(ivp, [dt, ivp.x_init, ivp.u_init, ivp.p_init, ivp.s_init])
+    ivp = IvpFes(fes_parameters, ivp_parameters)
 
     # Integrating the solution
-    result = sol_from_initial_guess.integrate(
-        shooting_type=Shooting.SINGLE,
-        integrator=SolutionIntegrator.OCP,
-        to_merge=[SolutionMerge.NODES, SolutionMerge.PHASES],
-        duplicated_times=False,
-    )
+    result = ivp.integrate(return_time=False)
 
     if model._with_fatigue and isinstance(pulse_intensity, list):
         np.testing.assert_almost_equal(result["F"][0][0], 0)
@@ -133,54 +91,40 @@ def test_hmed2018_ivp(model, pulse_intensity):
         np.testing.assert_almost_equal(result["F"][0][-1], 55.57471909903151)
 
 
-@pytest.mark.parametrize("pulse_mode", ["Single", "Doublet", "Triplet"])
+@pytest.mark.parametrize("pulse_mode", ["single", "doublet", "triplet"])
 def test_pulse_mode_ivp(pulse_mode):
-    n_stim = 3 if pulse_mode == "Single" else 6 if pulse_mode == "Doublet" else 9
-    final_time = 0.3
-    ns = 10
-    ivp = IvpFes(
-        model=DingModelFrequencyWithFatigue(),
-        n_stim=n_stim,
-        n_shooting=ns,
-        final_time=final_time,
-        pulse_mode=pulse_mode,
-        use_sx=True,
-    )
+    n_stim = 3 if pulse_mode == "single" else 6 if pulse_mode == "doublet" else 9
+    fes_parameters = {"model": DingModelFrequencyWithFatigue(), "n_stim": n_stim, "pulse_mode": pulse_mode}
+    ivp_parameters = {"n_shooting": 10, "final_time": 0.3, "use_sx": True}
 
-    # Creating the solution from the initial guess
-    dt = np.array([final_time / (ns * n_stim)] * n_stim)
-    sol_from_initial_guess = Solution.from_initial_guess(ivp, [dt, ivp.x_init, ivp.u_init, ivp.p_init, ivp.s_init])
+    ivp = IvpFes(fes_parameters, ivp_parameters)
 
     # Integrating the solution
-    result = sol_from_initial_guess.integrate(
-        shooting_type=Shooting.SINGLE,
-        integrator=SolutionIntegrator.OCP,
-        to_merge=[SolutionMerge.NODES, SolutionMerge.PHASES],
-        duplicated_times=False,
-    )
+    result = ivp.integrate(return_time=False)
 
-    if pulse_mode == "Single":
+    if pulse_mode == "single":
         np.testing.assert_almost_equal(result["F"][0][0], 0)
         np.testing.assert_almost_equal(result["F"][0][10], 92.06532561584642)
         np.testing.assert_almost_equal(result["F"][0][-1], 138.94556672277545)
-    elif pulse_mode == "Doublet":
+    elif pulse_mode == "doublet":
         np.testing.assert_almost_equal(result["F"][0][0], 0)
-        np.testing.assert_almost_equal(result["F"][0][20], 96.86596842444625)
-        np.testing.assert_almost_equal(result["F"][0][-1], 161.1142206208378)
+        np.testing.assert_almost_equal(result["F"][0][20], 107.1572156700596)
+        np.testing.assert_almost_equal(result["F"][0][-1], 199.51123480749564)
 
-    elif pulse_mode == "Triplet":
+    elif pulse_mode == "triplet":
         np.testing.assert_almost_equal(result["F"][0][0], 0)
-        np.testing.assert_almost_equal(result["F"][0][30], 106.71755997847865)
-        np.testing.assert_almost_equal(result["F"][0][-1], 183.85060889614934)
+        np.testing.assert_almost_equal(result["F"][0][30], 137.72706226851224)
+        np.testing.assert_almost_equal(result["F"][0][-1], 236.04865519419803)
 
 
 def test_ivp_methods():
-    ivp = IvpFes.from_frequency_and_final_time(
-        model=DingModelFrequency(), frequency=30, n_shooting=10, final_time=1.25, use_sx=True, round_down=True
-    )
-    ivp = IvpFes.from_frequency_and_n_stim(
-        model=DingModelFrequency(), n_stim=3, n_shooting=10, frequency=10, use_sx=True
-    )
+    fes_parameters = {"model": DingModelFrequency(), "frequency": 30, "round_down": True}
+    ivp_parameters = {"n_shooting": 10, "final_time": 1.25, "use_sx": True}
+    ivp = IvpFes.from_frequency_and_final_time(fes_parameters, ivp_parameters)
+
+    fes_parameters = {"model": DingModelFrequency(), "n_stim": 3, "frequency": 10}
+    ivp_parameters = {"n_shooting": 10, "use_sx": True}
+    ivp = IvpFes.from_frequency_and_n_stim(fes_parameters, ivp_parameters)
 
 
 def test_all_ivp_errors():
@@ -191,115 +135,99 @@ def test_all_ivp_errors():
             "to True or set final_time * frequency to make the result an integer."
         ),
     ):
-        IvpFes.from_frequency_and_final_time(model=DingModelFrequency(), final_time=1.25, frequency=30, n_shooting=1)
+        IvpFes.from_frequency_and_final_time(
+            fes_parameters={"model": DingModelFrequency(), "frequency": 30, "round_down": False},
+            ivp_parameters={"n_shooting": 1, "final_time": 1.25},
+        )
 
     with pytest.raises(ValueError, match="Pulse mode not yet implemented"):
-        IvpFes(model=DingModelFrequency(), n_stim=3, n_shooting=10, final_time=0.3, pulse_mode="Quadruplet")
+        IvpFes(
+            fes_parameters={"model": DingModelFrequency(), "n_stim": 3, "pulse_mode": "Quadruplet"},
+            ivp_parameters={"n_shooting": 10, "final_time": 0.3},
+        )
 
     pulse_duration = 0.00001
-    minimum_pulse_duration = DingModelPulseDurationFrequency().pd0
     with pytest.raises(
         ValueError,
-        match=re.escape(
-            f"The pulse duration set ({pulse_duration}) is lower than minimum duration"
-            f" required. Set a value above {minimum_pulse_duration} seconds"
-        ),
+        match=re.escape("Pulse duration must be greater than minimum pulse duration"),
     ):
         IvpFes(
-            model=DingModelPulseDurationFrequency(),
-            n_stim=3,
-            n_shooting=10,
-            final_time=0.3,
-            pulse_duration=pulse_duration,
+            fes_parameters={"model": DingModelPulseDurationFrequency(), "n_stim": 3, "pulse_duration": pulse_duration},
+            ivp_parameters={"n_shooting": 10, "final_time": 0.3},
         )
 
     with pytest.raises(ValueError, match="pulse_duration list must have the same length as n_stim"):
         IvpFes(
-            model=DingModelPulseDurationFrequency(),
-            n_stim=3,
-            n_shooting=10,
-            final_time=0.3,
-            pulse_duration=[0.0003, 0.0004],
+            fes_parameters={
+                "model": DingModelPulseDurationFrequency(),
+                "n_stim": 3,
+                "pulse_duration": [0.0003, 0.0004],
+            },
+            ivp_parameters={"n_shooting": 10, "final_time": 0.3},
         )
 
     pulse_duration = [0.001, 0.0001, 0.003]
     with pytest.raises(
         ValueError,
-        match=re.escape(
-            f"The pulse duration set ({pulse_duration[1]} at index {1})"
-            f" is lower than minimum duration required."
-            f" Set a value above {minimum_pulse_duration} seconds"
-        ),
+        match=re.escape("Pulse duration must be greater than minimum pulse duration"),
     ):
         IvpFes(
-            model=DingModelPulseDurationFrequency(),
-            n_stim=3,
-            n_shooting=10,
-            final_time=0.3,
-            pulse_duration=pulse_duration,
+            fes_parameters={"model": DingModelPulseDurationFrequency(), "n_stim": 3, "pulse_duration": pulse_duration},
+            ivp_parameters={"n_shooting": 10, "final_time": 0.3},
         )
 
     with pytest.raises(TypeError, match="pulse_duration must be int, float or list type"):
-        IvpFes(model=DingModelPulseDurationFrequency(), n_stim=3, n_shooting=10, final_time=0.3, pulse_duration=True)
+        IvpFes(
+            fes_parameters={"model": DingModelPulseDurationFrequency(), "n_stim": 3, "pulse_duration": True},
+            ivp_parameters={"n_shooting": 10, "final_time": 0.3},
+        )
 
     pulse_intensity = 0.1
-    minimum_pulse_intensity = DingModelIntensityFrequency().min_pulse_intensity()
     with pytest.raises(
         ValueError,
-        match=re.escape(
-            f"The pulse intensity set ({pulse_intensity})"
-            f" is lower than minimum intensity required."
-            f" Set a value above {minimum_pulse_intensity} seconds"
-        ),
+        match=re.escape("Pulse intensity must be greater than minimum pulse intensity"),
     ):
         IvpFes(
-            model=DingModelIntensityFrequency(),
-            n_stim=3,
-            n_shooting=10,
-            final_time=0.3,
-            pulse_intensity=pulse_intensity,
+            fes_parameters={"model": DingModelIntensityFrequency(), "n_stim": 3, "pulse_intensity": pulse_intensity},
+            ivp_parameters={"n_shooting": 10, "final_time": 0.3},
         )
 
     with pytest.raises(ValueError, match="pulse_intensity list must have the same length as n_stim"):
         IvpFes(
-            model=DingModelIntensityFrequency(),
-            n_stim=3,
-            n_shooting=10,
-            final_time=0.3,
-            pulse_intensity=[20, 30],
+            fes_parameters={"model": DingModelIntensityFrequency(), "n_stim": 3, "pulse_intensity": [20, 30]},
+            ivp_parameters={"n_shooting": 10, "final_time": 0.3},
         )
 
     pulse_intensity = [20, 30, 0.1]
     with pytest.raises(
         ValueError,
-        match=re.escape(
-            f"The pulse intensity set ({pulse_intensity[2]} at index {2})"
-            f" is lower than minimum intensity required."
-            f" Set a value above {minimum_pulse_intensity} mA"
-        ),
+        match=re.escape("Pulse intensity must be greater than minimum pulse intensity"),
     ):
         IvpFes(
-            model=DingModelIntensityFrequency(),
-            n_stim=3,
-            n_shooting=10,
-            final_time=0.3,
-            pulse_intensity=pulse_intensity,
+            fes_parameters={"model": DingModelIntensityFrequency(), "n_stim": 3, "pulse_intensity": pulse_intensity},
+            ivp_parameters={"n_shooting": 10, "final_time": 0.3},
         )
 
     with pytest.raises(TypeError, match="pulse_intensity must be int, float or list type"):
         IvpFes(
-            model=DingModelIntensityFrequency(),
-            n_stim=3,
-            n_shooting=10,
-            final_time=0.3,
-            pulse_intensity=True,
+            fes_parameters={"model": DingModelIntensityFrequency(), "n_stim": 3, "pulse_intensity": True},
+            ivp_parameters={"n_shooting": 10, "final_time": 0.3},
         )
 
     with pytest.raises(ValueError, match="ode_solver must be a OdeSolver type"):
-        IvpFes(model=DingModelFrequency(), n_stim=3, n_shooting=10, final_time=0.3, ode_solver=None)
+        IvpFes(
+            fes_parameters={"model": DingModelFrequency(), "n_stim": 3},
+            ivp_parameters={"n_shooting": 10, "final_time": 0.3, "ode_solver": None},
+        )
 
     with pytest.raises(ValueError, match="use_sx must be a bool type"):
-        IvpFes(model=DingModelFrequency(), n_stim=3, n_shooting=10, final_time=0.3, use_sx=None)
+        IvpFes(
+            fes_parameters={"model": DingModelFrequency(), "n_stim": 3},
+            ivp_parameters={"n_shooting": 10, "final_time": 0.3, "use_sx": None},
+        )
 
     with pytest.raises(ValueError, match="n_thread must be a int type"):
-        IvpFes(model=DingModelFrequency(), n_stim=3, n_shooting=10, final_time=0.3, n_threads=None)
+        IvpFes(
+            fes_parameters={"model": DingModelFrequency(), "n_stim": 3},
+            ivp_parameters={"n_shooting": 10, "final_time": 0.3, "n_threads": None},
+        )

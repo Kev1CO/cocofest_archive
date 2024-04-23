@@ -148,7 +148,14 @@ You can also compute the models form initial value problem.
 For that, use the IvpFes class to build the computed problem.
 
 ```python
-ocp = IvpFes(model=DingModelFrequency(), ...)
+from cocofest import IvpFes, DingModelFrequencyWithFatigue
+
+fes_parameters = {"model": DingModelFrequencyWithFatigue(), "n_stim": 10}
+ivp_parameters = {"n_shooting": 20, "final_time": 1}
+
+ivp = IvpFes(fes_parameters, ivp_parameters)
+
+result, time = ivp.integrate()
 ```
 
 ## Summation truncation
