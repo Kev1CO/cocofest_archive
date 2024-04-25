@@ -157,26 +157,32 @@ class FesMskModel(BiorbdModel):
         q: MX | SX = None,
         qdot: MX | SX = None,
     ):
-        muscle_joint_torques = 0
+
         dxdt_muscle_list = vertcat()
+        muscle_forces = vertcat()
+        muscle_idx_list = []
+
+        updatedModel = nlp.model.bio_model.model.UpdateKinematicsCustom(q, qdot)
+        nlp.model.bio_model.model.updateMuscles(updatedModel, q, qdot)
+        updated_muscle_length_jacobian = nlp.model.bio_model.model.musclesLengthJacobian(updatedModel, q, False).to_mx()
 
         bio_muscle_names_at_index = []
         for i in range(len(nlp.model.bio_model.model.muscles())):
             bio_muscle_names_at_index.append(nlp.model.bio_model.model.muscle(i).name().to_string())
 
         for muscle_model in muscle_models:
-            muscle_states_idx = [
+            muscle_states_idxs = [
                 i for i in range(len(state_name_list)) if muscle_model.muscle_name in state_name_list[i]
             ]
             muscle_states = vertcat()
-            for i in range(len(muscle_states_idx)):
-                muscle_states = vertcat(muscle_states, states[muscle_states_idx[i]])
+            for i in range(len(muscle_states_idxs)):
+                muscle_states = vertcat(muscle_states, states[muscle_states_idxs[i]])
 
             muscle_idx = bio_muscle_names_at_index.index(muscle_model.muscle_name)
 
             muscle_force_length_coeff = (
                 muscle_force_length_coefficient(
-                    model=nlp.model.bio_model.model, muscle=nlp.model.bio_model.model.muscle(muscle_idx), q=q
+                    model=updatedModel, muscle=nlp.model.bio_model.model.muscle(muscle_idx), q=q
                 )
                 if nlp.model.activate_force_velocity_relationship
                 else 1
@@ -184,7 +190,7 @@ class FesMskModel(BiorbdModel):
 
             muscle_force_velocity_coeff = (
                 muscle_force_velocity_coefficient(
-                    model=nlp.model.bio_model.model, muscle=nlp.model.bio_model.model.muscle(muscle_idx), q=q, qdot=qdot
+                    model=updatedModel, muscle=nlp.model.bio_model.model.muscle(muscle_idx), q=q, qdot=qdot
                 )
                 if nlp.model.activate_force_velocity_relationship
                 else 1
@@ -203,12 +209,17 @@ class FesMskModel(BiorbdModel):
                 force_velocity_relationship=muscle_force_velocity_coeff,
             ).dxdt
 
-            muscle_forces = DynamicsFunctions.get(nlp.states["F_" + muscle_model.muscle_name], states)
-
-            muscle_moment_arm_matrix = -nlp.model.bio_model.model.musclesLengthJacobian(q).to_mx()[muscle_idx, :].T
-            muscle_joint_torques += muscle_moment_arm_matrix @ muscle_forces
-
             dxdt_muscle_list = vertcat(dxdt_muscle_list, muscle_dxdt)
+            muscle_idx_list.append(muscle_idx)
+
+            muscle_forces = vertcat(
+                muscle_forces, DynamicsFunctions.get(nlp.states["F_" + muscle_model.muscle_name], states)
+            )
+
+        muscle_moment_arm_matrix = updated_muscle_length_jacobian[
+            muscle_idx_list, :
+        ]  # reorganize the muscle moment arm matrix according to the muscle index list
+        muscle_joint_torques = -muscle_moment_arm_matrix.T @ muscle_forces
 
         return muscle_joint_torques, dxdt_muscle_list
 
