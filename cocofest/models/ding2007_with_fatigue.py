@@ -208,7 +208,6 @@ class DingModelPulseDurationFrequencyWithFatigue(DingModelPulseDurationFrequency
         algebraic_states: MX,
         numerical_timeseries: MX,
         nlp: NonLinearProgram,
-        stim_apparition: list[float] = None,
         fes_model=None,
         force_length_relationship: MX | float = 1,
         force_velocity_relationship: MX | float = 1,
@@ -232,8 +231,6 @@ class DingModelPulseDurationFrequencyWithFatigue(DingModelPulseDurationFrequency
             The numerical timeseries of the system
         nlp: NonLinearProgram
             A reference to the phase
-        stim_apparition: list[float]
-            The time list of the previous stimulations (s)
         fes_model: DingModelPulseDurationFrequencyWithFatigue
             The current phase fes model
         force_length_relationship: MX | float
