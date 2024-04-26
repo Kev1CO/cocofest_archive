@@ -1,4 +1,5 @@
 from typing import Callable
+import numpy as np
 
 from casadi import vertcat, MX, SX
 from bioptim import (
@@ -82,7 +83,8 @@ class FesMskModel(BiorbdModel):
         states: MX | SX,
         controls: MX | SX,
         parameters: MX | SX,
-        stochastic_variables: MX | SX,
+        algebraic_states: MX | SX,
+        numerical_data_timeseries: MX | SX,
         nlp: NonLinearProgram,
         muscle_models: list[FesModel],
         state_name_list=None,
@@ -100,8 +102,10 @@ class FesMskModel(BiorbdModel):
             The controls of the system
         parameters: MX | SX
             The parameters acting on the system
-        stochastic_variables: MX | SX
+        algebraic_states: MX | SX
             The stochastic variables of the system
+        numerical_data_timeseries: MX | SX
+            A list of values to pass to the dynamics at each node. Experimental external forces should be included here.
         nlp: NonLinearProgram
             A reference to the phase
         muscle_models: list[FesModel]
@@ -118,7 +122,17 @@ class FesMskModel(BiorbdModel):
         tau = DynamicsFunctions.get(nlp.controls["tau"], controls)
 
         muscles_tau, dxdt_muscle_list = self.muscles_joint_torque(
-            time, states, controls, parameters, stochastic_variables, nlp, muscle_models, state_name_list, q, qdot
+            time,
+            states,
+            controls,
+            parameters,
+            algebraic_states,
+            numerical_data_timeseries,
+            nlp,
+            muscle_models,
+            state_name_list,
+            q,
+            qdot,
         )
 
         # You can directly call biorbd function (as for ddq) or call bioptim accessor (as for dq)
@@ -135,33 +149,40 @@ class FesMskModel(BiorbdModel):
         states: MX | SX,
         controls: MX | SX,
         parameters: MX | SX,
-        stochastic_variables: MX | SX,
+        algebraic_states: MX | SX,
+        numerical_data_timeseries: MX | SX,
         nlp: NonLinearProgram,
         muscle_models: list[FesModel],
         state_name_list=None,
         q: MX | SX = None,
         qdot: MX | SX = None,
     ):
-        muscle_joint_torques = 0
+
         dxdt_muscle_list = vertcat()
+        muscle_forces = vertcat()
+        muscle_idx_list = []
+
+        updatedModel = nlp.model.bio_model.model.UpdateKinematicsCustom(q, qdot)
+        nlp.model.bio_model.model.updateMuscles(updatedModel, q, qdot)
+        updated_muscle_length_jacobian = nlp.model.bio_model.model.musclesLengthJacobian(updatedModel, q, False).to_mx()
 
         bio_muscle_names_at_index = []
         for i in range(len(nlp.model.bio_model.model.muscles())):
             bio_muscle_names_at_index.append(nlp.model.bio_model.model.muscle(i).name().to_string())
 
         for muscle_model in muscle_models:
-            muscle_states_idx = [
+            muscle_states_idxs = [
                 i for i in range(len(state_name_list)) if muscle_model.muscle_name in state_name_list[i]
             ]
             muscle_states = vertcat()
-            for i in range(len(muscle_states_idx)):
-                muscle_states = vertcat(muscle_states, states[muscle_states_idx[i]])
+            for i in range(len(muscle_states_idxs)):
+                muscle_states = vertcat(muscle_states, states[muscle_states_idxs[i]])
 
             muscle_idx = bio_muscle_names_at_index.index(muscle_model.muscle_name)
 
             muscle_force_length_coeff = (
                 muscle_force_length_coefficient(
-                    model=nlp.model.bio_model.model, muscle=nlp.model.bio_model.model.muscle(muscle_idx), q=q
+                    model=updatedModel, muscle=nlp.model.bio_model.model.muscle(muscle_idx), q=q
                 )
                 if nlp.model.activate_force_velocity_relationship
                 else 1
@@ -169,7 +190,7 @@ class FesMskModel(BiorbdModel):
 
             muscle_force_velocity_coeff = (
                 muscle_force_velocity_coefficient(
-                    model=nlp.model.bio_model.model, muscle=nlp.model.bio_model.model.muscle(muscle_idx), q=q, qdot=qdot
+                    model=updatedModel, muscle=nlp.model.bio_model.model.muscle(muscle_idx), q=q, qdot=qdot
                 )
                 if nlp.model.activate_force_velocity_relationship
                 else 1
@@ -180,23 +201,31 @@ class FesMskModel(BiorbdModel):
                 muscle_states,
                 controls,
                 parameters,
-                stochastic_variables,
+                algebraic_states,
+                numerical_data_timeseries,
                 nlp,
                 fes_model=muscle_model,
                 force_length_relationship=muscle_force_length_coeff,
                 force_velocity_relationship=muscle_force_velocity_coeff,
             ).dxdt
 
-            muscle_forces = DynamicsFunctions.get(nlp.states["F_" + muscle_model.muscle_name], states)
-
-            muscle_moment_arm_matrix = -nlp.model.bio_model.model.musclesLengthJacobian(q).to_mx()[muscle_idx, :].T
-            muscle_joint_torques += muscle_moment_arm_matrix @ muscle_forces
-
             dxdt_muscle_list = vertcat(dxdt_muscle_list, muscle_dxdt)
+            muscle_idx_list.append(muscle_idx)
+
+            muscle_forces = vertcat(
+                muscle_forces, DynamicsFunctions.get(nlp.states["F_" + muscle_model.muscle_name], states)
+            )
+
+        muscle_moment_arm_matrix = updated_muscle_length_jacobian[
+            muscle_idx_list, :
+        ]  # reorganize the muscle moment arm matrix according to the muscle index list
+        muscle_joint_torques = -muscle_moment_arm_matrix.T @ muscle_forces
 
         return muscle_joint_torques, dxdt_muscle_list
 
-    def declare_model_variables(self, ocp: OptimalControlProgram, nlp: NonLinearProgram):
+    def declare_model_variables(
+        self, ocp: OptimalControlProgram, nlp: NonLinearProgram, numerical_data_timeseries: dict[str, np.ndarray] = None
+    ):
         """
         Tell the program which variables are states and controls.
         The user is expected to use the ConfigureProblem.configure_xxx functions.
@@ -206,6 +235,9 @@ class FesMskModel(BiorbdModel):
             A reference to the ocp
         nlp: NonLinearProgram
             A reference to the phase
+        numerical_data_timeseries: dict[str, np.ndarray]
+            A list of values to pass to the dynamics at each node. Experimental external forces should be included here.
+
         """
         state_name_list = StateConfigure().configure_all_muscle_states(self.muscles_dynamics_model, ocp, nlp)
         ConfigureProblem.configure_q(ocp, nlp, as_states=True, as_controls=False)

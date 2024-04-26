@@ -284,7 +284,8 @@ class DingModelFrequency(FesModel):
         states: MX,
         controls: MX,
         parameters: MX,
-        stochastic_variables: MX,
+        algebraic_states: MX,
+        numerical_timeseries: MX,
         nlp: NonLinearProgram,
         fes_model=None,
         force_length_relationship: MX | float = 1,
@@ -303,8 +304,10 @@ class DingModelFrequency(FesModel):
             The controls of the system, none
         parameters: MX
             The parameters acting on the system, final time of each phase
-        stochastic_variables: MX
+        algebraic_states: MX
             The stochastic variables of the system, none
+        numerical_timeseries: MX
+            The numerical timeseries of the system
         nlp: NonLinearProgram
             A reference to the phase
         fes_model: DingModelFrequency
@@ -336,7 +339,9 @@ class DingModelFrequency(FesModel):
             ),
         )
 
-    def declare_ding_variables(self, ocp: OptimalControlProgram, nlp: NonLinearProgram):
+    def declare_ding_variables(
+        self, ocp: OptimalControlProgram, nlp: NonLinearProgram, numerical_data_timeseries: dict[str, np.ndarray] = None
+    ):
         """
         Tell the program which variables are states and controls.
         The user is expected to use the ConfigureProblem.configure_xxx functions.
@@ -346,6 +351,8 @@ class DingModelFrequency(FesModel):
             A reference to the ocp
         nlp: NonLinearProgram
             A reference to the phase
+        numerical_data_timeseries: dict[str, np.ndarray]
+            A list of values to pass to the dynamics at each node. Experimental external forces should be included here.
         """
         StateConfigure().configure_all_fes_model_states(ocp, nlp, fes_model=self)
         ConfigureProblem.configure_dynamics_function(ocp, nlp, dyn_func=self.dynamics)

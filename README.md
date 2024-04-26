@@ -2,7 +2,7 @@
 
 # COCOFEST
 
-`Cocofest` : Custom Optimal Control Optimization for Functional Electrical Stimulation, is an optimal control program (OCP) package for functional electrical stimulation (FES).
+`Cocofest` : Custom Optimal Control Optimization for Functional Electrical STimulation, is an optimal control program (OCP) package for functional electrical stimulation (FES).
 It is based on the [bioptim](https://github.com/pyomeca/bioptim) framework for the optimal control construction.
 Bioptim uses [biorbd](https://github.com/pyomeca/biorbd) a biomechanics library and benefits from the powerful algorithmic diff provided by [CasADi](https://web.casadi.org/).
 To solve the OCP, the robust solver [Ipopt](https://github.com/coin-or/Ipopt) has been implemented.

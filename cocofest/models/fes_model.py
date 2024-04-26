@@ -1,4 +1,5 @@
 from abc import ABC, abstractmethod
+import numpy as np
 
 from casadi import MX
 from bioptim import NonLinearProgram, OptimalControlProgram
@@ -181,7 +182,8 @@ class FesModel(ABC):
         states: MX,
         controls: MX,
         parameters: MX,
-        stochastic_variables: MX,
+        algebraic_states: MX,
+        numerical_data_timeseries: MX,
         nlp: NonLinearProgram,
         fes_model,
         force_length_relationship: MX | float,
@@ -195,7 +197,9 @@ class FesModel(ABC):
         """
 
     @abstractmethod
-    def declare_ding_variables(self, ocp: OptimalControlProgram, nlp: NonLinearProgram):
+    def declare_ding_variables(
+        self, ocp: OptimalControlProgram, nlp: NonLinearProgram, numerical_data_timeseries: dict[str, np.ndarray] = None
+    ):
         """
 
         Returns

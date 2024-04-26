@@ -31,7 +31,7 @@ def muscle_force_length_coefficient(model, muscle, q):
     b33 = 0.354
     b43 = 0.0
 
-    muscle_length = muscle.length(model, q).to_mx()
+    muscle_length = muscle.length(model, q, False).to_mx()
     muscle_optimal_length = muscle.characteristics().optimalLength().to_mx()
     norm_length = muscle_length / muscle_optimal_length
 
@@ -75,7 +75,7 @@ def muscle_force_velocity_coefficient(model, muscle, q, qdot):
     -------
     The muscle force velocity coefficient
     """
-    muscle_velocity = muscle.velocity(model, q, qdot).to_mx()
+    muscle_velocity = muscle.velocity(model, q, qdot, False).to_mx()
     m_cste_maxShorteningSpeed = 10
     norm_v = muscle_velocity / m_cste_maxShorteningSpeed
 
