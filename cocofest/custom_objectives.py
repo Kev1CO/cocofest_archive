@@ -4,7 +4,7 @@ such as functional electro stimulation
 """
 
 import numpy as np
-from casadi import MX, SX
+from casadi import MX, SX, fabs
 
 from bioptim import PenaltyController
 from .fourier_approx import FourierSeries
@@ -84,8 +84,9 @@ class CustomObjective:
         -------
         The sum of each force scaling factor
         """
-        muscle_name_list = controller.model.bio_model.muscle_names
-        muscle_fatigue = [controller.states["A_" + muscle_name_list[x]].cx for x in range(len(muscle_name_list))]
+        # muscle_name_list = controller.model.bio_model.muscle_names
+        muscle_model_name_list = [controller.model.bio_stim_model[i].muscle_name for i in range(1, len(controller.model.bio_stim_model))]
+        muscle_fatigue = [controller.states["A_" + muscle_model_name_list[x]].cx / controller.model.bio_stim_model[x+1].a_rest for x in range(len(muscle_model_name_list))]
         return sum(muscle_fatigue)
 
     @staticmethod
@@ -105,3 +106,44 @@ class CustomObjective:
         muscle_name_list = controller.model.bio_model.muscle_names
         muscle_force = [controller.states["F_" + muscle_name_list[x]].cx ** 3 for x in range(len(muscle_name_list))]
         return sum(muscle_force)
+
+    @staticmethod
+    def track_motion(controller: PenaltyController, fourier_coeff_x: np.ndarray, fourier_coeff_y: np.ndarray, marker_idx: int) -> MX | SX:
+        """
+        Minimize the states variables.
+        By default, this function is quadratic, meaning that it minimizes towards the target.
+        Targets (default=np.zeros()) and indices (default=all_idx) can be specified.
+
+        Parameters
+        ----------
+        controller: PenaltyController
+            The penalty node elements
+        fourier_coeff: np.ndarray
+            The values to aim for
+        key: str
+            The name of the state to minimize
+
+        Returns
+        -------
+        The difference between the two keys
+        """
+        x = FourierSeries().fit_func_by_fourier_series_with_real_coeffs(
+            controller.ocp.node_time(phase_idx=controller.phase_idx, node_idx=controller.t[0]),
+            # controller.time.cx,
+            fourier_coeff_x,
+            mode="casadi",
+        )
+
+        y = FourierSeries().fit_func_by_fourier_series_with_real_coeffs(
+            controller.ocp.node_time(phase_idx=controller.phase_idx, node_idx=controller.t[0]),
+            # controller.time.cx,
+            fourier_coeff_y,
+            mode="casadi",
+        )
+
+        # hand_marker = controller.model.marker(controller.q.mx, 1)
+
+        markers = controller.mx_to_cx("markers", controller.model.markers, controller.states["q"])
+        hand_marker = markers[:, 1]
+
+        return fabs(x - hand_marker[0]) + fabs(y - hand_marker[1])
