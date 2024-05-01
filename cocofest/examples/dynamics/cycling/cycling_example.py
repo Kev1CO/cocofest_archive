@@ -62,14 +62,15 @@ for i in range(n_stim):
 minimum_pulse_duration = DingModelPulseDurationFrequencyWithFatigue().pd0
 
 ocp = OcpFesMsk.prepare_ocp(
-    biorbd_model_path="../../msk_models/arm26_cycling.bioMod",
+    # biorbd_model_path="../../msk_models/arm26_cycling.bioMod",
+    biorbd_model_path="../../msk_models/simplified_UL_Seth.bioMod",
     fes_muscle_models=[
-        DingModelPulseDurationFrequencyWithFatigue(muscle_name="BIClong"),
-        DingModelPulseDurationFrequencyWithFatigue(muscle_name="BICshort"),
+        DingModelPulseDurationFrequencyWithFatigue(muscle_name="DeltoideusClavicle_A"),
+        DingModelPulseDurationFrequencyWithFatigue(muscle_name="DeltoideusScapula_P"),
         DingModelPulseDurationFrequencyWithFatigue(muscle_name="TRIlong"),
-        DingModelPulseDurationFrequencyWithFatigue(muscle_name="TRIlat"),
-        DingModelPulseDurationFrequencyWithFatigue(muscle_name="TRImed"),
-        DingModelPulseDurationFrequencyWithFatigue(muscle_name="BRA"),
+        DingModelPulseDurationFrequencyWithFatigue(muscle_name="BIC_long"),
+        DingModelPulseDurationFrequencyWithFatigue(muscle_name="BIC_brevis"),
+        # DingModelPulseDurationFrequencyWithFatigue(muscle_name="BRA"),
     ],
     n_stim=n_stim,
     n_shooting=10,
@@ -87,6 +88,6 @@ ocp = OcpFesMsk.prepare_ocp(
     custom_constraint=custom_constraint,
 )
 
-sol = ocp.solve(Solver.IPOPT(_max_iter=3000))
+sol = ocp.solve(Solver.IPOPT(_max_iter=1000))
 sol.animate()
 sol.graphs(show_bounds=False)
