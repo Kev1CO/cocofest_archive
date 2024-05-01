@@ -24,11 +24,6 @@ endsegment
         parent    base
         position    0.15 0.15 0.17
     endmarker
-	
-	marker    reaching_target
-        parent    base
-        position    0.40 -0.05 0.167
-    endmarker
 
 
 segment r_humerus_translation

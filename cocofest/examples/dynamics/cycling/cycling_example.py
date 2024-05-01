@@ -24,7 +24,7 @@ def get_circle_coord(theta, x_center, y_center, radius):
     return (x,y)
 
 
-get_circle_coord_list = [get_circle_coord(theta, 0.4, 0, 0.1) for theta in np.linspace(0, -2 * np.pi, 100)]
+get_circle_coord_list = [get_circle_coord(theta, 0.35, 0, 0.1) for theta in np.linspace(0, -2 * np.pi, 100)]
 x_coordinates = [i[0] for i in get_circle_coord_list]
 y_coordinates = [i[1] for i in get_circle_coord_list]
 
