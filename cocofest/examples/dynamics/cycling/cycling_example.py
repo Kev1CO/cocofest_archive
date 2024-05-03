@@ -4,6 +4,7 @@ Those ocp were build to move the elbow from 0 to 90 degrees angle.
 The stimulation frequency will be set to 10Hz and pulse duration will be optimized to satisfy the motion and to minimize the overall muscle fatigue.
 Intensity can be optimized from sensitivity threshold to 600us. No residual torque is allowed.
 """
+import pickle
 
 import numpy as np
 
@@ -12,7 +13,12 @@ from bioptim import (
     ObjectiveFcn,
     ObjectiveList,
     Solver,
+    SolutionMerge
 )
+
+import biorbd
+
+from pyorerun import BiorbdModel, PhaseRerun
 
 from cocofest import DingModelPulseDurationFrequencyWithFatigue, OcpFesMsk, FourierSeries, CustomObjective
 
@@ -35,26 +41,26 @@ fourier_coef_y = fourier_fun.compute_real_fourier_coeffs(time, y_coordinates, 50
 x_approx = fourier_fun.fit_func_by_fourier_series_with_real_coeffs(time, fourier_coef_x)
 y_approx = FourierSeries().fit_func_by_fourier_series_with_real_coeffs(time, fourier_coef_y)
 
-n_stim = 10
+n_stim = 40
 n_shooting = 10
 
 custom_constraint = ConstraintList()
 objective_functions = ObjectiveList()
 for i in range(n_stim):
     for j in range(n_shooting):
-        custom_constraint.add(
+        objective_functions.add(
             CustomObjective.track_motion,
-            # custom_type=ObjectiveFcn.Mayer,
+            custom_type=ObjectiveFcn.Mayer,
             node=j,
             fourier_coeff_x=fourier_coef_x,
             fourier_coeff_y=fourier_coef_y,
             marker_idx=1,
             quadratic=True,
-            # weight=1000,
+            weight=10000,
             phase=i,
         )
 
-objective_functions = ObjectiveList()
+# objective_functions = ObjectiveList()
 for i in range(n_stim):
     objective_functions.add(ObjectiveFcn.Lagrange.MINIMIZE_CONTROL, key="tau", weight=1000, quadratic=True, phase=i)
 
@@ -62,7 +68,6 @@ for i in range(n_stim):
 minimum_pulse_duration = DingModelPulseDurationFrequencyWithFatigue().pd0
 
 ocp = OcpFesMsk.prepare_ocp(
-    # biorbd_model_path="../../msk_models/arm26_cycling.bioMod",
     biorbd_model_path="../../msk_models/simplified_UL_Seth.bioMod",
     fes_muscle_models=[
         DingModelPulseDurationFrequencyWithFatigue(muscle_name="DeltoideusClavicle_A"),
@@ -88,6 +93,29 @@ ocp = OcpFesMsk.prepare_ocp(
     custom_constraint=custom_constraint,
 )
 
-sol = ocp.solve(Solver.IPOPT(_max_iter=1000))
-sol.animate()
+sol = ocp.solve(Solver.IPOPT(_max_iter=100000))
+
+dictionary = {
+    "time": sol.decision_time(to_merge=[SolutionMerge.PHASES, SolutionMerge.NODES]),
+    "states": sol.decision_states(to_merge=[SolutionMerge.PHASES, SolutionMerge.NODES]),
+    "control": sol.decision_controls(to_merge=[SolutionMerge.PHASES, SolutionMerge.NODES]),
+    "parameters": sol.decision_parameters(),
+}
+
+with open("cycling_result.pkl", "wb") as file:
+    pickle.dump(dictionary, file)
+
+
+biorbd_model = biorbd.Model("../../msk_models/simplified_UL_Seth_full_mesh.bioMod")
+prr_model = BiorbdModel.from_biorbd_object(biorbd_model)
+
+nb_frames = 440
+nb_seconds = 1
+t_span = np.linspace(0, nb_seconds, nb_frames)
+
+viz = PhaseRerun(t_span)
+q = sol.decision_states(to_merge=[SolutionMerge.PHASES, SolutionMerge.NODES])["q"]
+viz.add_animated_model(prr_model, q)
+viz.rerun("msk_model")
+
 sol.graphs(show_bounds=False)
