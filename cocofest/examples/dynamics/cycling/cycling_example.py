@@ -100,6 +100,7 @@ dictionary = {
     "states": sol.decision_states(to_merge=[SolutionMerge.PHASES, SolutionMerge.NODES]),
     "control": sol.decision_controls(to_merge=[SolutionMerge.PHASES, SolutionMerge.NODES]),
     "parameters": sol.decision_parameters(),
+    "time_to_optimize": sol.real_time_to_optimize,
 }
 
 with open("cycling_result.pkl", "wb") as file:
