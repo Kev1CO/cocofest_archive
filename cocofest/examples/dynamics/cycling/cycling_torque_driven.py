@@ -21,6 +21,7 @@ from bioptim import (
     DynamicsFcn,
     BiorbdModel,
     OdeSolver,
+    ConstraintList,
 )
 
 from cocofest import FourierSeries, CustomObjective
@@ -43,38 +44,48 @@ def prepare_ocp(
 ) -> OptimalControlProgram:
     # Adding the models to the same phase
     bio_models = BiorbdModel(biorbd_model_path,)
-
     # Problem parameters
     final_time = 1
     tau_min, tau_max = -200, 200
 
     # Add objective functions
-    get_circle_coord_list = [get_circle_coord(theta, 0.35, 0, 0.1) for theta in np.linspace(0, -2 * np.pi, 100)]
+    get_circle_coord_list = [get_circle_coord(theta, 0.35, 0, 0.1) for theta in np.linspace(0, -2 * np.pi, 101)]
     x_coordinates = [i[0] for i in get_circle_coord_list]
     y_coordinates = [i[1] for i in get_circle_coord_list]
 
-    fourier_fun = FourierSeries()
-    time = np.linspace(0, 1, 100)
-    fourier_coef_x = fourier_fun.compute_real_fourier_coeffs(time, x_coordinates, 50)
-    fourier_coef_y = fourier_fun.compute_real_fourier_coeffs(time, y_coordinates, 50)
+    # fourier_fun = FourierSeries()
+    # time = np.linspace(0, 1, 100)
+    # fourier_coef_x = fourier_fun.compute_real_fourier_coeffs(time, x_coordinates, 50)
+    # fourier_coef_y = fourier_fun.compute_real_fourier_coeffs(time, y_coordinates, 50)
     # x_approx = fourier_fun.fit_func_by_fourier_series_with_real_coeffs(time, fourier_coef_x)
     # y_approx = FourierSeries().fit_func_by_fourier_series_with_real_coeffs(time, fourier_coef_y)
 
     objective_functions = ObjectiveList()
-    # objective_functions.add(
-    #     CustomObjective.track_motion,
-    #     custom_type=ObjectiveFcn.Lagrange,
-    #     node=Node.ALL,
-    #     fourier_coeff_x=fourier_coef_x,
-    #     fourier_coeff_y=fourier_coef_y,
-    #     marker_idx=1,
-    #     quadratic=True,
-    #     weight=10000,
-    #     phase=0,
-    # )
+    custom_constraint = ConstraintList()
+    # for i in range(100):
+    #     custom_constraint.add(
+    #             CustomObjective.track_motion,
+    #             phase=0,
+    #             node=i,
+    #             fourier_coeff_x=x_coordinates,
+    #             fourier_coeff_y=y_coordinates,
+    #             marker_idx=0,
+    #             node_index=i,
+    #         )
+
     objective_functions.add(
-        ObjectiveFcn.Mayer.SUPERIMPOSE_MARKERS, weight=100000, first_marker="target", second_marker="COM_hand"
+        CustomObjective.track_motion,
+        custom_type=ObjectiveFcn.Lagrange,
+        phase=0,
+        node=Node.ALL,
+        fourier_coeff_x=x_coordinates,
+        fourier_coeff_y=y_coordinates,
+        marker_idx=0,
+        quadratic=True,
+        weight=1000,
     )
+
+    # objective_functions.add(ObjectiveFcn.Lagrange.MINIMIZE_CONTROL, key="tau", weight=10, quadratic=True, phase=0)
 
     # Dynamics
     dynamics = DynamicsList()
@@ -82,12 +93,14 @@ def prepare_ocp(
 
     # Path constraint
     x_bounds = BoundsList()
-    x_bounds["q"] = bio_models.bounds_from_ranges("q")
-    x_bounds["qdot"] = bio_models.bounds_from_ranges("qdot")
+    q_x_bounds = bio_models.bounds_from_ranges("q")
+    qdot_x_bounds = bio_models.bounds_from_ranges("qdot")
+    x_bounds.add(key="q", bounds=q_x_bounds, phase=0)
+    x_bounds.add(key="qdot", bounds=qdot_x_bounds, phase=0)
 
     # Define control path constraint
     u_bounds = BoundsList()
-    u_bounds["tau"] = [tau_min, tau_min], [tau_max, tau_max]
+    u_bounds.add(key="tau", min_bound=np.array([-200, -200]), max_bound=np.array([200, 200]), phase=0)
 
     return OptimalControlProgram(
         bio_models,
@@ -97,6 +110,7 @@ def prepare_ocp(
         x_bounds=x_bounds,
         u_bounds=u_bounds,
         objective_functions=objective_functions,
+        constraints=custom_constraint,
         ode_solver=OdeSolver.RK4(),
     )
 
@@ -104,8 +118,8 @@ def prepare_ocp(
 def main():
     # --- Prepare the ocp --- #
     ocp = prepare_ocp()
-    sol = ocp.solve(Solver.IPOPT(show_online_optim=True, _max_iter=1000))
-
+    sol = ocp.solve(Solver.IPOPT(_max_iter=10000))
+    # sol = ocp.solve(Solver.IPOPT(show_online_optim=True, _max_iter=1000))
     dictionary = {
         "time": sol.decision_time(to_merge=[SolutionMerge.PHASES, SolutionMerge.NODES]),
         "states": sol.decision_states(to_merge=[SolutionMerge.PHASES, SolutionMerge.NODES]),

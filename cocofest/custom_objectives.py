@@ -127,23 +127,23 @@ class CustomObjective:
         -------
         The difference between the two keys
         """
-        x = FourierSeries().fit_func_by_fourier_series_with_real_coeffs(
-            controller.ocp.node_time(phase_idx=controller.phase_idx, node_idx=controller.t[0]),
-            # controller.time.cx,
-            fourier_coeff_x,
-            mode="casadi",
-        )
-
-        y = FourierSeries().fit_func_by_fourier_series_with_real_coeffs(
-            controller.ocp.node_time(phase_idx=controller.phase_idx, node_idx=controller.t[0]),
-            # controller.time.cx,
-            fourier_coeff_y,
-            mode="casadi",
-        )
+        # x = FourierSeries().fit_func_by_fourier_series_with_real_coeffs(
+        #     controller.ocp.node_time(phase_idx=controller.phase_idx, node_idx=controller.t[0]),
+        #     # controller.time.cx,
+        #     fourier_coeff_x,
+        #     mode="casadi",
+        # )
+        #
+        # y = FourierSeries().fit_func_by_fourier_series_with_real_coeffs(
+        #     controller.ocp.node_time(phase_idx=controller.phase_idx, node_idx=controller.t[0]),
+        #     # controller.time.cx,
+        #     fourier_coeff_y,
+        #     mode="casadi",
+        # )
 
         # hand_marker = controller.model.marker(controller.q.mx, 1)
 
         markers = controller.mx_to_cx("markers", controller.model.markers, controller.states["q"])
-        hand_marker = markers[:, 1]
-
-        return fabs(x - hand_marker[0]) + fabs(y - hand_marker[1])
+        marker_idx = controller.model.marker_index("COM_hand")
+        hand_marker = markers[:, marker_idx]
+        return fabs(fourier_coeff_x[controller.node_index] - hand_marker[0]) + fabs(fourier_coeff_y[controller.node_index] - hand_marker[1])
