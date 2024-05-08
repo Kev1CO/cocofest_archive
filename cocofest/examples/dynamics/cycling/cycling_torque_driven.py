@@ -61,18 +61,6 @@ def prepare_ocp(
     # y_approx = FourierSeries().fit_func_by_fourier_series_with_real_coeffs(time, fourier_coef_y)
 
     objective_functions = ObjectiveList()
-    custom_constraint = ConstraintList()
-    # for i in range(100):
-    #     custom_constraint.add(
-    #             CustomObjective.track_motion,
-    #             phase=0,
-    #             node=i,
-    #             fourier_coeff_x=x_coordinates,
-    #             fourier_coeff_y=y_coordinates,
-    #             marker_idx=0,
-    #             node_index=i,
-    #         )
-
     objective_functions.add(
         CustomObjective.track_motion,
         custom_type=ObjectiveFcn.Lagrange,
@@ -84,8 +72,6 @@ def prepare_ocp(
         quadratic=True,
         weight=1000,
     )
-
-    # objective_functions.add(ObjectiveFcn.Lagrange.MINIMIZE_CONTROL, key="tau", weight=10, quadratic=True, phase=0)
 
     # Dynamics
     dynamics = DynamicsList()
@@ -110,7 +96,6 @@ def prepare_ocp(
         x_bounds=x_bounds,
         u_bounds=u_bounds,
         objective_functions=objective_functions,
-        constraints=custom_constraint,
         ode_solver=OdeSolver.RK4(),
     )
 
