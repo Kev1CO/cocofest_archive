@@ -13,7 +13,8 @@ from bioptim import (
     ObjectiveFcn,
     ObjectiveList,
     Solver,
-    SolutionMerge
+    SolutionMerge,
+    Node
 )
 
 import biorbd
@@ -38,31 +39,46 @@ fourier_fun = FourierSeries()
 time = np.linspace(0, 1, 100)
 fourier_coef_x = fourier_fun.compute_real_fourier_coeffs(time, x_coordinates, 50)
 fourier_coef_y = fourier_fun.compute_real_fourier_coeffs(time, y_coordinates, 50)
-x_approx = fourier_fun.fit_func_by_fourier_series_with_real_coeffs(time, fourier_coef_x)
-y_approx = FourierSeries().fit_func_by_fourier_series_with_real_coeffs(time, fourier_coef_y)
+# x_approx = fourier_fun.fit_func_by_fourier_series_with_real_coeffs(time, fourier_coef_x)
+# y_approx = FourierSeries().fit_func_by_fourier_series_with_real_coeffs(time, fourier_coef_y)
 
-n_stim = 40
-n_shooting = 10
+n_stim = 1
+n_shooting = 100
 
 custom_constraint = ConstraintList()
 objective_functions = ObjectiveList()
 for i in range(n_stim):
-    for j in range(n_shooting):
-        objective_functions.add(
-            CustomObjective.track_motion,
-            custom_type=ObjectiveFcn.Mayer,
-            node=j,
-            fourier_coeff_x=fourier_coef_x,
-            fourier_coeff_y=fourier_coef_y,
-            marker_idx=1,
-            quadratic=True,
-            weight=10000,
-            phase=i,
-        )
+    objective_functions.add(
+        CustomObjective.track_motion,
+        custom_type=ObjectiveFcn.Lagrange,
+        node=Node.ALL,
+        fourier_coeff_x=fourier_coef_x,
+        fourier_coeff_y=fourier_coef_y,
+        marker_idx=1,
+        quadratic=True,
+        weight=10000,
+        phase=i,
+    )
+#     custom_constraint.add(
+#         CustomObjective.track_motion,
+#         phase=i*4,
+#         node=Node.START,
+#         fourier_coeff_x=fourier_coef_x,
+#         fourier_coeff_y=fourier_coef_y,
+#         marker_idx=1,
+#     )
+#
+# custom_constraint.add(
+#     CustomObjective.track_motion,
+#     phase=39,
+#     node=Node.END,
+#     fourier_coeff_x=fourier_coef_x,
+#     fourier_coeff_y=fourier_coef_y,
+#     marker_idx=1,
+# )
 
-# objective_functions = ObjectiveList()
-for i in range(n_stim):
-    objective_functions.add(ObjectiveFcn.Lagrange.MINIMIZE_CONTROL, key="tau", weight=1000, quadratic=True, phase=i)
+# for i in range(n_stim):
+#     objective_functions.add(ObjectiveFcn.Lagrange.MINIMIZE_CONTROL, key="tau", weight=1000, quadratic=True, phase=i)
 
 
 minimum_pulse_duration = DingModelPulseDurationFrequencyWithFatigue().pd0
@@ -75,10 +91,9 @@ ocp = OcpFesMsk.prepare_ocp(
         DingModelPulseDurationFrequencyWithFatigue(muscle_name="TRIlong"),
         DingModelPulseDurationFrequencyWithFatigue(muscle_name="BIC_long"),
         DingModelPulseDurationFrequencyWithFatigue(muscle_name="BIC_brevis"),
-        # DingModelPulseDurationFrequencyWithFatigue(muscle_name="BRA"),
     ],
     n_stim=n_stim,
-    n_shooting=10,
+    n_shooting=n_shooting,
     final_time=1,
     pulse_duration={
         "min": minimum_pulse_duration,
@@ -88,12 +103,13 @@ ocp = OcpFesMsk.prepare_ocp(
     with_residual_torque=True,
     objective={"custom": objective_functions},
     activate_force_length_relationship=True,
-    activate_force_velocity_relationship=False,
-    minimize_muscle_fatigue=True,
+    activate_force_velocity_relationship=True,
+    minimize_muscle_fatigue=False,
     custom_constraint=custom_constraint,
+    n_threads=5,
 )
 
-sol = ocp.solve(Solver.IPOPT(_max_iter=100000))
+sol = ocp.solve(Solver.IPOPT(_max_iter=10000))
 
 dictionary = {
     "time": sol.decision_time(to_merge=[SolutionMerge.PHASES, SolutionMerge.NODES]),
