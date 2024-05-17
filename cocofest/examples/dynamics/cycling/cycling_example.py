@@ -14,7 +14,8 @@ from bioptim import (
     ObjectiveList,
     Solver,
     SolutionMerge,
-    Node
+    Node,
+    Axis,
 )
 
 import biorbd
@@ -31,54 +32,29 @@ def get_circle_coord(theta, x_center, y_center, radius):
     return (x,y)
 
 
-get_circle_coord_list = [get_circle_coord(theta, 0.35, 0, 0.1) for theta in np.linspace(0, -2 * np.pi, 100)]
-x_coordinates = [i[0] for i in get_circle_coord_list]
-y_coordinates = [i[1] for i in get_circle_coord_list]
+get_circle_coord_list = [get_circle_coord(theta, 0.35, 0, 0.1) for theta in np.linspace(0, -2 * np.pi, 400)]
 
-fourier_fun = FourierSeries()
-time = np.linspace(0, 1, 100)
-fourier_coef_x = fourier_fun.compute_real_fourier_coeffs(time, x_coordinates, 50)
-fourier_coef_y = fourier_fun.compute_real_fourier_coeffs(time, y_coordinates, 50)
-# x_approx = fourier_fun.fit_func_by_fourier_series_with_real_coeffs(time, fourier_coef_x)
-# y_approx = FourierSeries().fit_func_by_fourier_series_with_real_coeffs(time, fourier_coef_y)
+n_stim = 40
+n_shooting = 10
+counter = 0
 
-n_stim = 1
-n_shooting = 100
-
-custom_constraint = ConstraintList()
 objective_functions = ObjectiveList()
 for i in range(n_stim):
-    objective_functions.add(
-        CustomObjective.track_motion,
-        custom_type=ObjectiveFcn.Lagrange,
-        node=Node.ALL,
-        fourier_coeff_x=fourier_coef_x,
-        fourier_coeff_y=fourier_coef_y,
-        marker_idx=1,
-        quadratic=True,
-        weight=10000,
-        phase=i,
-    )
-#     custom_constraint.add(
-#         CustomObjective.track_motion,
-#         phase=i*4,
-#         node=Node.START,
-#         fourier_coeff_x=fourier_coef_x,
-#         fourier_coeff_y=fourier_coef_y,
-#         marker_idx=1,
-#     )
-#
-# custom_constraint.add(
-#     CustomObjective.track_motion,
-#     phase=39,
-#     node=Node.END,
-#     fourier_coeff_x=fourier_coef_x,
-#     fourier_coeff_y=fourier_coef_y,
-#     marker_idx=1,
-# )
+    for j in range(n_shooting):
+        objective_functions.add(
+            ObjectiveFcn.Mayer.TRACK_MARKERS,
+            weight=10000,
+            axes=[Axis.X, Axis.Y],
+            marker_index=1,
+            target=np.array(get_circle_coord_list[counter]),
+            node=j,
+            phase=i,
+            quadratic=True,
+        )
+        counter += 1
 
-# for i in range(n_stim):
-#     objective_functions.add(ObjectiveFcn.Lagrange.MINIMIZE_CONTROL, key="tau", weight=1000, quadratic=True, phase=i)
+for i in range(n_stim):
+    objective_functions.add(ObjectiveFcn.Lagrange.MINIMIZE_CONTROL, key="tau", weight=100, quadratic=True, phase=i)
 
 
 minimum_pulse_duration = DingModelPulseDurationFrequencyWithFatigue().pd0
@@ -104,8 +80,7 @@ ocp = OcpFesMsk.prepare_ocp(
     objective={"custom": objective_functions},
     activate_force_length_relationship=True,
     activate_force_velocity_relationship=True,
-    minimize_muscle_fatigue=False,
-    custom_constraint=custom_constraint,
+    minimize_muscle_fatigue=True,
     n_threads=5,
 )
 
@@ -119,7 +94,7 @@ dictionary = {
     "time_to_optimize": sol.real_time_to_optimize,
 }
 
-with open("cycling_result.pkl", "wb") as file:
+with open("cycling_result_min_fatigue.pkl", "wb") as file:
     pickle.dump(dictionary, file)
 
 

@@ -22,6 +22,7 @@ from bioptim import (
     BiorbdModel,
     OdeSolver,
     ConstraintList,
+    Axis,
 )
 
 from cocofest import FourierSeries, CustomObjective
@@ -50,28 +51,19 @@ def prepare_ocp(
 
     # Add objective functions
     get_circle_coord_list = [get_circle_coord(theta, 0.35, 0, 0.1) for theta in np.linspace(0, -2 * np.pi, 101)]
-    x_coordinates = [i[0] for i in get_circle_coord_list]
-    y_coordinates = [i[1] for i in get_circle_coord_list]
-
-    # fourier_fun = FourierSeries()
-    # time = np.linspace(0, 1, 100)
-    # fourier_coef_x = fourier_fun.compute_real_fourier_coeffs(time, x_coordinates, 50)
-    # fourier_coef_y = fourier_fun.compute_real_fourier_coeffs(time, y_coordinates, 50)
-    # x_approx = fourier_fun.fit_func_by_fourier_series_with_real_coeffs(time, fourier_coef_x)
-    # y_approx = FourierSeries().fit_func_by_fourier_series_with_real_coeffs(time, fourier_coef_y)
 
     objective_functions = ObjectiveList()
-    objective_functions.add(
-        CustomObjective.track_motion,
-        custom_type=ObjectiveFcn.Lagrange,
-        phase=0,
-        node=Node.ALL,
-        fourier_coeff_x=x_coordinates,
-        fourier_coeff_y=y_coordinates,
-        marker_idx=0,
-        quadratic=True,
-        weight=1000,
-    )
+    for i in range(100):
+        objective_functions.add(
+            ObjectiveFcn.Mayer.TRACK_MARKERS,
+            weight=100,
+            axes=[Axis.X, Axis.Y],
+            marker_index=1,
+            target=np.array(get_circle_coord_list[i]),
+            node=i,
+            phase=0,
+            quadratic=True,
+        )
 
     # Dynamics
     dynamics = DynamicsList()
@@ -81,12 +73,13 @@ def prepare_ocp(
     x_bounds = BoundsList()
     q_x_bounds = bio_models.bounds_from_ranges("q")
     qdot_x_bounds = bio_models.bounds_from_ranges("qdot")
+
     x_bounds.add(key="q", bounds=q_x_bounds, phase=0)
     x_bounds.add(key="qdot", bounds=qdot_x_bounds, phase=0)
 
     # Define control path constraint
     u_bounds = BoundsList()
-    u_bounds.add(key="tau", min_bound=np.array([-200, -200]), max_bound=np.array([200, 200]), phase=0)
+    u_bounds.add(key="tau", min_bound=np.array([-50, -50]), max_bound=np.array([50, 50]), phase=0)
 
     return OptimalControlProgram(
         bio_models,
@@ -103,8 +96,8 @@ def prepare_ocp(
 def main():
     # --- Prepare the ocp --- #
     ocp = prepare_ocp()
-    sol = ocp.solve(Solver.IPOPT(_max_iter=10000))
-    # sol = ocp.solve(Solver.IPOPT(show_online_optim=True, _max_iter=1000))
+    # sol = ocp.solve(Solver.IPOPT(_max_iter=20000))
+    sol = ocp.solve(Solver.IPOPT(show_online_optim=True, _max_iter=1000))
     dictionary = {
         "time": sol.decision_time(to_merge=[SolutionMerge.PHASES, SolutionMerge.NODES]),
         "states": sol.decision_states(to_merge=[SolutionMerge.PHASES, SolutionMerge.NODES]),
