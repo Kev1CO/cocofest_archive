@@ -104,4 +104,4 @@ class CustomObjective:
         """
         muscle_name_list = controller.model.bio_model.muscle_names
         muscle_force = horzcat(*[controller.states["F_" + muscle_name_list[x]].cx ** 3 for x in range(len(muscle_name_list))])
-        return 1/sum1(muscle_force)
+        return sum1(muscle_force)

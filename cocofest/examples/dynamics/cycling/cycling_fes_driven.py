@@ -9,7 +9,7 @@ import pickle
 
 import numpy as np
 
-from bioptim import ObjectiveFcn, ObjectiveList, SolutionMerge, Solver
+from bioptim import CostType, ObjectiveFcn, ObjectiveList, SolutionMerge, Solver
 
 import biorbd
 
@@ -24,7 +24,7 @@ def main():
 
     objective_functions = ObjectiveList()
     for i in range(n_stim):
-        objective_functions.add(ObjectiveFcn.Lagrange.MINIMIZE_CONTROL, key="tau", weight=1, quadratic=True, phase=i)
+        objective_functions.add(ObjectiveFcn.Lagrange.MINIMIZE_CONTROL, key="tau", weight=100, quadratic=True, phase=i)
 
     minimum_pulse_duration = DingModelPulseDurationFrequencyWithFatigue().pd0
 
@@ -52,12 +52,12 @@ def main():
         },
         activate_force_length_relationship=True,
         activate_force_velocity_relationship=True,
-        minimize_muscle_fatigue=False,
+        minimize_muscle_fatigue=True,
         warm_start=False,
         n_threads=5,
     )
-
-    sol = ocp.solve(Solver.IPOPT(_max_iter=10000))
+    ocp.add_plot_penalty(CostType.ALL)
+    sol = ocp.solve(Solver.IPOPT(show_online_optim=False, _max_iter=10000))
 
     dictionary = {
         "time": sol.decision_time(to_merge=[SolutionMerge.PHASES, SolutionMerge.NODES]),
@@ -67,7 +67,7 @@ def main():
         "time_to_optimize": sol.real_time_to_optimize,
     }
 
-    with open("cycling_fes_driven_min_residual_torque_results.pkl", "wb") as file:
+    with open("cycling_fes_driven_min_residual_torque_and_muscle_fatigue_results.pkl", "wb") as file:
         pickle.dump(dictionary, file)
 
     biorbd_model = biorbd.Model("../../msk_models/simplified_UL_Seth_full_mesh.bioMod")

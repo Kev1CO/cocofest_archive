@@ -69,6 +69,7 @@ def prepare_ocp(
 
     # Define control path constraint
     u_bounds = BoundsList()
+    u_bounds["muscles"] = [0] * bio_model.nb_muscles, [1] * bio_model.nb_muscles
 
     # Initial q guess
     x_init = InitialGuessList()

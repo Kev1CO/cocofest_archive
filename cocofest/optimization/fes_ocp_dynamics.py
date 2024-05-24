@@ -723,18 +723,20 @@ class OcpFesMsk:
                     for theta in np.linspace(0, -2 * np.pi, n_shooting[0] * n_stim)
                 ]
             )
+            counter = 0
             for phase in range(n_stim):
                 for i in range(n_shooting[phase]):
                     objective_functions.add(
                         ObjectiveFcn.Mayer.TRACK_MARKERS,
-                        weight=1000,
+                        weight=100000,
                         axes=[Axis.X, Axis.Y],
                         marker_index=0,
-                        target=np.array(get_circle_coord_list[i]),
+                        target=np.array(get_circle_coord_list[counter]),
                         node=i,
                         phase=phase,
                         quadratic=True,
                     )
+                    counter += 1
 
         if q_fourier_coef:
             for j in range(len(q_fourier_coef)):
@@ -759,7 +761,7 @@ class OcpFesMsk:
                     custom_type=ObjectiveFcn.Mayer,
                     node=Node.ALL,
                     quadratic=True,
-                    weight=-1,
+                    weight=1,
                     phase=i,
                 )
 
