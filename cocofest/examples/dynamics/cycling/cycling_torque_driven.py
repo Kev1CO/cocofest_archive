@@ -9,10 +9,12 @@ from bioptim import (
     Axis,
     BiorbdModel,
     BoundsList,
+    CostType,
     DynamicsFcn,
     DynamicsList,
     InitialGuessList,
     InterpolationType,
+    Node,
     ObjectiveFcn,
     ObjectiveList,
     OdeSolver,
@@ -40,21 +42,20 @@ def prepare_ocp(
     x_center = objective["cycling"]["x_center"]
     y_center = objective["cycling"]["y_center"]
     radius = objective["cycling"]["radius"]
-    get_circle_coord_list = np.array(
+    circle_coord_list = np.array(
         [get_circle_coord(theta, x_center, y_center, radius)[:-1] for theta in np.linspace(0, -2 * np.pi, n_shooting)]
-    )
+    ).T
     objective_functions = ObjectiveList()
-    for i in range(n_shooting):
-        objective_functions.add(
-            ObjectiveFcn.Mayer.TRACK_MARKERS,
-            weight=100,
-            axes=[Axis.X, Axis.Y],
-            marker_index=0,
-            target=np.array(get_circle_coord_list[i]),
-            node=i,
-            phase=0,
-            quadratic=True,
-        )
+    objective_functions.add(
+        ObjectiveFcn.Mayer.TRACK_MARKERS,
+        weight=100,
+        axes=[Axis.X, Axis.Y],
+        marker_index=0,
+        target=circle_coord_list,
+        node=Node.ALL_SHOOTING,
+        phase=0,
+        quadratic=True,
+    )
 
     # Dynamics
     dynamics = DynamicsList()
@@ -108,6 +109,7 @@ def main():
         objective={"cycling": {"x_center": 0.35, "y_center": 0, "radius": 0.1}},
         warm_start=True,
     )
+    ocp.add_plot_penalty(CostType.ALL)
     sol = ocp.solve()
     sol.animate()
     sol.graphs()

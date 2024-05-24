@@ -18,6 +18,8 @@ from bioptim import (
     OptimalControlProgram,
     PhaseDynamics,
     Solver,
+    Node,
+    CostType,
 )
 
 from cocofest import get_circle_coord, inverse_kinematics_cycling
@@ -40,21 +42,20 @@ def prepare_ocp(
     x_center = objective["cycling"]["x_center"]
     y_center = objective["cycling"]["y_center"]
     radius = objective["cycling"]["radius"]
-    get_circle_coord_list = np.array(
-        [get_circle_coord(theta, x_center, y_center, radius)[:-1] for theta in np.linspace(0, -2 * np.pi, n_shooting)]
-    )
+    circle_coord_list = np.array(
+        [get_circle_coord(theta, x_center, y_center, radius)[:-1] for theta in np.linspace(0, -2 * np.pi, n_shooting+1)]
+    ).T
     objective_functions = ObjectiveList()
-    for i in range(n_shooting):
-        objective_functions.add(
-            ObjectiveFcn.Mayer.TRACK_MARKERS,
-            weight=100,
-            axes=[Axis.X, Axis.Y],
-            marker_index=0,
-            target=np.array(get_circle_coord_list[i]),
-            node=i,
-            phase=0,
-            quadratic=True,
-        )
+    objective_functions.add(
+        ObjectiveFcn.Mayer.TRACK_MARKERS,
+        weight=100,
+        axes=[Axis.X, Axis.Y],
+        marker_index=0,
+        target=circle_coord_list,
+        node=Node.ALL,
+        phase=0,
+        quadratic=True,
+    )
 
     # Dynamics
     dynamics = DynamicsList()
@@ -106,7 +107,8 @@ def main():
         objective={"cycling": {"x_center": 0.35, "y_center": 0, "radius": 0.1}},
         warm_start=True,
     )
-    sol = ocp.solve()
+    ocp.add_plot_penalty(CostType.ALL)
+    sol = ocp.solve(Solver.IPOPT(show_online_optim=True))
     sol.animate()
     sol.graphs()
 

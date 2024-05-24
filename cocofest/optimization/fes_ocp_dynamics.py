@@ -717,26 +717,23 @@ class OcpFesMsk:
             x_center = cycling_objective["x_center"]
             y_center = cycling_objective["y_center"]
             radius = cycling_objective["radius"]
-            get_circle_coord_list = np.array(
+            circle_coord_list = np.array(
                 [
                     get_circle_coord(theta, x_center, y_center, radius)[:-1]
-                    for theta in np.linspace(0, -2 * np.pi, n_shooting[0] * n_stim)
+                    for theta in np.linspace(0, -2 * np.pi, n_shooting[0] * n_stim + 1)
                 ]
             )
-            counter = 0
             for phase in range(n_stim):
-                for i in range(n_shooting[phase]):
-                    objective_functions.add(
-                        ObjectiveFcn.Mayer.TRACK_MARKERS,
-                        weight=100000,
-                        axes=[Axis.X, Axis.Y],
-                        marker_index=0,
-                        target=np.array(get_circle_coord_list[counter]),
-                        node=i,
-                        phase=phase,
-                        quadratic=True,
-                    )
-                    counter += 1
+                objective_functions.add(
+                    ObjectiveFcn.Mayer.TRACK_MARKERS,
+                    weight=100000,
+                    axes=[Axis.X, Axis.Y],
+                    marker_index=0,
+                    target=circle_coord_list[n_shooting[0] * phase : n_shooting[0] * (phase + 1) + 1].T,
+                    node=Node.ALL,
+                    phase=phase,
+                    quadratic=True,
+                )
 
         if q_fourier_coef:
             for j in range(len(q_fourier_coef)):
