@@ -1,6 +1,6 @@
 version 4
 
-// File extracted from Models/arm26_test.osim
+// File extracted from /simplified_UL_Seth.osim
 
 //Publication : Holzbaur, K.R.S., Murray, W.M., Delp, S.L. A Model of the Upper Extremity for Simulating Musculoskeletal Surgery and Analyzing Neuromuscular Control. Annals of Biomedical Engineering, vol 33, pp 829�840, 2005
 
@@ -9,9 +9,6 @@ version 4
 //Force units : N
 
 //Length units : meters
-
-// Biomod not include all Osim features as the optimisation is performed on a third part software.
-// The original file contained some of these features, corresponding warnings are shown in the end of the file.
 
 
 gravity	0 -9.8065999999999995 0
@@ -276,6 +273,13 @@ endmusclegroup
 		pennationAngle	0.17453299999999999
 		maxVelocity	10
 	endmuscle
+
+		viapoint	TRIlong-P2
+			parent	r_humerus
+			muscle	TRIlong
+			musclegroup	ground_to_r_ulna_radius_hand
+			position	-0.01 -0.29 -0.011
+		endviapoint
 
 	muscle	BIC_long
 		type	hill
