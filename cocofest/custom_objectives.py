@@ -4,7 +4,7 @@ such as functional electro stimulation
 """
 
 import numpy as np
-from casadi import MX, SX
+from casadi import MX, SX, sum1, horzcat
 
 from bioptim import PenaltyController
 from .fourier_approx import FourierSeries
@@ -85,8 +85,8 @@ class CustomObjective:
         The sum of each force scaling factor
         """
         muscle_name_list = controller.model.bio_model.muscle_names
-        muscle_fatigue = [controller.states["A_" + muscle_name_list[x]].cx for x in range(len(muscle_name_list))]
-        return sum(muscle_fatigue)
+        muscle_fatigue = horzcat(*[controller.states["A_" + muscle_name_list[x]].cx for x in range(len(muscle_name_list))])
+        return 1/sum1(muscle_fatigue)
 
     @staticmethod
     def minimize_overall_muscle_force_production(controller: PenaltyController) -> MX:
@@ -103,5 +103,5 @@ class CustomObjective:
         The sum of each force
         """
         muscle_name_list = controller.model.bio_model.muscle_names
-        muscle_force = [controller.states["F_" + muscle_name_list[x]].cx ** 3 for x in range(len(muscle_name_list))]
-        return sum(muscle_force)
+        muscle_force = horzcat(*[controller.states["F_" + muscle_name_list[x]].cx ** 3 for x in range(len(muscle_name_list))])
+        return 1/sum1(muscle_force)
