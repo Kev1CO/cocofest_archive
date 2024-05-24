@@ -727,7 +727,7 @@ class OcpFesMsk:
                 for i in range(n_shooting[phase]):
                     objective_functions.add(
                         ObjectiveFcn.Mayer.TRACK_MARKERS,
-                        weight=100,
+                        weight=1000,
                         axes=[Axis.X, Axis.Y],
                         marker_index=0,
                         target=np.array(get_circle_coord_list[i]),

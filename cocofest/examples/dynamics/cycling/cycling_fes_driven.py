@@ -24,7 +24,7 @@ def main():
 
     objective_functions = ObjectiveList()
     for i in range(n_stim):
-        objective_functions.add(ObjectiveFcn.Lagrange.MINIMIZE_CONTROL, key="tau", weight=100, quadratic=True, phase=i)
+        objective_functions.add(ObjectiveFcn.Lagrange.MINIMIZE_CONTROL, key="tau", weight=1, quadratic=True, phase=i)
 
     minimum_pulse_duration = DingModelPulseDurationFrequencyWithFatigue().pd0
 
