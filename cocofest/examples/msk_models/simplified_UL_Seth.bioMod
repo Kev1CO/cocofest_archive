@@ -1,8 +1,8 @@
 version 4
 
-// File extracted from /simplified_UL_Seth_1.osim
+// File extracted from Models/arm26_test.osim
 
-//Publication : Holzbaur, K.R.S., Murray, W.M., Delp, S.L. A Model of the Upper Extremity for Simulating Musculoskeletal Surgery and Analyzing Neuromuscular Control. Annals of Biomedical Engineering, vol 33, pp 829–840, 2005
+//Publication : Holzbaur, K.R.S., Murray, W.M., Delp, S.L. A Model of the Upper Extremity for Simulating Musculoskeletal Surgery and Analyzing Neuromuscular Control. Annals of Biomedical Engineering, vol 33, pp 829ï¿½840, 2005
 
 //Credit : The OpenSim Development Team (Reinbolt, J; Seth, A; Habib, A; Hamner, S) adapted from a model originally created by Kate Holzbaur (11/22/04) License: Creative Commons (CCBY 3.0). You are free to distribute, remix, tweak, and build upon this work, even commercially, as long as you credit us for the original creation. http://creativecommons.org/licenses/by/3.0/
 
@@ -10,140 +10,204 @@ version 4
 
 //Length units : meters
 
+// Biomod not include all Osim features as the optimisation is performed on a third part software.
+// The original file contained some of these features, corresponding warnings are shown in the end of the file.
+
 
 gravity	0 -9.8065999999999995 0
 
 // SEGMENT DEFINITION
 
-segment base
-    // meshfile mesh/ground_ribs.vtp
-endsegment
+// Information about ground segment
+    segment base
+        // meshfile mesh/ground_ribs.vtp
+    endsegment
 
-    // Markers
-    marker    target
-        parent    base
-        position    0.15 0.15 0.17
-    endmarker
+// Information about r_humerus segment
+	// Segment
+	segment r_humerus_parent_offset
+		parent ground 
+		RTinMatrix	0
+		RT	0 0 0	xyz	-0.017545000000000002 -0.0070000000000000001 0.17000000000000001
+	endsegment
 
+	// Segments to define transformation axis.
+	// Segment
+	segment r_humerus_translation
+		parent r_humerus_parent_offset 
+		RTinMatrix	1
+		RT
+			1.0		0.0		0.0		0
+			0.0		1.0		0.0		0
+			0.0		0.0		1.0		0
+			0		0		0		1
+	endsegment
 
-segment r_humerus_translation
-    parent base
-    RTinMatrix    1
-    RT
-        1.0    0.0    0.0    -0.017545
-        0.0    1.0    0.0    -0.007
-        0.0    0.0    1.0    0.17
-        0.0    0.0    0.0    1.0
-endsegment
+	// Segment
+	segment r_humerus_r_shoulder_elev
+		parent r_humerus_translation 
+		RTinMatrix	1
+		RT
+			0.0		0.9742134877644554		-0.22562819029947306		0
+			0.0		0.22562819029947306		0.9742134877644554		0
+			1.0		0.0		0.0		0
+			0		0		0		1
+		rotations x
+		// ranges
+				// -1.5707963300000001 3.1415926500000002
+	endsegment
 
+	// Segment
+	segment r_humerus_rotation_1
+		parent r_humerus_r_shoulder_elev 
+		RTinMatrix	1
+		RT
+			0.3202200433178924		0.0		0.9473431922262845		0
+			0.9229145154086816		0.22562819029947306		-0.31196268525280896		0
+			-0.21374733005454244		0.9742134877644554		0.07225066887143494		0
+			0		0		0		1
+		// ranges
+				// -1.5707963300000001 3.1415926500000002
+	endsegment
 
-segment r_humerus_rotation1
-    parent r_humerus_translation
-    RTinMatrix    1
-    RT
-        0.9975010776109747    0.039020807762349584    -0.058898019716436364    0.0
-        -0.038952964437603196    0.9992383982621832    0.0022999999889266845    0.0
-        0.05894291073968768    0.0    0.9982613551938856    0.0
-        0.0    0.0    0.0    1.0
-    rotations z
-    rangesQ	-2*pi 2*pi
-endsegment
-
-
-segment r_humerus_rotation2
-    parent r_humerus_rotation1
-endsegment
-
-// Segment
-segment r_humerus_rotation3
-    parent r_humerus_rotation2
-    RTinMatrix    1
-    RT
-        0.0    -0.0588981755023151    0.9982639956056206    0.0
-        1.0    0.0    0.0    0.0
-        0.0    0.9982639956056206    0.0588981755023151    0.0
-        0.0    0.0    0.0    1.0
-endsegment
-
-
-segment r_humerus
-    parent r_humerus_rotation3
-    RTinMatrix    1
-    RT
-        0.039020807762349605    0.9992383982621836    0.0    0.0
-        -0.11754676602826802    0.004590265714620227    0.9930567391931666    0.0
-        0.9923004254548464    -0.03874987611716229    0.11763635808301447    0.0
-        0.0    0.0    0.0    1.0
-    mass 1.8645719999999999
-    inertia
-        0.01481    0.0    0.0
-        0.0    0.004551    0.0
-        0.0    0.0    0.013193
-    com    0 -0.18049599999999999 0
-    meshfile mesh/arm_r_humerus.vtp
-endsegment
+	// Segment
+	segment r_humerus_rotation_2
+		parent r_humerus_rotation_1 
+		RTinMatrix	1
+		RT
+			-0.11023328985988975		0.239847133577542		0.9645319975621869		0
+			0.9086290430758694		0.4176041930812351		3.215689717199417e-17		0
+			-0.4027926065429889		0.8764017859609867		-0.26396595552968144		0
+			0		0		0		1
+		// ranges
+				// -1.5707963300000001 3.1415926500000002
+	endsegment
 
 
-segment r_ulna_radius_hand_translation
-    parent r_humerus
-    RTinMatrix    1
-    RT
-        1.0    0.0    0.0    0.0061
-        0.0    1.0    0.0    -0.2904
-        0.0    0.0    1.0    -0.0123
-        0.0    0.0    0.0    1.0
-endsegment
+    // Segment to cancel transformation bases effect.
+	// Segment
+	segment r_humerus_reset_axis
+		parent r_humerus_rotation_2 
+		RTinMatrix	1
+		RT
+			0.02455350920984932		0.9086290430758699		-0.4168817425415886		0
+			-0.053423868694632774		0.41760419308123525		0.907057125088971		0
+			0.9982700112891202		-6.626002070608912e-17		0.05879612709030681		0
+			0		0		0		1
+	endsegment
 
 
-segment r_ulna_radius_hand_rotation1
-    parent r_ulna_radius_hand_translation
-    RTinMatrix    1
-    RT
-        0.801979522152563    -0.5953053712684071    0.04940000998917986    0.0
-        0.5941792022021661    0.8034995425879125    0.036600009991983457    0.0
-        -0.06148106796684942    3.469446951953614e-18    0.9981082497813831    0.0
-        0.0    0.0    0.0    1.0
-    rotations z
-    rangesQ	0 pi
-endsegment
+    //True segment where are applied inertial values.
+	// Segment
+	segment r_humerus
+		parent r_humerus_reset_axis 
+		RTinMatrix	0
+		RT	-0.0	 0.0	 -0.0	xyz	-0.0	 -0.0	 -0.0
+		mass	1.8645719999999999
+		inertia
+			0.01481	0	0
+			0	0.0045510000000000004	0
+			0	0	0.013193
+		com	0 -0.18049599999999999 0
+		meshfile	Geometry/arm_r_humerus.vtp
+		meshcolor	1 1 1
+		meshscale	1 1 1
+	endsegment
+
+// Information about r_ulna_radius_hand segment
+	// Segment
+	segment r_ulna_radius_hand_parent_offset
+		parent r_humerus
+		RTinMatrix	0
+		RT	0 0 0	xyz	0.0061000000000000004 -0.29039999999999999 -0.0123
+	endsegment
+
+	// Segments to define transformation axis.
+	// Segment
+	segment r_ulna_radius_hand_translation
+		parent r_ulna_radius_hand_parent_offset
+		RTinMatrix	1
+		RT
+			1.0		0.0		0.0		0
+			0.0		1.0		0.0		0
+			0.0		0.0		1.0		0
+			0		0		0		1
+	endsegment
+
+	// Segment
+	segment r_ulna_radius_hand_r_elbow_flex
+		parent r_ulna_radius_hand_translation
+		RTinMatrix	1
+		RT
+			0.0		0.9943667684025684		-0.10599400877706615		0
+			0.0		0.10599400877706615		0.9943667684025684		0
+			1.0		0.0		0.0		0
+			0		0		0		1
+		rotations x
+		// ranges
+				// 0 2.2689280300000001
+	endsegment
+
+	// Segment
+	segment r_ulna_radius_hand_rotation_1
+		parent r_ulna_radius_hand_r_elbow_flex
+		RTinMatrix	1
+		RT
+			0.599826531139275		0.0		0.8001300722641441		0
+			0.7956227542590106		0.10599400877706615		-0.5964475693710836		0
+			-0.08480899390236027		0.9943667684025684		0.06357801860629346		0
+			0		0		0		1
+		// ranges
+				// 0 2.2689280300000001
+	endsegment
+
+	// Segment
+	segment r_ulna_radius_hand_rotation_2
+		parent r_ulna_radius_hand_rotation_1
+		RTinMatrix	1
+		RT
+			-0.30883962129007886		0.5590053477601999		0.7695005584773144		0
+			0.8752974673577487		0.48358488772614744		3.731366476053312e-18		0
+			-0.3721188411764598		0.6735418899655664		-0.6386461387208893		0
+			0		0		0		1
+		// ranges
+				// 0 2.2689280300000001
+	endsegment
 
 
-segment r_ulna_radius_hand_rotation2
-    parent r_ulna_radius_hand_rotation1
-endsegment
+    // Segment to cancel transformation bases effect.
+	// Segment
+	segment r_ulna_radius_hand_reset_axis
+		parent r_ulna_radius_hand_rotation_2
+		RTinMatrix	1
+		RT
+			-0.023905114826418966		0.8752974673577489		-0.4829936739981656		0
+			0.04326869386437471		0.4835848877261475		0.8742273597263815		0
+			0.9987774354761958		-3.65932388392008e-17		-0.04943313042477962		0
+			0		0		0		1
+	endsegment
 
+	// Segment
+    //True segment where are applied inertial values.
+	// Segment
+	segment r_ulna_radius_hand
+		parent r_ulna_radius_hand_reset_axis
+		RTinMatrix	0
+		RT	0	 0	 0	xyz	0	 0	 0
+		mass	1.5343150000000001
+		inertia
+			0.019281	0	0
+			0	0.0015709999999999999	0
+			0	0	0.020062
+		com	0 -0.181479 0
+		meshfile	Geometry/arm_r_ulna.vtp
+		meshcolor	1 1 1
+		meshscale	1 1 1
+	endsegment
 
-segment r_ulna_radius_hand_rotation3
-    parent r_ulna_radius_hand_rotation2
-    RTinMatrix    1
-    RT
-        0.0    0.049433130424779516    0.998777435476196    0.0
-        1.0    0.0    0.0    0.0
-        0.0    0.998777435476196    -0.049433130424779516    0.0
-        0.0    0.0    0.0    1.0
-endsegment
-
-
-segment r_ulna_radius_hand
-    parent r_ulna_radius_hand_rotation3
-    RTinMatrix    1
-    RT
-        -0.5953053712684069    0.803499542587912    0.0    0.0
-        0.08898397360606149    0.06592740211634747    0.9938487963928239    0.0
-        0.7985570533031812    0.5916435267212894    -0.11074551868375905    0.0
-        0.0    0.0    0.0    1.0
-    mass 1.5343150000000001
-    inertia
-        0.019281    0.0    0.0
-        0.0    0.001571    0.0
-        0.0    0.0    0.020062
-    com    0 -0.181479 0
-    meshfile mesh/arm_r_ulna.vtp
-endsegment
-
-    marker    COM_hand
+	marker    hand
         parent    r_ulna_radius_hand
-        position    0 -0.181479 0
+        position    0.04 -0.32 0.075
     endmarker
 
 // MUSCLE DEFINIION
@@ -247,4 +311,3 @@ endmusclegroup
 	endmuscle
 
 /*-------------- WARNINGS---------------
-*/

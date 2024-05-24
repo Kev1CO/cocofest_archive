@@ -1,6 +1,5 @@
 """
-This example will do an optimal control program of a 100 steps tracking a hand cycling motion with a torque driven
-control.
+This example will do an optimal control program of a 100 steps tracking a hand cycling motion with a muscle driven control.
 """
 
 import numpy as np
@@ -18,9 +17,10 @@ from bioptim import (
     OdeSolver,
     OptimalControlProgram,
     PhaseDynamics,
+    Solver
 )
 
-from cocofest import get_circle_coord, inverse_kinematics_cycling, inverse_dynamics_cycling
+from cocofest import get_circle_coord, inverse_kinematics_cycling
 
 
 def prepare_ocp(
@@ -54,7 +54,7 @@ def prepare_ocp(
 
     # Dynamics
     dynamics = DynamicsList()
-    dynamics.add(DynamicsFcn.TORQUE_DRIVEN, expand_dynamics=True, phase_dynamics=PhaseDynamics.SHARED_DURING_THE_PHASE)
+    dynamics.add(DynamicsFcn.MUSCLE_DRIVEN, expand_dynamics=True, phase_dynamics=PhaseDynamics.SHARED_DURING_THE_PHASE)
 
     # Path constraint
     x_bounds = BoundsList()
@@ -65,18 +65,15 @@ def prepare_ocp(
 
     # Define control path constraint
     u_bounds = BoundsList()
-    u_bounds.add(key="tau", min_bound=np.array([-50, -50]), max_bound=np.array([50, 50]), phase=0)
 
     # Initial q guess
     x_init = InitialGuessList()
     u_init = InitialGuessList()
-    # If warm start, the initial guess is the result of the inverse kinematics and dynamics
+    # If warm start, the initial guess is the result of the inverse kinematics
     if warm_start:
         q_guess, qdot_guess, qddotguess = inverse_kinematics_cycling(biorbd_model_path, n_shooting, x_center, y_center, radius, ik_method="trf")
         x_init.add("q", q_guess, interpolation=InterpolationType.EACH_FRAME)
         x_init.add("qdot", qdot_guess, interpolation=InterpolationType.EACH_FRAME)
-        u_guess = inverse_dynamics_cycling(biorbd_model_path, q_guess, qdot_guess, qddotguess)
-        u_init.add("tau", u_guess, interpolation=InterpolationType.EACH_FRAME)
 
     return OptimalControlProgram(
         bio_model,

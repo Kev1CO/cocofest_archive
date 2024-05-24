@@ -272,6 +272,7 @@ class OcpFes:
         default_objective = {
             "force_tracking": None,
             "end_node_tracking": None,
+            "cycling": None,
             "custom": None,
         }
         dict_list = [pulse_event, pulse_duration, pulse_intensity, objective]
