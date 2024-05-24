@@ -5,10 +5,12 @@ import biorbd
 
 
 # This function gets the x, y, z circle coordinates based on the angle theta
-def get_circle_coord(theta: int|float, x_center: int|float, y_center: int|float, radius: int|float, z: int|float=None)-> list:
+def get_circle_coord(
+    theta: int | float, x_center: int | float, y_center: int | float, radius: int | float, z: int | float = None
+) -> list:
     """
     Get the x, y, z coordinates of a circle based on the angle theta and the center of the circle
-    
+
     Parameters
     ----------
     theta: int | float
@@ -21,12 +23,12 @@ def get_circle_coord(theta: int|float, x_center: int|float, y_center: int|float,
         The radius of the circle
     z: int | float
         The z coordinate of the center of the circle. If None, the z coordinate of the circle will be 0
-        
+
     Returns
     ----------
     x, y, z : list
         The x, y, z coordinates of the circle
-    
+
     """
     x = radius * math.cos(theta) + x_center
     y = radius * math.sin(theta) + y_center
@@ -40,9 +42,9 @@ def get_circle_coord(theta: int|float, x_center: int|float, y_center: int|float,
 def inverse_kinematics_cycling(
     model_path: str,
     n_shooting: int,
-    x_center: int|float,
-    y_center: int|float,
-    radius: int|float,
+    x_center: int | float,
+    y_center: int | float,
+    radius: int | float,
     ik_method: str = "trf",
 ) -> tuple:
     """
@@ -86,14 +88,19 @@ def inverse_kinematics_cycling(
         raise ValueError("The model must have only one markers to perform the inverse kinematics")
 
     z = model.markers(np.array([0, 0]))[0].to_array()[2]
-    if z != model.markers(np.array([np.pi/2, np.pi/2]))[0].to_array()[2]:
+    if z != model.markers(np.array([np.pi / 2, np.pi / 2]))[0].to_array()[2]:
         print("The model not strictly 2d. Warm start not optimal.")
 
-    x_y_z_coord = np.array([get_circle_coord(theta, x_center, y_center, radius, z=z) for theta in np.linspace(0, -2 * np.pi + (-2 * np.pi / n_shooting), n_shooting+1)]).T
-    target_q = x_y_z_coord.reshape((3, 1, n_shooting+1))
+    x_y_z_coord = np.array(
+        [
+            get_circle_coord(theta, x_center, y_center, radius, z=z)
+            for theta in np.linspace(0, -2 * np.pi + (-2 * np.pi / n_shooting), n_shooting + 1)
+        ]
+    ).T
+    target_q = x_y_z_coord.reshape((3, 1, n_shooting + 1))
     ik = biorbd.InverseKinematics(model, target_q)
     ik_q = ik.solve(method=ik_method)
-    ik_qdot = np.array([np.gradient(ik_q[i], (1/n_shooting)) for i in range(ik_q.shape[0])])
+    ik_qdot = np.array([np.gradient(ik_q[i], (1 / n_shooting)) for i in range(ik_q.shape[0])])
     ik_qddot = np.array([np.gradient(ik_qdot[i], (1 / n_shooting)) for i in range(ik_qdot.shape[0])])
     return ik_q, ik_qdot, ik_qddot
 
@@ -125,7 +132,7 @@ def inverse_dynamics_cycling(
         joints torques
     """
     model = biorbd.Model(model_path)
-    tau_shape = (model.nbQ(), q.shape[1]-1)
+    tau_shape = (model.nbQ(), q.shape[1] - 1)
     tau = np.zeros(tau_shape)
     for i in range(tau.shape[1]):
         tau_i = model.InverseDynamics(q[:, i], qdot[:, i], qddot[:, i])

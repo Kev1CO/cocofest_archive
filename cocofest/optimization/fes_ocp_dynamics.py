@@ -262,7 +262,9 @@ class OcpFesMsk:
         ]
 
         dynamics = OcpFesMsk._declare_dynamics(bio_models, n_stim)
-        initial_state = get_initial_guess(biorbd_model_path, final_time, n_stim, n_shooting, objective) if warm_start else None
+        initial_state = (
+            get_initial_guess(biorbd_model_path, final_time, n_stim, n_shooting, objective) if warm_start else None
+        )
 
         x_bounds, x_init = OcpFesMsk._set_bounds(
             bio_models,
@@ -619,10 +621,22 @@ class OcpFesMsk:
         if initial_state:
             muscle_names = bio_models[0].muscle_names
             for i in range(n_stim):
-                x_init.add(key="q", initial_guess=initial_state["q"][i], interpolation=InterpolationType.EACH_FRAME, phase=i)
-                x_init.add(key="qdot", initial_guess=initial_state["qdot"][i], interpolation=InterpolationType.EACH_FRAME, phase=i)
+                x_init.add(
+                    key="q", initial_guess=initial_state["q"][i], interpolation=InterpolationType.EACH_FRAME, phase=i
+                )
+                x_init.add(
+                    key="qdot",
+                    initial_guess=initial_state["qdot"][i],
+                    interpolation=InterpolationType.EACH_FRAME,
+                    phase=i,
+                )
                 for j in range(len(muscle_names)):
-                    x_init.add(key="F_"+muscle_names[j], initial_guess=initial_state[muscle_names[j]][i], interpolation=InterpolationType.EACH_FRAME, phase=i)
+                    x_init.add(
+                        key="F_" + muscle_names[j],
+                        initial_guess=initial_state[muscle_names[j]][i],
+                        interpolation=InterpolationType.EACH_FRAME,
+                        phase=i,
+                    )
         else:
             for i in range(n_stim):
                 x_init.add(key="q", initial_guess=[0] * bio_models[i].nb_q, phase=i)
@@ -703,8 +717,12 @@ class OcpFesMsk:
             x_center = cycling_objective["x_center"]
             y_center = cycling_objective["y_center"]
             radius = cycling_objective["radius"]
-            get_circle_coord_list = np.array([get_circle_coord(theta, x_center, y_center, radius)[:-1] for theta in
-                                              np.linspace(0, -2 * np.pi, n_shooting[0]*n_stim)])
+            get_circle_coord_list = np.array(
+                [
+                    get_circle_coord(theta, x_center, y_center, radius)[:-1]
+                    for theta in np.linspace(0, -2 * np.pi, n_shooting[0] * n_stim)
+                ]
+            )
             for phase in range(n_stim):
                 for i in range(n_shooting[phase]):
                     objective_functions.add(
@@ -867,14 +885,20 @@ class OcpFesMsk:
             cycling_objective_keys = ["x_center", "y_center", "radius", "target"]
             if not all([cycling_objective_keys[i] in cycling_objective for i in range(len(cycling_objective_keys))]):
                 raise ValueError(
-                    f"cycling_objective dictionary must contain the following keys: {cycling_objective_keys}")
+                    f"cycling_objective dictionary must contain the following keys: {cycling_objective_keys}"
+                )
 
             if not all([isinstance(cycling_objective[key], int | float) for key in cycling_objective_keys[:3]]):
                 raise TypeError(f"cycling_objective x_center, y_center and radius inputs must be int or float")
 
             if isinstance(cycling_objective[cycling_objective_keys[-1]], str):
-                if cycling_objective[cycling_objective_keys[-1]] != "marker" and cycling_objective[cycling_objective_keys[-1]] != "q":
-                    raise ValueError(f"{cycling_objective[cycling_objective_keys[-1]]} not implemented chose between 'marker' and 'q' as 'target'")
+                if (
+                    cycling_objective[cycling_objective_keys[-1]] != "marker"
+                    and cycling_objective[cycling_objective_keys[-1]] != "q"
+                ):
+                    raise ValueError(
+                        f"{cycling_objective[cycling_objective_keys[-1]]} not implemented chose between 'marker' and 'q' as 'target'"
+                    )
             else:
                 raise TypeError(f"cycling_objective target must be string type")
 

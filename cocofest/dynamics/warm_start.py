@@ -16,7 +16,7 @@ from bioptim import (
     OptimalControlProgram,
     PhaseDynamics,
     SolutionMerge,
-    Solver
+    Solver,
 )
 
 from ..dynamics.inverse_kinematics_and_dynamics import get_circle_coord, inverse_kinematics_cycling
@@ -58,30 +58,36 @@ def get_initial_guess(biorbd_model_path: str, final_time: int, n_stim: int, n_sh
     model = biorbd.Model(biorbd_model_path)
 
     # Reorganizing the q and qdot shape for the warm start
-    q_init = [q[:, n_shooting[0] * i:n_shooting[0] * (i + 1) + 1] for i in range(n_stim)]
-    qdot_init = [qdot[:, n_shooting[0] * i:n_shooting[0] * (i + 1) + 1] for i in range(n_stim)]
+    q_init = [q[:, n_shooting[0] * i : n_shooting[0] * (i + 1) + 1] for i in range(n_stim)]
+    qdot_init = [qdot[:, n_shooting[0] * i : n_shooting[0] * (i + 1) + 1] for i in range(n_stim)]
 
     # Building the initial guess dictionary
     states_init = {"q": q_init, "qdot": qdot_init}
 
     # Creating initial muscle forces guess from the muscle controls and the muscles max iso force characteristics
-    for i in range(muscles_control['muscles'].shape[0]):
+    for i in range(muscles_control["muscles"].shape[0]):
         fmax = model.muscle(i).characteristics().forceIsoMax()  # Get the max iso force of the muscle
         states_init[model.muscle(i).name().to_string()] = [
-            np.array([muscles_control["muscles"][i][n_shooting[0] * j:n_shooting[0] * (j + 1) + 1]]) * fmax for j in
-            range(n_stim)]  # Multiply the muscle control by the max iso force to get the muscle force for each shooting point
-        states_init[model.muscle(i).name().to_string()][-1] = np.array([np.append(
-            states_init[model.muscle(i).name().to_string()][-1], states_init[model.muscle(i).name().to_string()][-1][0][
-                -1])])  # Adding a last value to the end for each interpolation frames
+            np.array([muscles_control["muscles"][i][n_shooting[0] * j : n_shooting[0] * (j + 1) + 1]]) * fmax
+            for j in range(n_stim)
+        ]  # Multiply the muscle control by the max iso force to get the muscle force for each shooting point
+        states_init[model.muscle(i).name().to_string()][-1] = np.array(
+            [
+                np.append(
+                    states_init[model.muscle(i).name().to_string()][-1],
+                    states_init[model.muscle(i).name().to_string()][-1][0][-1],
+                )
+            ]
+        )  # Adding a last value to the end for each interpolation frames
 
     return states_init
 
 
 def prepare_muscle_driven_ocp(
-        biorbd_model_path: str,
-        n_shooting: int,
-        final_time: int,
-        objective: dict,
+    biorbd_model_path: str,
+    n_shooting: int,
+    final_time: int,
+    objective: dict,
 ) -> tuple:
     """
     Prepare the muscle driven ocp with a cycling objective
@@ -108,14 +114,17 @@ def prepare_muscle_driven_ocp(
     """
 
     # Adding the models to the same phase
-    bio_model = BiorbdModel(biorbd_model_path, )
+    bio_model = BiorbdModel(
+        biorbd_model_path,
+    )
 
     # Add objective functions
     x_center = objective["cycling"]["x_center"]
     y_center = objective["cycling"]["y_center"]
     radius = objective["cycling"]["radius"]
-    get_circle_coord_list = np.array([get_circle_coord(theta, x_center, y_center, radius)[:-1] for theta in
-                                      np.linspace(0, -2 * np.pi, n_shooting)])
+    get_circle_coord_list = np.array(
+        [get_circle_coord(theta, x_center, y_center, radius)[:-1] for theta in np.linspace(0, -2 * np.pi, n_shooting)]
+    )
     objective_functions = ObjectiveList()
     for i in range(n_shooting):
         objective_functions.add(
@@ -131,8 +140,7 @@ def prepare_muscle_driven_ocp(
 
     # Dynamics
     dynamics = DynamicsList()
-    dynamics.add(DynamicsFcn.MUSCLE_DRIVEN, expand_dynamics=True,
-                 phase_dynamics=PhaseDynamics.SHARED_DURING_THE_PHASE)
+    dynamics.add(DynamicsFcn.MUSCLE_DRIVEN, expand_dynamics=True, phase_dynamics=PhaseDynamics.SHARED_DURING_THE_PHASE)
 
     # Path constraint
     x_bounds = BoundsList()
@@ -149,20 +157,25 @@ def prepare_muscle_driven_ocp(
     x_init = InitialGuessList()
     u_init = InitialGuessList()
 
-    q_guess, qdot_guess, qddotguess = inverse_kinematics_cycling(biorbd_model_path, n_shooting, x_center,
-                                                                 y_center, radius, ik_method="trf")
+    q_guess, qdot_guess, qddotguess = inverse_kinematics_cycling(
+        biorbd_model_path, n_shooting, x_center, y_center, radius, ik_method="trf"
+    )
     x_init.add("q", q_guess, interpolation=InterpolationType.EACH_FRAME)
     x_init.add("qdot", qdot_guess, interpolation=InterpolationType.EACH_FRAME)
 
-    return OptimalControlProgram(
-        bio_model,
-        dynamics,
-        n_shooting,
-        final_time,
-        x_bounds=x_bounds,
-        u_bounds=u_bounds,
-        x_init=x_init,
-        u_init=u_init,
-        objective_functions=objective_functions,
-        ode_solver=OdeSolver.RK4(),
-    ), q_guess, qdot_guess
+    return (
+        OptimalControlProgram(
+            bio_model,
+            dynamics,
+            n_shooting,
+            final_time,
+            x_bounds=x_bounds,
+            u_bounds=u_bounds,
+            x_init=x_init,
+            u_init=u_init,
+            objective_functions=objective_functions,
+            ode_solver=OdeSolver.RK4(),
+        ),
+        q_guess,
+        qdot_guess,
+    )

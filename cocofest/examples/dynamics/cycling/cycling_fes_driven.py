@@ -4,6 +4,7 @@ Those ocp were build to produce a cycling motion.
 The stimulation frequency will be set to 40Hz and pulse duration will be optimized to satisfy the motion meanwhile
 reducing residual torque.
 """
+
 import pickle
 
 import numpy as np
@@ -45,8 +46,10 @@ def main():
             "bimapping": False,
         },
         with_residual_torque=True,
-        objective={"custom": objective_functions,
-                   "cycling": {"x_center": 0.35, "y_center": 0, "radius": 0.1, "target": "marker"}},
+        objective={
+            "custom": objective_functions,
+            "cycling": {"x_center": 0.35, "y_center": 0, "radius": 0.1, "target": "marker"},
+        },
         activate_force_length_relationship=True,
         activate_force_velocity_relationship=True,
         minimize_muscle_fatigue=False,

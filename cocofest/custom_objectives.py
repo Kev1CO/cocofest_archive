@@ -85,8 +85,13 @@ class CustomObjective:
         The sum of each force scaling factor
         """
         # muscle_name_list = controller.model.bio_model.muscle_names
-        muscle_model_name_list = [controller.model.bio_stim_model[i].muscle_name for i in range(1, len(controller.model.bio_stim_model))]
-        muscle_fatigue = [controller.states["A_" + muscle_model_name_list[x]].cx / controller.model.bio_stim_model[x+1].a_rest for x in range(len(muscle_model_name_list))]
+        muscle_model_name_list = [
+            controller.model.bio_stim_model[i].muscle_name for i in range(1, len(controller.model.bio_stim_model))
+        ]
+        muscle_fatigue = [
+            controller.states["A_" + muscle_model_name_list[x]].cx / controller.model.bio_stim_model[x + 1].a_rest
+            for x in range(len(muscle_model_name_list))
+        ]
         return sum(muscle_fatigue)
 
     @staticmethod

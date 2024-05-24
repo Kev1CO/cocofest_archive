@@ -32,13 +32,17 @@ def prepare_ocp(
 ) -> OptimalControlProgram:
 
     # Adding the model
-    bio_model = BiorbdModel(biorbd_model_path,)
+    bio_model = BiorbdModel(
+        biorbd_model_path,
+    )
 
     # Adding an objective function to track a marker in a circular trajectory
     x_center = objective["cycling"]["x_center"]
     y_center = objective["cycling"]["y_center"]
     radius = objective["cycling"]["radius"]
-    get_circle_coord_list = np.array([get_circle_coord(theta, x_center, y_center, radius)[:-1] for theta in np.linspace(0, -2 * np.pi, n_shooting)])
+    get_circle_coord_list = np.array(
+        [get_circle_coord(theta, x_center, y_center, radius)[:-1] for theta in np.linspace(0, -2 * np.pi, n_shooting)]
+    )
     objective_functions = ObjectiveList()
     for i in range(n_shooting):
         objective_functions.add(
@@ -72,7 +76,9 @@ def prepare_ocp(
     u_init = InitialGuessList()
     # If warm start, the initial guess is the result of the inverse kinematics and dynamics
     if warm_start:
-        q_guess, qdot_guess, qddotguess = inverse_kinematics_cycling(biorbd_model_path, n_shooting, x_center, y_center, radius, ik_method="trf")
+        q_guess, qdot_guess, qddotguess = inverse_kinematics_cycling(
+            biorbd_model_path, n_shooting, x_center, y_center, radius, ik_method="trf"
+        )
         x_init.add("q", q_guess, interpolation=InterpolationType.EACH_FRAME)
         x_init.add("qdot", qdot_guess, interpolation=InterpolationType.EACH_FRAME)
         u_guess = inverse_dynamics_cycling(biorbd_model_path, q_guess, qdot_guess, qddotguess)
@@ -95,11 +101,13 @@ def prepare_ocp(
 
 def main():
     # --- Prepare the ocp --- #
-    ocp = prepare_ocp(biorbd_model_path="../../msk_models/simplified_UL_Seth.bioMod",
-                      n_shooting=100,
-                      final_time=1,
-                      objective={"cycling": {"x_center": 0.35, "y_center": 0, "radius": 0.1}},
-                      warm_start=True)
+    ocp = prepare_ocp(
+        biorbd_model_path="../../msk_models/simplified_UL_Seth.bioMod",
+        n_shooting=100,
+        final_time=1,
+        objective={"cycling": {"x_center": 0.35, "y_center": 0, "radius": 0.1}},
+        warm_start=True,
+    )
     sol = ocp.solve()
     sol.animate()
     sol.graphs()
