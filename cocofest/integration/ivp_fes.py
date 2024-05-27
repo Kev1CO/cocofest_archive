@@ -83,26 +83,6 @@ class IvpFes:
         parameters_init = InitialGuessList()
         parameters_bounds = BoundsList()
 
-        self.pulse_apparition_time = np.round(np.array(self.pulse_apparition_time), 3).tolist()
-        parameters_bounds.add(
-            "pulse_apparition_time",
-            min_bound=np.array(self.pulse_apparition_time),
-            max_bound=np.array(self.pulse_apparition_time),
-            interpolation=InterpolationType.CONSTANT,
-        )
-
-        parameters_init.add(
-            key="pulse_apparition_time",
-            initial_guess=np.array(self.pulse_apparition_time),
-        )
-
-        parameters.add(
-            name="pulse_apparition_time",
-            function=DingModelFrequency.set_pulse_apparition_time,
-            size=self.n_stim,
-            scaling=VariableScaling("pulse_apparition_time", [1] * self.n_stim),
-        )
-
         if isinstance(self.model, DingModelPulseDurationFrequency | DingModelPulseDurationFrequencyWithFatigue):
             if isinstance(self.pulse_duration, int | float):
                 parameters_init["pulse_duration"] = np.array([self.pulse_duration] * self.n_stim)
@@ -306,7 +286,6 @@ class IvpFes:
             for i in range(self.n_stim):
                 self.final_time_phase = self.final_time_phase + (step,)
                 self.dt.append(step / self.n_shooting[i])
-            self.pulse_apparition_time = [self.final_time / self.n_stim * i for i in range(self.n_stim)]
 
         elif self.pulse_mode == "doublet":
             doublet_step = 0.005
@@ -319,12 +298,6 @@ class IvpFes:
                 index += 1
                 self.dt.append(step / self.n_shooting[index])
                 index += 1
-
-            self.pulse_apparition_time = [
-                [self.final_time / (self.n_stim / 2) * i, self.final_time / (self.n_stim / 2) * i + 0.005]
-                for i in range(int(self.n_stim / 2))
-            ]
-            self.pulse_apparition_time = [item for sublist in self.pulse_apparition_time for item in sublist]
 
         elif self.pulse_mode == "triplet":
             doublet_step = 0.005
@@ -341,16 +314,6 @@ class IvpFes:
                 index += 1
                 self.dt.append(step / self.n_shooting[index])
                 index += 1
-
-            self.pulse_apparition_time = [
-                [
-                    self.final_time / (self.n_stim / 3) * i,
-                    self.final_time / (self.n_stim / 3) * i + 0.005,
-                    self.final_time / (self.n_stim / 3) * i + 0.010,
-                ]
-                for i in range(int(self.n_stim / 3))
-            ]
-            self.pulse_apparition_time = [item for sublist in self.pulse_apparition_time for item in sublist]
 
         else:
             raise ValueError("Pulse mode not yet implemented")

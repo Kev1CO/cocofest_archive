@@ -185,6 +185,7 @@ class FesModel(ABC):
         algebraic_states: MX,
         numerical_data_timeseries: MX,
         nlp: NonLinearProgram,
+        stim_prev: list[float],
         fes_model,
         force_length_relationship: MX | float,
         force_velocity_relationship: MX | float,
@@ -210,6 +211,16 @@ class FesModel(ABC):
     @staticmethod
     @abstractmethod
     def get_stim_prev(nlp: NonLinearProgram, parameters: MX, idx: int):
+        """
+
+        Returns
+        -------
+
+        """
+
+    @staticmethod
+    @abstractmethod
+    def _build_t_stim_prev(ocp: OptimalControlProgram, idx: int):
         """
 
         Returns

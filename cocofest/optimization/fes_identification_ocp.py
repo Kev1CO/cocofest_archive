@@ -310,27 +310,6 @@ class OcpFesId(OcpFes):
         parameters_bounds = BoundsList()
         parameters_init = InitialGuessList()
 
-        # stim_apparition_time = np.cumsum(stim_apparition_time).tolist()
-        stim_apparition_time = [0] + np.cumsum(stim_apparition_time[:-1]).tolist()
-
-        parameters.add(
-            name="pulse_apparition_time",
-            function=DingModelFrequency.set_pulse_apparition_time,
-            size=n_stim,
-            scaling=VariableScaling("pulse_apparition_time", [1] * n_stim),
-        )
-
-        parameters_bounds.add(
-            "pulse_apparition_time",
-            min_bound=np.array(stim_apparition_time),
-            max_bound=np.array(stim_apparition_time),
-            interpolation=InterpolationType.CONSTANT,
-        )
-        parameters_init.add(
-            key="pulse_apparition_time",
-            initial_guess=np.array(stim_apparition_time),
-        )
-
         for i in range(len(parameter_to_identify)):
             parameters.add(
                 name=parameter_to_identify[i],

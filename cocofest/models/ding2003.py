@@ -287,6 +287,7 @@ class DingModelFrequency(FesModel):
         algebraic_states: MX,
         numerical_timeseries: MX,
         nlp: NonLinearProgram,
+        stim_prev: list[MX] = None,
         fes_model=None,
         force_length_relationship: MX | float = 1,
         force_velocity_relationship: MX | float = 1,
@@ -310,6 +311,8 @@ class DingModelFrequency(FesModel):
             The numerical timeseries of the system
         nlp: NonLinearProgram
             A reference to the phase
+        stim_prev: list[MX]
+            The time list of the previous stimulations (s)
         fes_model: DingModelFrequency
             The current phase fes model
         force_length_relationship: MX | float
@@ -326,7 +329,9 @@ class DingModelFrequency(FesModel):
             fes_model.get_stim_prev(nlp=nlp, parameters=parameters, idx=nlp.phase_idx)
             if fes_model
             else nlp.model.get_stim_prev(nlp=nlp, parameters=parameters, idx=nlp.phase_idx)
-        )
+        ) if stim_prev is None else stim_prev  # Get the previous stimulation apparition time from the parameters
+        # if not provided from stim_prev, this way of getting the list is not optimal, but it is the only way to get it.
+        # Otherwise, it will create issues with free variables or wrong mx or sx type while calculating the dynamics
 
         return DynamicsEvaluation(
             dxdt=dxdt_fun(
@@ -355,7 +360,8 @@ class DingModelFrequency(FesModel):
             A list of values to pass to the dynamics at each node. Experimental external forces should be included here.
         """
         StateConfigure().configure_all_fes_model_states(ocp, nlp, fes_model=self)
-        ConfigureProblem.configure_dynamics_function(ocp, nlp, dyn_func=self.dynamics)
+        stim_prev = self._build_t_stim_prev(ocp, nlp.phase_idx) if "pulse_apparition_time" not in nlp.parameters.keys() else None
+        ConfigureProblem.configure_dynamics_function(ocp, nlp, dyn_func=self.dynamics, stim_prev=stim_prev)
 
     @staticmethod
     def get_stim_prev(nlp: NonLinearProgram, parameters: MX, idx: int) -> list[float]:
@@ -382,6 +388,28 @@ class DingModelFrequency(FesModel):
             if len(t_stim_prev) > idx:
                 break
 
+        return t_stim_prev
+
+    @staticmethod
+    def _build_t_stim_prev(ocp: OptimalControlProgram, idx: int) -> list[float]:
+        """
+        Builds a list of previous stimulation apparition time from known ocp phase time when the pulse_apparition_time
+        is not a declared optimized parameter
+
+        Parameters
+        ----------
+        ocp: OptimalControlProgram
+            The OptimalControlProgram of the problem
+        idx: int
+            The index of the current phase
+
+        Returns
+        -------
+        The list of previous stimulation time
+        """
+        t_stim_prev = [0]
+        for i in range(idx):
+            t_stim_prev.append(t_stim_prev[-1] + ocp.phase_time[i])
         return t_stim_prev
 
     def set_pulse_apparition_time(self, value: list[MX]):

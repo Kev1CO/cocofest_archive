@@ -222,6 +222,7 @@ class DingModelFrequencyWithFatigue(DingModelFrequency):
         algebraic_states: MX,
         numerical_timeseries: MX,
         nlp: NonLinearProgram,
+        stim_prev: list[float] = None,
         fes_model=None,
         force_length_relationship: MX | float = 1,
         force_velocity_relationship: MX | float = 1,
@@ -245,6 +246,8 @@ class DingModelFrequencyWithFatigue(DingModelFrequency):
             The numerical timeseries of the system
         nlp: NonLinearProgram
             A reference to the phase
+        stim_prev: list[float]
+            The previous stimulation time
         fes_model: DingModelFrequencyWithFatigue
             The current phase fes model
         force_length_relationship: MX | float
@@ -261,7 +264,9 @@ class DingModelFrequencyWithFatigue(DingModelFrequency):
             fes_model.get_stim_prev(nlp=nlp, parameters=parameters, idx=nlp.phase_idx)
             if fes_model
             else nlp.model.get_stim_prev(nlp=nlp, parameters=parameters, idx=nlp.phase_idx)
-        )
+        ) if stim_prev is None else stim_prev  # Get the previous stimulation apparition time from the parameters
+        # if not provided from stim_prev, this way of getting the list is not optimal, but it is the only way to get it.
+        # Otherwise, it will create issues with free variables or wrong mx or sx type while calculating the dynamics
 
         return DynamicsEvaluation(
             dxdt=dxdt_fun(
@@ -294,4 +299,5 @@ class DingModelFrequencyWithFatigue(DingModelFrequency):
             A list of values to pass to the dynamics at each node. Experimental external forces should be included here.
         """
         StateConfigure().configure_all_fes_model_states(ocp, nlp, fes_model=self)
-        ConfigureProblem.configure_dynamics_function(ocp, nlp, dyn_func=self.dynamics)
+        stim_prev = self._build_t_stim_prev(ocp, nlp.phase_idx) if "pulse_apparition_time" not in nlp.parameters.keys() else None
+        ConfigureProblem.configure_dynamics_function(ocp, nlp, dyn_func=self.dynamics, stim_prev=stim_prev)

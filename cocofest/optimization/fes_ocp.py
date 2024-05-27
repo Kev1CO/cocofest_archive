@@ -548,30 +548,31 @@ class OcpFes:
         parameter_objectives = ParameterObjectiveList()
         constraints = ConstraintList()
 
-        parameters.add(
-            name="pulse_apparition_time",
-            function=DingModelFrequency.set_pulse_apparition_time,
-            size=n_stim,
-            scaling=VariableScaling("pulse_apparition_time", [1] * n_stim),
-        )
+        if time_min:
+            parameters.add(
+                name="pulse_apparition_time",
+                function=DingModelFrequency.set_pulse_apparition_time,
+                size=n_stim,
+                scaling=VariableScaling("pulse_apparition_time", [1] * n_stim),
+            )
 
-        if time_min and time_max:
-            time_min_list = [time_min * n for n in range(n_stim)]
-            time_max_list = [time_max * n for n in range(n_stim)]
-        else:
-            time_min_list = [0] * n_stim
-            time_max_list = [100] * n_stim
-        parameters_bounds.add(
-            "pulse_apparition_time",
-            min_bound=np.array(time_min_list),
-            max_bound=np.array(time_max_list),
-            interpolation=InterpolationType.CONSTANT,
-        )
+            if time_min and time_max:
+                time_min_list = [time_min * n for n in range(n_stim)]
+                time_max_list = [time_max * n for n in range(n_stim)]
+            else:
+                time_min_list = [0] * n_stim
+                time_max_list = [100] * n_stim
+            parameters_bounds.add(
+                "pulse_apparition_time",
+                min_bound=np.array(time_min_list),
+                max_bound=np.array(time_max_list),
+                interpolation=InterpolationType.CONSTANT,
+            )
 
-        parameters_init["pulse_apparition_time"] = np.array([0] * n_stim)
+            parameters_init["pulse_apparition_time"] = np.array([0] * n_stim)
 
-        for i in range(n_stim):
-            constraints.add(CustomConstraint.pulse_time_apparition_as_phase, node=Node.START, phase=i, target=0)
+            for i in range(n_stim):
+                constraints.add(CustomConstraint.pulse_time_apparition_as_phase, node=Node.START, phase=i, target=0)
 
         if time_bimapping and time_min and time_max:
             for i in range(n_stim):
