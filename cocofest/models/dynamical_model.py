@@ -251,7 +251,11 @@ class FesMskModel(BiorbdModel):
         ConfigureProblem.configure_qdot(ocp, nlp, as_states=True, as_controls=False)
         state_name_list.append("qdot")
         ConfigureProblem.configure_tau(ocp, nlp, as_states=False, as_controls=True)
-        stim_prev = DingModelFrequency._build_t_stim_prev(ocp, nlp.phase_idx) if "pulse_apparition_time" not in nlp.parameters.keys() else None
+        stim_prev = (
+            DingModelFrequency._build_t_stim_prev(ocp, nlp.phase_idx)
+            if "pulse_apparition_time" not in nlp.parameters.keys()
+            else None
+        )
         ConfigureProblem.configure_dynamics_function(
             ocp,
             nlp,

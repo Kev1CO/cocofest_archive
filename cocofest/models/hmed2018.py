@@ -308,10 +308,14 @@ class DingModelIntensityFrequency(DingModelFrequency):
 
         dxdt_fun = fes_model.system_dynamics if fes_model else nlp.model.system_dynamics
         stim_apparition = (
-            fes_model.get_stim_prev(nlp=nlp, parameters=parameters, idx=nlp.phase_idx)
-            if fes_model
-            else nlp.model.get_stim_prev(nlp=nlp, parameters=parameters, idx=nlp.phase_idx)
-        ) if stim_prev is None else stim_prev  # Get the previous stimulation apparition time from the parameters
+            (
+                fes_model.get_stim_prev(nlp=nlp, parameters=parameters, idx=nlp.phase_idx)
+                if fes_model
+                else nlp.model.get_stim_prev(nlp=nlp, parameters=parameters, idx=nlp.phase_idx)
+            )
+            if stim_prev is None
+            else stim_prev
+        )  # Get the previous stimulation apparition time from the parameters
         # if not provided from stim_prev, this way of getting the list is not optimal, but it is the only way to get it.
         # Otherwise, it will create issues with free variables or wrong mx or sx type while calculating the dynamics
 
@@ -344,7 +348,11 @@ class DingModelIntensityFrequency(DingModelFrequency):
             A list of values to pass to the dynamics at each node. Experimental external forces should be included here.
         """
         StateConfigure().configure_all_fes_model_states(ocp, nlp, fes_model=self)
-        stim_prev = self._build_t_stim_prev(ocp, nlp.phase_idx) if "pulse_apparition_time" not in nlp.parameters.keys() else None
+        stim_prev = (
+            self._build_t_stim_prev(ocp, nlp.phase_idx)
+            if "pulse_apparition_time" not in nlp.parameters.keys()
+            else None
+        )
         ConfigureProblem.configure_dynamics_function(ocp, nlp, dyn_func=self.dynamics, stim_prev=stim_prev)
 
     def min_pulse_intensity(self):
