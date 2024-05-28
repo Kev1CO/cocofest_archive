@@ -43,7 +43,10 @@ def prepare_ocp(
     y_center = objective["cycling"]["y_center"]
     radius = objective["cycling"]["radius"]
     circle_coord_list = np.array(
-        [get_circle_coord(theta, x_center, y_center, radius)[:-1] for theta in np.linspace(0, -2 * np.pi, n_shooting+1)]
+        [
+            get_circle_coord(theta, x_center, y_center, radius)[:-1]
+            for theta in np.linspace(0, -2 * np.pi, n_shooting + 1)
+        ]
     ).T
     objective_functions = ObjectiveList()
     objective_functions.add(

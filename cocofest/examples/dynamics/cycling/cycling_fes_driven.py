@@ -75,5 +75,6 @@ def main():
     sol.graphs(show_bounds=False)
     PlotCyclingResult(sol).plot(starting_location="E")
 
+
 if __name__ == "__main__":
     main()

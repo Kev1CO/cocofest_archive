@@ -49,4 +49,3 @@ class SolutionToPickle:
                 states[key] = np.array(temps_states)
 
         return time, states
-

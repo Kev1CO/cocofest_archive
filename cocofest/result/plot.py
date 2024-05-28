@@ -1,6 +1,7 @@
 import numpy as np
 import matplotlib
-matplotlib.use('TkAgg')
+
+matplotlib.use("TkAgg")
 import matplotlib.pyplot as plt
 
 from bioptim import Solution
@@ -40,34 +41,37 @@ class PlotCyclingResult:
         ax.set_yticklabels([])
         ticks = np.linspace(0, 1, len(extracted_data) + 1)
         ax.set_rticks(ticks)  # To configure radial ticks
-        color = ['b', 'g', 'r', 'c', 'm', 'y']
+        color = ["b", "g", "r", "c", "m", "y"]
 
         counter = 0
         for muscle in extracted_data:
-            if muscle == 'empty':
+            if muscle == "empty":
                 continue
 
-            bars = ax.bar(extracted_data[muscle]["theta"],
-                          extracted_data[muscle]["radii"],
-                          width=extracted_data[muscle]["width"],
-                          bottom=extracted_data[muscle]["bottom"],
-                          label=extracted_data[muscle]["label"],
-                          color=color[counter],
-                          edgecolor='black',
-                          linewidth=2)
+            bars = ax.bar(
+                extracted_data[muscle]["theta"],
+                extracted_data[muscle]["radii"],
+                width=extracted_data[muscle]["width"],
+                bottom=extracted_data[muscle]["bottom"],
+                label=extracted_data[muscle]["label"],
+                color=color[counter],
+                edgecolor="black",
+                linewidth=2,
+            )
 
             for i in range(len(bars)):
-                bars[i].set_alpha(extracted_data[muscle]['opacity'][i])
+                bars[i].set_alpha(extracted_data[muscle]["opacity"][i])
             counter += 1
 
-        empty_bar = ax.bar(extracted_data['empty']["theta"],
-                           extracted_data['empty']["radii"],
-                           width=extracted_data['empty']["width"],
-                           bottom=extracted_data['empty']["bottom"],
-                           label=extracted_data['empty']["label"],
-                           linewidth=0,
-                           color='w'
-                           )
+        empty_bar = ax.bar(
+            extracted_data["empty"]["theta"],
+            extracted_data["empty"]["radii"],
+            width=extracted_data["empty"]["width"],
+            bottom=extracted_data["empty"]["bottom"],
+            label=extracted_data["empty"]["label"],
+            linewidth=0,
+            color="w",
+        )
         for i in range(len(empty_bar)):
             empty_bar[i].set_alpha(0)
 
@@ -83,11 +87,13 @@ class PlotCyclingResult:
         deltoideus_anterior = {"theta": np.radians(100), "radii": 1 / 5, "width": np.radians(160), "bottom": 2 / 5}
         deltoideus_posterior = {"theta": np.radians(295), "radii": 1 / 5, "width": np.radians(150), "bottom": 1 / 5}
         empty = {"theta": 1, "radii": 1 / 5, "width": 1, "bottom": 0}
-        stimulated_muscles = {"triceps_brachii": triceps_brachii,
-                              "biceps_brachii": biceps_brachii,
-                              "deltoideus_anterior": deltoideus_anterior,
-                              "deltoideus_posterior": deltoideus_posterior,
-                              "": empty}
+        stimulated_muscles = {
+            "triceps_brachii": triceps_brachii,
+            "biceps_brachii": biceps_brachii,
+            "deltoideus_anterior": deltoideus_anterior,
+            "deltoideus_posterior": deltoideus_posterior,
+            "": empty,
+        }
         fig = plt.figure(figsize=(8, 8))
         ax = fig.add_axes([0.1, 0.1, 0.8, 0.8], polar=True)
         ax.set_theta_zero_location("W")
@@ -104,9 +110,10 @@ class PlotCyclingResult:
             radii.append(stimulated_muscles[muscle]["radii"])
             width.append(stimulated_muscles[muscle]["width"])
             bottom.append(stimulated_muscles[muscle]["bottom"])
-        bars = ax.bar(theta, radii, width=width, bottom=bottom, label=stimulated_muscles.keys(), edgecolor='black',
-                      linewidth=2)
-        color = ['b', 'g', 'r', 'c', 'w']
+        bars = ax.bar(
+            theta, radii, width=width, bottom=bottom, label=stimulated_muscles.keys(), edgecolor="black", linewidth=2
+        )
+        color = ["b", "g", "r", "c", "w"]
         for i in range(len(bars)):
             bars[i].set_facecolor(color[i])
             bars[i].set_alpha(0.5)
@@ -121,16 +128,26 @@ class PlotCyclingResult:
         radii = 1 / (solution.ocp.nlp[0].model.nb_muscles + 1)
         if "pulse_apparition_time" in solution.ocp.parameters.keys():
             final_time = sum(solution.ocp.phase_time)
-            pulse_apparition_time = solution.parameters['pulse_apparition_time']
-            theta = np.array([(pulse_apparition_time[i]/final_time)*2*np.pi + width/2 for i in range(n_phase)])
+            pulse_apparition_time = solution.parameters["pulse_apparition_time"]
+            theta = np.array([(pulse_apparition_time[i] / final_time) * 2 * np.pi + width / 2 for i in range(n_phase)])
         else:
-            theta = np.linspace(0, 2 * np.pi, n_phase+1)[:-1] + width/2
+            theta = np.linspace(0, 2 * np.pi, n_phase + 1)[:-1] + width / 2
 
-        intensity = True if sum(["pulse_intensity" in parameter_key for parameter_key in solution.ocp.parameters.keys()]) > 0 else False
-        pulse_duration = True if sum(["pulse_duration" in parameter_key for parameter_key in solution.ocp.parameters.keys()]) > 0 else False
+        intensity = (
+            True
+            if sum(["pulse_intensity" in parameter_key for parameter_key in solution.ocp.parameters.keys()]) > 0
+            else False
+        )
+        pulse_duration = (
+            True
+            if sum(["pulse_duration" in parameter_key for parameter_key in solution.ocp.parameters.keys()]) > 0
+            else False
+        )
         parameter = "pulse_intensity" if intensity else "pulse_duration" if pulse_duration else None
         if parameter is None:
-            raise ValueError("The solution must contain either a pulse intensity or a pulse duration parameter to be plotted with the PlotCyclingResult class")
+            raise ValueError(
+                "The solution must contain either a pulse intensity or a pulse duration parameter to be plotted with the PlotCyclingResult class"
+            )
 
         counter = 0
         for muscle in solution.ocp.nlp[0].model.muscle_names:
@@ -142,10 +159,19 @@ class PlotCyclingResult:
             for i in range(n_phase):
                 value = solution.parameters[parameter_key][i] - min
                 opacity_percentage = value / parameter_range
-                opacity_percentage = 1 if opacity_percentage > 1 else 0 if opacity_percentage < 0 else opacity_percentage
+                opacity_percentage = (
+                    1 if opacity_percentage > 1 else 0 if opacity_percentage < 0 else opacity_percentage
+                )
                 opacity.append(opacity_percentage)
 
-            data[muscle] = {"theta": theta, "radii": radii, "width": width, "bottom": (counter + 1) / (solution.ocp.nlp[0].model.nb_muscles + 1), "opacity": opacity, "label": muscle}
+            data[muscle] = {
+                "theta": theta,
+                "radii": radii,
+                "width": width,
+                "bottom": (counter + 1) / (solution.ocp.nlp[0].model.nb_muscles + 1),
+                "opacity": opacity,
+                "label": muscle,
+            }
             counter += 1
 
         data = self.add_empty_muscle(data)
@@ -153,7 +179,7 @@ class PlotCyclingResult:
         return data
 
     def extract_data_from_pickle(self, solution: str):
-        with open(solution, 'rb') as f:
+        with open(solution, "rb") as f:
             pickle_data = pickle.load(f)
         data = {}
 
@@ -165,19 +191,26 @@ class PlotCyclingResult:
 
         if pulse_apparition_time_as_parameter:
             final_time = pickle_data["time"][-1]
-            pulse_apparition_time = pickle_data["parameters"]['pulse_apparition_time']
+            pulse_apparition_time = pickle_data["parameters"]["pulse_apparition_time"]
             theta = np.array([(pulse_apparition_time[i] / final_time) * 2 * np.pi + width / 2 for i in range(n_phase)])
         else:
             theta = np.linspace(0, 2 * np.pi, n_phase + 1)[:-1] + width / 2
 
-        intensity = True if sum(
-            ["pulse_intensity" in parameter_key for parameter_key in pickle_data["parameters"]]) > 0 else False
-        pulse_duration = True if sum(
-            ["pulse_duration" in parameter_key for parameter_key in pickle_data["parameters"]]) > 0 else False
+        intensity = (
+            True
+            if sum(["pulse_intensity" in parameter_key for parameter_key in pickle_data["parameters"]]) > 0
+            else False
+        )
+        pulse_duration = (
+            True
+            if sum(["pulse_duration" in parameter_key for parameter_key in pickle_data["parameters"]]) > 0
+            else False
+        )
         parameter = "pulse_intensity" if intensity else "pulse_duration" if pulse_duration else None
         if parameter is None:
             raise ValueError(
-                "The solution must contain either a pulse intensity or a pulse duration parameter to be plotted with the PlotCyclingResult class")
+                "The solution must contain either a pulse intensity or a pulse duration parameter to be plotted with the PlotCyclingResult class"
+            )
 
         counter = 0
         muscle_name_list = list(pickle_data["parameters"].keys())
@@ -193,13 +226,19 @@ class PlotCyclingResult:
             for i in range(n_phase):
                 value = pickle_data["parameters"][parameter_key][i] - min
                 opacity_percentage = value / parameter_range
-                opacity_percentage = 1 if opacity_percentage > 1 else 0 if opacity_percentage < 0 else opacity_percentage
+                opacity_percentage = (
+                    1 if opacity_percentage > 1 else 0 if opacity_percentage < 0 else opacity_percentage
+                )
                 opacity.append(opacity_percentage)
 
-            data[muscle] = {"theta": theta, "radii": radii, "width": width,
-                            "bottom": (counter + 1) / (nb_muscle + 1), "opacity": opacity,
-                            "label": muscle
-                            }
+            data[muscle] = {
+                "theta": theta,
+                "radii": radii,
+                "width": width,
+                "bottom": (counter + 1) / (nb_muscle + 1),
+                "opacity": opacity,
+                "label": muscle,
+            }
             counter += 1
 
         data = self.add_empty_muscle(data)
@@ -219,9 +258,11 @@ class PlotCyclingResult:
         deltoideus_anterior = {"theta": np.radians(100), "radii": 1 / 5, "width": np.radians(160), "bottom": 2 / 5}
         deltoideus_posterior = {"theta": np.radians(295), "radii": 1 / 5, "width": np.radians(150), "bottom": 1 / 5}
         empty = {"theta": 1, "radii": 1 / 5, "width": 1, "bottom": 0}
-        stimulated_muscles = {"triceps_brachii": triceps_brachii,
-                              "biceps_brachii": biceps_brachii,
-                              "deltoideus_anterior": deltoideus_anterior,
-                              "deltoideus_posterior": deltoideus_posterior,
-                              "": empty}
+        stimulated_muscles = {
+            "triceps_brachii": triceps_brachii,
+            "biceps_brachii": biceps_brachii,
+            "deltoideus_anterior": deltoideus_anterior,
+            "deltoideus_posterior": deltoideus_posterior,
+            "": empty,
+        }
         return stimulated_muscles
