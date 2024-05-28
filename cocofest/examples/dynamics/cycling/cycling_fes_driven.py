@@ -15,7 +15,7 @@ import biorbd
 
 from pyorerun import BiorbdModel, PhaseRerun
 
-from cocofest import DingModelPulseDurationFrequencyWithFatigue, OcpFesMsk
+from cocofest import DingModelPulseDurationFrequencyWithFatigue, OcpFesMsk, PlotCyclingResult, SolutionToPickle
 
 
 def main():
@@ -52,23 +52,13 @@ def main():
         },
         activate_force_length_relationship=True,
         activate_force_velocity_relationship=True,
-        minimize_muscle_fatigue=True,
+        minimize_muscle_fatigue=False,
         warm_start=False,
         n_threads=5,
     )
     ocp.add_plot_penalty(CostType.ALL)
     sol = ocp.solve(Solver.IPOPT(show_online_optim=False, _max_iter=10000))
-
-    dictionary = {
-        "time": sol.decision_time(to_merge=[SolutionMerge.PHASES, SolutionMerge.NODES]),
-        "states": sol.decision_states(to_merge=[SolutionMerge.PHASES, SolutionMerge.NODES]),
-        "control": sol.decision_controls(to_merge=[SolutionMerge.PHASES, SolutionMerge.NODES]),
-        "parameters": sol.decision_parameters(),
-        "time_to_optimize": sol.real_time_to_optimize,
-    }
-
-    with open("cycling_fes_driven_min_residual_torque_and_muscle_fatigue_results.pkl", "wb") as file:
-        pickle.dump(dictionary, file)
+    SolutionToPickle(sol, "cycling_fes_driven_min_residual_torque.pkl", "").pickle()
 
     biorbd_model = biorbd.Model("../../msk_models/simplified_UL_Seth_full_mesh.bioMod")
     prr_model = BiorbdModel.from_biorbd_object(biorbd_model)
@@ -83,7 +73,7 @@ def main():
     viz.rerun("msk_model")
 
     sol.graphs(show_bounds=False)
-
+    PlotCyclingResult(sol).plot(starting_location="E")
 
 if __name__ == "__main__":
     main()

@@ -40,7 +40,6 @@ class SolutionToPickle:
         time = time[idx_start]
         state_keys = states.keys()
         for key in state_keys:
-            print(key)
             if states[key].shape[0] == 1:
                 states[key] = states[key][0][idx_start]
             else:

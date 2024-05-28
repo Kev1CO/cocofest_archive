@@ -1,5 +1,4 @@
 import numpy as np
-import matplotlib.cm as cm
 import matplotlib
 matplotlib.use('TkAgg')
 import matplotlib.pyplot as plt
@@ -34,40 +33,30 @@ class PlotCyclingResult:
             raise ValueError("The solution must be a Solution object or a pickle file")
 
         fig = plt.figure(figsize=(8, 8))
-        plt.title("Muscle stimulation angle of a cycling motion")
+        fig.suptitle("Muscle stimulation angle of a cycling motion")
         ax = fig.add_axes([0.1, 0.1, 0.8, 0.8], polar=True)
         ax.set_theta_zero_location(starting_location)
         ax.set_theta_direction(-1)
         ax.set_yticklabels([])
-        ticks = np.linspace(0, 1, len(extracted_data) + 2)
+        ticks = np.linspace(0, 1, len(extracted_data) + 1)
         ax.set_rticks(ticks)  # To configure radial ticks
-        color = ['b', 'g', 'r', 'c', 'w']
+        color = ['b', 'g', 'r', 'c', 'm', 'y']
+
         counter = 0
         for muscle in extracted_data:
             if muscle == 'empty':
                 continue
-            # theta = []
-            # radii = []
-            # width = []
-            # bottom = []
-            # theta.append(extracted_data[muscle]["theta"])
-            # radii.append(extracted_data[muscle]["radii"])
-            # width.append(extracted_data[muscle]["width"])
-            # bottom.append(extracted_data[muscle]["bottom"])
 
             bars = ax.bar(extracted_data[muscle]["theta"],
                           extracted_data[muscle]["radii"],
                           width=extracted_data[muscle]["width"],
                           bottom=extracted_data[muscle]["bottom"],
                           label=extracted_data[muscle]["label"],
+                          color=color[counter],
                           edgecolor='black',
                           linewidth=2)
 
-            # bars = ax.bar(theta, radii, width=width, bottom=bottom, label=extracted_data[muscle]["label"], edgecolor='black',
-            #               linewidth=2)
-
             for i in range(len(bars)):
-                bars[i].set_facecolor(color[counter])
                 bars[i].set_alpha(extracted_data[muscle]['opacity'][i])
             counter += 1
 
@@ -82,7 +71,9 @@ class PlotCyclingResult:
         for i in range(len(empty_bar)):
             empty_bar[i].set_alpha(0)
 
-        plt.legend()
+        leg = plt.legend()
+        for lh in leg.legend_handles:
+            lh.set_alpha(1)
         plt.show()
 
     def plot_rehastim(self):
@@ -127,7 +118,7 @@ class PlotCyclingResult:
         data = {}
         n_phase = solution.ocp.n_phases
         width = 2 * np.pi / n_phase
-        radii = 1 / solution.ocp.nlp[0].model.nb_muscles
+        radii = 1 / (solution.ocp.nlp[0].model.nb_muscles + 1)
         if "pulse_apparition_time" in solution.ocp.parameters.keys():
             final_time = sum(solution.ocp.phase_time)
             pulse_apparition_time = solution.parameters['pulse_apparition_time']
@@ -150,7 +141,9 @@ class PlotCyclingResult:
             parameter_range = max - min
             for i in range(n_phase):
                 value = solution.parameters[parameter_key][i] - min
-                opacity.append(value / parameter_range)
+                opacity_percentage = value / parameter_range
+                opacity_percentage = 1 if opacity_percentage > 1 else 0 if opacity_percentage < 0 else opacity_percentage
+                opacity.append(opacity_percentage)
 
             data[muscle] = {"theta": theta, "radii": radii, "width": width, "bottom": (counter + 1) / (solution.ocp.nlp[0].model.nb_muscles + 1), "opacity": opacity, "label": muscle}
             counter += 1
@@ -167,11 +160,10 @@ class PlotCyclingResult:
         n_phase = pickle_data["parameters"][next(iter(pickle_data["parameters"]))].shape[0]
         width = 2 * np.pi / n_phase
         pulse_apparition_time_as_parameter = 1 if "pulse_apparition_time" in pickle_data["parameters"] else 0
-        nb_muscle = pickle_data["parameters"].shape[1] - pulse_apparition_time_as_parameter
-        radii = 1 / nb_muscle
+        nb_muscle = len(pickle_data["parameters"].keys()) - pulse_apparition_time_as_parameter
+        radii = 1 / (nb_muscle + 1)
 
-        pulse_apparition_time = True if pulse_apparition_time_as_parameter == 1 else False
-        if pulse_apparition_time:
+        if pulse_apparition_time_as_parameter:
             final_time = pickle_data["time"][-1]
             pulse_apparition_time = pickle_data["parameters"]['pulse_apparition_time']
             theta = np.array([(pulse_apparition_time[i] / final_time) * 2 * np.pi + width / 2 for i in range(n_phase)])
@@ -188,20 +180,21 @@ class PlotCyclingResult:
                 "The solution must contain either a pulse intensity or a pulse duration parameter to be plotted with the PlotCyclingResult class")
 
         counter = 0
-        muscle_name_list = pickle_data["parameters"].keys()
-        muscle_name_list.remove("pulse_apparition_time") if pulse_apparition_time else None
-        element_to_remove = parameter + "_"
-        muscle_name_list = [s.strip(element_to_remove) for s in muscle_name_list]
+        muscle_name_list = list(pickle_data["parameters"].keys())
+        muscle_name_list.remove("pulse_apparition_time") if pulse_apparition_time_as_parameter else None
+        muscle_name_list = [s.replace(parameter + "_", "", 1) for s in muscle_name_list]
 
         for muscle in muscle_name_list:
             opacity = []
             parameter_key = parameter + "_" + muscle
-            min = pickle_data["parameters_bounds"][parameter_key].min[0][0]
-            max = pickle_data["parameters_bounds"][parameter_key].max[0][0]
+            min = pickle_data["parameters_bounds"][parameter_key][0]
+            max = pickle_data["parameters_bounds"][parameter_key][1]
             parameter_range = max - min
             for i in range(n_phase):
-                value = pickle_data[parameter_key][i] - min
-                opacity.append(value / parameter_range)
+                value = pickle_data["parameters"][parameter_key][i] - min
+                opacity_percentage = value / parameter_range
+                opacity_percentage = 1 if opacity_percentage > 1 else 0 if opacity_percentage < 0 else opacity_percentage
+                opacity.append(opacity_percentage)
 
             data[muscle] = {"theta": theta, "radii": radii, "width": width,
                             "bottom": (counter + 1) / (nb_muscle + 1), "opacity": opacity,
