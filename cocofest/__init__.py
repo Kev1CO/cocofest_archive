@@ -24,3 +24,5 @@ from .dynamics.inverse_kinematics_and_dynamics import (
     inverse_kinematics_cycling,
     inverse_dynamics_cycling,
 )
+from .result.plot import PlotCyclingResult
+from .result.pickle import SolutionToPickle
