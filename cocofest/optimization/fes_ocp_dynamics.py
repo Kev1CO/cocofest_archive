@@ -1,31 +1,34 @@
 import numpy as np
 
 from bioptim import (
+    Axis,
     BoundsList,
-    ControlType,
     ConstraintList,
+    ControlType,
     DynamicsList,
     InitialGuessList,
+    InterpolationType,
+    Node,
+    ObjectiveFcn,
     ObjectiveList,
     OdeSolver,
+    OdeSolverBase,
     OptimalControlProgram,
-    PhaseDynamics,
     ParameterList,
     ParameterObjectiveList,
-    InterpolationType,
-    ObjectiveFcn,
-    OdeSolverBase,
-    Node,
+    PhaseDynamics,
     VariableScaling,
 )
 
 from ..custom_constraints import CustomConstraint
 from ..custom_objectives import CustomObjective
-from ..models.fes_model import FesModel
+from ..dynamics.inverse_kinematics_and_dynamics import get_circle_coord
+from ..dynamics.warm_start import get_initial_guess
 from ..models.ding2003 import DingModelFrequency
 from ..models.ding2007 import DingModelPulseDurationFrequency
-from ..models.hmed2018 import DingModelIntensityFrequency
 from ..models.dynamical_model import FesMskModel
+from ..models.fes_model import FesModel
+from ..models.hmed2018 import DingModelIntensityFrequency
 from ..optimization.fes_ocp import OcpFes
 
 
@@ -50,6 +53,7 @@ class OcpFesMsk:
         minimize_muscle_fatigue: bool = False,
         minimize_muscle_force: bool = False,
         use_sx: bool = True,
+        warm_start: bool = False,
         ode_solver: OdeSolverBase = OdeSolver.RK4(n_integration_steps=1),
         control_type: ControlType = ControlType.CONSTANT,
         n_threads: int = 1,
@@ -100,6 +104,8 @@ class OcpFesMsk:
             Minimize the muscle force.
         use_sx : bool
             The nature of the CasADi variables. MX are used if False.
+        warm_start : bool
+            If a warm start is run to get the problem initial guesses.
         ode_solver : OdeSolverBase
             The ODE solver to use.
         control_type : ControlType
@@ -140,6 +146,7 @@ class OcpFesMsk:
 
         force_tracking = objective["force_tracking"]
         end_node_tracking = objective["end_node_tracking"]
+        cycling_objective = objective["cycling"]
         custom_objective = objective["custom"]
         key_in_dict = "q_tracking" in objective
         q_tracking = objective["q_tracking"] if key_in_dict else None
@@ -175,6 +182,7 @@ class OcpFesMsk:
             fes_muscle_models=fes_muscle_models,
             force_tracking=force_tracking,
             end_node_tracking=end_node_tracking,
+            cycling_objective=cycling_objective,
             q_tracking=q_tracking,
             with_residual_torque=with_residual_torque,
             activate_force_length_relationship=activate_force_length_relationship,
@@ -254,12 +262,17 @@ class OcpFesMsk:
         ]
 
         dynamics = OcpFesMsk._declare_dynamics(bio_models, n_stim)
+        initial_state = (
+            get_initial_guess(biorbd_model_path, final_time, n_stim, n_shooting, objective) if warm_start else None
+        )
+
         x_bounds, x_init = OcpFesMsk._set_bounds(
             bio_models,
             fes_muscle_models,
             bound_type,
             bound_data,
             n_stim,
+            initial_state,
         )
         u_bounds, u_init = OcpFesMsk._set_controls(bio_models, n_stim, with_residual_torque)
         muscle_force_key = ["F_" + fes_muscle_models[i].muscle_name for i in range(len(fes_muscle_models))]
@@ -268,6 +281,7 @@ class OcpFesMsk:
             n_shooting,
             force_fourier_coef,
             end_node_tracking,
+            cycling_objective,
             custom_objective,
             q_fourier_coef,
             minimize_muscle_fatigue,
@@ -500,7 +514,7 @@ class OcpFesMsk:
         return constraints
 
     @staticmethod
-    def _set_bounds(bio_models, fes_muscle_models, bound_type, bound_data, n_stim):
+    def _set_bounds(bio_models, fes_muscle_models, bound_type, bound_data, n_stim, initial_state):
         # ---- STATE BOUNDS REPRESENTATION ---- #
         #
         #                    |‾‾‾‾‾‾‾‾‾‾x_max_middle‾‾‾‾‾‾‾‾‾‾‾‾x_max_end‾
@@ -604,8 +618,29 @@ class OcpFesMsk:
             x_bounds.add(key="q", bounds=q_x_bounds, phase=i)
             x_bounds.add(key="qdot", bounds=qdot_x_bounds, phase=i)
 
-        for i in range(n_stim):
-            x_init.add(key="q", initial_guess=[0] * bio_models[i].nb_q, phase=i)
+        # Sets the initial state of q, qdot and muscle forces for all the phases if a warm start is used
+        if initial_state:
+            muscle_names = bio_models[0].muscle_names
+            for i in range(n_stim):
+                x_init.add(
+                    key="q", initial_guess=initial_state["q"][i], interpolation=InterpolationType.EACH_FRAME, phase=i
+                )
+                x_init.add(
+                    key="qdot",
+                    initial_guess=initial_state["qdot"][i],
+                    interpolation=InterpolationType.EACH_FRAME,
+                    phase=i,
+                )
+                for j in range(len(muscle_names)):
+                    x_init.add(
+                        key="F_" + muscle_names[j],
+                        initial_guess=initial_state[muscle_names[j]][i],
+                        interpolation=InterpolationType.EACH_FRAME,
+                        phase=i,
+                    )
+        else:
+            for i in range(n_stim):
+                x_init.add(key="q", initial_guess=[0] * bio_models[i].nb_q, phase=i)
 
         return x_bounds, x_init
 
@@ -635,6 +670,7 @@ class OcpFesMsk:
         n_shooting,
         force_fourier_coef,
         end_node_tracking,
+        cycling_objective,
         custom_objective,
         q_fourier_coef,
         minimize_muscle_fatigue,
@@ -678,6 +714,28 @@ class OcpFesMsk:
                     phase=n_stim - 1,
                 )
 
+        if cycling_objective:
+            x_center = cycling_objective["x_center"]
+            y_center = cycling_objective["y_center"]
+            radius = cycling_objective["radius"]
+            circle_coord_list = np.array(
+                [
+                    get_circle_coord(theta, x_center, y_center, radius)[:-1]
+                    for theta in np.linspace(0, -2 * np.pi, n_shooting[0] * n_stim + 1)
+                ]
+            )
+            for phase in range(n_stim):
+                objective_functions.add(
+                    ObjectiveFcn.Mayer.TRACK_MARKERS,
+                    weight=100000,
+                    axes=[Axis.X, Axis.Y],
+                    marker_index=0,
+                    target=circle_coord_list[n_shooting[0] * phase : n_shooting[0] * (phase + 1) + 1].T,
+                    node=Node.ALL,
+                    phase=phase,
+                    quadratic=True,
+                )
+
         if q_fourier_coef:
             for j in range(len(q_fourier_coef)):
                 for phase in range(n_stim):
@@ -701,7 +759,7 @@ class OcpFesMsk:
                     custom_type=ObjectiveFcn.Mayer,
                     node=Node.ALL,
                     quadratic=True,
-                    weight=-1,
+                    weight=1,
                     phase=i,
                 )
 
@@ -748,6 +806,7 @@ class OcpFesMsk:
         fes_muscle_models,
         force_tracking,
         end_node_tracking,
+        cycling_objective,
         q_tracking,
         with_residual_torque,
         activate_force_length_relationship,
@@ -813,6 +872,35 @@ class OcpFesMsk:
             for i in range(len(end_node_tracking)):
                 if not isinstance(end_node_tracking[i], int | float):
                     raise TypeError(f"end_node_tracking index {i}: {end_node_tracking[i]} must be int or float type")
+
+        if cycling_objective:
+            if not isinstance(cycling_objective, dict):
+                raise TypeError(f"cycling_objective: {cycling_objective} must be dictionary type")
+
+            if len(cycling_objective) != 4:
+                raise ValueError(
+                    "cycling_objective dictionary must have the same size as the number of muscles in fes_muscle_models"
+                )
+
+            cycling_objective_keys = ["x_center", "y_center", "radius", "target"]
+            if not all([cycling_objective_keys[i] in cycling_objective for i in range(len(cycling_objective_keys))]):
+                raise ValueError(
+                    f"cycling_objective dictionary must contain the following keys: {cycling_objective_keys}"
+                )
+
+            if not all([isinstance(cycling_objective[key], int | float) for key in cycling_objective_keys[:3]]):
+                raise TypeError(f"cycling_objective x_center, y_center and radius inputs must be int or float")
+
+            if isinstance(cycling_objective[cycling_objective_keys[-1]], str):
+                if (
+                    cycling_objective[cycling_objective_keys[-1]] != "marker"
+                    and cycling_objective[cycling_objective_keys[-1]] != "q"
+                ):
+                    raise ValueError(
+                        f"{cycling_objective[cycling_objective_keys[-1]]} not implemented chose between 'marker' and 'q' as 'target'"
+                    )
+            else:
+                raise TypeError(f"cycling_objective target must be string type")
 
         if q_tracking:
             if not isinstance(q_tracking, list) and len(q_tracking) != 2:

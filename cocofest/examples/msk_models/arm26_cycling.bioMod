@@ -13,7 +13,6 @@ endsegment
         position    0.15 0.15 0.17
     endmarker
 
-
 segment r_humerus_translation
     parent base
     RTinMatrix    1
@@ -153,7 +152,7 @@ endmusclegroup
         tendonSlackLength    0.14299999999999999
         pennationAngle    0.20943951
         maxVelocity    10
-	
+
         fatigueParameters
             Type Xia
             fatiguerate 0.01
@@ -237,6 +236,42 @@ endmusclegroup
             position    0.022800000000000001 -0.1754 -0.0063
         endviapoint
 
+    muscle    BICshort
+        Type    degroote
+        musclegroup    base_to_r_ulna_radius_hand
+        OriginPosition    0.0046750000000000003 -0.01231 0.13475000000000001
+        InsertionPosition    0.0075100000000000002 -0.048390000000000002 0.02179
+        optimalLength    0.1321
+        maximalForce    435.56
+        tendonSlackLength    0.1923
+        pennationAngle    0
+        maxVelocity    10
+    endmuscle
+
+        viapoint    BICshort-P2
+            parent    base
+            muscle    BICshort
+            musclegroup    base_to_r_ulna_radius_hand
+            position    -0.0070749999999999997 -0.040039999999999999 0.14507
+        endviapoint
+        viapoint    BICshort-P3
+            parent    r_humerus
+            muscle    BICshort
+            musclegroup    base_to_r_ulna_radius_hand
+            position    0.011169999999999999 -0.075759999999999994 -0.011010000000000001
+        endviapoint
+        viapoint    BICshort-P4
+            parent    r_humerus
+            muscle    BICshort
+            musclegroup    base_to_r_ulna_radius_hand
+            position    0.01703 -0.12125 -0.010789999999999999
+        endviapoint
+        viapoint    BICshort-P5
+            parent    r_humerus
+            muscle    BICshort
+            musclegroup    base_to_r_ulna_radius_hand
+            position    0.022800000000000001 -0.1754 -0.0063
+        endviapoint
 
 // r_humerus > r_ulna_radius_hand
 musclegroup r_humerus_to_r_ulna_radius_hand
@@ -274,3 +309,46 @@ endmusclegroup
             musclegroup    r_humerus_to_r_ulna_radius_hand
             position    -0.017430000000000001 -0.26756999999999997 -0.01208
         endviapoint
+
+    muscle    TRImed
+        Type    degroote
+        musclegroup    r_humerus_to_r_ulna_radius_hand
+        OriginPosition    -0.0083800000000000003 -0.13694999999999999 -0.0090600000000000003
+        InsertionPosition    -0.021899999999999999 0.010460000000000001 -0.00077999999999999999
+        optimalLength    0.1138
+        maximalForce    624.29999999999995
+        tendonSlackLength    0.090800000000000006
+        pennationAngle    0.15707963
+        maxVelocity    10
+    endmuscle
+
+        viapoint    TRImed-P2
+            parent    r_humerus
+            muscle    TRImed
+            musclegroup    r_humerus_to_r_ulna_radius_hand
+            position    -0.026009999999999998 -0.15139 -0.010800000000000001
+        endviapoint
+        viapoint    TRImed-P3
+            parent    r_humerus
+            muscle    TRImed
+            musclegroup    r_humerus_to_r_ulna_radius_hand
+            position    -0.03184 -0.22636999999999999 -0.01217
+        endviapoint
+        viapoint    TRImed-P4
+            parent    r_humerus
+            muscle    TRImed
+            musclegroup    r_humerus_to_r_ulna_radius_hand
+            position    -0.017430000000000001 -0.26756999999999997 -0.01208
+        endviapoint
+
+    muscle    BRA
+        Type    degroote
+        musclegroup    r_humerus_to_r_ulna_radius_hand
+        OriginPosition    0.0067999999999999996 -0.1739 -0.0035999999999999999
+        InsertionPosition    -0.0032000000000000002 -0.023900000000000001 0.00089999999999999998
+        optimalLength    0.085800000000000001
+        maximalForce    987.25999999999999
+        tendonSlackLength    0.053499999999999999
+        pennationAngle    0
+        maxVelocity    10
+    endmuscle
