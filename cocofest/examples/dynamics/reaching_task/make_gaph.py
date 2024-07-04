@@ -74,14 +74,14 @@ for i in range(2):
         if i == 0 and j == 0:
             axs[i][j].plot(
                 data_minimize_force["time"],
-                data_minimize_force["states"][force_muscle_keys[index]][0],
+                data_minimize_force["states"][force_muscle_keys[index]],
                 ms=4,
                 linewidth=5.0,
                 label="Minimizing force",
             )
             axs[i][j].plot(
                 data_minimize_fatigue["time"],
-                data_minimize_fatigue["states"][force_muscle_keys[index]][0],
+                data_minimize_fatigue["states"][force_muscle_keys[index]],
                 ms=4,
                 linewidth=5.0,
                 label="Minimizing fatigue",
@@ -89,13 +89,13 @@ for i in range(2):
         else:
             axs[i][j].plot(
                 data_minimize_force["time"],
-                data_minimize_force["states"][force_muscle_keys[index]][0],
+                data_minimize_force["states"][force_muscle_keys[index]],
                 ms=4,
                 linewidth=5.0,
             )
             axs[i][j].plot(
                 data_minimize_fatigue["time"],
-                data_minimize_fatigue["states"][force_muscle_keys[index]][0],
+                data_minimize_fatigue["states"][force_muscle_keys[index]],
                 ms=4,
                 linewidth=5.0,
             )
@@ -177,13 +177,13 @@ a_sum_base_line = 0
 a_force_sum_list = []
 a_fatigue_sum_list = []
 for key_a in a_list:
-    a_sum_base_line += data_minimize_force["states"][key_a][0][0]
+    a_sum_base_line += data_minimize_force["states"][key_a][0]
 for i in range(len(data_minimize_force["time"])):
     a_force_sum = 0
     a_fatigue_sum = 0
     for key_a in a_list:
-        a_force_sum += data_minimize_force["states"][key_a][0][i]
-        a_fatigue_sum += data_minimize_fatigue["states"][key_a][0][i]
+        a_force_sum += data_minimize_force["states"][key_a][i]
+        a_fatigue_sum += data_minimize_fatigue["states"][key_a][i]
 
     a_force_sum_list.append(a_force_sum)
     a_fatigue_sum_list.append(a_fatigue_sum)

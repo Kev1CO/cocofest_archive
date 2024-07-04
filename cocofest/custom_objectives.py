@@ -88,7 +88,7 @@ class CustomObjective:
         muscle_fatigue = horzcat(
             *[controller.states["A_" + muscle_name_list[x]].cx for x in range(len(muscle_name_list))]
         )
-        return 1 / sum1(muscle_fatigue)
+        return sum1(muscle_fatigue)
 
     @staticmethod
     def minimize_overall_muscle_force_production(controller: PenaltyController) -> MX:
@@ -106,6 +106,6 @@ class CustomObjective:
         """
         muscle_name_list = controller.model.bio_model.muscle_names
         muscle_force = horzcat(
-            *[controller.states["F_" + muscle_name_list[x]].cx ** 3 for x in range(len(muscle_name_list))]
+            *[controller.states["F_" + muscle_name_list[x]].cx for x in range(len(muscle_name_list))]
         )
         return sum1(muscle_force)

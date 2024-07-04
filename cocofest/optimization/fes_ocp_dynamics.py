@@ -753,25 +753,28 @@ class OcpFesMsk:
                         )
 
         if minimize_muscle_fatigue:
+            # for i in range(n_stim):
+            objective_functions.add(
+                CustomObjective.minimize_overall_muscle_fatigue,
+                # custom_type=ObjectiveFcn.Lagrange,
+                custom_type=ObjectiveFcn.Mayer,
+                node=Node.END,
+                quadratic=True,
+                weight=-1,
+                phase=n_stim-1,
+            )
+
+        if minimize_muscle_force:
             for i in range(n_stim):
                 objective_functions.add(
-                    CustomObjective.minimize_overall_muscle_fatigue,
-                    custom_type=ObjectiveFcn.Mayer,
-                    node=Node.ALL,
+                    CustomObjective.minimize_overall_muscle_force_production,
+                    custom_type=ObjectiveFcn.Lagrange,
+                    # custom_type=ObjectiveFcn.Mayer,
+                    # node=Node.ALL,
                     quadratic=True,
                     weight=1,
                     phase=i,
                 )
-
-        if minimize_muscle_force:
-            objective_functions.add(
-                CustomObjective.minimize_overall_muscle_force_production,
-                custom_type=ObjectiveFcn.Mayer,
-                node=Node.END,
-                quadratic=True,
-                weight=1,
-                phase=n_stim - 1,
-            )
 
         if time_min and time_max:
             for i in range(n_stim):

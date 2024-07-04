@@ -5,6 +5,8 @@ defined in the bioMod file. At the end of the simulation 2 files will be created
 The files will contain the time, states, controls and parameters of the ocp.
 """
 
+import pickle
+
 from bioptim import (
     Axis,
     ConstraintFcn,
@@ -62,10 +64,10 @@ for i in range(len(fes_muscle_models)):
     fes_muscle_models[i].a_scale = fes_muscle_models[i].a_scale * a_scale_proportion_list[i]
 
 minimum_pulse_duration = DingModelPulseDurationFrequencyWithFatigue().pd0
-# pickle_file_list = ["minimize_muscle_fatigue.pkl", "minimize_muscle_force.pkl"]
-pickle_file_list = ["minimize_muscle_fatigue.pkl"]
+# pickle_file_list = ["minimize_muscle_fatigue", "minimize_muscle_force"]
+pickle_file_list = ["minimize_muscle_force"]
 n_stim = 60
-n_shooting = 2
+n_shooting = 25
 # Step time of 1ms -> 1sec / (40Hz * 25) = 0.001s
 
 constraint = ConstraintList()
@@ -78,31 +80,55 @@ constraint.add(
     axes=[Axis.X, Axis.Y],
 )
 
+counter = 0
 for i in range(len(pickle_file_list)):
-    ocp = OcpFesMsk.prepare_ocp(
-        biorbd_model_path="../../msk_models/arm26.bioMod",
-        bound_type="start_end",
-        bound_data=[[0, 5], [0, 5]],
-        fes_muscle_models=fes_muscle_models,
-        n_stim=n_stim,
-        n_shooting=n_shooting,
-        final_time=1.5,
-        pulse_duration={
-            "min": minimum_pulse_duration,
-            "max": 0.0006,
-            "bimapping": False,
-        },
-        with_residual_torque=False,
-        custom_constraint=constraint,
-        activate_force_length_relationship=True,
-        activate_force_velocity_relationship=True,
-        minimize_muscle_fatigue=True if pickle_file_list[i] == "minimize_muscle_fatigue.pkl" else False,
-        minimize_muscle_force=True if pickle_file_list[i] == "minimize_muscle_force.pkl" else False,
-        use_sx=False,
-    )
+    while counter == 0 or sol.status == 0:
+        if counter == 0:
+            ocp = OcpFesMsk.prepare_ocp(
+                biorbd_model_path="../../msk_models/arm26.bioMod",
+                bound_type="start_end",
+                bound_data=[[0, 5], [0, 5]],
+                fes_muscle_models=fes_muscle_models,
+                n_stim=n_stim,
+                n_shooting=n_shooting,
+                final_time=1.5,
+                pulse_duration={
+                    "min": minimum_pulse_duration,
+                    "max": 0.0006,
+                    "bimapping": False,
+                },
+                with_residual_torque=False,
+                custom_constraint=constraint,
+                activate_force_length_relationship=True,
+                activate_force_velocity_relationship=True,
+                minimize_muscle_fatigue=True if pickle_file_list[i] == "minimize_muscle_fatigue" else False,
+                minimize_muscle_force=True if pickle_file_list[i] == "minimize_muscle_force" else False,
+                use_sx=False,
+            )
+        else:
+            with open(f"result_file/" + "pulse_duration_" + pickle_file_list[i] + "_" + str(counter-1) + ".pkl", "rb") as file:
+                data_from_previous_motion = pickle.load(file)
+            q_init = data_from_previous_motion["states"]["q"][:, :-1]
+            qdot_init = data_from_previous_motion["states"]["qdot"][:, :-1]
 
-    sol = ocp.solve(Solver.IPOPT(_max_iter=10000))
-    SolutionToPickle(sol, "pulse_duration_" + pickle_file_list[i], "result_file/").pickle()
+            for j in range(len(ocp.nlp)):
+                ocp.nlp[j].x_init["q"].init[0] = q_init[0][i*2]
+                ocp.nlp[j].x_init["q"].init[1] = q_init[1][i*2]
+                ocp.nlp[j].x_init["qdot"].init[0] = qdot_init[0][i*2]
+                ocp.nlp[j].x_init["qdot"].init[1] = qdot_init[1][i*2]
+            for key in ocp.nlp[i].x_bounds.keys():
+                if key == "q" or key == "qdot":
+                    ocp.nlp[0].x_bounds[key].max[0][0] = data_from_previous_motion["states"][key][0][-1]
+                    ocp.nlp[0].x_bounds[key].max[1][0] = data_from_previous_motion["states"][key][1][-1]
+                    ocp.nlp[0].x_bounds[key].min[0][0] = data_from_previous_motion["states"][key][0][-1]
+                    ocp.nlp[0].x_bounds[key].min[1][0] = data_from_previous_motion["states"][key][1][-1]
+                else:
+                    ocp.nlp[0].x_bounds[key].max[0][0] = data_from_previous_motion["states"][key][-1]
+                    ocp.nlp[0].x_bounds[key].min[0][0] = data_from_previous_motion["states"][key][-1]
+
+        sol = ocp.solve(Solver.IPOPT(_max_iter=10000))
+        SolutionToPickle(sol, "pulse_duration_" + pickle_file_list[i] + "_" + str(counter) + ".pkl", "result_file/").pickle()
+        counter += 1
 
 # [1] Dahmane, R., Djordjevič, S., Šimunič, B., & Valenčič, V. (2005).
 # Spatial fiber type distribution in normal human muscle: histochemical and tensiomyographical evaluation.
