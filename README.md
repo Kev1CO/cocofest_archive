@@ -69,7 +69,7 @@ conda install -cconda-forge conda-libmamba-solver
 
 After, install the dependencies
 ```bash
-conda install numpy matplotlib pytest casadi biorbd -cconda-forge --solver=libmamba
+conda install numpy matplotlib pytest casadi biorbd pyorerun -cconda-forge --solver=libmamba
 ```
 
 Finally, install the bioptim setup.py file located in your cocofest/external/bioptim folder
