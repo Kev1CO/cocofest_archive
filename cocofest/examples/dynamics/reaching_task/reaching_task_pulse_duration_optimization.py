@@ -62,10 +62,9 @@ for i in range(len(fes_muscle_models)):
     fes_muscle_models[i].a_scale = fes_muscle_models[i].a_scale * a_scale_proportion_list[i]
 
 minimum_pulse_duration = DingModelPulseDurationFrequencyWithFatigue().pd0
-# pickle_file_list = ["minimize_muscle_fatigue.pkl", "minimize_muscle_force.pkl"]
-pickle_file_list = ["minimize_muscle_fatigue.pkl"]
+pickle_file_list = ["minimize_muscle_fatigue.pkl", "minimize_muscle_force.pkl"]
 n_stim = 60
-n_shooting = 2
+n_shooting = 25
 # Step time of 1ms -> 1sec / (40Hz * 25) = 0.001s
 
 constraint = ConstraintList()
