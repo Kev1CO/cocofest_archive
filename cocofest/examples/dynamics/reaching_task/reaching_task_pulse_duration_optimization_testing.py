@@ -106,16 +106,18 @@ for i in range(len(pickle_file_list)):
                 use_sx=False,
             )
         else:
-            with open(f"result_file/" + "pulse_duration_" + pickle_file_list[i] + "_" + str(counter-1) + ".pkl", "rb") as file:
+            with open(
+                f"result_file/" + "pulse_duration_" + pickle_file_list[i] + "_" + str(counter - 1) + ".pkl", "rb"
+            ) as file:
                 data_from_previous_motion = pickle.load(file)
             q_init = data_from_previous_motion["states"]["q"][:, :-1]
             qdot_init = data_from_previous_motion["states"]["qdot"][:, :-1]
 
             for j in range(len(ocp.nlp)):
-                ocp.nlp[j].x_init["q"].init[0] = q_init[0][i*2]
-                ocp.nlp[j].x_init["q"].init[1] = q_init[1][i*2]
-                ocp.nlp[j].x_init["qdot"].init[0] = qdot_init[0][i*2]
-                ocp.nlp[j].x_init["qdot"].init[1] = qdot_init[1][i*2]
+                ocp.nlp[j].x_init["q"].init[0] = q_init[0][i * 2]
+                ocp.nlp[j].x_init["q"].init[1] = q_init[1][i * 2]
+                ocp.nlp[j].x_init["qdot"].init[0] = qdot_init[0][i * 2]
+                ocp.nlp[j].x_init["qdot"].init[1] = qdot_init[1][i * 2]
             for key in ocp.nlp[i].x_bounds.keys():
                 if key == "q" or key == "qdot":
                     ocp.nlp[0].x_bounds[key].max[0][0] = data_from_previous_motion["states"][key][0][-1]
@@ -127,7 +129,9 @@ for i in range(len(pickle_file_list)):
                     ocp.nlp[0].x_bounds[key].min[0][0] = data_from_previous_motion["states"][key][-1]
 
         sol = ocp.solve(Solver.IPOPT(_max_iter=10000))
-        SolutionToPickle(sol, "pulse_duration_" + pickle_file_list[i] + "_" + str(counter) + ".pkl", "result_file/").pickle()
+        SolutionToPickle(
+            sol, "pulse_duration_" + pickle_file_list[i] + "_" + str(counter) + ".pkl", "result_file/"
+        ).pickle()
         counter += 1
 
 # [1] Dahmane, R., Djordjevič, S., Šimunič, B., & Valenčič, V. (2005).

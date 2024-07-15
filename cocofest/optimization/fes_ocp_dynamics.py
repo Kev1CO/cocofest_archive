@@ -761,7 +761,7 @@ class OcpFesMsk:
                 node=Node.END,
                 quadratic=True,
                 weight=-1,
-                phase=n_stim-1,
+                phase=n_stim - 1,
             )
 
         if minimize_muscle_force:

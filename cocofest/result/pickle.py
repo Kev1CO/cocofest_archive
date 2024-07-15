@@ -27,7 +27,9 @@ class SolutionToPickle:
             "parameters": self.sol.decision_parameters(),
             "parameters_bounds": bounds,
             "time_to_optimize": self.sol.real_time_to_optimize,
-            "bio_model_path": self.sol.ocp.nlp[0].model.bio_model.path if hasattr(self.sol.ocp.nlp[0].model, 'bio_model') else None,
+            "bio_model_path": (
+                self.sol.ocp.nlp[0].model.bio_model.path if hasattr(self.sol.ocp.nlp[0].model, "bio_model") else None
+            ),
         }
 
         with open(self.path + self.file_name, "wb") as file:

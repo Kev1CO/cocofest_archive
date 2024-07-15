@@ -25,11 +25,15 @@ muscle_names = ["BIClong", "BICshort", "TRIlong", "TRIlat", "TRImed", "BRA"]
 nb_stim = len(data_minimize_fatigue["parameters"][pulse_duration_keys[0]])
 width = round(data_minimize_fatigue["time"][-1], 2) / nb_stim
 
-pw_for_force_optim = [data_minimize_force["parameters"][pulse_duration_keys[i]] * 1000000 for i in range(len(pulse_duration_keys))]
-pw_for_fatigue_optim = [data_minimize_fatigue["parameters"][pulse_duration_keys[i]] * 1000000 for i in range(len(pulse_duration_keys))]
+pw_for_force_optim = [
+    data_minimize_force["parameters"][pulse_duration_keys[i]] * 1000000 for i in range(len(pulse_duration_keys))
+]
+pw_for_fatigue_optim = [
+    data_minimize_fatigue["parameters"][pulse_duration_keys[i]] * 1000000 for i in range(len(pulse_duration_keys))
+]
 pw_list = [pw_for_force_optim, pw_for_fatigue_optim]
 
-plasma = cm = plt.get_cmap('plasma')
+plasma = cm = plt.get_cmap("plasma")
 cNorm = colors.Normalize(vmin=100, vmax=600)
 scalarMap = cmx.ScalarMappable(norm=cNorm, cmap=plasma)
 
@@ -56,9 +60,9 @@ def plot_graph(datas):
             value = pw_for_force_optim[i][j]
 
             color = scalarMap.to_rgba(value)
-            axs[i].barh(muscle_names[i], width, left=j*width, height=0.5, color=color)
+            axs[i].barh(muscle_names[i], width, left=j * width, height=0.5, color=color)
 
-    fig.colorbar(scalarMap, ax=axs, orientation='vertical', label='Pulse duration (us)')
+    fig.colorbar(scalarMap, ax=axs, orientation="vertical", label="Pulse duration (us)")
     plt.show()
 
 
