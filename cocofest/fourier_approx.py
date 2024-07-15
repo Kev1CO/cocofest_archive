@@ -12,8 +12,8 @@ class FourierSeries:
     def compute_real_fourier_coeffs(self, x, y, n):
         result = []
         for i in range(n + 1):
-            an = (2.0 / self.p) * spi.trapz(y * np.cos(2 * np.pi * i * x / self.p), x)
-            bn = (2.0 / self.p) * spi.trapz(y * np.sin(2 * np.pi * i * x / self.p), x)
+            an = (2.0 / self.p) * spi.trapezoid(y * np.cos(2 * np.pi * i * x / self.p), x)
+            bn = (2.0 / self.p) * spi.trapezoid(y * np.sin(2 * np.pi * i * x / self.p), x)
             result.append((an, bn))
         return np.array(result)
 
