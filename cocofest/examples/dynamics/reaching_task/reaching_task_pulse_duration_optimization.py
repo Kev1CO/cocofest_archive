@@ -5,19 +5,17 @@ defined in the bioMod file. At the end of the simulation 2 files will be created
 The files will contain the time, states, controls and parameters of the ocp.
 """
 
-import pickle
-
 from bioptim import (
     Axis,
     ConstraintFcn,
     ConstraintList,
     Node,
     Solver,
-    SolutionMerge,
 )
 
-from cocofest import DingModelPulseDurationFrequencyWithFatigue, OcpFesMsk
+from cocofest import DingModelPulseDurationFrequencyWithFatigue, OcpFesMsk, SolutionToPickle
 
+# Scaling alpha_a and a_scale parameters for each muscle proportionally to the muscle PCSA and fiber type 2 proportion
 # Fiber type proportion from [1]
 biceps_fiber_type_2_proportion = 0.607
 triceps_fiber_type_2_proportion = 0.465
@@ -32,13 +30,12 @@ alpha_a_proportion_list = [
 ]
 
 # PCSA (cm²) from [2]
-biceps_pcsa = 12.7
 triceps_pcsa = 28.3
+biceps_pcsa = 12.7
 brachioradialis_pcsa = 11.6
-
-biceps_a_scale_proportion = 12.7 / 28.3
 triceps_a_scale_proportion = 1
-brachioradialis_a_scale_proportion = 11.6 / 28.3
+biceps_a_scale_proportion = biceps_pcsa / triceps_pcsa
+brachioradialis_a_scale_proportion = brachioradialis_pcsa / triceps_pcsa
 a_scale_proportion_list = [
     biceps_a_scale_proportion,
     biceps_a_scale_proportion,
@@ -48,6 +45,8 @@ a_scale_proportion_list = [
     brachioradialis_a_scale_proportion,
 ]
 
+# Build the functional electrical stimulation models according
+# to number and name of muscle in the musculoskeletal model used
 fes_muscle_models = [
     DingModelPulseDurationFrequencyWithFatigue(muscle_name="BIClong"),
     DingModelPulseDurationFrequencyWithFatigue(muscle_name="BICshort"),
@@ -57,6 +56,7 @@ fes_muscle_models = [
     DingModelPulseDurationFrequencyWithFatigue(muscle_name="BRA"),
 ]
 
+# Applying the scaling
 for i in range(len(fes_muscle_models)):
     fes_muscle_models[i].alpha_a = fes_muscle_models[i].alpha_a * alpha_a_proportion_list[i]
     fes_muscle_models[i].a_scale = fes_muscle_models[i].a_scale * a_scale_proportion_list[i]
@@ -64,7 +64,8 @@ for i in range(len(fes_muscle_models)):
 minimum_pulse_duration = DingModelPulseDurationFrequencyWithFatigue().pd0
 pickle_file_list = ["minimize_muscle_fatigue.pkl", "minimize_muscle_force.pkl"]
 n_stim = 60
-n_shooting = 2
+n_shooting = 25
+# Step time of 1ms -> 1sec / (40Hz * 25) = 0.001s
 
 constraint = ConstraintList()
 constraint.add(
@@ -100,22 +101,7 @@ for i in range(len(pickle_file_list)):
     )
 
     sol = ocp.solve(Solver.IPOPT(_max_iter=10000))
-
-    time = sol.decision_time(to_merge=[SolutionMerge.PHASES, SolutionMerge.NODES])
-    states = sol.decision_states(to_merge=[SolutionMerge.PHASES, SolutionMerge.NODES])
-    controls = sol.decision_controls(to_merge=[SolutionMerge.PHASES, SolutionMerge.NODES])
-    parameters = sol.decision_parameters()
-
-    dictionary = {
-        "time": time,
-        "states": states,
-        "controls": controls,
-        "parameters": parameters,
-    }
-
-    with open("result_file/pulse_duration_" + pickle_file_list[i], "wb") as file:
-        pickle.dump(dictionary, file)
-
+    SolutionToPickle(sol, "pulse_duration_" + pickle_file_list[i], "result_file/").pickle()
 
 # [1] Dahmane, R., Djordjevič, S., Šimunič, B., & Valenčič, V. (2005).
 # Spatial fiber type distribution in normal human muscle: histochemical and tensiomyographical evaluation.
