@@ -1,5 +1,6 @@
 from .custom_objectives import CustomObjective
 from .custom_constraints import CustomConstraint
+from .models.fes_model import FesModel
 from .models.ding2003 import DingModelFrequency
 from .models.ding2003_with_fatigue import DingModelFrequencyWithFatigue
 from .models.ding2007 import DingModelPulseDurationFrequency
@@ -10,6 +11,8 @@ from .models.dynamical_model import FesMskModel
 from .optimization.fes_ocp import OcpFes
 from .optimization.fes_identification_ocp import OcpFesId
 from .optimization.fes_ocp_dynamics import OcpFesMsk
+# from .optimization.fes_ocp_nmpc import OcpFesNmpc
+from .optimization.fes_ocp_mhe import OcpFesMhe
 from .integration.ivp_fes import IvpFes
 from .fourier_approx import FourierSeries
 from .identification.ding2003_force_parameter_identification import DingModelFrequencyForceParameterIdentification
