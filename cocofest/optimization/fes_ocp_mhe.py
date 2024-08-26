@@ -1,7 +1,7 @@
 import math
 
 import numpy as np
-from bioptim import SolutionMerge, ObjectiveList, ObjectiveFcn, OdeSolver, Node, OptimalControlProgram, ControlType
+from bioptim import SolutionMerge, ObjectiveList, ObjectiveFcn, OdeSolver, Node, OptimalControlProgram, ControlType, TimeAlignment
 from cocofest import DingModelPulseDurationFrequencyWithFatigue, OcpFes, CustomObjective, FesModel
 # TODO relative import
 
@@ -43,13 +43,14 @@ class OcpFesMhe:
         self.n_threads = n_threads
         self.ocp = None
         self._mhe_sanity_check()
-        self.time = []
+        # self.time = []
         self.states = []
         self.parameters = []
         self.previous_stim = []
-        self.result_states = {}
-        self.result_parameters = {}
-        self.result_time = {}
+        # self.result_states = {}
+        # self.result_parameters = {}
+        # self.result_time = {}
+        self.result = {"time": {}, "states": {}, "parameters": {}}
 
     def prepare_mhe(self):
         (pulse_event, pulse_duration, pulse_intensity, objective) = OcpFes._fill_dict(
@@ -212,7 +213,11 @@ class OcpFesMhe:
         if index == 0:
             sol_time = sol.decision_time(to_merge=[SolutionMerge.PHASES, SolutionMerge.NODES])
             sol_time = list(sol_time.reshape(sol_time.shape[0]))
-            self.time.append(sol_time)
+            sol_time = [t - sol_time[0] for t in sol_time]
+
+
+
+            # self.time.append(sol_time)
         else:
             sol_time = sol.decision_time(to_merge=[SolutionMerge.PHASES, SolutionMerge.NODES])
             sol_time = list(sol_time.reshape(sol_time.shape[0]))
@@ -222,19 +227,16 @@ class OcpFesMhe:
         sol_time = list(sol_time.reshape(sol_time.shape[0]))
         final_time = sol_time[-1] + self.time[-1][-1]
 
-
         if index != 0:
             sol_time = [x + self.time[-1][-1] for x in sol_time]
         self.time.append(sol_time)
 
-    def update_states(self, sol, state_keys):
-        sol_states = sol.decision_states(to_merge=[SolutionMerge.NODES])
+    def update_states_bounds(self, sol_states, state_keys):
         for key in state_keys:
             self.ocp.nlp[0].x_bounds[key].max[0][0] = sol_states[self.n_stim//self.n_simultaneous_cycles - 1][key][0][-1]
             self.ocp.nlp[0].x_bounds[key].min[0][0] = sol_states[self.n_stim//self.n_simultaneous_cycles - 1][key][0][-1]
             for j in range(self.n_stim//self.n_simultaneous_cycles - 1, len(self.ocp.nlp)):
                 self.ocp.nlp[j].x_init[key].init[0][0] = sol_states[j][key][0][0]
-        return sol_states
 
     def update_parameters(self, sol, parameters_keys):
         sol_parameters = sol.decision_parameters()
@@ -259,18 +261,39 @@ class OcpFesMhe:
 
             list(self.previous_stim)
 
-    def store_results(self, sol_states, index):
+    def store_results(self, sol_time, sol_states, sol_parameters, index, merge=False):
         if self.cycle_to_keep == "middle":
+            # Get the middle phase index to keep
             phase_to_keep = int(math.ceil(self.n_simultaneous_cycles / 2))
             first_node_in_phase = self.n_stim * (phase_to_keep - 1)
             last_node_in_phase = self.n_stim * phase_to_keep
-            # self.result_time = self.time[first_node_in_phase:last_node_in_phase]
-            for key in list(sol_states[0].keys()):
+
+            # Initialize the dict if it's the first iteration
+            if index == 0:
+                self.result["time"] = [None]*self.n_total_cycles
+                [self.result["states"].update({state_key: [None]*self.n_total_cycles}) for state_key in list(sol_states[0].keys())]
+                [self.result["parameters"].update({key_parameter: [None]*self.n_total_cycles}) for key_parameter in list(sol_parameters.keys())]
+
+            # Store the results
+            phase_size = np.array(sol_time).shape[0]
+            node_size = np.array(sol_time).shape[1]
+            sol_time = list(np.array(sol_time).reshape(phase_size*node_size))[first_node_in_phase*node_size:last_node_in_phase*node_size]
+            if index == 0:
+                sol_time = [t - sol_time[0] for t in sol_time]
+            else:
+                sol_time = [t - sol_time[0] + self.result["time"][index-1][-1] for t in sol_time]
+                # time_diff = sol_time[first_node_in_phase]
+                # sol_time[first_node_in_phase:last_node_in_phase] = sol_time[first_node_in_phase:last_node_in_phase] - self.time[-1][-1]
+            self.result["time"][index] = sol_time  # Todo remove last node
+
+            for state_key in list(sol_states[0].keys()):
                 middle_states_values = sol_states[first_node_in_phase:last_node_in_phase]
-                middle_states_values = [list(middle_states_values[i][key][0]) for i in range(len(middle_states_values))]
+                middle_states_values = [list(middle_states_values[i][state_key][0]) for i in range(len(middle_states_values))]
                 middle_states_values = [j for sub in middle_states_values for j in sub]
-                self.result_states[key] = middle_states_values# Todo might be wrong
-            # self.result_parameters = self.parameters[first_node_in_phase:last_node_in_phase]
+                self.result["states"][state_key][index] = middle_states_values# Todo might be wrong
+
+            for key_parameter in list(sol_parameters.keys()):
+                self.result["parameters"][key_parameter][index] = sol_parameters[key_parameter][first_node_in_phase:last_node_in_phase]
         return
 
     def solve(self):
@@ -278,12 +301,20 @@ class OcpFesMhe:
         parameters_keys = list(self.ocp.nlp[0].parameters.keys())
         for i in range(self.n_total_cycles // self.n_cycle_to_advance):
             sol = self.ocp.solve()
-            # self.update_time(sol, index=i)
-            sol_states = self.update_states(sol, state_keys)
+
+            sol_states = sol.decision_states(to_merge=[SolutionMerge.NODES])
+            self.update_states_bounds(sol_states, state_keys)
+
+            sol_time = sol.decision_time(to_merge=SolutionMerge.NODES, time_alignment=TimeAlignment.STATES)
+            # sol_time = self.update_time(sol, index=i)
+
+            sol_parameters = sol.decision_parameters()
             # self.update_parameters(sol, parameters_keys)
             # self.update_stim(sol)
-            self.store_results(sol_states, i)
+
             # sol.graphs()
+
+            self.store_results(sol_time, sol_states, sol_parameters, i)
         # return self.ocp.solve()
 
     @staticmethod
