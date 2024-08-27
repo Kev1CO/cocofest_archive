@@ -188,9 +188,6 @@ class OcpFesMhe:
     #     sol_parameters_dict = {key: list(sol_parameters[key][0]) for key in sol_parameters.keys()}
     #     return
 
-    def update_objective(self, sol):
-        return
-
     def update_stim(self, sol):
         if "pulse_apparition_time" in sol.decision_parameters():
             stimulation_time = sol.decision_parameters()["pulse_apparition_time"]
@@ -205,8 +202,8 @@ class OcpFesMhe:
         else:
             self.previous_stim = stim_prev
 
-        for j in range(len(sol.ocp.nlp)):
-            sol.ocp.nlp[j].model.set_pass_pulse_apparition_time(self.previous_stim)  #TODO: Does not seem to impact the model estimation
+        for j in range(len(self.ocp.nlp)):
+            self.ocp.nlp[j].model.set_pass_pulse_apparition_time(self.previous_stim)  #TODO: Does not seem to be taken into account by the next model force estimation
 
     def store_results(self, sol_time, sol_states, sol_parameters, index, merge=False):
         if self.cycle_to_keep == "middle":

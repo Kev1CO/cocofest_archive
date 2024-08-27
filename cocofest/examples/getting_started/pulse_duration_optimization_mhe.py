@@ -1,115 +1,81 @@
 """
-This example will do a 10 stimulation example with Ding's 2007 pulse duration and frequency model.
-This ocp was build to match a force value of 200N at the end of the last node.
+This example showcases a moving time horizon simulation problem of cyclic muscle force tracking.
+The FES model used here is Ding's 2007 pulse duration and frequency model with fatigue.
+Only the pulse duration is optimized, frequency is fixed.
+The mhe problem is composed of 3 cycles and will move forward 1 cycle at each step.
+Only the middle cycle is kept in the optimization problem, the mhe problem stops once the last 6th cycle is reached.
 """
+
 import numpy as np
-from bioptim import SolutionMerge, ObjectiveList, ObjectiveFcn, OdeSolver
-from cocofest import DingModelPulseDurationFrequencyWithFatigue, OcpFes
+import matplotlib.pyplot as plt
 
-# --- Build ocp --- #
-# This ocp was build to match a force value of 200N at the end of the last node.
-# The stimulation will be optimized between 0.01 to 0.1 seconds and are equally spaced (a fixed frequency).
-# Plus the pulsation duration will be optimized between 0 and 0.0006 seconds and are not the same across the problem.
-# The flag with_fatigue is set to True by default, this will include the fatigue model
+from bioptim import OdeSolver
+from cocofest import OcpFesMhe, DingModelPulseDurationFrequencyWithFatigue
 
-# objective_functions = ObjectiveList()
-# n_stim = 10
-# for i in range(n_stim):
-#     objective_functions.add(ObjectiveFcn.Lagrange.MINIMIZE_STATE, key="F", weight=1/100000, quadratic=True, phase=i)
+# --- Build target force --- #
+target_time = np.linspace(0, 1, 100)
+target_force = abs(np.sin(target_time*np.pi)) * 200
+force_tracking = [target_time, target_force]
 
-# --- Building force to track ---#
-time = np.linspace(0, 1, 100)
-force = abs(np.sin(time * 5) + np.random.normal(scale=0.1, size=len(time))) * 100
-force_tracking = [time, force]
-
+# --- Build mhe --- #
 minimum_pulse_duration = DingModelPulseDurationFrequencyWithFatigue().pd0
-ocp = OcpFes().prepare_ocp(
-    model=DingModelPulseDurationFrequencyWithFatigue(sum_stim_truncation=10),
-    n_stim=10,
-    n_shooting=5,
-    final_time=1,
-    # pulse_event={"min": 0.01, "max": 0.1, "bimapping": True},
-    pulse_duration={
-        "min": minimum_pulse_duration,
-        "max": 0.0006,
-        "bimapping": False,
-    },
-    objective={"force_tracking": force_tracking},
-    # objective={"end_node_tracking": 100},
-    # , "custom": objective_functions},
-    use_sx=True,
-    ode_solver=OdeSolver.COLLOCATION(),
-)
+mhe = OcpFesMhe(model=DingModelPulseDurationFrequencyWithFatigue(sum_stim_truncation=10),
+                n_stim=30,
+                n_shooting=5,
+                final_time=1,
+                pulse_duration={
+                      "min": minimum_pulse_duration,
+                      "max": 0.0006,
+                      "bimapping": False,
+                },
+                objective={"force_tracking": force_tracking},
+                n_total_cycles=8,
+                n_simultaneous_cycles=3,
+                n_cycle_to_advance=1,
+                cycle_to_keep="middle",
+                use_sx=True,
+                ode_solver=OdeSolver.COLLOCATION())
 
-# --- Solve the program --- #
-cn_results = []
-f_results = []
-a_results = []
-tau1_results = []
-km_results = []
-time = []
-previous_stim = []
-for i in range(5):
-    sol = ocp.solve()
-    # sol.graphs(show_bounds=True)
-    sol_states = sol.decision_states(to_merge=[SolutionMerge.PHASES, SolutionMerge.NODES])
-    cn_results.append(list(sol_states["Cn"][0]))
-    f_results.append(list(sol_states["F"][0]))
-    a_results.append(list(sol_states["A"][0]))
-    tau1_results.append(list(sol_states["Tau1"][0]))
-    km_results.append(list(sol_states["Km"][0]))
-    sol_time = sol.decision_time(to_merge=[SolutionMerge.PHASES, SolutionMerge.NODES])
-    sol_time = list(sol_time.reshape(sol_time.shape[0]))
-
-    # sol_time_stim_parameters = sol.decision_parameters()["pulse_apparition_time"]
-
-    # if previous_stim:
-    #     # stim_prev = list(sol_time_stim_parameters - sol_time[-1])
-    #     update_previous_stim = list(np.array(previous_stim) - sol_time[-1])
-    #     previous_stim = update_previous_stim + stim_prev
-    # else:
-    #     stim_prev = list(sol_time_stim_parameters - sol_time[-1])
-    #     previous_stim = stim_prev
-
-    if i != 0:
-        sol_time = [x + time[-1][-1] for x in sol_time]
-
-    time.append(sol_time)
-    keys = list(sol_states.keys())
-
-    for key in keys:
-        ocp.nlp[0].x_bounds[key].max[0][0] = sol_states[key][-1][-1]
-        ocp.nlp[0].x_bounds[key].min[0][0] = sol_states[key][-1][-1]
-    for j in range(len(ocp.nlp)):
-        ocp.nlp[j].model = DingModelPulseDurationFrequencyWithFatigue(sum_stim_truncation=10, stim_prev=previous_stim)
-        for key in keys:
-            ocp.nlp[j].x_init[key].init[0][0] = sol_states[key][-1][-1]
-
+mhe.prepare_mhe()
+mhe.solve()
 
 # --- Show results --- #
-cn_results = [j for sub in cn_results for j in sub]
-f_results = [j for sub in f_results for j in sub]
-a_results = [j for sub in a_results for j in sub]
-tau1_results = [j for sub in tau1_results for j in sub]
-km_results = [j for sub in km_results for j in sub]
-time_result = [j for sub in time for j in sub]
+time = [j for sub in mhe.result["time"] for j in sub]
+fatigue = [j for sub in mhe.result["states"]["A"] for j in sub]
+force = [j for sub in mhe.result["states"]["F"] for j in sub]
 
-import matplotlib.pyplot as plt
-fig, axs = plt.subplots(5)
-axs[0].plot(time_result, cn_results)
-axs[0].set_ylabel("Cn")
-axs[1].plot(time_result, f_results)
-axs[1].set_ylabel("F")
-axs[2].plot(time_result, a_results)
-axs[2].set_ylabel("A")
-axs[3].plot(time_result, tau1_results)
-axs[3].set_ylabel("Tau1")
-axs[4].plot(time_result, km_results)
-axs[4].set_ylabel("Km")
-plt.xlabel("Time (s)")
-plt.ylabel("Force (N)")
+ax1 = plt.subplot(221)
+ax1.plot(time, fatigue, label='A', color='green')
+ax1.set_title('Fatigue', weight='bold')
+ax1.set_xlabel('Time')
+ax1.set_ylabel('Force scaling factor')
+plt.legend()
+
+ax2 = plt.subplot(222)
+ax2.plot(time, force, label='F', color='red', linewidth=2)
+ax2.plot(target_time, target_force, label='Target', color='purple')
+ax2.set_title('Force', weight='bold')
+ax2.set_xlabel('Time')
+ax2.set_ylabel('Force (N)')
+plt.legend()
+
+barWidth = 0.25  # set width of bar
+cycles = mhe.result["parameters"]["pulse_duration"]  # set height of bar
+bar = []  # Set position of bar on X axis
+for i in range(6):
+    if i == 0:
+        br = [barWidth * (x + 1) for x in range(len(cycles[i]))]
+    else:
+        br = [bar[-1][-1] + barWidth * (x + 1) for x in range(len(cycles[i]))]
+    bar.append(br)
+
+ax3 = plt.subplot(212)
+for i in range(6):
+    ax3.bar(bar[i], cycles[i], width = barWidth,
+            edgecolor ='grey', label =f'cycle n°{i+1}')
+ax3.set_xticks([np.mean(r) for r in bar], ['1', '2', '3', '4', '5', '6'])
+ax3.set_xlabel('Cycles')
+ax3.set_ylabel('Pulse duration (s)')
+plt.legend()
+ax3.set_title('Pulse duration', weight='bold')
 plt.show()
-
-print(previous_stim + time_result[-1])
-
-# TODO : Add the init parameters and state parameters according to the previous solution for each phase
