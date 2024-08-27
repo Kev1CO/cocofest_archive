@@ -4,9 +4,9 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 
-time = np.linspace(0, 1, 100)
-force = abs(np.sin(time * 5) + np.random.normal(scale=0.1, size=len(time))) * 100
-force_tracking = [time, force]
+time1 = np.linspace(0, 6, 600)
+force1 = abs(np.sin(time1 * 5) + np.random.normal(scale=0.1, size=len(time1))) * 100
+force_tracking = [time1, force1]
 
 minimum_pulse_duration = DingModelPulseDurationFrequencyWithFatigue().pd0
 mhe = OcpFesMhe(model=DingModelPulseDurationFrequencyWithFatigue(sum_stim_truncation=10),
@@ -29,10 +29,10 @@ mhe = OcpFesMhe(model=DingModelPulseDurationFrequencyWithFatigue(sum_stim_trunca
 mhe.prepare_mhe()
 mhe.solve()
 # print(mhe)
-plt.plot(np.linspace(0, 6, 260), mhe.result_states["F"])
+time = [j for sub in mhe.result["time"] for j in sub]
+force = [j for sub in mhe.result["states"]["F"] for j in sub]
+# fatigue = [j for sub in mhe.result["states"]["A"] for j in sub]
+# plt.plot(time, fatigue)
+plt.plot(time, force)
+plt.plot(time1, force1)
 plt.show()
-
-
-# sol = ocp.solve()
-# sol.graphs()
-
