@@ -48,7 +48,9 @@ def test_nmpc_cyclic():
     fatigue = [j for sub in nmpc.result["states"]["A"] for j in sub]
     force = [j for sub in nmpc.result["states"]["F"] for j in sub]
 
-    np.testing.assert_almost_equal(len(time), n_total_cycles*n_stim*n_shooting*(nmpc.ode_solver.polynomial_degree+1))
+    np.testing.assert_almost_equal(
+        len(time), n_total_cycles * n_stim * n_shooting * (nmpc.ode_solver.polynomial_degree + 1)
+    )
     np.testing.assert_almost_equal(len(fatigue), len(time))
     np.testing.assert_almost_equal(len(force), len(time))
 
@@ -68,9 +70,7 @@ def test_nmpc_cyclic():
 def test_all_nmpc_errors():
     with pytest.raises(
         TypeError,
-        match=re.escape(
-            "n_total_cycles must be an integer"
-        ),
+        match=re.escape("n_total_cycles must be an integer"),
     ):
         OcpFesNmpcCyclic(
             model=DingModelPulseDurationFrequencyWithFatigue(sum_stim_truncation=10),
@@ -87,9 +87,7 @@ def test_all_nmpc_errors():
 
     with pytest.raises(
         TypeError,
-        match=re.escape(
-            "n_simultaneous_cycles must be an integer"
-        ),
+        match=re.escape("n_simultaneous_cycles must be an integer"),
     ):
         OcpFesNmpcCyclic(
             model=DingModelPulseDurationFrequencyWithFatigue(sum_stim_truncation=10),
@@ -106,9 +104,7 @@ def test_all_nmpc_errors():
 
     with pytest.raises(
         TypeError,
-        match=re.escape(
-            "n_cycle_to_advance must be an integer"
-        ),
+        match=re.escape("n_cycle_to_advance must be an integer"),
     ):
         OcpFesNmpcCyclic(
             model=DingModelPulseDurationFrequencyWithFatigue(sum_stim_truncation=10),
@@ -126,9 +122,7 @@ def test_all_nmpc_errors():
 
     with pytest.raises(
         TypeError,
-        match=re.escape(
-            "cycle_to_keep must be a string"
-        ),
+        match=re.escape("cycle_to_keep must be a string"),
     ):
         OcpFesNmpcCyclic(
             model=DingModelPulseDurationFrequencyWithFatigue(sum_stim_truncation=10),
@@ -147,9 +141,7 @@ def test_all_nmpc_errors():
 
     with pytest.raises(
         ValueError,
-        match=re.escape(
-            "The number of n_simultaneous_cycles must be higher than the number of n_cycle_to_advance"
-        ),
+        match=re.escape("The number of n_simultaneous_cycles must be higher than the number of n_cycle_to_advance"),
     ):
         OcpFesNmpcCyclic(
             model=DingModelPulseDurationFrequencyWithFatigue(sum_stim_truncation=10),
@@ -169,9 +161,7 @@ def test_all_nmpc_errors():
 
     with pytest.raises(
         ValueError,
-        match=re.escape(
-            "The number of n_total_cycles must be a multiple of the number n_cycle_to_advance"
-        ),
+        match=re.escape("The number of n_total_cycles must be a multiple of the number n_cycle_to_advance"),
     ):
         OcpFesNmpcCyclic(
             model=DingModelPulseDurationFrequencyWithFatigue(sum_stim_truncation=10),
@@ -191,9 +181,7 @@ def test_all_nmpc_errors():
 
     with pytest.raises(
         ValueError,
-        match=re.escape(
-            "cycle_to_keep must be either 'first', 'middle' or 'last'"
-        ),
+        match=re.escape("cycle_to_keep must be either 'first', 'middle' or 'last'"),
     ):
         OcpFesNmpcCyclic(
             model=DingModelPulseDurationFrequencyWithFatigue(sum_stim_truncation=10),
@@ -213,9 +201,7 @@ def test_all_nmpc_errors():
 
     with pytest.raises(
         NotImplementedError,
-        match=re.escape(
-            "Only 'middle' cycle_to_keep is implemented"
-        ),
+        match=re.escape("Only 'middle' cycle_to_keep is implemented"),
     ):
         OcpFesNmpcCyclic(
             model=DingModelPulseDurationFrequencyWithFatigue(sum_stim_truncation=10),
@@ -235,9 +221,7 @@ def test_all_nmpc_errors():
 
     with pytest.raises(
         NotImplementedError,
-        match=re.escape(
-            "Only 3 simultaneous cycles are implemented yet work in progress"
-        ),
+        match=re.escape("Only 3 simultaneous cycles are implemented yet work in progress"),
     ):
         OcpFesNmpcCyclic(
             model=DingModelPulseDurationFrequencyWithFatigue(sum_stim_truncation=10),
