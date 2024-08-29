@@ -1,8 +1,6 @@
 import numpy as np
 
 from bioptim import (
-    BiMapping,
-    # BiMappingList, parameter mapping not yet implemented
     BoundsList,
     ConstraintList,
     ControlType,
@@ -29,7 +27,6 @@ from ..models.fes_model import FesModel
 from ..models.ding2007 import DingModelPulseDurationFrequency
 from ..models.ding2007_with_fatigue import DingModelPulseDurationFrequencyWithFatigue
 from ..models.ding2003 import DingModelFrequency
-from ..models.ding2003_with_fatigue import DingModelFrequencyWithFatigue
 from ..models.hmed2018 import DingModelIntensityFrequency
 from ..models.hmed2018_with_fatigue import DingModelIntensityFrequencyWithFatigue
 
@@ -158,7 +155,7 @@ class OcpFes:
         force_fourier_coefficient = (
             None if force_tracking is None else OcpFes._build_fourier_coefficient(force_tracking)
         )
-        end_node_tracking = end_node_tracking
+
         models = [model] * n_stim
         n_shooting = [n_shooting] * n_stim
 

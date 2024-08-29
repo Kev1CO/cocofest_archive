@@ -180,7 +180,7 @@ for i in range(len(data_minimize_force["time"])):
     )
 
 fig, axs = plt.subplots(1, 1, figsize=(3, (1 / 3) * 7))
-fig.suptitle("Muscle fatigue", fontsize=20, fontweight="bold", fontname="Times New Roman")
+fig.suptitle("Muscle fatigue", fontsize=20, fontweight="bold")
 
 axs.set_xlim(left=0, right=1.5)
 plt.setp(
@@ -192,8 +192,8 @@ plt.setp(
 a_force_sum_percentage = (np.array(a_force_sum_list) / a_sum_base_line) * 100
 a_fatigue_sum_percentage = (np.array(a_fatigue_sum_list) / a_sum_base_line) * 100
 
-axs.plot(data_minimize_force["time"], a_force_sum_percentage, lw=5)
-axs.plot(data_minimize_force["time"], a_fatigue_sum_percentage, lw=5)
+axs.plot(data_minimize_force["time"], a_force_sum_percentage, lw=5, label="Minimize force production")
+axs.plot(data_minimize_force["time"], a_fatigue_sum_percentage, lw=5, label="Maximize muscle capacity")
 
 axs.set_xlim(left=0, right=1.5)
 
@@ -204,21 +204,16 @@ plt.setp(
 )
 
 labels = axs.get_xticklabels() + axs.get_yticklabels()
-[label.set_fontname("Times New Roman") for label in labels]
-[label.set_fontsize(14) for label in labels]
 fig.text(
     0.05,
     0.5,
-    "Fatigue percentage (%)",
+    "Muscle capacity (%)",
     ha="center",
     va="center",
     rotation="vertical",
     fontsize=18,
     weight="bold",
-    font="Times New Roman",
 )
-axs.text(0.75, 96.3, "Time (s)", ha="center", va="center", fontsize=18, weight="bold", font="Times New Roman")
-plt.legend(
-    ["Force", "Fatigue"], loc="upper right", ncol=1, prop={"family": "Times New Roman", "size": 14, "weight": "bold"}
-)
+axs.text(0.75, 96.3, "Time (s)", ha="center", va="center", fontsize=18, weight="bold")
+axs.legend(title="Cost function", fontsize="medium", loc="upper right", ncol=1)
 plt.show()
