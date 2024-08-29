@@ -20,8 +20,10 @@ force_tracking = [target_time, target_force]
 # --- Build nmpc cyclic --- #
 n_total_cycles = 8
 minimum_pulse_duration = DingModelPulseDurationFrequencyWithFatigue().pd0
+fes_model = DingModelPulseDurationFrequencyWithFatigue(sum_stim_truncation=10)
+fes_model.alpha_a = -4.0 * 10e-1  # Increasing the fatigue rate to make the fatigue more visible
 nmpc = OcpFesNmpcCyclic(
-    model=DingModelPulseDurationFrequencyWithFatigue(sum_stim_truncation=10),
+    model=fes_model,
     n_stim=30,
     n_shooting=5,
     final_time=1,

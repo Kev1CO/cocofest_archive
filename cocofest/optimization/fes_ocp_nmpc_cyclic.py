@@ -339,20 +339,20 @@ class OcpFesNmpcCyclic:
         return objective_functions
 
     def _nmpc_sanity_check(self):
-        if self.n_total_cycles is None:
-            raise ValueError("n_total_cycles must be set")
-        if self.n_simultaneous_cycles is None:
-            raise ValueError("n_simultaneous_cycles must be set")
-        if self.n_cycle_to_advance is None:
-            raise ValueError("n_cycle_to_advance must be set")
-        if self.cycle_to_keep is None:
-            raise ValueError("cycle_to_keep must be set")
-
-        if self.n_total_cycles % self.n_cycle_to_advance != 0:
-            raise ValueError("The number of n_total_cycles must be a multiple of the number n_cycle_to_advance")
+        if not isinstance(self.n_total_cycles, int):
+            raise TypeError("n_total_cycles must be an integer")
+        if not isinstance(self.n_simultaneous_cycles, int):
+            raise TypeError("n_simultaneous_cycles must be an integer")
+        if not isinstance(self.n_cycle_to_advance, int):
+            raise TypeError("n_cycle_to_advance must be an integer")
+        if not isinstance(self.cycle_to_keep, str):
+            raise TypeError("cycle_to_keep must be a string")
 
         if self.n_cycle_to_advance > self.n_simultaneous_cycles:
             raise ValueError("The number of n_simultaneous_cycles must be higher than the number of n_cycle_to_advance")
+
+        if self.n_total_cycles % self.n_cycle_to_advance != 0:
+            raise ValueError("The number of n_total_cycles must be a multiple of the number n_cycle_to_advance")
 
         if self.cycle_to_keep not in ["first", "middle", "last"]:
             raise ValueError("cycle_to_keep must be either 'first', 'middle' or 'last'")

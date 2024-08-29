@@ -34,7 +34,6 @@ class DingModelFrequency(FesModel):
         model_name: str = "ding2003",
         muscle_name: str = None,
         sum_stim_truncation: int = None,
-        stim_prev: list[float] = None,
     ):
         super().__init__()
         self._model_name = model_name
@@ -51,8 +50,6 @@ class DingModelFrequency(FesModel):
         self.tau1_rest = 0.050957  # Value from Ding's experimentation [1] (s)
         self.tau2 = 0.060  # Close value from Ding's experimentation [2] (s)
         self.km_rest = 0.103  # Value from Ding's experimentation [1] (unitless)
-
-        self.stim_prev = stim_prev
 
     def set_a_rest(self, model, a_rest: MX | float):
         # models is required for bioptim compatibility
@@ -148,8 +145,6 @@ class DingModelFrequency(FesModel):
         -------
         The value of the derivative of each state dx/dt at the current time t
         """
-        if self.stim_prev:
-            t_stim_prev = self.stim_prev + t_stim_prev
         r0 = self.km_rest + self.r0_km_relationship  # Simplification
         cn_dot = self.cn_dot_fun(cn, r0, t, t_stim_prev=t_stim_prev)  # Equation n°1
         f_dot = self.f_dot_fun(

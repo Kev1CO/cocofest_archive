@@ -31,10 +31,9 @@ class DingModelPulseDurationFrequencyWithFatigue(DingModelPulseDurationFrequency
         model_name: str = "ding_2007_with_fatigue",
         muscle_name: str = None,
         sum_stim_truncation: int = None,
-        stim_prev: list[float] = None,
     ):
         super(DingModelPulseDurationFrequencyWithFatigue, self).__init__(
-            model_name=model_name, muscle_name=muscle_name, sum_stim_truncation=sum_stim_truncation, stim_prev=stim_prev
+            model_name=model_name, muscle_name=muscle_name, sum_stim_truncation=sum_stim_truncation
         )
         self._with_fatigue = True
 
@@ -141,8 +140,6 @@ class DingModelPulseDurationFrequencyWithFatigue(DingModelPulseDurationFrequency
         -------
         The value of the derivative of each state dx/dt at the current time t
         """
-        if self.stim_prev:
-            t_stim_prev = self.stim_prev + t_stim_prev
         r0 = km + self.r0_km_relationship  # Simplification
         cn_dot = self.cn_dot_fun(cn, r0, t, t_stim_prev=t_stim_prev)  # Equation n°1 from Ding's 2003 article
         a_calculated = self.a_calculation(a_scale=a, impulse_time=impulse_time)  # Equation n°3 from Ding's 2007 article

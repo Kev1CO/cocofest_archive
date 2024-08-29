@@ -32,10 +32,9 @@ class DingModelPulseDurationFrequency(DingModelFrequency):
         model_name: str = "ding_2007",
         muscle_name: str = None,
         sum_stim_truncation: int = None,
-        stim_prev: list[float] = None,
     ):
         super(DingModelPulseDurationFrequency, self).__init__(
-            model_name=model_name, muscle_name=muscle_name, sum_stim_truncation=sum_stim_truncation, stim_prev=stim_prev
+            model_name=model_name, muscle_name=muscle_name, sum_stim_truncation=sum_stim_truncation
         )
         self._with_fatigue = False
         self.impulse_time = None
