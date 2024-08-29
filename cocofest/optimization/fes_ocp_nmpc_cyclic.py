@@ -2,11 +2,13 @@ import math
 
 import numpy as np
 from bioptim import SolutionMerge, ObjectiveList, ObjectiveFcn, OdeSolver, Node, OptimalControlProgram, ControlType, TimeAlignment
-from cocofest import DingModelPulseDurationFrequencyWithFatigue, OcpFes, CustomObjective, FesModel
-# TODO relative import
+
+from .fes_ocp import OcpFes
+from ..models.fes_model import FesModel
+from ..custom_objectives import CustomObjective
 
 
-class OcpFesMhe:
+class OcpFesNmpcCyclic:
     def __init__(self,
                  model: FesModel = None,
                  n_stim: int = None,
@@ -24,8 +26,7 @@ class OcpFesMhe:
                  ode_solver: OdeSolver = OdeSolver.RK4(n_integration_steps=1),
                  n_threads: int = 1,
     ):
-
-        super(OcpFesMhe, self).__init__()
+        super(OcpFesNmpcCyclic, self).__init__()
         self.model = model
         self.n_stim = n_stim
         self.n_shooting = n_shooting
@@ -42,17 +43,16 @@ class OcpFesMhe:
         self.ode_solver = ode_solver
         self.n_threads = n_threads
         self.ocp = None
-        self._mhe_sanity_check()
-        # self.time = []
+        self._nmpc_sanity_check()
         self.states = []
         self.parameters = []
         self.previous_stim = []
-        # self.result_states = {}
-        # self.result_parameters = {}
-        # self.result_time = {}
         self.result = {"time": {}, "states": {}, "parameters": {}}
+        self.temp_last_node_time = 0
+        self.first_node_in_phase = 0
+        self.last_node_in_phase = 0
 
-    def prepare_mhe(self):
+    def prepare_nmpc(self):
         (pulse_event, pulse_duration, pulse_intensity, objective) = OcpFes._fill_dict(
             self.pulse_event, self.pulse_duration, self.pulse_intensity, self.objective
         )
@@ -105,10 +105,6 @@ class OcpFesMhe:
         )
 
         OcpFes._sanity_check_frequency(n_stim=self.n_stim, final_time=self.final_time, frequency=frequency, round_down=round_down)
-
-        n_stim, final_time = OcpFes._build_phase_parameter(
-            n_stim=self.n_stim * self.n_simultaneous_cycles, final_time=self.final_time * self.n_simultaneous_cycles, frequency=frequency, pulse_mode=pulse_mode, round_down=round_down
-        )
 
         force_fourier_coefficient = (
             None if force_tracking is None else OcpFes._build_fourier_coefficient(force_tracking)
@@ -183,11 +179,6 @@ class OcpFesMhe:
             for j in range(index_to_keep, len(self.ocp.nlp)):
                 self.ocp.nlp[j].x_init[key].init[0][0] = sol_states[j][key][0][0]
 
-    # def update_parameters(self, sol, parameters_keys):
-    #     sol_parameters = sol.decision_parameters()
-    #     sol_parameters_dict = {key: list(sol_parameters[key][0]) for key in sol_parameters.keys()}
-    #     return
-
     def update_stim(self, sol):
         if "pulse_apparition_time" in sol.decision_parameters():
             stimulation_time = sol.decision_parameters()["pulse_apparition_time"]
@@ -203,9 +194,10 @@ class OcpFesMhe:
             self.previous_stim = stim_prev
 
         for j in range(len(self.ocp.nlp)):
-            self.ocp.nlp[j].model.set_pass_pulse_apparition_time(self.previous_stim)  #TODO: Does not seem to be taken into account by the next model force estimation
+            self.ocp.nlp[j].model.set_pass_pulse_apparition_time(self.previous_stim)
+            # TODO: Does not seem to be taken into account by the next model force estimation
 
-    def store_results(self, sol_time, sol_states, sol_parameters, index, merge=False):
+    def store_results(self, sol_time, sol_states, sol_parameters, index):
         if self.cycle_to_keep == "middle":
             # Get the middle phase index to keep
             phase_to_keep = int(math.ceil(self.n_simultaneous_cycles / 2))
@@ -234,7 +226,7 @@ class OcpFesMhe:
                 middle_states_values = sol_states[self.first_node_in_phase:self.last_node_in_phase]
                 middle_states_values = [list(middle_states_values[i][state_key][0])[:-1] for i in range(len(middle_states_values))]  # Remove the last node duplicate
                 middle_states_values = [j for sub in middle_states_values for j in sub]
-                self.result["states"][state_key][index] = middle_states_values# Todo might be wrong
+                self.result["states"][state_key][index] = middle_states_values
 
             for key_parameter in list(sol_parameters.keys()):
                 self.result["parameters"][key_parameter][index] = sol_parameters[key_parameter][self.first_node_in_phase:self.last_node_in_phase]
@@ -248,7 +240,8 @@ class OcpFesMhe:
             sol_time = sol.decision_time(to_merge=SolutionMerge.NODES, time_alignment=TimeAlignment.STATES)
             sol_parameters = sol.decision_parameters()
             self.store_results(sol_time, sol_states, sol_parameters, i)
-            self.update_stim(sol)
+            # self.update_stim(sol)
+            # Todo uncomment when the model is updated to take into account the past stimulation
 
     @staticmethod
     def _set_objective(n_stim, n_shooting, force_fourier_coefficient, end_node_tracking, custom_objective, time_min, time_max,
@@ -304,7 +297,7 @@ class OcpFesMhe:
 
         return objective_functions
 
-    def _mhe_sanity_check(self):
+    def _nmpc_sanity_check(self):
         if self.n_total_cycles is None:
             raise ValueError("n_total_cycles must be set")
         if self.n_simultaneous_cycles is None:
@@ -326,4 +319,5 @@ class OcpFesMhe:
             raise NotImplementedError("Only 'middle' cycle_to_keep is implemented")
 
         if self.n_simultaneous_cycles != 3:
-            raise NotImplementedError("Only 3 simultaneous cycles are implemented yet work in progress")  # todo add more simultaneous cycles
+            raise NotImplementedError("Only 3 simultaneous cycles are implemented yet work in progress")
+            # Todo add more simultaneous cycles
