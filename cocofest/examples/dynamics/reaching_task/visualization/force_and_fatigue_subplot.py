@@ -215,5 +215,5 @@ fig.text(
     weight="bold",
 )
 axs.text(0.75, 96.3, "Time (s)", ha="center", va="center", fontsize=18, weight="bold")
-axs.legend(title='Cost function', fontsize="medium", loc="upper right", ncol=1)
+axs.legend(title="Cost function", fontsize="medium", loc="upper right", ncol=1)
 plt.show()

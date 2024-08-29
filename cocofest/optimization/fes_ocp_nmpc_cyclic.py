@@ -1,7 +1,16 @@
 import math
 
 import numpy as np
-from bioptim import SolutionMerge, ObjectiveList, ObjectiveFcn, OdeSolver, Node, OptimalControlProgram, ControlType, TimeAlignment
+from bioptim import (
+    SolutionMerge,
+    ObjectiveList,
+    ObjectiveFcn,
+    OdeSolver,
+    Node,
+    OptimalControlProgram,
+    ControlType,
+    TimeAlignment,
+)
 
 from .fes_ocp import OcpFes
 from ..models.fes_model import FesModel
@@ -9,22 +18,23 @@ from ..custom_objectives import CustomObjective
 
 
 class OcpFesNmpcCyclic:
-    def __init__(self,
-                 model: FesModel = None,
-                 n_stim: int = None,
-                 n_shooting: int = None,
-                 final_time: int | float = None,
-                 pulse_event: dict = None,
-                 pulse_duration: dict = None,
-                 pulse_intensity: dict = None,
-                 n_total_cycles: int = None,
-                 n_simultaneous_cycles: int = None,
-                 n_cycle_to_advance: int = None,
-                 cycle_to_keep: str = None,
-                 objective: dict = None,
-                 use_sx: bool = True,
-                 ode_solver: OdeSolver = OdeSolver.RK4(n_integration_steps=1),
-                 n_threads: int = 1,
+    def __init__(
+        self,
+        model: FesModel = None,
+        n_stim: int = None,
+        n_shooting: int = None,
+        final_time: int | float = None,
+        pulse_event: dict = None,
+        pulse_duration: dict = None,
+        pulse_intensity: dict = None,
+        n_total_cycles: int = None,
+        n_simultaneous_cycles: int = None,
+        n_cycle_to_advance: int = None,
+        cycle_to_keep: str = None,
+        objective: dict = None,
+        use_sx: bool = True,
+        ode_solver: OdeSolver = OdeSolver.RK4(n_integration_steps=1),
+        n_threads: int = 1,
     ):
         super(OcpFesNmpcCyclic, self).__init__()
         self.model = model
@@ -104,7 +114,9 @@ class OcpFesNmpcCyclic:
             n_threads=self.n_threads,
         )
 
-        OcpFes._sanity_check_frequency(n_stim=self.n_stim, final_time=self.final_time, frequency=frequency, round_down=round_down)
+        OcpFes._sanity_check_frequency(
+            n_stim=self.n_stim, final_time=self.final_time, frequency=frequency, round_down=round_down
+        )
 
         force_fourier_coefficient = (
             None if force_tracking is None else OcpFes._build_fourier_coefficient(force_tracking)
@@ -146,7 +158,14 @@ class OcpFesNmpcCyclic:
         x_bounds, x_init = OcpFes._set_bounds(self.model, self.n_stim * self.n_simultaneous_cycles)
         one_cycle_shooting = [self.n_shooting] * self.n_stim
         objective_functions = self._set_objective(
-            self.n_stim, one_cycle_shooting, force_fourier_coefficient, end_node_tracking, custom_objective, time_min, time_max, self.n_simultaneous_cycles
+            self.n_stim,
+            one_cycle_shooting,
+            force_fourier_coefficient,
+            end_node_tracking,
+            custom_objective,
+            time_min,
+            time_max,
+            self.n_simultaneous_cycles,
         )
         all_cycle_n_shooting = [self.n_shooting] * self.n_stim * self.n_simultaneous_cycles
         self.ocp = OptimalControlProgram(
@@ -183,7 +202,7 @@ class OcpFesNmpcCyclic:
         if "pulse_apparition_time" in sol.decision_parameters():
             stimulation_time = sol.decision_parameters()["pulse_apparition_time"]
         else:
-            stimulation_time = [0] + list(np.cumsum(sol.ocp.phase_time[:self.n_stim-1]))
+            stimulation_time = [0] + list(np.cumsum(sol.ocp.phase_time[: self.n_stim - 1]))
 
         stim_prev = list(np.array(stimulation_time) - self.final_time)
         if self.previous_stim:
@@ -206,14 +225,22 @@ class OcpFesNmpcCyclic:
 
             # Initialize the dict if it's the first iteration
             if index == 0:
-                self.result["time"] = [None]*self.n_total_cycles
-                [self.result["states"].update({state_key: [None]*self.n_total_cycles}) for state_key in list(sol_states[0].keys())]
-                [self.result["parameters"].update({key_parameter: [None]*self.n_total_cycles}) for key_parameter in list(sol_parameters.keys())]
+                self.result["time"] = [None] * self.n_total_cycles
+                [
+                    self.result["states"].update({state_key: [None] * self.n_total_cycles})
+                    for state_key in list(sol_states[0].keys())
+                ]
+                [
+                    self.result["parameters"].update({key_parameter: [None] * self.n_total_cycles})
+                    for key_parameter in list(sol_parameters.keys())
+                ]
 
             # Store the results
             phase_size = np.array(sol_time).shape[0]
             node_size = np.array(sol_time).shape[1]
-            sol_time = list(np.array(sol_time).reshape(phase_size*node_size))[self.first_node_in_phase*node_size:self.last_node_in_phase*node_size]
+            sol_time = list(np.array(sol_time).reshape(phase_size * node_size))[
+                self.first_node_in_phase * node_size : self.last_node_in_phase * node_size
+            ]
             sol_time = list(dict.fromkeys(sol_time))  # Remove duplicate time
             if index == 0:
                 updated_sol_time = [t - sol_time[0] for t in sol_time]
@@ -223,13 +250,17 @@ class OcpFesNmpcCyclic:
             self.result["time"][index] = updated_sol_time[:-1]
 
             for state_key in list(sol_states[0].keys()):
-                middle_states_values = sol_states[self.first_node_in_phase:self.last_node_in_phase]
-                middle_states_values = [list(middle_states_values[i][state_key][0])[:-1] for i in range(len(middle_states_values))]  # Remove the last node duplicate
+                middle_states_values = sol_states[self.first_node_in_phase : self.last_node_in_phase]
+                middle_states_values = [
+                    list(middle_states_values[i][state_key][0])[:-1] for i in range(len(middle_states_values))
+                ]  # Remove the last node duplicate
                 middle_states_values = [j for sub in middle_states_values for j in sub]
                 self.result["states"][state_key][index] = middle_states_values
 
             for key_parameter in list(sol_parameters.keys()):
-                self.result["parameters"][key_parameter][index] = sol_parameters[key_parameter][self.first_node_in_phase:self.last_node_in_phase]
+                self.result["parameters"][key_parameter][index] = sol_parameters[key_parameter][
+                    self.first_node_in_phase : self.last_node_in_phase
+                ]
         return
 
     def solve(self):
@@ -244,13 +275,23 @@ class OcpFesNmpcCyclic:
             # Todo uncomment when the model is updated to take into account the past stimulation
 
     @staticmethod
-    def _set_objective(n_stim, n_shooting, force_fourier_coefficient, end_node_tracking, custom_objective, time_min, time_max,
-                       n_simultaneous_cycles):
+    def _set_objective(
+        n_stim,
+        n_shooting,
+        force_fourier_coefficient,
+        end_node_tracking,
+        custom_objective,
+        time_min,
+        time_max,
+        n_simultaneous_cycles,
+    ):
         # Creates the objective for our problem
         objective_functions = ObjectiveList()
         if custom_objective:
             if len(custom_objective) != n_stim:
-                raise ValueError("The number of custom objective must be equal to the stimulation number of a single cycle")
+                raise ValueError(
+                    "The number of custom objective must be equal to the stimulation number of a single cycle"
+                )
             for i in range(len(custom_objective)):
                 for j in range(n_simultaneous_cycles):
                     objective_functions.add(custom_objective[i + j * n_stim][0])

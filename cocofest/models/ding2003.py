@@ -34,7 +34,7 @@ class DingModelFrequency(FesModel):
         model_name: str = "ding2003",
         muscle_name: str = None,
         sum_stim_truncation: int = None,
-        stim_prev: list[float] = None
+        stim_prev: list[float] = None,
     ):
         super().__init__()
         self._model_name = model_name
