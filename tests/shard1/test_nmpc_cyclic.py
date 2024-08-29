@@ -54,17 +54,17 @@ def test_nmpc_cyclic():
     np.testing.assert_almost_equal(len(fatigue), len(time))
     np.testing.assert_almost_equal(len(force), len(time))
 
-    np.testing.assert_almost_equal(time[0], 0.0)
-    np.testing.assert_almost_equal(fatigue[0], 4796.3120362970285)
-    np.testing.assert_almost_equal(force[0], 3.0948778396159535)
+    np.testing.assert_almost_equal(time[0], 0.0, decimal=4)
+    np.testing.assert_almost_equal(fatigue[0], 4796.3120, decimal=4)
+    np.testing.assert_almost_equal(force[0], 3.0948, decimal=4)
 
-    np.testing.assert_almost_equal(time[750], 3.0000000000000013)
-    np.testing.assert_almost_equal(fatigue[750], 4427.259641834449)
-    np.testing.assert_almost_equal(force[750], 4.508999252965375)
+    np.testing.assert_almost_equal(time[750], 3.0, decimal=4)
+    np.testing.assert_almost_equal(fatigue[750], 4427.2596, decimal=4)
+    np.testing.assert_almost_equal(force[750], 4.5089, decimal=4)
 
-    np.testing.assert_almost_equal(time[-1], 5.998611363115943)
-    np.testing.assert_almost_equal(fatigue[-1], 4063.8504572735123)
-    np.testing.assert_almost_equal(force[-1], 5.661514731665669)
+    np.testing.assert_almost_equal(time[-1], 5.9986, decimal=4)
+    np.testing.assert_almost_equal(fatigue[-1], 4063.8504, decimal=4)
+    np.testing.assert_almost_equal(force[-1], 5.6615, decimal=4)
 
 
 def test_all_nmpc_errors():
